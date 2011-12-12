@@ -1,0 +1,89 @@
+.PS 5i
+right
+boxht = 0.8
+arrowhead = 2
+
+define GoodBadBetween 	{ 4.5 }
+define SeqParBetween 	{ -2 }
+define LegendWid 	{ 3.6 }
+define ArrowHeight 	{ -0.5 }
+
+define GOOD_BP { 1 }
+define GOOD_TP { 5 }
+
+define GOOD_BQ { 2 }
+define GOOD_TQ { 4 }
+
+define BAD_BP { 4 }
+define BAD_TP { 5 }
+
+define BAD_BQ { 1 }
+define BAD_TQ { 4 }
+
+GOOD_SP: box wid GOOD_TP
+GOOD_SPA: box invis wid GOOD_BP "$pA$" with .nw at GOOD_SP.nw
+GOOD_SPR: box invis wid GOOD_TP-GOOD_BP "$pR$"
+line dotted 0.125 from GOOD_SPA.ne to GOOD_SPA.se
+GOOD_SQ: box wid GOOD_TQ with .nw at GOOD_SP.ne
+GOOD_SQA: box invis wid GOOD_BQ "$qA$" with .nw at GOOD_SQ.nw
+GOOD_SQR: box invis wid GOOD_TQ-GOOD_BQ "$qR$"
+line dotted 0.125 from GOOD_SQA.ne to GOOD_SQA.se
+
+arrow -> wid 0.1 ht 0.2 from GOOD_SPA.se + (0, ArrowHeight) to GOOD_SPA.se
+box invis "produce $A$" with .c at GOOD_SPA.se + (0, 2*ArrowHeight)
+
+arrow -> wid 0.1 ht 0.2 from GOOD_SQA.se + (0, ArrowHeight) to GOOD_SQA.se
+box invis "consume $A$" with .c at GOOD_SQA.se + (0, 2*ArrowHeight)
+
+GOOD_Seq: box invis wid LegendWid with .e at GOOD_SP.w
+"Seq: p, q~~" at GOOD_Seq.w ljust
+
+GOOD_PP: box wid GOOD_TP with .nw at GOOD_SP.sw + (0, SeqParBetween)
+GOOD_PPA: box invis wid GOOD_BP "$pA$" with .nw at GOOD_PP.nw
+GOOD_PPR: box invis wid GOOD_TP-GOOD_BP "$pR$"
+line dotted 0.125 from GOOD_PPA.ne to GOOD_PPA.se
+GOOD_PQ: box wid GOOD_TQ with .nw at GOOD_PP.sw
+GOOD_PQA: box invis wid GOOD_BQ "$qA$" with .nw at GOOD_PQ.nw
+GOOD_PQR: box invis wid GOOD_TQ-GOOD_BQ "$qR$"
+line dotted 0.125 from GOOD_PQA.ne to GOOD_PQA.se
+
+arrow -> wid 0.1 ht 0.2 from GOOD_PQR.sw + (0, ArrowHeight) \
+	to GOOD_PQR.sw + (0, 0)
+box invis "consume $A$" with .c at GOOD_PQR.sw + (0, 2*ArrowHeight)
+
+GOOD_Par: box invis wid LegendWid with .e at GOOD_PP.sw
+"Par: p \& q" at GOOD_Par.w ljust
+
+BAD_SP: box wid BAD_TP with .w at GOOD_SQ.e + (GoodBadBetween, 0)
+BAD_SPA: box invis wid BAD_BP "$pA$" with .nw at BAD_SP.nw
+BAD_SPR: box invis wid BAD_TP-BAD_BP "$pR$"
+line dotted 0.125 from BAD_SPA.ne to BAD_SPA.se
+BAD_SQ: box wid BAD_TQ with .nw at BAD_SP.ne
+BAD_SQA: box invis wid BAD_BQ "$qA$" with .nw at BAD_SQ.nw
+BAD_SQR: box invis wid BAD_TQ-BAD_BQ "$qR$"
+line dotted 0.125 from BAD_SQA.ne to BAD_SQA.se
+
+arrow -> wid 0.1 ht 0.2 from BAD_SPA.se + (0, ArrowHeight) to BAD_SPA.se
+box invis "produce $A$" with .c at BAD_SPA.se + (0, 2*ArrowHeight)
+
+arrow -> wid 0.1 ht 0.2 from BAD_SQA.se + (0, 2*ArrowHeight) to BAD_SQA.se
+box invis "consume $A$" with .c at BAD_SQA.se + (0, 3*ArrowHeight)
+
+BAD_Seq: box invis wid LegendWid with .e at BAD_SP.w
+"Seq: p, q~~" at BAD_Seq.w ljust
+
+BAD_PP: box wid BAD_TP with .nw at BAD_SP.sw + (0, SeqParBetween)
+BAD_PPA: box invis wid BAD_BP "$pA$" with .nw at BAD_PP.nw
+BAD_PPR: box invis wid BAD_TP-BAD_BP "$pR$"
+line dotted 0.125 from BAD_PPA.ne to BAD_PPA.se
+BAD_PQA: box wid BAD_BQ "$qA$" with .nw at BAD_PP.sw
+BAD_PQR: box wid BAD_TQ-BAD_BQ "$qR$" \
+	with .w at BAD_PQA.w + (max(BAD_BP, BAD_BQ), 0)
+
+arrow -> wid 0.1 ht 0.2 from BAD_PQR.sw + (0, ArrowHeight) \
+	to BAD_PQR.sw + (0, 0)
+box invis "consume $A$" with .c at BAD_PQR.sw + (0, 2*ArrowHeight)
+
+BAD_Par: box invis wid LegendWid with .e at BAD_PP.sw
+"Par: p \& q" at BAD_Par.w ljust
+.PE

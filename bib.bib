@@ -1,0 +1,557 @@
+
+@Article{trinder_98_strategies,
+  author =   {Philip W. Trinder and Kevin Hammond and Hans-Wolfgang Loidl and Simon L. {Peyton Jones}},
+  title =    {Algorithm + {S}trategy = {P}arallelism},
+  journal =      {Journal of Functional Programming},
+  year =     {1998},
+  volume =   {8},
+  number =   {1},
+  month =    jan,
+  pages =    {23--60},
+  read =     "no",
+  file =     "strategies.ps.gz"
+}
+
+@Article{lopez96:distance_granularity,
+  author =       {P. Lopez and M. Hermenegildo and S. Debray},
+  title =        {A methodology for granularity-based control of parallelism in logic programs},
+  journal =      {Journal of Symbolic Computation},
+  year =         1996,
+  volume =    22,
+  number =    4,
+  pages =     {715--734},
+  read = "yes",
+  file = "ciao_granuality.pdf"
+}
+
+
+@Misc{hermenegildo_ciao,
+  author =    {M. Hermenegildo and F. Bueno and D. Cabeza and M. Carro
+  and M. Garc\'ia de la Banday and P. Lopez and G. Puebla},
+  title =     {The CIAO Multi-Dialect Compiler and System:
+     An Experimentation Workbench for
+          Future (C)LP Systems},
+  file = "Ciao.ps",
+  read = "yes"
+}
+
+@article{harris_07_feedback_imp_par,
+ author = {Tim Harris and Satnam Singh},
+ title = {Feedback directed implicit parallelism},
+ journal = {SIGPLAN Notices},
+ volume = {42},
+ number = {9},
+ year = {2007},
+ issn = {0362-1340},
+ pages = {251--264},
+ doi = {http://doi.acm.org/10.1145/1291220.1291192},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ read = "yes",
+ file = "harris-sing_feedback-directed-implicit-parallelism.pdf"
+}
+
+@InProceedings{shen_98_granularity-control,
+  author = {Shen, Kish and Costa, V\'{\i}tor Santos and King, Andy},
+  title = {Distance: a new metric for controlling granularity for parallel execution},
+  booktitle = {Proceedings of the 1998 joint international conference and symposium on Logic programming},
+  year = {1998},
+  isbn = {0-262-60031-5},
+  location = {Manchester, United Kingdom},
+  pages = {85--99},
+  numpages = {15},
+  url = {http://portal.acm.org/citation.cfm?id=299315.300851},
+  acmid = {300851},
+  publisher = {MIT Press},
+  address = {Cambridge, MA, USA},
+} 
+
+@Misc{soper_improv_logic_languag_compil,
+  author =    {P. J. Soper and A. M. King and M. Longley},
+  title =     {Improving Logic Language Compilers},
+  file =      {king_imporving-logic-language-compilation.pdf},
+  read =      {no},
+}
+
+@Misc{king:_sched_analy_of_concur_logic_progr,
+  author =    {Andy King and Paul Soper},
+  title =     {Schedule Analysis of Concurrent Logic Programs},
+  file =      {king_schedule-analysis-of-lp.ps},
+  read =      {yes}
+}
+
+@MastersThesis{tannier:2007:parallel-mercury,
+  author =       {J\'er\"ome Tannier},
+  title =        {Parallel {Mercury}},
+  school =       {Institut d'informatique,
+                  Facult\'es Universitaires Notre-Dame de la Paix},
+  address =      {21, rue Grandgagnage,
+                  B-5000 Namur, Belgium},
+  year =         2007,
+  file =         {tannier_07_parallel_mercury.ps},
+  read =         {yes}
+}
+
+@InProceedings{jones_08_data-par-haskell,
+  author =       {Simon Peyton Jones and Roman Leshchinskiy and Gabriele Keller and Manuel M. T. Chakravarty},
+  title =        {Harnessing the Multicores: Nested Data Parallelism in Haskell},
+  booktitle = {{IARCS} Annual Conference on Foundations of Software Technology and Theoretical Computer Science},
+  year =      2008,
+  editor =    {R. Hariharan and M. Mukund and V. Vinay},
+  address =   {Bangalore},
+  month =     {October},
+  file =      {jones_08_data-par-haskell.pdf},
+  abstract =  {If you want to program a parallel computer, a purely
+                  functional language like Haskell is a promising
+                  starting point. Since the language is pure, it is
+                  by-default safe for parallel evaluation, whereas
+                  imperative languages are by-default unsafe. But that
+                  doesn't make it easy! Indeed it has proved quite
+                  difficult to get robust, scalable performance
+                  increases through parallel functional programming,
+                  especially as the number of processors increases. A
+                  particularly promising and well-studied approach to
+                  employing large numbers of processors is data
+                  parallelism. Blelloch's pioneering work on NESL
+                  showed that it was possible to combine a rather
+                  flexible programming model (nested data parallelism)
+                  with a fast, scalable execution model (flat data
+                  parallelism). In this paper we describe Data
+                  Parallel Haskell, which embodies nested data
+                  parallelism in a modern, general-purpose language,
+                  implemented in a state-of-the-art compiler, GHC. We
+                  focus particularly on the vectorisation
+                  transformation, which transforms nested to flat data
+                  parallelism.},
+  read =      {yes},
+  notes =     {A good paper, sadly no results section on the
+                  performance of this implementation.
+
+               It makes some
+                  interesting points about locality of reference,
+                  especially when an algorithm can be parallelised in
+                  multiple ways.  
+
+               The code transformations are quite
+                  in depth and in some cases difficult to follow.  The
+                  representation of data parallel arrays with regard
+                  to locality of reference and memory bandwith is
+                  excelent.  This un-parametric type transformation
+                  may be useful in Mercury.  When tuples are stored in
+                  an array the use of multiple arrays is interesting
+                  and gives some nice speed improvments for zip/unzip.
+
+               Some interesting discussion about inlineing, map/map 
+                  transformations and join (split ..) transformations 
+                  towards the end.  These impact on how work is balanced 
+                  between threads.}
+
+}
+
+@inproceedings{diplcl99,
+  title = "Mozart: {A} Programming System for Agent Applications",
+  year = {1999},
+  author = {Peter Van Roy and Seif Haridi},
+  abstract = {The Mozart Programming System is a development platform
+ designed for distributed programming,
+ symbolic computation, and constraint-based inferencing.
+ This article gives a survey of
+ the abilities of Mozart
+ for open, concurrent, resource-aware distributed computing.
+ We show by example how easy it is to
+ develop applications with these properties.
+ This makes Mozart particularly well-suited
+ for building agent applications.
+ We give a summary of some current
+ agent-based projects in Mozart.},
+  booktitle = "International Workshop on Distributed and Internet Programming with
+ Logic and Constraint Languages",
+  month = nov,
+  note = "Part of International Conference on Logic Programming (ICLP 99)",
+  sline = {2190},
+  label = {diplcl99},
+  file = {diplcl99.ps.gz}
+}
+
+@article{Toplas:99,
+  title = {Efficient Logic Variables for Distributed Computing},
+  year = {1999},
+  author = {Seif Haridi and Peter Van Roy and Per Brand and Michael Mehl and Ralf Scheidhauer and Gert Smolka},
+  abstract = {We define a practical algorithm for distributed rational tree unification and prove its correctness in both the off-line and on-line
+ cases.  We derive the distributed algorithm from a centralized one,
+ showing clearly the trade-offs between local and distributed
+ execution.  The algorithm is used to realize logic variables in the
+ Mozart Programming System, which implements the Oz language
+ (see http://www.mozart-oz.org/).
+ Oz appears to the programmer as
+ a concurrent object-oriented language with dataflow synchronization.
+ Logic variables implement the dataflow behavior.  We
+ show that logic variables can easily be added to the more restricted
+ models of Java and ML, thus providing an alternative way to do
+ concurrent programming in these languages.  We present common
+ distributed programming idioms in a network-transparent way using
+ logic variables.  We show that in common cases the algorithm maintains
+ the same message latency as explicit message passing.  In addition, it
+ is able to handle uncommon cases that arise from the properties of
+ latency tolerance and third-party independence.  This is evidence that
+ using logic variables in distributed computing is beneficial at both
+ the system and language levels.  At the system level, they improve
+ latency tolerance and third-party independence.  At the language
+ level, they help make network-transparent distribution practical.},
+  volume = 21,
+  journal = {ACM Transactions on Programming Languages and Systems},
+  number = 3,
+  month = may,
+  pages = {569--626},
+  sline = {3111},
+  project-key = {C1},
+  label = {TOPLAS99},
+  file = {TOPLASS99.gs.ps}
+}
+
+
+@inproceedings{1991:concurrent-clean,
+ author = {N\"{o}cker, E. G. J. M. H. and Smetsers, J. E. W. and Eekelen, Marko C. J. D. van and Plasmeijer, Marinus J.},
+ title = {Concurrent Clean},
+ booktitle = {PARLE '91: Proceedings of Parallel Architectures and Languages Europe},
+ year = {1991},
+ volume = {506},
+ isbn = {3-540-54152-7},
+ pages = {202--219},
+ publisher = {Springer-Verlag},
+ address = {London, UK},
+ read = "no",
+ }
+
+@article{2005:eden-parallel-fp,
+ author = {Loogen, Rita and Ortega-mall\'{e}n, Yolanda and Pe\,
+{n}a-mar\'{\i}, Ricardo},
+ title = {Parallel functional programming in Eden},
+ journal = {J. Funct. Program.},
+ volume = {15},
+ number = {3},
+ year = {2005},
+ issn = {0956-7968},
+ pages = {431--475},
+ doi = {http://dx.doi.org/10.1017/S0956796805005526},
+ publisher = {Cambridge University Press},
+ address = {New York, NY, USA},
+ read = "no",
+ file = "eden-parallel-fp.pdf",
+ }
+
+@article{trinder_loidl_pointon:2002:haskell-par-dist,
+ author = {Trinder, P. W. and Loidl, H.-W. and Pointon, R. F.},
+ title = {Parallel and Distributed Haskells},
+ journal = {J. Funct. Program.},
+ volume = {12},
+ number = {5},
+ year = {2002},
+ issn = {0956-7968},
+ pages = {469--510},
+ doi = {http://dx.doi.org/10.1017/S0956796802004343},
+ publisher = {Cambridge University Press},
+ address = {New York, NY, USA},
+ read = "no",
+ missing = "yes",
+ }
+
+@inproceedings{2008:eden-lphg-parallelism,
+ author = {Al Zain, Abdallah Deeb I. and Hammond, Kevin and Berthold, Jost and Trinder, Phil and Michaelson, Greg and Aswad, Mustafa},
+ title = {Low-pain, high-gain multicore programming in Haskell: coordinating irregular symbolic computations on multicore architectures},
+ booktitle = {DAMP '09: Proceedings of the 4th workshop on Declarative aspects of multicore programming},
+ year = {2008},
+ isbn = {978-1-60558-417-1},
+ pages = {25--36},
+ location = {Savannah, GA, USA},
+ doi = {http://doi.acm.org/10.1145/1481839.1481843},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ read = "no",
+ file = "eden-lphg-parallelism",
+ }
+
+
+@Misc{blair-chappell10:_what_paral_progr_reall_reall_want,
+  author =    {Stephen Blair-Chappell},
+  title =     {What parallel programmers really really want...},
+  howpublished = {Intel Software Blogs},
+  month =     {March},
+  year =      2010,
+  note =      {http://software.intel.com/en-us/blogs/2010/03/15/what-parallel-programmers-really-really-want}
+}
+
+@phdthesis{conway:2002:par,
+    author =    {Thomas Conway},
+    title =     {Towards parallel {Mercury}},
+    url = 	{http://www.cs.mu.oz.au/research/mercury/information/papers.html\#conway-thesis},
+    year =      {2002},
+    month =     {July},
+    school =    {Department of Computer Science and Software
+                  Engineering, The University of Melbourne},
+    address =       {Melbourne, Australia}
+}
+
+@TechReport{wang_hons_thesis,
+  author =       {Peter Wang},
+  title =        {Parallel {Mercury}},
+  institution =  {Department of Computer Science and Software
+                  Engineering, The University of Melbourne},
+  year =         2006,
+  type =      {Honours Thesis},
+  month =     {October},
+  address =       {Melbourne, Australia}}
+
+
+@article{jlp, 
+    author =    {Zoltan Somogyi and Fergus Henderson and Thomas
+                  Conway},
+    title =     {The execution algorithm of {Mercury}, an efficient
+                  purely declarative logic programming language},
+    journal =   {Journal of Logic Programming},
+    volume =    {26},
+    number =    {1-3},
+    month =     {October-December},
+    year =      {1996},
+    pages =     {17--64}
+} 
+
+@techreport{conway:2001:mercury-deep,
+    author =        {Thomas Conway and Zoltan Somogyi},
+    title =         {Deep profiling: engineering a profiler for a
+                  declarative programming language},
+    year =          2001,
+    month =         {July},
+    institution =   {Department of Computer Science and Software
+                  Engineering, University of Melbourne},
+    address =       {Melbourne, Australia}
+
+}
+
+% Maybe remove this reference since it's online.
+@misc{tutorial,
+        author =        {Ralph Becket},
+        title =         {Mercury tutorial},
+        year =          {1999},
+        note =          {Available from
+	{http://www.cs.mu.oz.au\z{}research\z{}mercury\z{}tutorial}}
+}
+
+@misc{mercury_refman,
+	author =	{Fergus Henderson and Thomas Conway and Zoltan
+                  Somogyi and David Jeffery and Peter Schachte and
+                  Simon Taylor and Chris Speirs and Tyson Dowd and
+                  Ralph Becket and Mark Brown},
+	title =		{The {M}ercury language reference manual, version 10.04},
+	howpublished  = "Available from {http://www.mercury.csse.unimelb.edu.au/}",
+	year =		{2010}
+}
+
+
+
+@Article{zinc,
+  author =       {Kim Marriott and Nicholas Nethercote and Reza Rafeh
+                  and Peter J. Stuckey and Maria Garc\'ia de la Banda
+                  and Mark Wallace},
+  title =        {The Design of the {Zinc} Modelling Language},
+  journal =      {Constraints},
+  year =         2008,
+  volume =    13,
+  number =    3,
+  pages =     {229-267},
+  month =     {September}}
+
+
+@TechReport{mercury-stm,
+  author =       {Leon Mika},
+  title =        {Software transactional memory in {Mercury}},
+  institution =  {Department of Computer Science and Software Engineering,
+                  Melbourne University},
+  year =         2007,
+  address =   {Melbourne, Australia},
+  month =     {October}
+}
+
+@InProceedings{haskell-stm,
+  author =       {Tim Harris and Simon Marlow and Simon Peyton-Jones
+                  and Maurice Herlihy},
+  title =        {Composable memory transactions},
+  booktitle = {The tenth {ACM} {SIGPLAN} {Symposium} on {Principles}
+                  and {Practice} of {Parallel} {Programming}},
+  pages =     {48-60},
+  year =      2005
+}
+
+@inproceedings{threadscope,
+ author = {Jones,Jr., Don and Marlow, Simon and Singh, Satnam},
+ title = {Parallel performance tuning for Haskell},
+ booktitle = {Haskell '09: Proceedings of the 2nd ACM SIGPLAN Symposium on Haskell},
+ year = {2009},
+ isbn = {978-1-60558-508-6},
+ pages = {81--92},
+ address = {Edinburgh, Scotland},
+ doi = {http://doi.acm.org/10.1145/1596638.1596649}
+}
+
+@inproceedings{wang_dep_par_conj,
+  author =      {Peter Wang and Zoltan Somogyi},
+  title =       {Minimizing the overheads of dependent {AND}-parallelism},
+  booktitle =   {Proceedings of the 27th International Conference on Logic Programming},
+  address = 	{Lexington, Kentucky},
+  year =        2011
+}
+
+@TechReport{bone:2008:hons,
+  author =       {Paul Bone},
+  title =        {Calculating likely Parallelism within Dependant
+                  Conjunctions for Logic Programs},
+  institution =  {University of Melbourne},
+  year =         2008,
+  type =      {Honours Thesis},
+  address =   {Melbourne, Australia},
+  month =     {October}}
+
+@article{simonmar_2009_multicore_rts,
+ author = {Simon Marlow and Simon Peyton\ Jones and Satnam Singh},
+ title = {Runtime support for multicore {H}askell},
+ journal = {SIGPLAN Notices},
+ volume = {44},
+ number = {9},
+ year = {2009},
+ issn = {0362-1340},
+ pages = {65--78},
+ doi = {http://doi.acm.org/10.1145/1631687.1596563}
+ }
+
+@inproceedings{multilisp,
+    author =    {Robert H. Halstead},
+    title =     {Implementation of {MultiLisp}: {L}isp on a multiprocessor},
+    booktitle = {Proceedings of the 1984 ACM Symposium on
+            	List and Functional Programming},
+    address =   {Austin, Texas},
+    pages =     {9--17},
+    year =      {1984}
+}
+
+@inproceedings{gprof,
+        author =       "S. L. Graham and P. B. Kessler and M. K. McKusick",
+        title =        "gprof: a call graph execution profiler",
+        booktitle =    "Proceedings of the 1982 SIGPLAN Symposium on Compiler
+                        Construction",
+        month =        jun,
+        year =         "1982",
+        location =     "Boston, Massachusetts",
+        pages =        "120--126"
+}
+
+@inproceedings{Chase_2005_wsdeque,
+ author = {David Chase and Yossi Lev},
+ title = {Dynamic circular work-stealing deque},
+ booktitle = {Proceedings of the seventeenth annual ACM Symposium on Parallelism in algorithms and architectures},
+ series = {SPAA '05},
+ year = {2005},
+ isbn = {1-58113-986-1},
+ location = {Las Vegas, Nevada, USA},
+ pages = {21--28},
+ numpages = {8},
+ url = {http://doi.acm.org/10.1145/1073970.1073974},
+ doi = {http://doi.acm.org/10.1145/1073970.1073974},
+ acmid = {1073974},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {deque, load balancing, lock-free, work stealing},
+} 
+
+@inproceedings{von_Praun:2007:implicit_parallelism_with_ordered_transactions,
+ author = {von Praun, Christoph and Ceze, Luis and Ca\c{s}caval, Calin},
+ title = {Implicit parallelism with ordered transactions},
+ booktitle = {Proceedings of the 12th Symposium on Principles and Practice of Parallel Programming},
+ year = {2007},
+ isbn = {978-1-59593-602-8},
+ address = {San Jose, California},
+ pages = {79--89},
+ numpages = {11},
+ url = {http://doi.acm.org/10.1145/1229428.1229443},
+ doi = {http://doi.acm.org/10.1145/1229428.1229443},
+ acmid = {1229443},
+ keywords = {implicit parallelism, ordered transactions, parallel programming, program parallelization, thread-level speculation, transactional memory},
+} 
+
+@article{DBLP:journals/jlp/MuthukumarBBH99,
+  author    = {Kalyan Muthukumar and
+               Francisco Bueno and
+               Maria J. Garc\'{\i}a de la Banda and
+               Manuel V. Hermenegildo},
+  title     = {Automatic Compile-Time Parallelization of Logic Programs
+               for Restricted, Goal Level, Independent {AND}-Parallelism},
+  journal   = {Journal of Logic Programming},
+  volume    = {38},
+  number    = {2},
+  year      = {1999},
+  pages     = {165-218},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@article{DBLP:journals/tcs/GrasH09,
+  author    = {Daniel Cabeza Gras and
+               Manuel V. Hermenegildo},
+  title     = {Non-strict independence-based program parallelization using
+               sharing and freeness information},
+  journal   = {Theoretical Computer Science},
+  volume    = {410},
+  number    = {46},
+  year      = {2009},
+  pages     = {4704-4723},
+  ee        = {http://dx.doi.org/10.1016/j.tcs.2009.07.044},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@inproceedings{DBLP:conf/lopstr/CasasCH07,
+  author    = {Amadeo Casas and
+               Manuel Carro and
+               Manuel V. Hermenegildo},
+  title     = {Annotation Algorithms for Unrestricted Independent {AND}-Parallelism
+               in Logic Programs},
+  booktitle = {Proceedings of the 17th International Symposium on
+  		Logic-based Program Synthesis and Transformation},
+  address   = {Lyngby, Denmark},
+  year      = {2007},
+  pages     = {138-153},
+  ee        = {http://dx.doi.org/10.1007/978-3-540-78769-3_10},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@article{Hermenegildo1995,
+	title = "Strict and nonstrict independent and-parallelism in logic programs: Correctness, efficiency, and compile-time conditions",
+	journal = "The Journal of Logic Programming",
+	volume = "22",
+	number = "1",
+	pages = "1--45",
+	year = "1995",
+	note = "",
+	issn = "0743-1066",
+	doi = "DOI: 10.1016/0743-1066(93)00007-F",
+	url = "http://www.sciencedirect.com/science/article/B6V0J-3YCMH4N-4/2/c0e3b963abba213093f4148b5a2351dd",
+	author = "Manuel V. Hermenegildo and Francesca Rossi"
+}
+
+@INPROCEEDINGS{bevemyr:reform,
+	AUTHOR = "Johan Bevemyr and Thomas Lindgren and Håkan Millroth",
+	TITLE = "Reform {P}rolog: the language and its implementation",
+	booktitle = "Proceedings of the Tenth International Conference on
+		Logic Programming",
+	PAGES = {283--298},
+	YEAR = {1993},
+	ADDRESS = "Budapest, Hungary"
+}
+
+@INPROCEEDINGS{Pontelli97automaticcompile-time,
+	author = {Enrico Pontelli and Gopal Gupta and Francesco Pulvirenti and
+		Alfredo Ferro},
+	title = {Automatic Compile-Time Parallelization of Prolog Programs for
+		Dependent And-Parallelism},
+	booktitle = {Proceedings of the 14th International Conference on Logic Programming},
+	year = {1997},
+	pages = {108--122},
+	address = {Leuven, Belgium}
+}

@@ -1,0 +1,794 @@
+#!/usr/bin/python
+# vim: ts=4 sw=4 et
+
+import getopt
+import os
+import re
+import sys
+from collections import defaultdict
+import pickle
+import math
+
+# Data for tests.
+
+# The path to use.
+mercury_path="/home/carlton/workspaces/pbone/stack_mem_profile.install/bin"
+
+# The compiler on taura is too old, I will fix it.
+#path="/home/taura/public/mercury-latest/x86_64-unknown-linux-gnu/bin"
+
+# The GC's initial heap size, in bytes.  (512MB)
+gc_initial_heap_size=512*1024*1024
+# Use only one marker thread for GC regardless of grade/test.
+gc_markers=1
+
+# A limit to the amount of memory available for a process, in kilobytes.
+# XXX This doesn't work, I don't know how to setrlimit in python.
+mem_limit=1024*1024
+
+# Maximum number of mercury engines to use.
+num_mercury_engines=[p+1 for p in range(4)]
+
+# Maximum number for --num-contexts-per-lc-per-thread
+num_loop_control_contexts_per_engine=[1, 2, 4]
+default_num_contexts_per_lc = 2
+
+# Values for --max-contexts-per-thread
+num_max_contexts_per_thread = [128, 512]
+default_max_contexts_per_thread = 128
+
+base_mcflags="-O2 --intermodule-optimization"
+
+base_mercury_options="--thread-pinning"
+
+# Grades for the control groups.
+control_grades=[("asmfast",     "asm_fast.gc.stseg"),
+                ("asmfast.par", "asm_fast.gc.par.stseg")]
+
+control_mcflags=("no-lc", "--no-par-loop-control --ignore-par-conjunctions")
+
+control_mercury_options=("P1-lc2", "-P 1")
+
+# Grades for the test groups.
+test_grades=[("asmfast.par",    "asm_fast.gc.par.stseg")]
+
+# MCFLAGS for testing, the first string in each tuple is a short description
+# used to generate file names.
+test_mcflags=[
+        ("no-lc", "--no-par-loop-control"),
+        ("lc", "--par-loop-control --no-par-loop-control-preserve-tail-recursion"),
+        ("lc-tr", "--par-loop-control --par-loop-control-preserve-tail-recursion"),
+    ]
+
+# Again, the first element is a concise name.
+test_mercury_options = \
+    [(("P%d-lc%d-c%d" % (p, lc, c)),
+            ("-P %d --max-contexts-per-thread %d --num-contexts-per-lc-per-thread %d" % (p, c, lc)))
+        for p in num_mercury_engines
+        for lc in num_loop_control_contexts_per_engine
+        for c in num_max_contexts_per_thread]
+
+# If we include tests with non stack segments grades then add
+# --max-contexts-per-thread 512 to these options.  otherwise these grades won't
+# perform well because they severly limit the number of live contexts one can
+# have.  They do this to work-around the memory problem that loop control
+# solves, but the work-around is at the expense of parallelism.
+
+# Set this to true to calculate standard deviation.
+write_stddev = False
+
+# The programs to test.
+programs = [
+      {"name": "raytracer",
+        "dir": "raytracer",
+        "prog_name": "main",
+        "test_args": "-d -p 0 -f RENDER_TIME < raytracer/snowgoon_1200.gml",
+        "times_file": "ray_times",
+        "tail_rec": True},
+      {"name": "mandelbrot",
+        "dir": "mandelbrot",
+        "prog_name": "mandelbrot",
+        "test_args": "-d -x 600 -y 600",
+        "times_file": "mandelbrot_times",
+        "tail_rec": True},
+      {"name": "mmult-indep",
+        "dir": "matrixmult_indep",
+        "prog_name": "mmult_test",
+        "test_args": "1200",
+        "times_file": "matmult_indep_times",
+        "tail_rec": False},
+      {"name": "mmult-dep",
+        "dir": "matrixmult_dep",
+        "prog_name": "mmult_test",
+        "test_args": "1200",
+        "times_file": "matmult_dep_times",
+        "tail_rec": False},
+      {"name": "spectral-indep",
+        "dir": "spectral_norm_indep",
+        "prog_name": "spectralnorm",
+        "test_args": "7000",
+        "times_file": "specnorm-indep_times",
+        "tail_rec": False},
+      {"name": "spectral-dep",
+        "dir": "spectral_norm_dep",
+        "prog_name": "spectralnorm",
+        "test_args": "7000",
+        "times_file": "specnorm-dep_times",
+        "tail_rec": False},
+    ]
+
+# The number of parallel jobs for make.
+parallel_jobs=4
+
+class CommandError(Exception):
+    def __init__(self, cmd, ret):
+        Exception.__init__(self,
+            "Command \"%s\" exited with status %d" % (cmd, ret))
+
+def run(cmd):
+    print "$ %s\n" % cmd
+    ret = os.system(cmd)
+    if ret != 0:
+        raise CommandError(cmd, ret)
+
+def setup_env():
+    old_path = os.environ["PATH"]
+    os.environ["PATH"] = mercury_path + ":" + old_path
+    os.environ["GC_INITIAL_HEAP_SIZE"] = str(gc_initial_heap_size)
+    os.environ["GC_MARKERS"] = str(gc_markers)
+    root_dir = os.getcwd()
+    return root_dir
+
+def remove_recursive(dir):
+    for (dirname, _, files) in os.walk(dir, topdown=False):
+        for file in files:
+            os.unlink(os.path.join(dirname, file))
+        os.rmdir(dirname)
+
+def build(prog, grade, mcflags, final_name, root_dir):
+    os.chdir(root_dir)
+    remove_recursive("build_dir")
+    os.mkdir("build_dir")
+    os.chdir("build_dir")
+
+    src_dir = os.path.join(root_dir, prog["dir"])
+    run("cp %s/*.m %s/Mmakefile ." % (src_dir, src_dir))
+
+    params_file = open("Mmake.params", "w")
+    params_file.write("GRADE = %s\n" % grade)
+    params_file.write("MCFLAGS = %s\n" % mcflags)
+    params_file.write("EXTRA_CFLAGS=-DMR_PROFILE_SBRK\n")
+    # Use static linkage, our executables will be self-contained.
+    params_file.write("EXTRA_MLFLAGS=--static\n")
+# Uncomment these for debugging:
+#    params_file.write("MCFLAGS = -Dall -dall --auto-comments %s\n" % mcflags)
+#    params_file.write("EXTRA_MGNUCFLAGS=-g\n")
+#    params_file.write("EXTRA_MLFLAGS=-g --static\n")
+    params_file.close()
+
+    run("mmake %s.depend" % prog["prog_name"])
+    run("%s/dotime mmake -j %d %s" % (root_dir, parallel_jobs, prog["prog_name"]))
+    run("cp %s %s/executables/%s" %
+        (prog["prog_name"], root_dir, final_name))
+
+def make_name(prog, t_or_c, grade, mcflags):
+    return "%s_%s_%s_%s" % (prog["name"], t_or_c, grade, mcflags)
+
+def do_rebuild(root_dir):
+    remove_recursive("executables")
+    os.mkdir("executables")
+
+    for prog in programs:
+
+        # Setup control groups.
+        for grade in control_grades:
+            build(prog, grade[1],
+                " ".join([base_mcflags, control_mcflags[1]]),
+                make_name(prog, "control", grade[0], control_mcflags[0]), root_dir)
+
+        # Setup test groups.
+        for (grade_name, grade) in test_grades:
+            for (mcflags_name, mcflags) in test_mcflags:
+                build(prog, grade,
+                    " ".join([base_mcflags, mcflags]),
+                    make_name(prog, "test", grade_name, mcflags_name), root_dir)
+
+    os.chdir(root_dir)
+
+"""
+A generator for tests
+"""
+def generate_tests():
+    for prog in programs:
+        for (grade_name, _) in control_grades:
+            yield {"prog": prog,
+                   "control_or_test": "control",
+                   "grade_name": grade_name,
+                   "mcflags_name": control_mcflags[0],
+                   "mercury_options": control_mercury_options}
+        for (grade_name, _) in test_grades:
+            for (mcflags_name, _) in test_mcflags:
+                for options in test_mercury_options:
+                    yield {"prog": prog,
+                           "control_or_test": "test",
+                           "grade_name": grade_name,
+                           "mcflags_name": mcflags_name,
+                           "mercury_options": options}
+
+def is_valid_test(test):
+    mcflags = test["mcflags_name"]
+    options_name = test["mercury_options"][0]
+    c_or_t = test["control_or_test"]
+    # Don't bother testing multiple --num-contexts-per-lc-per-thread options
+    # for non-lc tests
+    if "no-lc" == mcflags and \
+            not re.match(".*lc%d" % default_num_contexts_per_lc, options_name):
+        return False
+
+    prog_name = test["prog"]["name"]
+    if ("lc" == mcflags or "lc-tr" == mcflags) and re.match(".*indep$", prog_name):
+        return False
+
+    if "lc-tr" == mcflags and not test["prog"]["tail_rec"]:
+        return False
+
+    if (("lc" == mcflags) or ("lc-tr" == mcflags)) \
+            and c_or_t == "test" \
+            and not re.match(".*-c"+str(num_max_contexts_per_thread[0]), options_name):
+        return False
+
+    return True
+
+def do_run(n, root_dir):
+    tests = filter(is_valid_test, generate_tests())
+
+    print "Will run %d tests %d times each\n" % (len(tests), n)
+
+    results = Results()
+
+    for test in tests:
+        (options_name, options) = test["mercury_options"]
+        control_or_test = test["control_or_test"]
+        grade = test["grade_name"]
+        mcflags = test["mcflags_name"]
+        prog = test["prog"]
+        exec_name = make_name(prog, control_or_test, grade, mcflags)
+        #name = "_".join([exec_name, options_name])
+        os.environ["MERCURY_OPTIONS"] = options
+        rl = []
+        for i in range(n):
+            #append_line(prog["times_file"], name)
+            cmd = "%s/dotime executables/%s %s" % \
+                (root_dir, exec_name, prog["test_args"])
+            print "Testing: %s\n" % cmd
+            pipe = os.popen(cmd)
+            r = parse_pipe(pipe)
+            rl.append(r)
+            pipe.close()
+
+        results.add_result(prog["name"], control_or_test, grade, mcflags, options_name, rl)
+
+    del os.environ["MERCURY_OPTIONS"]
+
+    return results
+
+def parse_pipe(pipe):
+    lines = []
+    time = None
+    stack_mem = None
+    sbrk_mem = None
+    num_contexts = None
+    num_zones = None
+    for line in pipe.readlines():
+        if not time:
+            time = try_parse(line)
+        if not stack_mem:
+            stack_mem = try_parse_stack_mem(line)
+        if not sbrk_mem:
+            sbrk_mem = try_parse_sbrk_mem(line)
+        if not num_contexts:
+            num_contexts = try_parse_num_contexts(line)
+        if not num_zones:
+            num_zones = try_parse_num_zones(line)
+
+        if time and stack_mem and sbrk_mem and num_contexts and num_zones:
+            return (time, stack_mem, sbrk_mem, num_contexts, num_zones)
+
+        lines.append(line)
+
+    if time and stack_mem and sbrk_mem and num_zones:
+        return (time, stack_mem, sbrk_mem, num_contexts, num_zones)
+
+    raise ValueError("Couldn't parse output from command, output was:\n" + "\n".join(lines))
+
+def try_parse(line):
+    fields = line.strip().split()
+    if len(fields) != 7:
+        return None
+    realtime = fields[2]
+    timefields = realtime.strip().split(":")
+    if len(timefields) != 2:
+        return None
+    mins = int(timefields[0])
+    secs = float(timefields[1])
+    return (float(mins)*60.0)+secs
+
+def try_parse_stack_mem(line):
+    fields = line.strip().split(":")
+    if len(fields) != 3:
+        return None
+    if fields[0] == "Maximum allocated space within zones (KB) Net":
+        fields = fields[1].strip().split(" ")
+        if len(fields) != 2:
+            return None
+        return int(fields[0])
+    return None
+
+def try_parse_sbrk_mem(line):
+    fields = line.strip().split(":")
+    if len(fields) != 2:
+        return None
+    if fields[0] == "sbrk delta":
+        return int(fields[1])
+    return None
+
+def try_parse_num_contexts(line):
+    fields = line.strip().split(":")
+    if len(fields) != 2:
+        return None
+    if fields[0] == "Total contexts num/max":
+        fields = fields[1].strip().split("/")
+        return int(fields[0])
+    return None
+
+def try_parse_num_zones(line):
+    fields = line.strip().split(":")
+    if len(fields) != 2:
+        return None
+    if fields[0] == "Number of zones allocated":
+        return int(fields[1])
+    return None
+
+def append_line(file_name, line):
+    file = open(file_name, "a")
+    file.write(line + "\n")
+    file.close()
+
+def usage():
+    print "Usage: bench_all [-r] [-n NUM] [-w]\n"
+
+#
+# I was using lambdas to chain all these together but the pickle library
+# doesn't like that.
+#
+def programs_table():
+    return defaultdict(t_or_c_table)
+
+def t_or_c_table():
+    return defaultdict(grades_table)
+
+def grades_table():
+    return defaultdict(mcflags_table)
+
+def mcflags_table():
+    return defaultdict(options_table)
+
+def options_table():
+    return defaultdict(new_test_result_item)
+
+def new_test_result_item():
+    return None
+
+def base_table():
+    return defaultdict(None)
+
+class Results(object):
+    def __init__(self):
+        # Table of programs.
+        self.table = programs_table()
+        self.progs = set()
+
+    def add_result(self, prog_name, control_or_test, grade, mcflags, options, rl):
+        if prog_name not in self.progs:
+            self.progs.add(prog_name)
+        self.table[prog_name][control_or_test][grade][mcflags][options] = rl
+
+    def write_times(self, filename):
+        progs = list(self.progs)
+        progs.sort()
+
+        # Get the first (time) element from each tuple in the list of tuples.
+        def get_times(lot):
+            if self.version == 0:
+                # lot is not a table in version zero of the file format.
+                return lot
+            else:
+                try:
+                    return [t[0] for t in lot]
+                except:
+                    return None
+
+        if (self.version == 0) or (self.version == 3):
+            lc_default = 1
+        else:
+            lc_default = 2 
+        control_opts = control_mercury_options[0]
+
+        f = open(filename, "w")
+        f.write("{\small\n")
+        f.write("\\begin{tabular}{|l|" + ("r|"*len(progs)) + "}\n")
+        f.write("\\hline\n")
+        if self.talk:
+            progs = filter(
+                lambda p: not (p.endswith("indep") or p.startswith("mmult")),
+                progs)
+        for p in progs:
+            if p == "mmult-dep":
+                pp = "mmult-dep"
+            elif p == "mmult-indep":
+                pp = "mmult-indep"
+            elif p == "spectral-dep":
+                if self.talk:
+                    pp = "spectral"
+                else:
+                    pp = "spectral-dep"
+            elif p == "spectral-indep":
+                pp = "spectral-indep"
+            else:
+                pp = p
+            f.write("& \\multicolumn{1}{|c|}{\\textbf{%s}}\n" % pp)
+        f.write("\\\\\n")
+        f.write("\\hline\n")
+        
+        baseseq = base_table()
+        basepar = base_table()
+        for prog in progs:
+            ts = mean(get_times(self.table[prog]["control"]["asmfast"]["no-lc"][control_opts]))
+            tp = mean(get_times(self.table[prog]["control"]["asmfast.par"]["no-lc"][control_opts]))
+            baseseq[prog] = ts
+            basepar[prog] = tp
+
+        f.write("\\textbf{%30s} " % "seq");
+        for prog in progs:
+            t = mean(get_times(self.table[prog]["control"]["asmfast"]["no-lc"][control_opts]))
+            suseq = baseseq[prog] / t
+            supar = basepar[prog] / t
+            f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+            if write_stddev:
+                sd = stddev(get_times(self.table[prog]["control"]["asmfast"]["no-lc"][control_opts]))
+                f.write(" (%2.2f)" % sd)
+        f.write("\\\\\n")
+
+        f.write("\\textbf{%30s} " % "par, no \&");
+        for prog in progs:
+            t = mean(get_times(self.table[prog]["control"]["asmfast.par"]["no-lc"][control_opts]))
+            suseq = baseseq[prog] / t
+            supar = basepar[prog] / t
+            f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+            if write_stddev:
+                sd = stddev(get_times(self.table[prog]["control"]["asmfast.par"]["no-lc"][control_opts]))
+                f.write(" (%2.2f)" % sd)
+        f.write("\\\\\n")
+
+        for p in num_mercury_engines:
+            if self.talk and p == 3:
+                continue
+
+            f.write("\\hline\n")
+            nc = "%dc" % p
+
+            for c in num_max_contexts_per_thread:
+                if self.talk:
+                    f.write("\\textbf{%30s} " % ("%s, nolc, c%d" % (nc, c)));
+                else:
+                    f.write("\\textbf{%30s} " % ("par, \&, %s, nolc, c%d" % (nc, c)));
+                for prog in progs:
+                    stats = get_times(self.table[prog]["test"]["asmfast.par"]["no-lc"]["P%d-lc%d-c%d" % (p, lc_default, c)])
+                    t = mean(stats)
+                    suseq = baseseq[prog] / t
+                    supar = basepar[prog] / t
+                    f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+                    if write_stddev:
+                        sd = stddev(stats)
+                        f.write(" (%2.2f)" % sd)
+                f.write("\\\\\n")
+
+            lc = default_num_contexts_per_lc
+            c = default_max_contexts_per_thread
+            if self.talk:
+                f.write("\\textbf{%30s} " % ("%s, lc%d" % (nc, lc)));
+            else:
+                f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d" % (nc, lc)));
+            for prog in progs:
+                if prog.endswith("indep"):
+                    # Loop control is not applicable to independant programs
+                    # since their conjuncts are swaped they become
+                    # left-recursive.
+                    f.write(" & n/a ")
+                else:
+                    ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc"]["P%d-lc%d-c%d" % (p, lc, c)])
+                    if not ts:
+                        f.write(" & n/a ")
+                        continue
+                    t = mean(ts)
+                    suseq = baseseq[prog] / t
+                    supar = basepar[prog] / t
+                    f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+                    if write_stddev:
+                        sd = stddev(ts)
+                        f.write(" (%2.2f)" % sd)
+            f.write("\\\\\n")
+
+            if self.talk:
+                f.write("\\textbf{%30s} " % ("%s, lc%d, tr" % (nc, lc)));
+            else:
+                f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d, tr" % (nc, lc)));
+            for prog in progs:
+                for cur_p in programs:
+                    if cur_p["name"] == prog:
+                        this_prog = cur_p
+                        break
+                is_tr = this_prog["tail_rec"]
+                if prog.endswith("indep"):
+                    # Loop control is not applicable to independant programs
+                    # since their conjuncts are swaped they become
+                    # left-recursive.
+                    f.write(" & n/a ")
+                elif not is_tr:
+                    # Not all programs are tail recursive.
+                    f.write(" & n/a ")
+                else:
+                    ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc-tr"]["P%d-lc%d-c%d" % (p, lc, c)])
+                    if not ts:
+                        f.write(" & n/a ")
+                        continue;
+                    t = mean(ts)
+                    suseq = baseseq[prog] / t
+                    supar = basepar[prog] / t
+                    f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+                    if write_stddev:
+                        sd = stddev(ts)
+                        f.write(" (%2.2f)" % sd)
+            f.write("\\\\\n")
+
+        f.write("\\hline\n")
+        f.write("\\end{tabular}\n")
+        f.write("}\n")
+        f.close()
+
+    def write_mem(self, filename):
+        progs = list(self.progs)
+        progs.sort()
+
+        # Get the amount of memory used in stacks element from each tuple in
+        # the list of tuples.
+        def get_mem_stacks(lot):
+            try:
+                return [t[1] for t in lot]
+            except:
+                return None
+
+        if (self.version == 0) or (self.version == 3):
+            lc_default = 1
+        else:
+            lc_default = 2
+
+        # Get the amount that the program break moves by (the growth of the
+        # heap) from each tuple in the list of tuples.
+        def get_mem_sbrk(lot):
+            return [t[2] for t in lot]
+
+        def get_num_contexts(lot):
+            try:
+                return [t[3] for t in lot]
+            except:
+                return None
+
+        # XXX Remove lc values for independent programs.
+
+        f = open(filename, "w")
+        f.write("{\small\n")
+        f.write("\\begin{tabular}{|l|" + ("rr|"*len(progs)) + "}\n")
+        f.write("\\hline\n")
+        if self.talk:
+            progs = filter(
+                lambda p: not (p.endswith("indep") or p.startswith("mmult")),
+                progs)
+        for p in progs:
+            if p == "mmult-dep":
+                if self.talk:
+                    pp = "mmult"
+                else:
+                    pp = "mmult-depi"
+            elif p == "mmult-indep":
+                pp = "mmult-indep"
+            elif p == "spectral-dep":
+                if self.talk:
+                    pp = "spectral"
+                else:
+                    pp = "spectral-dep"
+            elif p == "spectral-indep":
+                pp = "spectral-indep"
+            else:
+                pp = p
+            f.write("& \\multicolumn{2}{|c|}{\\textbf{%s}}\n" % pp)
+        f.write("\\\\\n")
+        f.write("\\hline\n")
+
+        f.write("\\textbf{%30s} " % "seq");
+        control_opts = control_mercury_options[0]
+        for prog in progs:
+            m_stack = mean(get_mem_stacks(self.table[prog]["control"]["asmfast"]["no-lc"][control_opts]))
+            f.write(" & %4d & %5.2f" % (1, m_stack / 1024.0))
+            if write_stddev:
+                sd = stddev(get_mem_stacks(self.table[prog]["control"]["asmfast"]["no-lc"][control_opts]))
+                f.write(" (%2.2f)" % sd)
+        f.write("\\\\\n")
+
+        f.write("\\textbf{%30s} " % ("par, no \&"));
+        for prog in progs:
+            m_stack = mean(get_mem_stacks(self.table[prog]["control"]["asmfast.par"]["no-lc"][control_opts]))
+            f.write(" & %4d & %5.2f" % (1, m_stack / 1024.0))
+            if write_stddev:
+                sd = stddev(get_mem_stacks(self.table[prog]["control"]["asmfast.par"]["no-lc"][control_opts]))
+                f.write(" (%2.2f)" % sd)
+        f.write("\\\\\n")
+
+        for p in num_mercury_engines:
+
+            if self.talk and p == 3:
+                continue
+
+            f.write("\\hline\n")
+            nc = "%dc" % p
+
+            for c in num_max_contexts_per_thread:
+                if self.talk:
+                    f.write("\\textbf{%30s} " % ("par, \&, %s, nolc, c%d" % (nc, c)));
+                else:
+                    f.write("\\textbf{%30s} " % ("par, \&, %s, nolc, c%d" % (nc, c)));
+                
+                for prog in progs:
+                    stats = get_mem_stacks(self.table[prog]["test"]["asmfast.par"]["no-lc"][("P%d-lc%d-c%d" % (p, lc_default, c))])
+                    num_cs = get_num_contexts(self.table[prog]["test"]["asmfast.par"]["no-lc"][("P%d-lc%d-c%d" % (p, lc_default, c))])
+                    m_stack = mean(stats)
+                    num_c = mean(num_cs)
+                    f.write(" & %4d & %5.2f" % (num_c, m_stack / 1024.0))
+                    if write_stddev:
+                        sd = stddev(stats)
+                        f.write(" (%2.2f)" % sd)
+                f.write("\\\\\n")
+
+            for lc in num_loop_control_contexts_per_engine:
+                c = default_max_contexts_per_thread
+                f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d" % (nc, lc)));
+                for prog in progs:
+                    if prog.endswith("indep"):
+                        # Loop control is not applicable to independant programs
+                        # since their conjuncts are swaped they become
+                        # left-recursive.
+                        f.write(" & n/a & n/a")
+                    else:
+                        stats = get_mem_stacks(self.table[prog]["test"]["asmfast.par"]["lc"]["P%d-lc%d-c%d" % (p, lc, c)])
+                        num_cs = get_num_contexts(self.table[prog]["test"]["asmfast.par"]["lc"][("P%d-lc%d-c%d" % (p, lc, c))])
+                        if not stats:
+                            f.write(" & n/a & n/a")
+                            continue
+                        m_stack = mean(stats)
+                        num_c = mean(num_cs)
+                        f.write(" & %4d & %5.2f" % (num_c, m_stack / 1024.0))
+                        if write_stddev:
+                            sd = stddev(stats)
+                            f.write(" (%2.2f)" % sd)
+                f.write("\\\\\n")
+
+        f.write("\\hline\n")
+        f.write("\\end{tabular}\n")
+        f.write("}\n")
+        f.close()
+
+def drop_best_and_worst_results(l0):
+    # This is a shallow copy of the list, according to
+    # http://docs.python.org/library/copy.html
+    if len(l0) > 2:
+        l = l0[:]
+        l.sort()
+        return l[1:-1]
+    else:
+        return l0
+
+def mean(l0):
+    l = drop_best_and_worst_results(l0)
+    return float(sum(l)) / float(len(l))
+
+def stddev(l0):
+    l = drop_best_and_worst_results(l0)
+    if len(l) > 1:
+        n = float(len(l))
+        m = float(sum(l)) / n
+        # Sum of squared distances from the mean.
+        ssd = sum([(x - m)*(x - m) for x in l])
+        # Note the -1, since this is sample variance.
+        variance = ssd / (n - 1)
+        return math.sqrt(variance)
+    else:
+        return 0.0
+
+def main():
+    (opts, args) = getopt.getopt(sys.argv[1:], "f:rn:wmp:t")
+    if len(args) != 0:
+        print "Extra args " + args
+        usage()
+        sys.exit(1)
+
+    rebuild = False
+    n = 1
+    write_times = False
+    write_mem = False
+    results_file = "results_table.tex"
+    pickle_file="results.pickle"
+    talk = False
+
+    for (opt, value) in opts:
+        if opt == "-r":
+            rebuild = True
+        elif opt == "-n":
+            n = int(value)
+            if n < 0:
+                usage()
+                sys.exit(1)
+        elif opt == "-w":
+            write_times = True
+        elif opt == "-f":
+            results_file = value
+        elif opt == "-m":
+            write_mem = True
+        elif opt == "-p":
+            pickle_file = value
+        elif opt == "-t":
+            talk = True
+        else:
+            usage()
+            sys.exit(1)
+
+    if write_times and write_mem:
+        print "Cannot write out timing and memory results\n"
+        sys.exit(1)
+
+    root_dir = setup_env()
+    if rebuild:
+        do_rebuild(root_dir)
+
+    if n > 0:
+        os.chdir(root_dir)
+        results = do_run(n, root_dir)
+        pf = open(pickle_file, "wb")
+        version = 2 # Version number.
+        pickle.dump(version, pf)
+        pickle.dump(results, pf)
+        pf.close()
+        results.version = version
+        results.talk = talk
+    elif write_times or write_mem:
+        pf = open(pickle_file, "rb")
+        data = pickle.load(pf)
+        try:
+            version = int(data)
+            results = pickle.load(pf)
+        except TypeError:
+            version = 0
+            results = data
+        print "Read results from %s with version %d\n" % (pickle_file, version)
+        pf.close()
+        results.version = version
+        results.talk = talk
+
+    if write_times:
+        results.write_times(results_file)
+
+    if write_mem:
+        results.write_mem(results_file)
+
+if __name__ == "__main__":
+    main()
+
