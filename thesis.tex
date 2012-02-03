@@ -92,59 +92,64 @@ for the degree of Bachelor of Computer Science at the University of Melbourne.
 This work occured before my PhD candidature commenced.
 It included the profiler feedback framework that is discussed in Section
 \ref{sec:background}.
-It also includes an initial version of the automatic parallelisation tool
+It also includes an initial, rudimentary, version of the automatic
+parallelisation tool
 (Section \ref{sec:background}
-including two algorithms:
-\paul{I don't know where I'll discuss this yet, it's currently in the overlap
-paper}
-the depth-first search for parallelisation opportunities
-(Section \ref{sec:dfs-for-opportunities}),
-and the variable use time analysis (Section \ref{sec:var_use_time})
+including an algorithm for determining when a sub-computation produces or
+consumes a variable (Section \ref{sec:var_use_time}).
 
 Peter Wang and I worked together to implement work stealing for the Mercury
 runtime system.
-\paul{Somewhere I've written down what percentage of the work is mine, look
-this up}
+We estimate that Peter contributed 80\% of the work stealing implementation
+and that I contributed 20\%.
 \paul{I haven't written up this work, I must decide which chapter it belongs
-in}.
+in, maybe it should be part of the background}.
 
 Chapter \ref{chap:overlap} is derived from a journal paper:
 
-Paul Bone, Zoltan Somogyi and Peter Schachte.
-\newblock Estimating the overlap between dependent computations for automatic
-  parallelization.
-\newblock {\em Theory and Practice of Logic Programming}, 11(4--5):575--591,
-  2011.
+% XXX: not really a quote, I want this text to be typeset as a paragraph whose
+% indent (not just first line) is larger than normal.
 
-Zoltan, Peter and I worked together to develop the overlap algorithm.
-\paul{The basis for this algorithm first appears in Zoltan's Louven slides}
-The implementation and testing is all my own work.
-Zoltan and Peter assisted me in writing and editing the paper.
+\begin{quote}
+Paul Bone, Zoltan Somogyi and Peter Schachte.
+Estimating the overlap between dependent computations for automatic
+parallelization.
+{\em Theory and Practice of Logic Programming}, 11(4--5):575--591, 2011.
+\end{quote}
+
+% Zoltan, Peter and I worked together to develop the overlap algorithm.
+% \paul{The basis for this algorithm first appears in Zoltan's Louven slides}
+% The implementation and testing is all my own work.
+% Zoltan and Peter assisted me in writing and editing the paper.
 
 Chapter \ref{chap:loop_control} is derived from a conference paper:
 
+\begin{quote}
 Paul Bone, Zoltan Somogyi and Peter Schachte.
-\newblock Controlling Loops in Parallel Mercury Code.
-\newblock {\em Declarative Aspects of Multicore Programming},
+Controlling Loops in Parallel Mercury Code.
+{\em Declarative Aspects and Applications of Multicore Programming},
 Philadelphia PA USA, Janurary 2012.
+\end{quote}
 
-Zoltan and I developed the datastructures and algorithm.
-80\% of the implementation is my own work.
-\paul{Zoltan worked on the code generator changes, but are they actually part
-of the research?}
-Zoltan and Peter assisted me in writing and editing the paper.
+% Zoltan and I developed the datastructures and algorithm.
+% 80\% of the implementation is my own work.
+% \paul{Zoltan worked on the code generator changes, but are they actually part
+% of the research?}
+% Zoltan and Peter assisted me in writing and editing the paper.
 
-Chapter \ref{chap:threadscope} is derived from a workshop paper:
+Chapter \ref{chap:tscope} is derived from a workshop paper:
 
+\begin{quote}
 Paul Bone and Zoltan Somogyi
-\newblock Profiling parallel Mercury programs with ThreadScope.
-\newblock {\em 21st Workshop on Logic-based methods in Programming Environments},
+Profiling parallel Mercury programs with ThreadScope.
+{\em 21st Workshop on Logic-based methods in Programming Environments},
 Lexington KY USA, July 2011.
+\end{quote}
 
-Zoltan provided feedback about my ideas and contributed a number of ideas of
-his own.
-I am the sole author of the implementation.
-Zoltan assisted me in writing and editing the paper.
+% Zoltan provided feedback about my ideas and contributed a number of ideas of
+% his own.
+% I am the sole author of the implementation.
+% Zoltan assisted me in writing and editing the paper.
 
 \chapter*{Acknowledgements}
 
@@ -156,27 +161,76 @@ Zoltan assisted me in writing and editing the paper.
 
 \chapter{Introduction}
 
-\section{Introduction}
+\paul{
+This contains a high level discussion of what I'm trying to
+accomplish.}
 
-\section{Background}
+\chapter{Background}
+
+\section{Parallelism in declarative languages}
+
+\paul{
+(Prolog, Mercury, Haskell,
+Data-parallel languages such as DpH).
+}
+
+\paul{
+This should just 'set the stage' for my work.  I would
+like to leave the contrasting discussions until later in the
+thesis, perhaps at the end of each major chapter.
+}
+
+\paul{
+I don't want to introduce all my citations here (the way Liz has to
+due to the APA-formatting standard).  Only enough that the user
+understand the context for reading the research chapters.  So,
+closely related work should be introduced for the first time when
+it is compared with my work.
+}
+
+\section{History of Parallelism in Mercury}
+
+\paul{
+I will have given an overview of parallelism in Mercury in the
+previous section.  So in this section I would like to describe how
+parallelism in Mercury is implemented.  This is where terms such as
+engine, context, spark etc should be introduced, as well as a
+discussion about how the RTS handles these objects.
+}
 
 \chapter{Overlap}
-\label{ref:overlap}
+\label{chap:overlap}
 \input{overlap}
 
+\paul{
+    Add discussion about how our data-flow analysis doesn't recognize loops
+    since they need to be treated specially.}
+
 \chapter{Loop Control}
-\label{ref:loop_control}
+\label{chap:loop_control}
 \input{loop_control}
 
+\paul{
+    Add something about updating overlap's cost model, then we need to
+    re-evaluate it.}
+
 \chapter{Visualisation}
-\label{ref:tscope}
+\label{chap:tscope}
 \input{tscope}
+
+\chapter{Revising the RTS}
+\label{ref:rts}
+
+\paul{XXX}
+
+\chapter{Order independent state update}
+\label{ref:order_indep_state_update}
+
+\paul{This chapter may be removed}
 
 \chapter{Conclusion}
 
-\section{Related Work}
-
-\section{Conclusion}
+% Each research chapter contains a discussion of related work.
 
 \bibliographystyle{plain}
 \bibliography{bib}
