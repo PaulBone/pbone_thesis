@@ -1,0 +1,58 @@
+%
+% vim: ft=tex ts=4 sw=4 
+%
+
+
+Moore's law\cite{moore} states that transistor density density is
+expected to double roughly every 18 months.
+However, it is often misunderstood to refer to CPU clock speeds.
+
+
+The rate at which computers are becoming faster at sequential
+execution has dropped significantly.  Instead their parallel processing 
+ability is increasing, and multicore computers are now common.
+Automatically parallelising programs is becoming much more desirable.
+Parallelisation of programs written in imperative languages is very
+difficult.  In contrast, it is trivial to determine if it is safe to
+parallelise part of a program written in a pure declarative language.
+However, it is difficult to determine if parallelising part of any
+program is an optimisation.  Frequently parallelisation can lead to
+cases where the overheads of parallel execution outweigh the speedup
+that might have been available by parallelising the program.
+
+Mercury --- a purely declarative logic programming language ---
+provides a good framework for automatic parallelisation.  Mercury
+already supports explicit parallelism of dependent conjunctions, as
+well as powerful profiling tools which generate data for my analysis.
+
+When a lot of parallelism is available (in which case the program is said to
+be \emph{embarrassingly parallel}), it is easy to parallelise the
+program beyond the parallel execution capacity of the computer it is
+running on.
+While the amount of parallelism the machine can exploit
+cannot increase beyond the number of CPUs,
+the overheads of parallel execution continue to increase.
+This often cripples the performance of such programs.
+For example a ray-tracer that creates an image
+1,000$\times$1,000 pixels in size has 1,000,000 independent computations
+available for parallelisation.
+Parallelising all of these on a four processor machine creates too
+many overheads, more than would be necessary to parallelise this program
+optimally.
+
+In other cases it is difficult for programmers to \emph{judge} whether
+a computation is expensive enough to be worth parallelising,
+or keep track of how many processors will be available at any given
+time during the program's execution.
+This makes automatic parallelisation desirable.
+
+I expect that automatic parallelisation will more easily and
+effectively parallelise declarative programs than manual
+parallelisation.
+Furthermore, if a program is modified it's performance characteristics
+are also likely to change and it would need to be
+\emph{re-parallelised}.
+Re-parallelising a program manually will be a tedious waste of time,
+automatic parallelisation will save programmers a lot of time in these
+situations.
+
