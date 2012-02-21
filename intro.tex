@@ -2,53 +2,86 @@
 % vim: ft=tex ts=4 sw=4 
 %
 
+Field Effect Transistors (FETs) in particular Metal Oxide Semiconductor FETs
+(MOSETs) consist of a channel of silicon between source and drain terminals and
+a layer of oxide connected to a gate.
+As a potential voltage is applied between the gate and drain creating an
+electric field in the oxide
+the transistor switches on;
+current may flow between the source and drain.
+The thiner the layer if oxide the stronger the electric field and the faster
+the transistor can switch.
+Transistors also switch faster when more voltage is applied
+and as the area of the oxide layer increases.
+Since it is desirable to make faster and faster processors,
+manufacturers are try to make processors smaller and smaller.
+
 In 1965 Moore~\cite{moore} predicted that the transistor 
-density would double roughly every two years.
-% XXX: Speed as a function of density.
-As density increased transistors where able to switch faster allowing
-processor speeds to also improve exponentially.
+density would double roughly every two years,
+therefore, as transistors became smaller we saw an
+exponential growth in the speed of processors.
+Until at a 45nm process the width of the oxide
+(actually silicon oxide, not metal oxide)
+was roughly 1nm thick.
+about the size of only five silicon atoms.
+At this size quantum tunneling is problematic and current is leaked from the
+gate to the silicon beneath,
+wasting power and therefore producing excess heat.
+Novel solutions,
+such as using hafnium-based compound rather than silicon
+oxide~\cite{intel-high-k},
+are necessary to manufacture power efficent CPUs on a 45nm process.
+Smaller processes are being used, shrinking the area in MOSFETs,
+however, the thickness of the oxide layer is not decreasing.
+Similarly, as the connections between transistors become thinner,
+lower voltages must be used to avoid excess heat.
+These two effects mean that transistors cannot run faster as they become
+smaller.
 
-Manufacturers continued to shrink their process,
-until at a 45nm process the width of the gate dialectric
-(made of silicon-oxide)
-in MOSFETs was approximately 1nm thick,
-roughly the size of five silicon atoms.
+To overcome these clock speed limitations manufacturers must build processors
+that can do more work concurrently.
+There are a number of ways to acheive this including:
+SIMD instruction sets,
+pipelining,
+and executing multiple instructions in a single clock cycle.
+One of the most notable of these techniques is multicore execution.
+Multiple processing cores can be placed in the same package,
+and usually on the same die.
+Individiual cores work individually, communicating through the memory
+heirachy;
+this makes additional cores relativly easy to add to a processor design.
+Therefore, this is a popular solution to the physical limitations of
+transistors.
 
-The thinner the gate the faster a transistor can switch,
-thereby affecting the clockspeed of the processor.
-However, at these thicknesses quantium tunneling occurs, leaking current across
-the gate consuming more power and therefore producing excess heat.
-
-Manufacturers continue to use smaller processes without making the gate
-dialectric smaller,
-Therefore, processor clock speeds are no-longer increaseing as new processors
-are released.
-
-
-when other physical limitations
-made it difficult to use higher clock speeds.
-The most notable limitations are:
-power usage, since the power used by a processor is quadratic in its clock speed;
-and heat disipation, as a processor uses more power it produces and needs to
-dispiate more heat.
-
-Dispite this, manufacturers are still able to improve the performance of their
-processors.
-This is acheived by packaging more than one core in a single processor.
-
-
-Manufacturers 
-
-this trend was correct, with the density of transistors
-growing exponentially\cite{free_lunch_is_over}.
-
-Moore's law\cite{moore} states that transistor
-However, it is often misunderstood to refer to CPU clock speeds.
+As processors have changed over the years,
+high level languages have remained the same;
+the same programming paradigms have been applicable to all processors.
+This is no-longer true for multicore processors,~%
+\footnote{We show in this thesis that multicore processors do not need to be
+programmed any differently than single-core processors.}
+programmers are expected to supply each processor with its own instruction
+stream.
+This is usually done by programming with \emph{threads}.
+The programmer creates multiple threads of exececution and the operating system
+multiplexes these threads onto processors.
+Threads communicate through shared memory and must synchronize to ensure that
+memory is kept in a consistent state.
+The most common synchronization method is the use of mutual exclusion locks.
+Locks prevent concurrent access to the same resource by different threads,
+however they pose particular problems: XXX
 
 
-The rate at which computers are becoming faster at sequential
-execution has dropped significantly.  Instead their parallel processing 
-ability is increasing, and multicore computers are now common.
+
+However, multicore processors are a significant challenge for programmers.
+modern processors have simply been faster.
+
+
+
+However, they are difficult to program because the task of scheduling work and
+communicating between them is now the responsability of the programmer.
+
+
+
 Automatically parallelising programs is becoming much more desirable.
 Parallelisation of programs written in imperative languages is very
 difficult.  In contrast, it is trivial to determine if it is safe to
