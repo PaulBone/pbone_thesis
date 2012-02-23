@@ -5,7 +5,14 @@
 PIC =		$(wildcard *.pic)
 PIC_TEX =	$(PIC:%.pic=%.tex)
 
-TEX_PROSE = thesis.tex overlap.tex loop_control.tex tscope.tex intro.tex
+TEX_PROSE = \
+		backgnd_mercury.tex \
+		intro.tex \
+		loop_control.tex \
+		overlap.tex \
+		thesis.tex \
+		tscope.tex
+
 TEXFILES = $(TEX_PROSE) macros.tex
 TABLES_TEX = mem_table.tex times_table.tex
 
