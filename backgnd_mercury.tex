@@ -5,7 +5,7 @@ While the syntax of Mercury is based on the syntax of Prolog,
 semantically the two languages are very different
 due to Mercury's purity and its type, mode, determinism and module systems.
 
-The abstract syntax of of Mercury is:
+The abstract syntax of Mercury is:
 % (The handling of each of the omitted constructs, e.g. method calls,
 % is analogous to one of the constructs that \emph{is} listed in the figure.)
 % \paul{And here, the reader doesn't even need to know this.}
@@ -23,18 +23,26 @@ $$
 \mbox{goal}~G
     & :~ x = y ~|~ x = f(y_1,~\ldots,~y_n)
         & \hbox{unifications}\\
-    & |~ p(x_1,~\ldots,~x_n) ~|~ x_0(x_1,~\ldots,~x_n)
-        & \hbox{first and higher order calls} \\
+    & |~ p(x_1,~\ldots,~x_n)
+        & \hbox{first order calls} \\
+    & |~ x_0(x_1,~\ldots,~x_n)
+        & \hbox{higher order calls} \\
     & |~ \hbox{foreign}(p, \hbox{\emph{foreign code}},
         & \\
     & ~~~ [x_1:~f_1,~\ldots,x_n:~f_n])
         & \hbox{foreign code} \\
-    & |~ (G_1,~\ldots,~G_n) ~|~ (G_1~\&~\ldots~\&~G_n)
-        & \hbox{seq and par conjunctions}\\
-    & |~ (G_1 ; \ldots ; G_n) ~|~ \hbox{switch}~x~(\ldots;~f_i: G_i ; \ldots)
-        & \hbox{disjunctions and switches}\\
-    & |~ (if~G_c~then~G_t~else~G_e) ~|~ not~G
-        & \hbox{if-then-elses and negations}\\
+    & |~ (G_1,~\ldots,~G_n)
+        & \hbox{sequential conjunctions}\\
+    & |~ (G_1~\&~\ldots~\&~G_n)
+        & \hbox{parallel conjunctions}\\
+    & |~ (G_1 ; \ldots ; G_n)
+        & \hbox{disjunctions}\\
+    & |~ \hbox{switch}~x~(\ldots;~f_i: G_i ; \ldots)
+        & \hbox{switches}\\
+    & |~ (if~G_c~then~G_t~else~G_e)
+        & \hbox{if-then-elses}\\
+    & |~ not~G
+        & \hbox{negations}\\
     & |~ some~[x_1,\ldots,x_n]~G
         & \hbox{quantifications}\\
 \end{array}
@@ -238,9 +246,9 @@ main(S0, S) :-
 \code{S0} is the initial state of the world,
 \code{S1} is the state of the world after printing ``\code{Hello }'',
 and \code{S} is the state of the world
-after printing ``\code{world\\n}'' as well.
+after printing ``\code{world\n}'' as well.
 Note that the difference e.g.\ between \code{S1} and \code{S}
-represents not just the printing of ``\code{world\\n}'',
+represents not just the printing of ``\code{world\n}'',
 but also all the changes made in the state of the world
 by \emph{other} processes since the creation of \code{S1}.
 
@@ -251,42 +259,36 @@ but this sugar does not affect
 the compiler's internal representation of the program.
 
 \noindent
-Mercury divides goals into three categories:
-pure, semipure and impure.
+Mercury divides goals into three purity categories:
 
-% XXX Currently here in my review.
-\begin{itemize}
+\begin{description}
 
-    \item
-    Pure goals have no side effects
+    \item[pure goals] have no side effects
     and their outputs do not depend on side effects;
 
-    \item
-    semipure goals have no side effects
+    \item[semipure goals] have no side effects
     but their outputs may depend side effects;
 
-    \item
-    impure goals may have side effects.
+    \item[impure goals] may have side effects.
 
-\end{itemize}
+\end{description}
 
 \noindent
 Semipure and impure predicates and functions
 have to be declared as such,
 and calls to them must be prefaced with either
-\verb|impure| or \verb|semipure| (whichever is appropriate).
+\code|impure| or \code|semipure| (whichever is appropriate).
 The vast majority of Mercury code is pure,
 with impure and semipure code confined to a few places
 where it is used to implement pure interfaces.
 (For example, the implementation of the all-solutions predicates
 in the Mercury standard library uses impure and semipure code.)
 Programmers can wrap
-\verb|promise_pure| or \verb|promise_semipure| around a goal
+\code|promise\_pure| or \code|promise\_semipure| around a goal
 to promise to the compiler (and to human readers) that
 the goal itself is pure or semipure respectively,
 even though some of the code inside the goal may be less pure.
 
-\tr{
 The compiler keeps a lot of information associated with each goal,
 whether atomic or not.
 This includes:
@@ -294,8 +296,8 @@ This includes:
 \begin{itemize}
 \item
 the set of variables bound (or \emph{produced}) by the goal;
-% PURITY \item
-% PURITY the purity of the goal
+\item
+the purity of the goal
 \item
 the \emph{nonlocal set} of the goal,
 which means the set of variables
@@ -304,8 +306,8 @@ that occur both inside the goal and outside it; and
 the determinism of the goal.
 \end{itemize}
 %\vspace{3mm}
-}
 
-% \noindent
-% A complete description of Mercury
-% can be found in the language reference manual \cite{mercury_refman}.
+\noindent
+A complete description of Mercury
+can be found in the language reference manual \cite{mercury_refman}.
+
