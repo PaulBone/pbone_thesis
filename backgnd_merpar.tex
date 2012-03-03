@@ -59,48 +59,50 @@ Following \cite{simonmar_2009_multicore_rts},
 we economize on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
-\tr{
 when an engine executes a spark, it uses its current context,
 or if it does not have a context a new one is allocated
 (from the pool of free contexts if the pool is not empty,
 and a newly created context otherwise).
 Unlike \cite{simonmar_2009_multicore_rts},
 Mercury's sparks cannot be garbage collected and must be executed.
-}
 
 The only parallel construct in Mercury is parallel conjunction,
 which is denoted $(G_1~\&~\ldots~\&~G_n)$.
-All the conjuncts must be deterministic or cc\_multi,
-that is, they must all have exactly one solution.
+All the conjuncts must be \ddet or \dccmulti,
+that is, they must all have exactly one solution,
+or commit to exactly one solution.
 This restriction greatly simplifies the implementation,
 since it guarantees that there can never be any need
 to execute $(G_2~\&~\ldots~\&~G_n)$ multiple times,
 just because $G_1$ has succeeded multiple times.
 (Any local backtracking inside $G_1$ will not be visible to the other conjuncts;
-bindings made by det code are never retracted.)
-% The current Mercury implementation supports parallelism only for det code,
-% since supporting it for code that may have no solution
-% would represent speculative execution,
-% while supporting for code that may have more than one solution
-% would require significant new infrastructure for managing bindings.
+bindings made by \ddet code are never retracted.)
+The current Mercury implementation supports parallelism only for \ddet and \dccmulti,
+since supporting it for code that may have no solution
+would represent speculative execution,
+while supporting for code that may have more than one solution
+would require significant new infrastructure for managing bindings.
 However, this is not a significant limitation.
 Since the design of Mercury strongly encourages deterministic code,
-in our experience, about 75 to 85\% of all Mercury procedures are det,
-and most programs spend an even greater fraction of their time in det code.
+in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
+and most programs spend an even greater fraction of their time in \ddet code.
 % \peter{Do we have any statistics regarding what proportion of execution time
 %   is spent in det code?  That would be a more relevant statistic.}
 Existing algorithms for executing nondeterministic code in parallel
 have very significant overheads, generating slowdowns by integer factors.
 Thus we have given priority to parallelizing deterministic code,
 which we can do with \emph{much} lower overhead.
-% We think that avoiding such slowdowns is a good idea,
-% even if it does mean foregoing the parallelization of 10 to 25\% of a program.
+We think that avoiding such slowdowns is a good idea,
+even if it does mean foregoing the parallelization of 10 to 25\% of a program.
 
 The Mercury compiler implements $(G_1~\&~G_2~\&~\ldots~\&~G_n)$
-by creating a data structure representing a barrier,
+by creating a \emph{syncterm}, a data structure representing a barrier,
 and then spawning off $(G_2~\&~\ldots~\&~G_n)$ as a spark.
-\tr{
+The spark contains a pointer to the syncterm as well as a pointer 
+to the code it must execute.
 The spark is added to the head of the context's double-ended queue.
+\paul{It may run most sparks it finds at the head of it's queue, not just this one.
+However the details are complicated wo I'll come back to this.}
 If the context finishes the execution of the first conjunct
 and finds that spark is still at the head of its queue,
 it will pick it up and run it itself.
@@ -108,8 +110,8 @@ This is a useful optimization,
 % it's also really well-known.
 since it avoids using a separate context in the relatively common case
 that all the other CPUs are busy with their own work.
-(Contexts contain stacks, so they occupy nontrivial amounts of memory.)
-}
+This optimization is also useful since it can avoid the creation of supurfluous
+contexts and their stacks.
 Since $(G_2~\&~\ldots~\&~G_n)$ is itself a conjunction,
 it is handled the same way:
 the context executing it
@@ -124,7 +126,6 @@ completed its job.
 When all conjuncts have done so,
 the original context will continue execution after the parallel conjunction.
 
-\tr{
 When an engine becomes idle, it will first try
 to resume a suspended but runnable context if there is one.
 If not, it will attempt to \emph{steal} sparks
@@ -133,11 +134,7 @@ If successful, it will allocate a context,
 and start running the spark in that context.
 The work-stealing dequeue structure we are using
 is from \cite{Chase_2005_wsdeque}.
-}
 
-% Replaces above with a much shorter description,
-% one that assumes readers know barriers
-\tr{
 After the end of the code of each conjunct,
 the compiler inserts synchronization code.
 This code starts by decrementing the number of outstanding conjuncts
@@ -158,9 +155,7 @@ may or may not be the now runnable syncterm-creating context.
 We have a special provision to avoid the potential race-condition
 between one engine suspending the original context
 at the same time as another engine is trying to wake it up.
-}
 
-\tr{
 If an engine with a context other than the original one finds that
 there are still outstanding jobs, they check their local spark queue
 for any such work, otherwise they look for global work.
@@ -177,7 +172,6 @@ it will then attempt to steal work from other contexts.
 If unsuccessful, it will become idle and sleep for a period of time
 before it looks for work again
 or is woken up because a context has become runnable.
-}
 
 \begin{figure}
 \begin{verbatim}
@@ -221,6 +215,9 @@ map_foldl_par(M, F, L, FutureAcc0, Acc) :-
 %\vspace{-1\baselineskip}
 \end{figure}
 
+% XXX: This paragraph raises an interesting point and leads to another
+% justification for the use of sparks.  However, it is out of place here.
+%
 % The simplest way to implement a parallel conjunction with $n$ conjuncts
 % is to spawn off $n-1$ of the conjuncts,
 % letting other CPUs pick them up when they are free,
@@ -253,7 +250,6 @@ it waits for this signal (if it has not yet happened),
 and then retrieves the value from the future.
 % Both operations are protected by mutexes.
 
-\tr{
 For each of these shared variables,
 the compiler creates a data structure called a \emph{future} \cite{multilisp},
 which contains room for the value of the variable,
@@ -272,7 +268,6 @@ looking for other work.
 When it wakes up,
 or if the flag said that the value was already `produced',
 the wait operation simply gets the value of the variable.
-}
 
 To minimize waiting,
 the compiler pushes signal operations on each future
