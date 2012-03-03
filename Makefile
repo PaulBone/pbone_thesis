@@ -10,6 +10,7 @@ TEX_PROSE = \
 		intro.tex \
 		backgnd_mercury.tex \
         backgnd_merpar.tex \
+        backgnd_deep.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex \
