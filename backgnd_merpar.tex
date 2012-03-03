@@ -1,0 +1,307 @@
+
+The low-level C backend of the Mercury implementation uses C as a
+pesudo-assembler;
+A Mercury \emph{engine} structure represents a CPU that can execute Mercury
+Abstract Machine instructions.
+These instructions are implemented as C macros and simply act on the
+engine structure as necesary.
+This engine structure has fields that represent virual registers,
+some of which are mapped (using a GCC extension) to physical machine
+registers - depending on the achitecture of the physical machine.
+These registers include 1024 general-purpose registers including
+three stack pointers for the two stacks,
+and a success continuation pointer for implementing tail-calls;
+the structure contains many other fields for bookkeeping,
+we will discuss them as they become relevant.
+More information about Mercury's execution algorithm should read
+\cite{mercury_jlp}.
+
+To make parallel execution possible Conway~\cite{conway_par} allowed
+multiple instances of the engine structure to reside in memory at once.
+The Operating System's threading library,
+namely POSIX Threads,
+is used to allow parallelism;
+each thread owning a single engine.
+The number of engines that a parallel Mercury program will allocate on startup
+is configurable by the user,
+but it defaults to the actual number of CPUs.
+Users can also configure the runtime system to pin engines to CPUs
+ensure there is an even distribution of engines across the machine.
+% XXX: Maybe discuss how thread pinning and SMT interact.  Although all
+% this thread pinning work is new work - it's not necessary part of the
+% background.
+
+Eacn POSIX Thread must maintain a pointer to its engine;
+this is kept in a physical machine register as it is accessed
+frequently.
+In sequential code,
+there was only one engine structure,
+so a compiled-in constant could easily be used.
+Therefore, in parallel builds there are fewer physical registers that
+virtual registers may be mapped onto.
+
+Conway~\cite{conway_par} also introduced a new structure called a
+\emph{context}.
+Contexts represent computations in progress.
+An engine may be idle, or it may be executing a context;
+a context can be running on an engine, or it may be suspended.
+Each context has two stacks, a det stack and a nondet stack;
+Procedures that can succeed more than once
+store their frames on the nondet stack;
+all other procedures use the det stack
+(which behaves like a stack in an imperative language).
+These stacks account for the majority of the context's memory usage.
+When a context finishes execution,
+its storage is put back into a pool of free contexts for
+later reuse.
+
+Following \cite{simonmar_2009_multicore_rts},
+we economize on memory by using \emph{sparks}
+to represent goals that have been spawned off
+but whose execution has not yet been started.
+\tr{
+when an engine executes a spark, it uses its current context,
+or if it does not have a context a new one is allocated
+(from the pool of free contexts if the pool is not empty,
+and a newly created context otherwise).
+Unlike \cite{simonmar_2009_multicore_rts},
+Mercury's sparks cannot be garbage collected and must be executed.
+}
+
+The only parallel construct in Mercury is parallel conjunction,
+which is denoted $(G_1~\&~\ldots~\&~G_n)$.
+All the conjuncts must be deterministic or cc\_multi,
+that is, they must all have exactly one solution.
+This restriction greatly simplifies the implementation,
+since it guarantees that there can never be any need
+to execute $(G_2~\&~\ldots~\&~G_n)$ multiple times,
+just because $G_1$ has succeeded multiple times.
+(Any local backtracking inside $G_1$ will not be visible to the other conjuncts;
+bindings made by det code are never retracted.)
+% The current Mercury implementation supports parallelism only for det code,
+% since supporting it for code that may have no solution
+% would represent speculative execution,
+% while supporting for code that may have more than one solution
+% would require significant new infrastructure for managing bindings.
+However, this is not a significant limitation.
+Since the design of Mercury strongly encourages deterministic code,
+in our experience, about 75 to 85\% of all Mercury procedures are det,
+and most programs spend an even greater fraction of their time in det code.
+% \peter{Do we have any statistics regarding what proportion of execution time
+%   is spent in det code?  That would be a more relevant statistic.}
+Existing algorithms for executing nondeterministic code in parallel
+have very significant overheads, generating slowdowns by integer factors.
+Thus we have given priority to parallelizing deterministic code,
+which we can do with \emph{much} lower overhead.
+% We think that avoiding such slowdowns is a good idea,
+% even if it does mean foregoing the parallelization of 10 to 25\% of a program.
+
+The Mercury compiler implements $(G_1~\&~G_2~\&~\ldots~\&~G_n)$
+by creating a data structure representing a barrier,
+and then spawning off $(G_2~\&~\ldots~\&~G_n)$ as a spark.
+\tr{
+The spark is added to the head of the context's double-ended queue.
+If the context finishes the execution of the first conjunct
+and finds that spark is still at the head of its queue,
+it will pick it up and run it itself.
+This is a useful optimization,
+% it's also really well-known.
+since it avoids using a separate context in the relatively common case
+that all the other CPUs are busy with their own work.
+(Contexts contain stacks, so they occupy nontrivial amounts of memory.)
+}
+Since $(G_2~\&~\ldots~\&~G_n)$ is itself a conjunction,
+it is handled the same way:
+the context executing it
+first spawns off $(G_3~\&~\ldots~\&~G_n)$ as a spark that points to the barrier
+created earlier,
+and then executes $G_2$ itself.
+Eventually, the spawned-off remainder of the conjunction
+consists only of the final conjunct, $G_n$,
+and the context just executes it.
+The code of each conjunct synchronizes on the barrier once it has
+completed its job.
+When all conjuncts have done so,
+the original context will continue execution after the parallel conjunction.
+
+\tr{
+When an engine becomes idle, it will first try
+to resume a suspended but runnable context if there is one.
+If not, it will attempt to \emph{steal} sparks
+from the tails of another context's queues.
+If successful, it will allocate a context,
+and start running the spark in that context.
+The work-stealing dequeue structure we are using
+is from \cite{Chase_2005_wsdeque}.
+}
+
+% Replaces above with a much shorter description,
+% one that assumes readers know barriers
+\tr{
+After the end of the code of each conjunct,
+the compiler inserts synchronization code.
+This code starts by decrementing the number of outstanding conjuncts
+in the conjunction's syncterm,
+a number that was initialized to the number of conjuncts.
+The engine executing the context that created the syncterm
+will check whether there are any outstanding conjuncts in the conjunction.
+If not, it will jump to the code after the conjunction.
+If there are some,
+it will suspend its context and look for other work to do.
+An engine executing any other context will also check
+whether there are any outstanding conjuncts when they finish.
+If there are some, it will just look for other work.
+If there are none, then it will first wake up the original context,
+which must still be suspended.
+The context it switches to executing after that
+may or may not be the now runnable syncterm-creating context.
+We have a special provision to avoid the potential race-condition
+between one engine suspending the original context
+at the same time as another engine is trying to wake it up.
+}
+
+\tr{
+If an engine with a context other than the original one finds that
+there are still outstanding jobs, they check their local spark queue
+for any such work, otherwise they look for global work.
+
+An engine looks for global work first by checking the local spark
+queue of its context.
+In some cases this check can be optimized out, for example after there
+are no outstanding conjuncts in a parallel conjunction.
+It will then check for runnable but suspended contexts,
+If it finds a runnable context and is still holding a context from a
+previous execution, it saves the old context onto the free context list.
+If there are no runnable contexts,
+it will then attempt to steal work from other contexts.
+If unsuccessful, it will become idle and sleep for a period of time
+before it looks for work again
+or is woken up because a context has become runnable.
+}
+
+\begin{figure}
+\begin{verbatim}
+map_foldl(M, F, L, Acc0, Acc) :-
+    (
+        L = [],
+        Acc = Acc0
+    ;
+        L = [H | T],
+        new_future(FutureAcc1),
+        (
+            M(H, MappedH),
+            F(MappedH, Acc0, Acc1),
+            signal_future(FutureAcc1, Acc1)
+        &
+            map_foldl_par(M, F, T, FutureAcc1, Acc)
+        )
+    ).
+
+map_foldl_par(M, F, L, FutureAcc0, Acc) :-
+    (
+        L = [],
+        wait_future(FutureAcc0, Acc0),
+        Acc = Acc0
+    ;
+        L = [H | T],
+        new_future(FutureAcc1),
+        (
+            M(H, MappedH),
+            wait_future(FutureAcc0, Acc0),
+            F(MappedH, Acc0, Acc1),
+            signal_future(FutureAcc1, Acc1)
+        &
+            map_foldl_par(M, F, T, FutureAcc1, Acc)
+        )
+    ).
+\end{verbatim}
+%\vspace{2mm}
+\caption{\mapfoldl{} with synchronization}
+\label{fig:map_foldl_sync}
+%\vspace{-1\baselineskip}
+\end{figure}
+
+% The simplest way to implement a parallel conjunction with $n$ conjuncts
+% is to spawn off $n-1$ of the conjuncts,
+% letting other CPUs pick them up when they are free,
+% and have the original CPU continue executing the last conjunct,
+% with all conjuncts meeting at a barrier at the end,
+% and only the original CPU continuing from the barrier.
+% In practice, this approach has unnecessarily high overhead.
+% The reason is that since current CPU chips
+% have only a few cores (usually only 2-4),
+% the probability is quite high that
+% there will be no free CPU to pick up most of the spawned-off conjuncts,
+% which means that
+
+Mercury's mode system allows a parallel conjunct to consume variables
+that are produced by conjuncts to its left, but not to its right.
+This guarantees the absence of circular dependencies
+and hence the absence of deadlocks between the conjuncts,
+but it does allow a conjunct to depend on data that is yet to be computed
+by a conjunct running in parallel.
+We handle these dependencies through a source-to-source transformation
+\cite{wang_dep_par_conj}.
+The compiler knows which variables
+are produced by one parallel conjunct and consumed by another.
+For each of these shared variables,
+it creates a data structure called a \emph{future} \cite{multilisp}.
+When the producer has finished computing the value of the variable,
+it puts the value in the future and signals its availability.
+When a consumer needs the value of the variable,
+it waits for this signal (if it has not yet happened),
+and then retrieves the value from the future.
+% Both operations are protected by mutexes.
+
+\tr{
+For each of these shared variables,
+the compiler creates a data structure called a \emph{future} \cite{multilisp},
+which contains room for the value of the variable,
+a flag indicating whether the variable has been produced yet,
+a queue of consumer contexts waiting for the value, and a mutex.
+The initial value of the future has the flag set to `not yet produced'.
+The signal operation on the future sets the value of the variable,
+sets the flag to `produced',
+and wakes up all the waiting consumers,
+all under the protection of the mutex.
+The wait operation on the future is also protected by the mutex:
+it checks the value of the flag,
+and if it says `not yet produced',
+the engine will put its context on the queue and suspend it before
+looking for other work.
+When it wakes up,
+or if the flag said that the value was already `produced',
+the wait operation simply gets the value of the variable.
+}
+
+To minimize waiting,
+the compiler pushes signal operations on each future
+as far to the left into the producer conjunct as possible,
+and it pushes wait operations
+as far to the right into each of its consumer conjuncts as possible.
+This means not only pushing them
+into the body of the predicate called by the conjunct,
+but also into the bodies of the predicates they call,
+with the intention being that
+each signal is put immediately after
+the primitive goal that produces the value of the variable,
+and each wait is put immediately before
+the leftmost primitive goal that consumes the value of the variable.
+Since the compiler has complete information
+about which goals produce and consume which variables,
+the only things that can stop the pushing process from placing the
+wait immediately before the value is to be used and the signal
+immediately after it is produced are
+higher order calls and module boundaries:
+the compiler cannot push a wait or signal operation
+into code it cannot identify or cannot access.
+% into the body of a predicate
+% if it does not have access to the identity or to the body of the predicate.
+
+% Work stealing --- Most things execute in sequence, parallel
+% execution occurs when an engine has no work of it's own.
+
+Given the \mapfoldl predicate in Figure~\ref{fig:mapfoldl},
+this synchronization transformation
+generates the code in Figure~\ref{fig:map_foldl_sync}.
+
