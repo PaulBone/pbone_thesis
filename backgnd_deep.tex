@@ -94,3 +94,87 @@ by the wraparound of the global CSC counter;
 on 64 bit platforms, the problem would occur
 only on a profiling run that lasts for years.
 
+% Feedback
+%%%%%%%%%%
+
+% Introduce feedback concept, assert that it is needed for
+% feedback-directed implicit parallelism.
+% This is the motivation for the rest of the section.
+
+Our implicit parallelism analysis operates on profiling data and a
+bytecode representation of the program.
+A program compiled for both deep profiling and coverage profiling
+produces both of these when executed.
+% with the correct environment variable set.
+
+An automatic parallelisation tool
+may wish to traverse the entire call tree of the program.
+For example, to limit the amount of parallelism at each stage of execution
+to the number of CPUs available.
+Such a tool needs to be able to work on the whole program.
+The Mercury compiler never operates on the whole program:
+it compiles separate modules separately.
+We therefore implemented our implicit parallelisation analysis in a new tool called
+\texttt{mdprof\_feedback}.
+For now, its task is to use profiling data and our variable use analysis
+to choose the conjunctions that are most profitable to parallelise,
+and to record this information in a \emph{feedback file}
+that can then be given to the compiler.
+The data flow of the feedback process is shown in Figure
+\ref{fig:prof_feedback_loop}.
+
+\picfigure{prof_fb}{Profiler feedback loop}
+
+Telling the compiler what to parallelise is just one use of profiler feedback.
+Other optimisations (such as inlining) could also benefit
+from profiling feedback.
+
+Using a feedback-directed optimisation requires that the user compile
+and run their program before feedback information is produced, 
+which takes a significant amount of time.
+Because of this, feedback-directed optimisations do not make sense
+unless
+the total execution time of the optimised program --- which depends
+mostly on how many times it will be executed --- is significantly
+greater than the time it takes to compile and execute the profiling
+version of the program.
+We expect that feedback-directed optimisations would normally be used
+when the programmer is building a \emph{release candidate} version of their
+program, after they have performed testing and fixed any bugs.
+
+In all cases the program should be profiled on an input that is
+representative of the inputs the program is expected to handle when
+it is used normally.
+This is important to ensure the compiler makes decisions using
+feedback information that improves rather than degrades the performance
+of the program in general.
+How a representative input is chosen and how important the exact choice
+of the profiling input is will change from program to program.
+
+% Describe data types: the feedback data can be any mercury data
+% types.  One can query the feedback data by asking it to complete the
+% instantiation of a type.
+We have designed and implemented a generic feedback framework that allows
+tools (both inside or outside the compiler)
+to create feedback information for the compiler.
+The feedback information can be expressed as any Mercury type, making the
+feedback framework very flexible.
+New feedback-directed optimisations may require feedback information
+from new analyses.
+We expect that many new feedback information types will be added to
+support these optimisations.
+We also expect that an optimisation may use more than one type of
+feedback information and that more than one optimisation may use the
+same feedback information.
+
+% Describe on-disk format,
+The on-disc format of the feedback information file is very simple, it
+contains a header that identifies the file format, including a version number.
+What follows is a list of feedback information items.
+When the file is read in the file format identifier and revision
+number are checked,
+the list of information items is checked to ensure that no two items
+describe the same feedback information, for example there can only be at
+most one item in this list that describes how to automatically
+parallelise a program.
+

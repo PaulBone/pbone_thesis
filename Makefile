@@ -2,7 +2,7 @@
 # vim: noet sw=4 ts=5
 #
 
-PIC =		$(wildcard *.pic)
+PIC =		$(wildcard pics/*.pic)
 PIC_TEX =	$(PIC:%.pic=%.tex)
 
 TEX_PROSE = \
