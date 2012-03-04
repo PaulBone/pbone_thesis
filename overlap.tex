@@ -18,52 +18,52 @@
 % and can resume only after another has completed its work,
 % then the cost of parallelization again exceeds the benefit.
 
-\begin{abstract}
-Researchers working on the automatic parallelization of programs
-have long known that too much parallelism
-can be even worse for performance than too little,
-because spawning a task to be run on another CPU incurs overheads.
-% Since making a task available to another CPU
-% may take thousands of instructions,
-% spawning off a task that takes only a hundred instructions is clearly a loss.
-% and even spawning off a tack of a few thousand instructions is not a win;
-% it should only be done for computations
-% that take long enough to benefit from parallelism.
-Autoparallelizing compilers have therefore
-long tried to use granularity analysis
-to ensure that they only spawn off computations
-whose cost will probably exceed the spawn-off cost by a comfortable margin.
-However, this is not enough to yield good results,
-because data dependencies may \emph{also} limit
-the usefulness of running computations in parallel.
-If one computation blocks almost immediately
-and can resume only after another has completed its work,
-then the cost of parallelization again exceeds the benefit.
-
-We present a set of algorithms for recognizing places in a program
-where it is worthwhile to execute two or more computations in parallel
-that pay attention to the second of these issues as well as the first.
-% that pays attention to the effect of data dependencies while ensuring
-% that the benefit of parallelization outweighs the costs.
-Our system uses profiling information to compute
-the times at which a procedure call consumes the values of its input arguments
-and the times at which it produces the values of its output arguments.
-Given two calls that may be executed in parallel,
-our system uses the times of production and consumption
-of the variables they share
-to determine how much their executions would overlap
-if they were run in parallel,
-and therefore whether executing them in parallel is a good idea or not.
-
-We have implemented this technique for Mercury
-in the form of a tool that uses profiling data
-to generate recommendations about what to parallelize,
-for the Mercury compiler to apply on the next compilation of the program.
-We present preliminary results that show that
-this technique can yield useful parallelization speedups,
-while requiring nothing more from the programmer
-than representative input data for the profiling run.
-\end{abstract}
+%\begin{abstract}
+%Researchers working on the automatic parallelization of programs
+%have long known that too much parallelism
+%can be even worse for performance than too little,
+%because spawning a task to be run on another CPU incurs overheads.
+%% Since making a task available to another CPU
+%% may take thousands of instructions,
+%% spawning off a task that takes only a hundred instructions is clearly a loss.
+%% and even spawning off a tack of a few thousand instructions is not a win;
+%% it should only be done for computations
+%% that take long enough to benefit from parallelism.
+%Autoparallelizing compilers have therefore
+%long tried to use granularity analysis
+%to ensure that they only spawn off computations
+%whose cost will probably exceed the spawn-off cost by a comfortable margin.
+%However, this is not enough to yield good results,
+%because data dependencies may \emph{also} limit
+%the usefulness of running computations in parallel.
+%If one computation blocks almost immediately
+%and can resume only after another has completed its work,
+%then the cost of parallelization again exceeds the benefit.
+%
+%We present a set of algorithms for recognizing places in a program
+%where it is worthwhile to execute two or more computations in parallel
+%that pay attention to the second of these issues as well as the first.
+%% that pays attention to the effect of data dependencies while ensuring
+%% that the benefit of parallelization outweighs the costs.
+%Our system uses profiling information to compute
+%the times at which a procedure call consumes the values of its input arguments
+%and the times at which it produces the values of its output arguments.
+%Given two calls that may be executed in parallel,
+%our system uses the times of production and consumption
+%of the variables they share
+%to determine how much their executions would overlap
+%if they were run in parallel,
+%and therefore whether executing them in parallel is a good idea or not.
+%
+%We have implemented this technique for Mercury
+%in the form of a tool that uses profiling data
+%to generate recommendations about what to parallelize,
+%for the Mercury compiler to apply on the next compilation of the program.
+%We present preliminary results that show that
+%this technique can yield useful parallelization speedups,
+%while requiring nothing more from the programmer
+%than representative input data for the profiling run.
+%\end{abstract}
 
 \section{Introduction}
 \label{sec:intro}

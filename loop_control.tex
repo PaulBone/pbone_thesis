@@ -1,29 +1,29 @@
 % vim: ts=6 sw=4 et ft=tex
 
-\begin{abstract}
-Recently we built a system that uses profiling data
-to automatically parallelize Mercury programs by
-finding conjunctions with expensive conjuncts
-that can run in parallel with minimal synchronization delays.
-This worked very well in many cases, but in cases of tail recursion,
-we got much lower speedups than we expected,
-due to excessive memory usage.
-In this paper, we present a novel program transformation
-that eliminates this problem,
-and also allows recursive calls inside parallel conjunctions
-to take advantage of tail recursion optimization.
-Our benchmark results show that our new transformation
-greatly increases the speedups we can get from parallel Mercury programs;
-in one case, it changes no speedup into almost perfect speedup on four cores.
-
-% First and most obvious,
-% it reduces the number of synchronization barriers needed
-% from one per loop iteration to one per loop.
-% Second, it reduces peak memory consumption
-% by putting a limit on how many stacks
-% a conjunction will need to be alive at the same time.
-% Third, it can preserve tail recursion.
-\end{abstract}
+%\begin{abstract}
+%Recently we built a system that uses profiling data
+%to automatically parallelize Mercury programs by
+%finding conjunctions with expensive conjuncts
+%that can run in parallel with minimal synchronization delays.
+%This worked very well in many cases, but in cases of tail recursion,
+%we got much lower speedups than we expected,
+%due to excessive memory usage.
+%In this paper, we present a novel program transformation
+%that eliminates this problem,
+%and also allows recursive calls inside parallel conjunctions
+%to take advantage of tail recursion optimization.
+%Our benchmark results show that our new transformation
+%greatly increases the speedups we can get from parallel Mercury programs;
+%in one case, it changes no speedup into almost perfect speedup on four cores.
+%
+%% First and most obvious,
+%% it reduces the number of synchronization barriers needed
+%% from one per loop iteration to one per loop.
+%% Second, it reduces peak memory consumption
+%% by putting a limit on how many stacks
+%% a conjunction will need to be alive at the same time.
+%% Third, it can preserve tail recursion.
+%\end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
