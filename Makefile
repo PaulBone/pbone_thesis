@@ -8,9 +8,10 @@ PIC_TEX =	$(PIC:%.pic=%.tex)
 TEX_PROSE = \
 		thesis.tex \
 		intro.tex \
+		backgnd_par.tex \
 		backgnd_mercury.tex \
-        backgnd_merpar.tex \
-        backgnd_deep.tex \
+		backgnd_merpar.tex \
+		backgnd_deep.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex \

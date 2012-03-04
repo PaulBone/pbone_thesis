@@ -1,0 +1,287 @@
+
+\paul{
+(Prolog, Mercury, Haskell,
+Data-parallel languages such as DpH).
+}
+
+\paul{
+This should just 'set the stage' for my work.  I would
+like to leave the contrasting discussions until later in the
+thesis, perhaps at the end of each major chapter.
+}
+
+\paul{
+I don't want to introduce all my citations here (the way Liz has to
+due to the APA-formatting standard).  Only enough that the user
+understand the context for reading the research chapters.  So,
+closely related work should be introduced for the first time when
+it is compared with my work.
+}
+
+\subsection{Explicit Parallelism}
+\label{sec:lit_explicit-parallelism}
+
+There are numerous imperative languages that support explicit
+parallelism.
+% some of the most common include:
+% C with POSIX Threads~\cite{pthreads},
+% Java~\cite{java} and C with OpenMP~\cite{openmp}.
+% MPI and PVM
+Most of them use a thread model for parallelism.
+Programmers must control how parallel \emph{threads} are executed,
+in particular, how threads synchronise and communicate.
+The most common method for synchronising threads is to use
+mutual-exclusion locks --- allowing only one thread to run code within
+a \emph{critical section} at a time.
+This is a problem because it is easy to make mistakes in such code.
+Frequent mistakes include: forgetting to synchronise access to a critical
+section, making the critical section too small, making it
+too large, and acquiring locks on the wrong order causing a deadlock.
+Furthermore, critical sections are not nestable, not without
+knowing which locks are acquired in what order in order to prevent
+deadlocks.
+It is well understand that these problems can be difficult and
+expensive to detect and correct.
+% I could also cite Hans Boehm here: "Threads cannot be implemented as
+% a library" but he doesn't specifically advocate against explicit
+% threading in imperative languages.
+Tim Sweeney recognises this and advocates for the use of pure
+languages where synchronisation is not
+required~\cite{sweeney:2009:end_gpu_roadmap}.
+
+% If I want to describe other solutions such as Parallel Fortran,
+% OpenMP or Erlang they should be discussed here.
+
+Pure declarative languages like Mercury~\cite{mercury-jlp},
+Haskell~\cite{haskell98} and Clean~\cite{1991:concurrent-clean} do not
+allow side-effects in most expressions.
+Some expressions such as IO operations do require side-effects, in
+these cases the programmer must declare that the code may cause
+side-effects.
+When computations have no side-effects they can be parallelised safely
+without synchronisation.
+When synchronisation code is required to support concurrent operations
+on data, techniques such as software transactional
+memory~\cite{harris_marlow_spj:haskell-stm, mika:mercury-stm} are
+available.
+
+Glasgow Parallel Haskell (GpH) allows programmers to request parallel
+evaluation of certain expressions by annotating them with a function
+whose operational semantics cause parallel
+evaluation~\cite{gph,trinder:1998:strategies,loidi:2008:gph-semiexplicit-parallelism}.
+Unfortunately Haskell's lazy evaluation strategy interacts poorly with
+parallelism, to gain significant improvements in performance a Haskell
+programmer must also force the evaluation of parallelised expressions.
+
+\label{ref:parallel_conjunction}
+Mercury allows programmers to request parallel evaluation of
+conjunctions by replacing the normal conjunction operator with the
+parallel conjunction operator introduced by Thomas Conway in
+\cite{conway:parallel-mercury}.
+This initially supported parallel execution of independent
+conjunctions --- conjunctions containing only conjuncts that do not depend on values
+computed by one-another.
+Peter Wang modified this to allow the execution of dependent conjunctions by
+allowing a consumer to block on the production of a variable
+binding~\cite{wang:parallel-mercury}.
+Wang also made some performance improvements to Conway's work,
+however he states that performance is still far from ideal.
+Because Mercury uses eager evaluation rather than lazy evaluation it
+does not have problems caused by the interaction of lazy and parallel
+execution, programmers simply annotate where parallel execution
+should be used.
+
+Both Mercury and GpH require the programmer to annotate their
+program to describe how it should be parallelised.
+This is preferable in contrast to explicit multi-threading in
+imperative languages, where programmers must also describe how
+parallel computations communicate and synchronise.
+Because Mercury does not use lazy evaluation it is simpler to
+parallelise Mercury programs than GpH programs, therefore we believe
+that Mercury provides a better parallel programming environment.
+
+% XXX: I'd like a citation here.
+However explicit parallelism is a drawback because it requires the
+programmer to know where their program spends most of its execution
+time, it is understood that most programmers are poor at this.
+Parallel execution has additional overheads such as:
+spawning parallel tasks,
+cleaning up completed parallel tasks and
+operating system scheduling.
+The speedup gained when parallelising a computation will depend upon
+these costs.
+Programmers must therefore know whether parallelising a particular
+computation is going to be an improvement in spite of the additional
+costs of parallel execution.
+Furthermore programmers must know whether there will be enough
+processors free at runtime to execute the parallelised computation:
+the additional costs of parallel execution will have an effect even
+if there is not a processor available to execute the parallel work.
+A compiler with access to a representative execution profile of the
+program including the call graph will be able to make these decisions
+automatically.
+
+
+\subsection{Implicit Parallelism}
+\label{sec:lit_implicit-parallelism}
+
+Some computer languages support implicit parallelism, in these
+languages many parts of programs are executed in parallel.  Parallel
+execution is the normal mode of execution.
+
+% Implicitly parallel prologs. (and OR-parallelism)
+A number of parallel Prolog-like languages that were developed during the
+1980's could be classified as implicitly parallel languages.
+These included Concurrent
+Prolog~\cite{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
+Parlog~\cite{parlog,clark84:parlog_sys_prog} and GHC~\cite{ueda:ghc}.
+Nearly all tasks in these languages were carried out in
+parallel causing them to perform poorly.
+This is because the overheads of parallel execution are typically
+greater than the benefit of running most small tasks in parallel.
+Furthermore implicitly parallel programs have an \emph{embarrassingly
+  parallel} workload,
+this occurs when much more parallel work is available than the parallel
+processing capacity of the machine.
+
+% Granularity control
+Granularity control was introduced in order to solve these
+problems~\cite{lopez96:distance_granularity,shen99:granularity_control}.
+There are a number of granularity control methods, some incur a
+runtime cost in order to determine if there is already ample parallel
+work available while other static methods do not.
+All methods help improve the performance of parallel programs and are
+quite valuable, especially in recursive procedures.
+
+Data Parallel Haskell (DpH) implicitly parallelises data parallel
+tasks~\cite{dph:2007:status_report,
+  dph:2008:harnessing_the_multicores}.
+When the same independent computation is performed on many
+pieces of data, the
+task is classified as a data parallel task.
+Data parallel tasks are usually independent and easy to parallelise.
+DpH is also able to handle nested data parallel problems, a
+data parallel problem where each parallel task is made up of other
+data parallel tasks.
+Using some compiler optimisations DpH overcomes some granularity
+problems by combining sequences of data parallel tasks into one
+single larger data parallel task.
+DpH is a promising project,
+however they attempt to parallelise only data parallel programs --- a
+small subset of computer programs.
+% and has even had some success with
+% general purpose graphics processing unit (GPGPU)
+% programming~\cite{dph-gpgpu}
+
+With the exception of DpH, implicit parallelism often performs worse
+than explicit parallelism.
+It is well understood that carefully adding a few explicit parallelism annotations
+to a program with the aid of a profiler will produce a faster-running
+program than implicitly parallelising most independent computations.
+Furthermore, implicitly parallelising most independent computations
+can produce a program that is slower than the original sequential
+program, the causes for this are described earlier in this section.
+
+\subsection{Automatic Parallelisation}
+\label{sec:lit_automatic-parallelisation}
+
+% Look at automatic parallelisation in Haskell.
+Harris and Singh~\cite{haskell-imp-par} developed a profiler feedback
+directed automatic parallelisation approach for Haskell programs.
+They have reported speed ups of up to 80\% compared to the sequential
+execution of their test programs on a four core machine.
+However they were not able to improve the performance of some
+programs, they attributed this to a lack of parallelism
+available in these programs.
+They have shown that automatic parallelisation is a promising idea for
+improving the performance of software.
+
+We believe that more can be done to improve the effectiveness of
+automatic parallelisation,
+In some cases it may be possible to transform common programming
+pasterns that lack parallelism into equivalent patterns with available
+parallelism.
+Furthermore, an advanced profiler --- such as Mercury's deep
+profiler~\cite{conway:2001:mercury-deep} --- can provide information
+that enables a compiler to make good parallelisation choices.
+However there are a number of challenges facing automatic
+parallelisation.
+When using profiler feedback the profiled execution of the program may
+not be a typical execution of the program, or there may be several
+typical executions of the program.
+We cannot control whether users profile typical executions of their
+programs, but we may be able to allow users to merge execution
+profiles to create a composite profile that is more representative of
+their program's usage.
+Another challenge can occur when a program has very little parallelism
+available in it, it may be difficult to parallelise effectively.
+We hope that in some cases the compiler can transform such a program
+into an equivalent program with more available parallelism.
+
+% Jerome's work.
+J\'er\"ome Tannier's implicit parallelism implementation for
+Mercury~\cite{tannier} also uses profiler feedback information to
+automatically parallelise a program.
+Tannier's approach selects the most expensive predicates of a program
+and attempts to parallelise conjunctions within them.
+Tannier also makes use of compile-time granularity
+control to reduce the over-parallelisation that can occur in recursive
+code.
+Unfortunately, he estimated the costs and benefits of parallelising
+dependant conjunctions based on the number of dependant variables that
+they shared.
+In practice most producers produce dependant variables late in their
+execution and most consumers consume them early.
+Therefore Tannier's calculation is na\"ive: the time that these
+variables are produced by one conjunct and consumed by the other may
+not correlate with the number of dependant variables.
+We believe that Tannier's algorithm is, in general, too optimistic
+about the parallelism available in dependant conjunctions.
+
+% My honours thesis.
+Paul Bone~\cite{bone:2008:hons} improved on this approach by using
+information from a modification of Mercury's deep profiler to
+calculate when the producing conjunct is most likely to produce the
+dependant values and when the consuming conjunct is likely to need
+them.
+This information can be used to estimate the parallel speedup of
+dependant conjunctions.
+The effectiveness of this approach is not yet clear.
+
+Mercury's deep profiler~\cite{conway:2001:mercury-deep} provides
+detailed and accurate profiling information,
+among other things the deep profiler records separate profiling
+information for separate uses of the same code.
+This will make it easier to implement optimisations such as
+parallel specialisation --- generating sequential and parallel
+versions of one procedure and using the sequential version
+in situations where parallelism is not an optimisation.
+Extracting information from the deep profiler to guide compiler
+optimisations is supported by Bone's feedback
+framework~\cite{bone:2008:hons}.
+These are examples of the flexibility that the deep profiler provides,
+describing other ideas is outside the context of a literature review.
+No equivalent profiler exists for Haskell or Clean, making Mercury an
+important choice for our implementation.
+
+There is another challenge with automatic parallelism: a lot of
+information about the execution of a program won't be recorded by the
+profiler, often recording information in infeasible.
+In these cases we must be careful to make safe, conservative
+assumptions when calculating estimates of this information.
+
+% Write about haskell's call centre stacks, maybe they provide enough
+% information to perform similar optimisations.
+
+% How does clean compare?
+
+We expect that automatic parallelisation will more easily and
+effectively parallelise declarative programs.
+Furthermore, it will be easier to maintain such programs, as
+characteristics of the program that are used to explicitly parallelise
+a program won't necessarily be true in future versions or uses of that
+program.
+Automatic parallelisation allows the programmer to re-parallelise
+their program quickly, based on a current execution profile of the
+program.
+
