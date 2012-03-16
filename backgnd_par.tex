@@ -16,45 +16,142 @@
 \subsection{Explicit Parallelism}
 \label{sec:back_par_explicit}
 
-There are numerous imperative languages that support explicit
-parallelism.
-some of the most common include:
-C with POSIX Threads~\cite{pthreads},
-Java~\cite{java} and C with OpenMP~\cite{openmp}.
-MPI and PVM
-Most of them use a thread model for parallelism.
-Programmers must control how parallel \emph{threads} are executed,
-in particular, how threads synchronise and communicate.
-The most common method for synchronising threads is to use
-mutual-exclusion locks --- allowing only one thread to run code within
-a \emph{critical section} at a time.
-This is a problem because it is easy to make mistakes in such code.
+% Parallelism and concurrency.
+It is important to distinguish between parallelism and concurrency.
+Concurrency is defined as multiple computations executing simultaneously,
+and may communicate with one another.
+On a single processor concurrency can be achieved by switching between
+alternative processes quickly.
+Parallelism occurs when multiple computations \textbf{actually} execute in parallel,
+speeding up a computation.
+Often parallelism is achieved through concurrency,
+for example, multiple concurrent processes execution on a multicore processor,
+this leads to a confusion between concurrency and parallelism.
+Concurrency can be extremely useful when it matches the programmer's intentions.
+For example,
+when programming a web server that may service multiple clients at once;
+it is natural to model each client's connection as a separate concurrent process.
+Not all programs can be easily modeled with concurrent tasks,
+in these cases it is best to introduce parallelism without concurrency.
+Therefore, distinguishing these concepts is important.
+
+% Threading.
+There are numerous imperative languages that support parallelism through
+concurrency.
+Many of these languages support concurrency through a library.
+For example, 
+C and C++ use the POSIX Threads~\cite{pthreads} or Windows
+Threads~\cite{winthreads} libraries that are provided with operating systems.
+These libraries tend to be low-level;
+they simply provide an interface to the operating system.
+These examples use the \emph{threading} model of concurrency:
+Different threads of execution run independently,
+sharing a heap and static data.
+Threads may read and write the same data,
+however,
+concurrent read and write, and write and write operations are unsafe.
+Code that uses shared data is known as a critical section,
+Only one thread may execute a critical section for a given piece of shared data
+at once,
+this is known as \emph{mutual exclusion}~\cite{dijkstra:mutex}.
+Critical sections therefore need to be protected by locks.
+Upon entering a critical section a thread must acquire the lock associated with
+the data,
+it must release the lock when it leaves the critical section and the lock
+ensures that only one thread may hold the lock at a time.
+The programmer is responsible for defining critical sections and using locks
+correctly.
+
+Many other languages and libraries support the threading model of concurrency.
+Many such languages support threading directly, buy building support into the
+language or its standard library such as Java~\cite{java-threads}.
+
+Mutual exclusion locking is problematic,
+it is too easy to make mistakes when using locks.
 Frequent mistakes include: forgetting to synchronise access to a critical
-section, making the critical section too small, making it
-too large, and acquiring locks on the wrong order causing a deadlock.
-Furthermore, critical sections are not nestable, not without
-knowing which locks are acquired in what order in order to prevent
-deadlocks.
-It is well understand that these problems can be difficult and
-expensive to detect and correct.
-% I could also cite Hans Boehm here: "Threads cannot be implemented as
-% a library" but he doesn't specifically advocate against explicit
-% threading in imperative languages.
-Tim Sweeney recognises this and advocates for the use of pure
-languages where synchronisation is not
-required~\cite{sweeney:2009:end_gpu_roadmap}.
+section,
+making the critical section too small, or too large,
+these can lead to incorrect program behaviour, inconsistent memory states and
+crashes. 
+When using multiple locks in a single critical section,
+because that critical section uses multiple resources,
+the locks must be acquired in the same order in each such critical section
+otherwise deadlocks can occur.
+This also prevents critical sections from being nestable.
+All of these problems are difficult to debug because they are intermittent.
+Often so intermittent that introducing tracing code or compiling with debugging
+support can prevent the problem from occurring,
+this is humorously known as a \emph{heisenbug} ---
+a testament to just how frustrating it can be to find.
 
-% If I want to describe other solutions such as Parallel Fortran,
-% OpenMP or Erlang they should be discussed here.
+% Message passing.
+Alternative models of concurrency exist,
+another popular model is \emph{message passing}.
+Notable examples of message passing libraries are MPI\cite{mpi} and
+PVM~\cite{pvm}.
+Unlike threads, message passing's \emph{processes} do not share static or heap data.
+They communicate by sending messages to one another.
+In MPI and PVM the programmer is responsible for encoding and decoding messages,
+which can be tedious.
+Languages such as Erlang~\cite{erlang} support message passing natively and
+encoding and decoding is done for the programmer.
+The major benefit of message passing is that it doesn't make assumptions about where processes
+are executing:
+they can be running all on one machine or spread-out across a network.
+Therefore, message passing is very popular for high performance computing,
+where shared memory systems are not feasible.
+Message passing also avoids the problems with threading described above.
+However,
+it is often slower on shared memory systems since the same memory cannot easily
+be referenced.
+There are exceptions to this,
+Go~\cite{go} for example uses message passing but also allows access to shared
+memory,
+and therefore has all the problems of threading.
+Message passing does not avoid the problem of deadlocks,
+Consider two processes,
+they both attempt to send a message to their counterpart but only after
+receiving such a message;
+neither can proceed and therefore a deadlock occurs.
+Most deadlocks are much more subtle and harder to find and fix.
 
+% Parallelism w/o concurrency in imperative languages.
+Parallelism can also be achieved without concurrency,
+a popular language and library for this is OpenMP~\cite{openmp},
+which allows programmers to annotate parts of their programs for parallel
+execution without describing \textbf{how} this parallelism should be achieved;
+making it much easier for programmers to use.
+We will refer to this as \emph{explicit parallelism}
+since parallelism is expressed directly by the programmer by the explicit
+annotations.
+In OpenMP most parallelism is achieved by annotating loops.
+However,
+the programmer is responsible for guaranteeing that the iterations of the loops
+are independent,
+that is to say, that no iteration depends on the results of affects of any of
+the previous iterations.
+If an iteration makes a function call, then this guarantee must also be true for
+the callee all transitive callees.
+Explicit parallelism otherwise avoids the problems with threading and message
+passing.
+
+% Declarative languages.
+One of the easiest ways to make explicit parallelism easier is to prevent
+side-effects from occurring, usually by designing them out of the language.
 Pure declarative languages like Mercury~\cite{mercury-jlp},
 Haskell~\cite{haskell98} and Clean~\cite{1991:concurrent-clean} do not
-allow side-effects in most expressions.
-Some expressions such as IO operations do require side-effects, in
-these cases the programmer must declare that the code may cause
-side-effects.
-When computations have no side-effects they can be parallelised safely
-without synchronisation.
+allow side-effects.
+\paul{I should be able to find a more useful citation for Clean.}
+This is done by ensuring that a function's declaration declares all of the
+functions effects.
+Therefore,
+the programmer or the compiler can read a function's declaration to see if it
+is safe to parallelize.
+Mercury and Haskell both support explicit parallelism,
+the programmer need only annotate their code, indicating that it should be
+executed in parallel.
+
+% XXX:
 When synchronisation code is required to support concurrent operations
 on data, techniques such as software transactional
 memory~\cite{harris_marlow_spj:haskell-stm, mika:mercury-stm} are
