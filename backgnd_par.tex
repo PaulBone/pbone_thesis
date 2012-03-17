@@ -13,9 +13,6 @@
 %it is compared with my work.
 %}
 
-\subsection{Explicit Parallelism}
-\label{sec:back_par_explicit}
-
 % Parallelism and concurrency.
 It is important to distinguish between parallelism and concurrency.
 Concurrency is defined as multiple computations executing simultaneously,
@@ -34,6 +31,9 @@ it is natural to model each client's connection as a separate concurrent process
 Not all programs can be easily modeled with concurrent tasks,
 in these cases it is best to introduce parallelism without concurrency.
 Therefore, distinguishing these concepts is important.
+
+\subsection{Concurrency}
+\label{sec:backgnd_concurrency}
 
 % Threading.
 There are numerous imperative languages that support parallelism through
@@ -115,6 +115,25 @@ receiving such a message;
 neither can proceed and therefore a deadlock occurs.
 Most deadlocks are much more subtle and harder to find and fix.
 
+% STM
+A better way to avoid all these problems in concurrent programing is to use
+software transational memory (STM)~%
+\cite{harris_marlow_spj:haskell-stm, mika:mercury-stm}.
+STM allows programmers to mark different variables as transactional
+and to define critical sections.
+Any changes to a transactional variable made during a critical section must
+be sequentially consistent with any other operations and critical
+sections executed by other threads.
+If an in consistency is detected one or more critical sections must
+\emph{roll back} --- undoing any changes made to transactional
+variables.
+It is important that a transaction has no side-effects, otherwise
+consistency may not be guaranteed.
+
+
+\subsection{Explicit Parallelism}
+\label{sec:back_par_explicit}
+
 % Parallelism w/o concurrency in imperative languages.
 Parallelism can also be achieved without concurrency,
 a popular language and library for this is OpenMP~\cite{openmp},
@@ -151,55 +170,63 @@ Mercury and Haskell both support explicit parallelism,
 the programmer need only annotate their code, indicating that it should be
 executed in parallel.
 
-% XXX:
-When synchronisation code is required to support concurrent operations
-on data, techniques such as software transactional
-memory~\cite{harris_marlow_spj:haskell-stm, mika:mercury-stm} are
-available.
-
 Glasgow Parallel Haskell (GpH) allows programmers to request parallel
 evaluation of certain expressions by annotating them with a function
 whose operational semantics cause parallel
-evaluation~\cite{gph,trinder:1998:strategies,loidi:2008:gph-semiexplicit-parallelism}.
+evaluation~\cite{gph,loidi:2008:gph-semiexplicit-parallelism}.
 Unfortunately Haskell's lazy evaluation strategy interacts poorly with
-parallelism, to gain significant improvements in performance a Haskell
-programmer must also force the evaluation of parallelised expressions.
+parallelism.
+A parallelized computation will be evaluated to weak-head-normal-form,
+that is to say that if it is a data term with parameters,
+the parameters will not be evaluated.
+This means that any parallelised work usually doesn't do enough work to
+make parallelization worthwhile.
+The GpH implementors have tried to solve this problem by allowing
+the programmer to express how deep evaluation should
+continue~\cite{trinder:1998:strategies}.
+An alternative Haskell library called Monad.Par~\cite{marlow:monadpar}
+fully evaluates the result of any spawned-off computation.
+However, the programmer must still describe how any of their own
+datatypes can be fully evaluated.
+These solutions don't really solve the problem,
+they still require the programmer to introduce strictness.
+\paul{I can add support to my argument by describing problems with
+space leaks, for example foldl, foldr, and foldl'.
+I want to avoid a rant or a religious war, but I do want to
+objectively assess the literature :-).}
+It is better to avoid these and many other problems completely by using
+a strict language.
 
 \label{ref:parallel_conjunction}
 Mercury allows programmers to request parallel evaluation of
 conjunctions by replacing the normal conjunction operator with the
 parallel conjunction operator introduced by Thomas Conway in
-\cite{conway:parallel-mercury}.
-This initially supported parallel execution of independent
-conjunctions --- conjunctions containing only conjuncts that do not depend on values
-computed by one-another.
-Peter Wang modified this to allow the execution of dependent conjunctions by
-allowing a consumer to block on the production of a variable
-binding~\cite{wang:parallel-mercury}.
-Wang also made some performance improvements to Conway's work,
-however he states that performance is still far from ideal.
-Because Mercury uses eager evaluation rather than lazy evaluation it
-does not have problems caused by the interaction of lazy and parallel
-execution, programmers simply annotate where parallel execution
+\cite{conway:parallel-mercury,wang:parallel-mercury,wang:indep-and-par}.
+Since Mercury is a strict language it does not have Haskell's
+lazyness problems,
+programmers simply annotate where parallel execution
 should be used.
+A more detailed description of parallelism in Mercury can be found in
+section \ref{sec:backgnd_mer_par}
 
-Both Mercury and GpH require the programmer to annotate their
-program to describe how it should be parallelised.
-This is preferable in contrast to explicit multi-threading in
-imperative languages, where programmers must also describe how
-parallel computations communicate and synchronise.
-Because Mercury does not use lazy evaluation it is simpler to
-parallelise Mercury programs than GpH programs, therefore we believe
-that Mercury provides a better parallel programming environment.
+When a problem is not naturally a concurrent problem 
+explicit parallelism such as in Mercury and Haskell
+is preferable as the programmer does not need to force their program
+into a concurrent model.
+Especially since in all but the STM cases of concurrency programmers
+must also describe how parallel computations communicate and
+synchronise.
 
-% XXX: I'd like a citation here.
-However explicit parallelism is a drawback because it requires the
+\paul{I'd like a citation here, I think I found something a while ago
+about profiling}
+However, explicit parallelism is a drawback because it requires the
 programmer to know where their program spends most of its execution
 time, it is understood that most programmers are poor at this.
 Parallel execution has additional overheads such as:
 spawning parallel tasks,
-cleaning up completed parallel tasks and
-operating system scheduling.
+cleaning up completed parallel tasks,
+operating system scheduling and
+hardware behaviour such as cache effects.
 The speedup gained when parallelising a computation will depend upon
 these costs.
 Programmers must therefore know whether parallelising a particular
@@ -209,10 +236,13 @@ Furthermore programmers must know whether there will be enough
 processors free at runtime to execute the parallelised computation:
 the additional costs of parallel execution will have an effect even
 if there is not a processor available to execute the parallel work.
-A compiler with access to a representative execution profile of the
-program including the call graph will be able to make these decisions
-automatically.
-
+Parallelisation is another optimization such as inlining or efficient
+register allocation.
+Therefore,
+it would be better for an optimizing compiler to handle parallelization
+automatically;
+the programmer will not need to worry about parallel evaluation any more
+than they currently worry about inlining and register allocation.
 
 \subsection{Implicit Parallelism}
 \label{sec:lit_implicit-parallelism}
