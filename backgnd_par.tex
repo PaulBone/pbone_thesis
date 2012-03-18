@@ -38,7 +38,8 @@ Therefore, distinguishing these concepts is important.
 % Threading.
 There are numerous imperative languages that support parallelism through
 concurrency.
-Many of these languages support concurrency through a library.
+Those that do not support concurrency nativly can add support
+with the use of a library.
 For example, 
 C and C++ use the POSIX Threads~\cite{pthreads} or Windows
 Threads~\cite{winthreads} libraries that are provided with operating systems.
@@ -247,62 +248,65 @@ than they currently worry about inlining and register allocation.
 \subsection{Implicit Parallelism}
 \label{sec:lit_implicit-parallelism}
 
-Some computer languages support implicit parallelism, in these
-languages many parts of programs are executed in parallel.  Parallel
-execution is the normal mode of execution.
+Some computer languages support implicit parallelism,
+in these languages many parts of programs are executed in parallel.
+Parallel execution is the normal mode of execution,
+it is used in most places within the program.
 
 % Implicitly parallel prologs. (and OR-parallelism)
 A number of parallel Prolog-like languages that were developed during the
-1980's could be classified as implicitly parallel languages.
+1980's are classified as implicitly parallel languages.
 These included Concurrent
 Prolog~\cite{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
 Parlog~\cite{parlog,clark84:parlog_sys_prog} and GHC~\cite{ueda:ghc}.
 Nearly all tasks in these languages were carried out in
-parallel causing them to perform poorly.
-This is because the overheads of parallel execution are typically
+parallel,
+as a result the overheads of parallel execution are typically
 greater than the benefit of running most small tasks in parallel.
 Furthermore implicitly parallel programs have an \emph{embarrassingly
   parallel} workload,
 this occurs when much more parallel work is available than the parallel
-processing capacity of the machine.
+processing capacity of the machine;
+thereby dramatically reducing the benifit of parallel execution while
+the cost remained the same.
+Both these effects often caused very poor performance.
 
 % Granularity control
 Granularity control was introduced in order to solve these
 problems~\cite{lopez96:distance_granularity,shen99:granularity_control}.
-There are a number of granularity control methods, some incur a
+It attempts to reduce the amount of work being executed in parallel.
+There are a number of different methods, some incur a
 runtime cost in order to determine if there is already ample parallel
 work available while other static methods do not.
 All methods help improve the performance of parallel programs and are
 quite valuable, especially in recursive procedures.
+\paul{I need to point out cases where GC doesn't help or isn't good
+enough,
+I'm going to have to find this in the literature and come back to this
+paragraph and possibly the previous one.}
 
-Data Parallel Haskell (DpH) implicitly parallelises data parallel
-tasks~\cite{dph:2007:status_report,
-  dph:2008:harnessing_the_multicores}.
-When the same independent computation is performed on many
-pieces of data, the
-task is classified as a data parallel task.
-Data parallel tasks are usually independent and easy to parallelise.
-DpH is also able to handle nested data parallel problems, a
-data parallel problem where each parallel task is made up of other
-data parallel tasks.
-Using some compiler optimisations DpH overcomes some granularity
-problems by combining sequences of data parallel tasks into one
-single larger data parallel task.
-DpH is a promising project,
-however they attempt to parallelise only data parallel programs --- a
-small subset of computer programs.
-% and has even had some success with
-% general purpose graphics processing unit (GPGPU)
-% programming~\cite{dph-gpgpu}
+Some languages allow for the parallelisation of data parallel
+tasks such as NESL~\cite{nesl} and Data Parallel
+Haskell (DpH)~\cite{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
+These languages use special datatypes to denote parallelism,
+sequences and parallel arrays in NESL and DpH respectivly.
+Only operations on elements of these collections are parallelized.
+We have none-the-less classified these systems as implicitly parallel,
+since every action on these data types is executed in parallel.
+Because operations are data-parallel they're independent and suitable
+\paul{Define SMP in the introduction}
+for execution on vector machines as well as SMP machines.
+By transforming code and arranging for one thread to work on more than
+one data item at a time granularity can be improved.
+The drawback of these data-parallel aproches is that they can
+parallelize data parallel programs
+--- only a small subset of computer programs.
 
 With the exception of DpH, implicit parallelism often performs worse
 than explicit parallelism.
-It is well understood that carefully adding a few explicit parallelism annotations
+It is understood that carefully adding a few explicit parallelism annotations
 to a program with the aid of a profiler will produce a faster-running
 program than implicitly parallelising most independent computations.
-Furthermore, implicitly parallelising most independent computations
-can produce a program that is slower than the original sequential
-program, the causes for this are described earlier in this section.
 
 \subsection{Automatic Parallelisation}
 \label{sec:lit_automatic-parallelisation}
