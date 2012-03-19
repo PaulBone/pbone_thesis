@@ -17,14 +17,17 @@
 % Page numbers must be consecutive and printed within the margin.
 %
 
-% citesort and hyperref don't play nice together, but I like hyperref so I can
-% navigate the PDF easier.
+% WARNING: citesort, hyperref and algorithm don't play nice together.
+% This can be fixed by using natbib (which is apparently better) instead of
+% citesort.
+% And by using hyperref before algorithm.
+
+\usepackage{hyperref}
 
 \usepackage{algorithm}
 \usepackage{amsmath}
-%\usepackage{citesort}
-\usepackage{hyperref}
 \usepackage[margin=3cm]{geometry}
+\usepackage[sort&compress]{natbib}
 \usepackage{pstricks}
 \usepackage{setspace}
 \usepackage{url}
