@@ -5,12 +5,9 @@ While the syntax of Mercury is based on the syntax of Prolog,
 semantically the two languages are very different
 due to Mercury's purity and its type, mode, determinism and module systems.
 
-The abstract syntax of Mercury is:
-% (The handling of each of the omitted constructs, e.g. method calls,
-% is analogous to one of the constructs that \emph{is} listed in the figure.)
-% \paul{And here, the reader doesn't even need to know this.}
+Code is organised into predicates and functions,
+$P$ is either a predicate or a function.
 
-% XXX: Other goal types such as purity?
 %\vspace{-1\baselineskip}
 % \begin{figure}[htb]
 $$
@@ -20,6 +17,18 @@ $$
         & \hbox{predicates} \\
     & |~ f(x_1, \ldots, x_n)=r~\leftarrow~G
         & \hbox{functions} \\
+\end{array}
+$$
+
+\noindent
+Predicates define relationships between their arguments.
+Functions define a mapping from their arguments to their result.
+Both predicates and functions are defined in terms of a goal.
+In turn, many goals are defined in terms of other goals.
+All goals are defined here:
+
+$$
+\begin{array}{lll}
 \mbox{goal}~G
     & :~ x = y ~|~ x = f(y_1,~\ldots,~y_n)
         & \hbox{unifications}\\
@@ -45,26 +54,30 @@ $$
         & \hbox{negations}\\
     & |~ some~[x_1,\ldots,x_n]~G
         & \hbox{quantifications}\\
+    & |~ promise\_pure~G
+        & \hbox{purity promise}\\
 \end{array}
 $$
 % \caption{The abstract syntax of Mercury}
-\label{fig:abstractsyntax}
+% \label{fig:abstractsyntax}
 % \end{figure}
 %\vspace{-1mm}
 
 \noindent
-The atomic constructs of Mercury are unifications
+The atomic goals are unifications
 (which the compiler breaks down until they contain
 at most one function symbol each),
 plain first-order calls,
 higher-order calls.
 and calls to predicates defined by code in a foreign language (usually C).
-To allow inlining, the representation of the last construct includes
+The compiler can inline foreign code definitions when generating code
+for a Mercury predicate.
+To allow this, the representation of a foreign code construct includes
 not just the name of the predicate being called
 but also the foreign code that is the predicate's definition
 and the mapping from the Mercury variables that are the call's arguments
 to the names of the variables that stand for them in the foreign code.
-The composite constructs include
+The composite goals include
 sequential and parallel conjunctions,
 disjunctions, if-then-elses, negations and existential quantifications.
 These should all be self-explanatory,
@@ -78,8 +91,8 @@ A switch is a disjunction in which
 each disjunct unifies the same bound variable
 with a different function symbol.
 Switches in Mercury are thus analogous to switches in languages like C.
-% XXX
-% PURITY We will discuss and purity assertions below.
+The purity promise is described in this section on page
+\pageref{page:purity}.
 
 Mercury has a strong Hindley-Milner type system very similar to Haskell's.
 Mercury programs are statically typed;
@@ -260,6 +273,7 @@ Mercury has syntactic sugar to avoid the need for this,
 but this sugar does not affect
 the compiler's internal representation of the program.
 
+\label{page:purity}
 \noindent
 Mercury divides goals into three purity categories:
 
