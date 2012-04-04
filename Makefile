@@ -8,7 +8,7 @@ PIC_TEX =	$(PIC:%.pic=%.tex)
 TEX_PROSE = \
 		thesis.tex \
 		intro.tex \
-		backgnd_par.tex \
+		literature_review.tex \
 		backgnd_mercury.tex \
 		backgnd_merpar.tex \
 		backgnd_deep.tex \
