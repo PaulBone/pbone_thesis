@@ -25,7 +25,7 @@ Predicates define relationships between their arguments.
 Functions define a mapping from their arguments to their result.
 Both predicates and functions are defined in terms of a goal.
 In turn, many goals are defined in terms of other goals.
-All goals are defined here:
+These are Mercury's goal types:
 
 $$
 \begin{array}{lll}
@@ -91,37 +91,96 @@ A switch is a disjunction in which
 each disjunct unifies the same bound variable
 with a different function symbol.
 Switches in Mercury are thus analogous to switches in languages like C.
-The purity promise is described in this section on page
-\pageref{page:purity}.
+The purity promise is described on page \pageref{page:purity}.
 
-Mercury has a strong Hindley-Milner type system very similar to Haskell's.
-Mercury programs are statically typed;
-the compiler knows the type of every argument of every predicate
-(from declarations or inference) and every local variable (from inference).
+Mercury has a strong Hindley-Milner~\cite{hindley_milner} type system very
+similar to Haskell's~\cite{haskell}.
+Mercury programs are statically typed; the compiler knows the type of every
+argument of every predicate (from declarations or inference) and every local
+variable (from inference).
+The body and type declaration of \code{list.append} is:
 
+\begin{verbatim}
+:- pred append(list(T), list(T), list(T)).
+
+append([], Ys, Ys).
+append([X | Xs], Ys, [X | Zs]) :-
+    append(Xs, Ys, Zs).
+\end{verbatim}
+
+\noindent
 Mercury also has a strong mode system.
-The mode system classifies each argument of each predicate
-as either input or output;
-% XXX
-there are exceptions, but they are not relevant to this paper.
-If input, the caller must pass a ground term as the argument.
-If output, the caller must pass a distinct free variable,
-which the predicate or function will instantiate to a ground term.
-Modes may also require an input argument to be a unique reference,
-and may promise an output argument to be unique.
+The mode of a predicate describes \emph{instantiation state} changes of the
+predicate's arguments.
+A variable may be free, ground or guaranteed to be bound to any of a set of
+function symbols.
+Further Instantiation states describe the state of each of the function symbols'
+arguments recursively.
+Partial instantiation is not fully supported,
+therefore, it is rarely used in typical Mercury programs.
+A clobbered instantiation state describes variables whose values are no-longer
+available.
+Ground and bound instantiation states may also be described as unique,
+meaning they are not aliased with any other value.
+The mode of a predicate's argument is a transition between two instantiation states,
+arguments can only become 'more instantiated',
+that is to say 'free to ground' is legal but 'ground to free' is not.
+Similarly uniqueness cannot be added to a value that is at least bound.
+Commonly used modes such as input (\code{in}), output (\code{out}),
+destructive input (\code{di}) and unique output (\code{uo}) are
+defined in the standard library:
+
+\begin{verbatim}
+:- mode in  == ground >> ground.
+:- mode out == free >> ground.
+:- mode di == unique >> clobbered.
+:- mode uo == free >> unique.
+\end{verbatim}
+
+\noindent
+There may be multiple modes for any given predicate.
+Here are two mode declarations for the append predicate above,
+these are usually written immediately after the type declaration.
+
+\begin{verbatim}
+:- mode append(in, in, out) is det.
+:- mode append(out, out, in) is multi.
+\end{verbatim}
+
+\noindent
+The compiler enforces the instantiation state constraints on variables passed
+as arguments.
+That is to say,
+variables passed as input arguments must be ground before and after the call
+while variables passed as output arguments must be free before the call and
+ground after the call.
+Similarly, a variable passed in a destructive input argument will be destroyed
+before the end of the call,
+the caller will not be able to use it after the call therefore it must be unique.
+A variable passed in a unique output argument will be instantiated and
+guaranteed to be unique.
+These two instantiation types are often used together to allow the compiler to
+destructively update data structures such as arrays.
+The compiler will infer the instantiation states of all variables before and
+after every goal in a predicate or function's body.
+
 It is possible for a predicate or function to have more than one mode;
-the usual example is \code{append}, which has two principal modes:
-\code{append(in,in,out)} and \code{append(out,out,in)}.
-we call each mode of a predicate or function a \emph{procedure}.
+for example \code{list.append}.
+We call each mode of a predicate or function a \emph{procedure}.
 The Mercury compiler generates separate code
 for each procedure of a predicate or function.
 In fact, different procedures are handled as separate entities by
 the compiler after mode checking.
 The mode checking pass of the compiler is responsible for
 reordering conjuncts (in both sequential and parallel conjunctions)
-as necessary to ensure that for each variable shared between conjuncts,
-the goal that generates the value of the variable (the \emph{producer})
-comes before all goals that use this value (the \emph{consumers}).
+as necessary to support the instantiatedness constraints imposed by arguments
+of calls.
+This means that,
+for each variable shared between conjuncts,
+the goal that makes a variable more instantiated,
+(the \emph{producer})
+comes before all goals that require the variable to be in at least
+the particular instantiation state, (the \emph{consumers}).
 This means that for each variable in each procedure,
 the compiler knows exactly where that variable gets grounded.
 
@@ -163,60 +222,63 @@ which may put upper and lower bounds on the number of its possible solutions
 (in the absence of infinite loops and exceptions).
 A determinism may impose an upper bound of one solution,
 and it may impose a lower bound of either zero solutions or one solution.
-\emph{det} procedures succeed exactly once
+\code{det} procedures succeed exactly once
 (upper bound is one, lower bound is one);
-\emph{semidet} procedures succeed at most once
+\code{semidet} procedures succeed at most once
 (upper bound is one, no lower bound);
-\emph{multi} procedures succeed at least once
+\code{multi} procedures succeed at least once
 (lower bound is one, no upper bound);
-\emph{nondet} procedures may succeed any number of times
+\code{nondet} procedures may succeed any number of times
 (no bound of either kind).
-Goals with determinism \emph{failure} can never succeed
+Goals with determinism \code{failure} can never succeed
 (upper bound is zero, no lower bound).
-Goals with determinism \emph{erroneous}
+Goals with determinism \code{erroneous}
 have an upper bound of zero and a lower bound of one,
 which means they can neither succeed nor fail,
 they must either throw an exception or loop forever.
 
 Each procedure's mode declaration
-typically declares its determinism,
-though if this is omitted, the compiler can infer the missing information.
+typically declares its determinism (see the mode declarations for append above).
+If this is omitted, the compiler can infer the missing information.
 
-% XXX: there is a brief note about switches above, alternativly we can describe
-% this here:
-
-% DETISM Before the compiler attempts to check or infer
-% DETISM the determinism of each procedure,
-% DETISM it runs a switch detection algorithm that looks for disjunctions
-% DETISM in which each disjunct unifies the same input variable
-% DETISM (a variable that is already bound when the disjunction is entered)
-% DETISM with different function symbols, like this,
-% DETISM where all of the $f_i$ are different:
-% DETISM $$
-% DETISM \begin{array}{l}
-% DETISM (~x~=~f_1(\ldots),~G_1~;~\ldots;~x~=~f_n(\ldots),~G_n~)
-% DETISM \end{array}
-% DETISM $$
-% DETISM The switch detection algorithm
-% DETISM turns any such disjunction into a \emph{switch}:
-% DETISM $$
-% DETISM \begin{array}{l}
-% DETISM \hbox{switch}~x~(f_1:~x~=~f_1(\ldots),~G_i; \ldots; f_n:~x~=~f_n(\ldots),~G_n)
-% DETISM \end{array}
-% DETISM $$
-% DETISM The point of this is that it allows determinism analysis
-% DETISM to infer much tighter bounds on the number of solutions of the goal.
-% DETISM For example, if each of the $G_i$ is deterministic
-% DETISM (i.e. it has determinism \emph{det})
-% DETISM and the various $f_i$ comprise all the function symbols in $x$'s type,
-% DETISM then the switch can be inferred to be deterministic as well,
-% DETISM whereas a disjunction that is \emph{not} a switch cannot be deterministic,
-% DETISM since each disjunct may generate a solution.
-% DETISM (Actually, our switch detection algorithm
-% DETISM is a bit more aggressive than this
-% DETISM in trying to identify disjuncts that cannot succeed at the same time,
-% DETISM but that does not matter for this paper.)
-% DETISM \peter{Drop this}.
+% Switch detection.
+Before the compiler attempts to check or infer
+the determinism of each procedure,
+it runs a switch detection algorithm that looks for disjunctions
+in which each disjunct unifies the same input variable
+(a variable that is already bound when the disjunction is entered)
+with different function symbols, like this,
+where all of the $f_i$ are different:
+$$
+\begin{array}{ll}
+(\\
+& x~=~f_1(\ldots),~G_1~; \\
+& \ldots; \\
+& x~=~f_n(\ldots),~G_n~ \\
+)
+\end{array}
+$$
+The switch detection algorithm
+turns any such disjunction into a \emph{switch}:
+$$
+\begin{array}{lll}
+\hbox{switch}~x~( \\
+& f_1: \\
+& & x~=~f_1(\ldots),~G_i; \\
+& \ldots; \\
+& f_n: \\
+& & x~=~f_n(\ldots),~G_n \\
+)
+\end{array}
+$$
+The point of this is that it allows determinism analysis
+to infer much tighter bounds on the number of solutions of the goal.
+For example, if each of the $G_i$ is deterministic
+(i.e. it has determinism \code{det})
+and the various $f_i$ comprise all the function symbols in $x$'s type,
+then the switch can be inferred to be deterministic as well,
+whereas a disjunction that is \emph{not} a switch cannot be deterministic,
+since each disjunct may generate a solution.
 
 Mercury has a module system.
 Calls may be qualified by the name of the module
