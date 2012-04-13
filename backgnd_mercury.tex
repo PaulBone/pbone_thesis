@@ -56,6 +56,8 @@ $$
         & \hbox{quantifications}\\
     & |~ promise\_pure~G
         & \hbox{purity promise}\\
+    & |~ promise\_semipure~G
+        & \hbox{purity promise}\\
 \end{array}
 $$
 % \caption{The abstract syntax of Mercury}
@@ -112,9 +114,9 @@ append([X | Xs], Ys, [X | Zs]) :-
 Mercury also has a strong mode system.
 The mode of a predicate describes \emph{instantiation state} changes of the
 predicate's arguments.
-A variable may be free, ground or guaranteed to be bound to any of a set of
+A variable may be free, ground, clobbered or to be bound to any of a set of
 function symbols.
-Further Instantiation states describe the state of each of the function symbols'
+Further instantiation states describe the state of each of the function symbols'
 arguments recursively.
 Partial instantiation is not fully supported,
 therefore, it is rarely used in typical Mercury programs.
@@ -122,10 +124,15 @@ A clobbered instantiation state describes variables whose values are no-longer
 available.
 Ground and bound instantiation states may also be described as unique,
 meaning they are not aliased with any other value.
-The mode of a predicate's argument is a transition between two instantiation states,
-arguments can only become 'more instantiated',
+When variables are used their instiation state may change,
+such a change is described by a transition between two instantiation states.
+This is also known as a mode (of an argument),
+and is easily confused with the closly related mode of a predicate.
+When a variable is used as an argument or in a unification it can only
+become 'more instantiated',
 that is to say 'free to ground' is legal but 'ground to free' is not.
-Similarly uniqueness cannot be added to a value that is at least bound.
+Similarly, uniqueness cannot be added to a value that is already
+bound or ground.
 Commonly used modes such as input (\code{in}), output (\code{out}),
 destructive input (\code{di}) and unique output (\code{uo}) are
 defined in the standard library:
@@ -156,23 +163,24 @@ while variables passed as output arguments must be free before the call and
 ground after the call.
 Similarly, a variable passed in a destructive input argument will be destroyed
 before the end of the call,
-the caller will not be able to use it after the call therefore it must be unique.
-A variable passed in a unique output argument will be instantiated and
-guaranteed to be unique.
+it must be unique before the call and clobbered after, it is illegal to
+reference a clobbered variable.
+A variable passed in a unique output argument must initially be free and
+will become unique.
 These two instantiation types are often used together to allow the compiler to
 destructively update data structures such as arrays.
 The compiler will infer the instantiation states of all variables before and
 after every goal in a predicate or function's body.
 
-It is possible for a predicate or function to have more than one mode;
-for example \code{list.append}.
+When a predicate or function has more than one mode;
+for example \code{list.append} above.
 We call each mode of a predicate or function a \emph{procedure}.
 The Mercury compiler generates separate code
 for each procedure of a predicate or function.
 In fact, different procedures are handled as separate entities by
 the compiler after mode checking.
-The mode checking pass of the compiler is responsible for
-reordering conjuncts (in both sequential and parallel conjunctions)
+This allows the mode checking pass of the compiler to minimally
+reorder conjuncts (in both sequential and parallel conjunctions)
 as necessary to support the instantiatedness constraints imposed by arguments
 of calls.
 This means that,
@@ -285,16 +293,16 @@ Calls may be qualified by the name of the module
 that defines the predicate or function being called,
 with the module qualifier and the predicate or function name
 separated by a dot.
-The \io (Input/Output)module of the Mercury standard library
+The \io (Input/Output) module of the Mercury standard library
 defines an abstract type called the \io state
 which represents the entire state of the world outside the program,
 and a large set of predicates that perform I/O.
-These predicates all have determinism \verb|det|,
+These predicates all have determinism \code|det|,
 and besides other arguments,
 they all take a pair of \io states
 whose modes are respectively \di and \uo,
-\di being shorthand for \emph{destructive input}
-and \uo for \emph{unique output}.
+(As discussed above, \di being shorthand for \emph{destructive input}
+and \uo for \emph{unique output}.)
 The \code{main} predicate that represents the entire program
 (like \code{main} in C)
 also has two arguments, a \code{di,uo} pair of \io states.
@@ -308,7 +316,7 @@ These conditions guarantee that at each point in the execution,
 there is exactly one current state of the world.
 
 As an example, here is one version of ``Hello world'':
-\vspace{3mm}
+
 \begin{verbatim}
 :- pred main(io::di, io::uo) is det.
 
@@ -316,7 +324,6 @@ main(S0, S) :-
     io.write_string("Hello ", S0, S1),
     io.write_string("world\n", S1, S).
 \end{verbatim}
-\vspace{3mm}
 
 \noindent
 % In this version,
@@ -328,15 +335,34 @@ Note that the difference e.g.\ between \code{S1} and \code{S}
 represents not just the printing of ``\code{world\n}'',
 but also all the changes made in the state of the world
 by \emph{other} processes since the creation of \code{S1}.
+This threaded state sequentialises I/O operations:
+``\code{world\n}'' cannot be printed until the value for \code{S1}
+is available.
 
 Since numbering each version of the state of the world
 (or any other state that a program may pass around) is cumbersome,
 Mercury has syntactic sugar to avoid the need for this,
 but this sugar does not affect
 the compiler's internal representation of the program.
+This syntactic suger is shown below, along with the convention of naming
+the I/O state \code{!IO}.
+
+\begin{verbatim}
+:- pred main(io::di, io::uo) is det.
+
+main(!IO) :-
+    io.write_string("Hello ", !IO),
+    io.write_string("world\n", !IO).
+\end{verbatim}
+
+\noindent
+The term \code{!IO} will be expanded into pairs of automatically named
+variables.
+The variable names created sequence conjunctions from left to right in
+conjunctions when used with pairs of \code{di/uo} or \code{in/out}
+modes.
 
 \label{page:purity}
-\noindent
 Mercury divides goals into three purity categories:
 
 \begin{description}
@@ -355,14 +381,14 @@ Mercury divides goals into three purity categories:
 Semipure and impure predicates and functions
 have to be declared as such,
 and calls to them must be prefaced with either
-\code|impure| or \code|semipure| (whichever is appropriate).
+\code{impure} or \code{semipure} (whichever is appropriate).
 The vast majority of Mercury code is pure,
 with impure and semipure code confined to a few places
 where it is used to implement pure interfaces.
 (For example, the implementation of the all-solutions predicates
 in the Mercury standard library uses impure and semipure code.)
 Programmers can wrap
-\code|promise\_pure| or \code|promise\_semipure| around a goal
+\code{promise\_pure} or \code{promise\_semipure} around a goal
 to promise to the compiler (and to human readers) that
 the goal itself is pure or semipure respectively,
 even though some of the code inside the goal may be less pure.
@@ -370,7 +396,7 @@ even though some of the code inside the goal may be less pure.
 The compiler keeps a lot of information associated with each goal,
 whether atomic or not.
 This includes:
-%\vspace{3mm}
+
 \begin{itemize}
 \item
 the set of variables bound (or \emph{produced}) by the goal;
@@ -383,7 +409,6 @@ that occur both inside the goal and outside it; and
 \item
 the determinism of the goal.
 \end{itemize}
-%\vspace{3mm}
 
 \noindent
 A complete description of Mercury
