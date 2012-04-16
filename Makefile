@@ -25,13 +25,13 @@ MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
 BENCH_ALL=          lc_bench_all
 
 .PHONY : all
-all : thesis.pdf wc
+all : thesis.pdf wc undefined.txt
 
 .PHONY : wc
 wc : 
 	wc -w $(TEX_PROSE)
 
-thesis.dvi : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib
+thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib
 	latex thesis
 	bibtex thesis
 	latex thesis
@@ -51,6 +51,9 @@ times_table.tex: $(TIMING_RESULTS) $(BENCH_ALL)
 
 mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
 	./$(BENCH_ALL) -n0 -m -f mem_table.tex -p $(MEM_RESULTS)
+
+undefined.txt: thesis.log
+	cat $< | grep undefined | sort -u > undefined.txt
 
 .PHONY : clean
 clean :
