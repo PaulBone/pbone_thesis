@@ -733,7 +733,9 @@ We calculate this by summing the times
 between pairs of GC\_START and GC\_END events,
 and dividing the result by the program's total runtime.
 (Both sides of the division refer to elapsed time, not CPU time.)
-Due to Amdahl's law~\cite{amdahlslaw},
+Due to Amdahl's law~\cite{amdahl:1967:law},
+% XXX Explain amdahl's law since the paper dosn't describe the usual
+% interpretation.
 this fraction limits the best possible speedup we can get
 for the program as a whole by parallelizing the mutator.
 For example, if the program spends one third of its time doing GC

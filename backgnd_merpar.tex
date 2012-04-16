@@ -16,7 +16,7 @@ we will discuss them as they become relevant.
 More information about Mercury's execution algorithm should read
 \cite{mercury_jlp}.
 
-To make parallel execution possible Conway~\cite{conway_par} allowed
+To make parallel execution possible Conway~\cite{conway:2002:par} allowed
 multiple instances of the engine structure to reside in memory at once.
 The Operating System's threading library,
 namely POSIX Threads,
@@ -40,7 +40,7 @@ so a compiled-in constant could easily be used.
 Therefore, in parallel builds there are fewer physical registers that
 virtual registers may be mapped onto.
 
-Conway~\cite{conway_par} also introduced a new structure called a
+Conway~\cite{conway:2002:par} also introduced a new structure called a
 \emph{context}.
 Contexts represent computations in progress.
 An engine may be idle, or it may be executing a context;

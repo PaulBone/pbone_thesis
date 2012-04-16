@@ -41,7 +41,7 @@ concurrency.
 Those that do not support concurrency nativly can add support
 with the use of a library.
 For example, 
-C and C++ use the POSIX Threads~\cite{pthreads} or Windows
+C and C++ use the POSIX Threads~\cite{butenhof1997:pthreads} or Windows
 Threads~\cite{winthreads} libraries that are provided with operating systems.
 These libraries tend to be low-level;
 they simply provide an interface to the operating system.
@@ -54,7 +54,7 @@ concurrent read and write, and write and write operations are unsafe.
 Code that uses shared data is known as a critical section,
 Only one thread may execute a critical section for a given piece of shared data
 at once,
-this is known as \emph{mutual exclusion}~\cite{dijkstra:mutex}.
+this is known as \emph{mutual exclusion}~\cite{Dijkstra:Mutex}.
 Critical sections therefore need to be protected by locks.
 Upon entering a critical section a thread must acquire the lock associated with
 the data,
@@ -106,8 +106,8 @@ However,
 it is often slower on shared memory systems since the same memory cannot easily
 be referenced.
 There are exceptions to this,
-Go~\cite{go} for example uses message passing but also allows access to shared
-memory,
+Go~\cite{balbaert:2012:go} for example uses message passing but also allows
+access to shared memory,
 and therefore has all the problems of threading.
 Message passing does not avoid the problem of deadlocks,
 Consider two processes,
@@ -202,7 +202,7 @@ a strict language.
 Mercury allows programmers to request parallel evaluation of
 conjunctions by replacing the normal conjunction operator with the
 parallel conjunction operator introduced by Thomas Conway in
-\cite{conway:parallel-mercury,wang:parallel-mercury,wang:indep-and-par}.
+\cite{conway:2002:par,wang:parallel-mercury,wang:indep-and-par}.
 Since Mercury is a strict language it does not have Haskell's
 lazyness problems,
 programmers simply annotate where parallel execution
