@@ -41,7 +41,7 @@
  series = {Lecture Notes in Computer Science},
  }
 
-@InProceedings{clark84:parlog_sys_prog,
+@InProceedings{clark:84:parlog_sys_prog,
   author =       {Keith Clark and Steve Gregory},
   title =        {Notes on systems programming in {PARLOG}},
   booktitle = {The international conference on fifth generation
@@ -51,6 +51,47 @@
   editor =    {ICOT},
   organization = {ICOT},
   publisher = {ICOT}}
+
+@article{clark:86:parlog,
+        author =        {Keith Clark and Steve Gregory},
+        title =         {{PARLOG}: parallel programming in logic},
+        journal =       {ACM Transactions on Programming Languages and
+                  Systems},
+        year =          {January 1986},
+        volume =        {8},
+        number =        {1},
+        pages =         {1--49}
+}
+
+@phdthesis{ueda:ghc,
+        author =        {Kazunori Ueda},
+        title =         {{G}uarded {H}orn {C}lauses},
+        year =          {March 1986},
+        school =        {University of Tokyo}
+}
+
+@PhdThesis{saraswat85:probl_with_concur_prolog,
+  author =       {Vijay A. Saraswat},
+  title =        {Problems with {Concurrent} {Prolog}},
+  school =       {Carnegie-Mellon University},
+  year =         1985}
+
+@Misc{saraswat86:concurrent_prolog_definition,
+  author =    {Vijay A. Saraswat},
+  title =     {The concurrent logic programming language {CP}:
+                  Definition and Operational Semantics},
+  howpublished = {Carnegie-Mellon University},
+  month =     {September},
+  year =      1986}
+
+@Misc{shapiro:flat_concur_prolog,
+  author =    {Ehud Shapiro},
+  title =     {{Flat} {Concurrent} {Prolog} as a general-purpose
+                  parallel machine language},
+  howpublished = {The Weizmann Institute of Science},
+  annote =    {This appears to be a hand-annotated paper, it has Lee
+                  Naish's initials on it}
+}
 
 @article{boehm,
         author =        {Hans Boehm and Mark Weiser},
@@ -158,7 +199,7 @@
   number =    8,
   month =     {April}}
 
-@Article{trinder_98_strategies,
+@Article{trinder:98:strategies,
   author =   {Philip W. Trinder and Kevin Hammond and Hans-Wolfgang Loidl and Simon L. {Peyton Jones}},
   title =    {Algorithm + {S}trategy = {P}arallelism},
   journal =      {Journal of Functional Programming},
@@ -239,7 +280,7 @@
   read =      {yes}
 }
 
-@MastersThesis{tannier:2007:parallel-mercury,
+@MastersThesis{tannier:2007:parallel_mercury,
   author =       {J\'er\"ome Tannier},
   title =        {Parallel {Mercury}},
   school =       {Institut d'informatique,
@@ -306,6 +347,15 @@
                   between threads.}
 
 }
+
+@TechReport{blelloch:95:nesl,
+  author =       {Guy Blelloch},
+  title =        {{NESL}: A Nested Data-Parallel Language. (Version 3.1),},
+  institution =  {Carnegie-Mellon University, School of Computer Science},
+  year =         1995,
+  number =    {CMU-CS-95-170},
+  address =   {Pittsburgh, PA},
+  month =     {September}}
 
 @inproceedings{diplcl99,
   title = "Mozart: {A} Programming System for Agent Applications",
@@ -531,7 +581,7 @@
   month =     {October}
 }
 
-@InProceedings{haskell-stm,
+@InProceedings{harris:2005:haskell-stm,
   author =       {Tim Harris and Simon Marlow and Simon Peyton-Jones
                   and Maurice Herlihy},
   title =        {Composable memory transactions},
@@ -767,11 +817,12 @@
 }
 
 @ARTICLE{Foster96,
-	author = {Ian Foster and Delta Ian Foster},
+	author = {Ian Foster},
 	title = {Compositional Parallel Programming Languages},
 	journal = {ACM Transactions on Programming Languages and Systems},
 	year = {1996},
 	volume = {18},
+    number = {4},
 	pages = {454--476}
 }
 
@@ -879,3 +930,87 @@ S. {Mattson Jr.} and Andrew S. Partridge and Simon L. {Peyton Jones}},
   year =         2007,
   address =   {Melbourne, Australia},
   month =     {October}}
+
+@Article{openmp,
+  author =       {L. Dagum and P. Menon},
+  title =        {{OpenMP}: an industry standard {API} for shared-memory programming},
+  journal =      {Computational Science \& Engineering, IEEE},
+  year =         1998,
+  volume =    5,
+  number =    1,
+  pages =     {46--55},
+  month =     {Janurary--March}}
+
+@article{sisal,
+	author =	{John T. Feo and David C. Cann and Rodney R. Oldehoeeft},
+	title =		{A report on the {S}isal language Project},
+	journal =	{Journal of Parallel and Disributed Computing},
+	year =		{1990},
+	volume =	{10},
+	pages =		{349--366}
+}
+
+@article{modedghc,
+	author =	{Kazunori Ueda and Masao Morita},
+	title =		{Moded {F}lat {GHC} and its message-oriented
+			implementation technique},
+	journal =	{New Generation Computing},
+	year =		{1994},
+	volume =	{13},
+	number =	{1},
+	pages =		{3--43}
+}
+
+@article{essurvey,
+	author =	{Ehud Shapiro},
+	title =		{A family of concurrent logic programming languages},
+	journal =	{Computing Surveys},
+	year =		{September 1989},
+	volume =	{21},
+	number =	{3}
+}
+
+@article{kgsurvey,
+	author =	{Jacques Chassin de Kergommeaux and Philippe Codognet},
+	title =		{Parallel logic programming systems},
+	journal =	{Computing Surveys},
+	year =		{September 1994},
+	volume =	{26},
+	number =	{3}
+}
+
+@article{gsurvey,
+	author =	{Gopal Gupta and Enrico Pontelli and Khayri A.M. Ali
+			and Mats Carlsson and Manuel V. Hermenegildo},
+	title =		{Parallel execution of {Prolog} programs: a survey},
+	journal =	{ACM Transactions on Programming Languages and Systems},
+	year =		{July 2001},
+	volume =	{23},
+	number =	{2}
+}
+
+@inproceedings{andorra,
+	author =	{Vitor Santos Costa and David H. D. Warren
+			and Rong Yang},
+	title =		{Andorra {I}: a parallel {P}rolog system that
+			transparently exploits
+			both {AND}- and {OR}-parallelism},
+	booktitle =	{Proceedings of the Third ACM Symposium on the
+			Principles and Practice of Parallel Programming},
+	address =	{Williamsburg, Virginia},
+	pages =		{83--93},
+	year =		{1991}
+}
+
+@article{gupta01:optimization_for_parallel_nodet_code,
+  author    = {Gopal Gupta and
+p               Enrico Pontelli},
+  title     = {Optimization schemas for parallel implementation of non-deterministic
+               languages and systems},
+  journal   = {Software: Practice and Experience},
+  volume    = {31},
+  number    = {12},
+  year      = {2001},
+  pages     = {1143-1181},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}

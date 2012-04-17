@@ -119,7 +119,7 @@ Most deadlocks are much more subtle and harder to find and fix.
 % STM
 A better way to avoid all these problems in concurrent programing is to use
 software transational memory (STM)~%
-\cite{harris_marlow_spj:haskell-stm,mika:mercury-stm}.
+\cite{harris:2005:haskell-stm,mika:mercury-stm}.
 STM allows programmers to mark different variables as transactional
 and to define critical sections.
 Any changes to a transactional variable made during a critical section must
@@ -184,7 +184,7 @@ This means that any parallelised work usually doesn't do enough work to
 make parallelization worthwhile.
 The GpH implementors have tried to solve this problem by allowing
 the programmer to express how deep evaluation should
-continue~\cite{trinder:1998:strategies}.
+continue~\cite{trinder:98:strategies}.
 An alternative Haskell library called Monad.Par~\cite{marlow:monadpar}
 fully evaluates the result of any spawned-off computation.
 However, the programmer must still describe how any of their own
@@ -202,7 +202,7 @@ a strict language.
 Mercury allows programmers to request parallel evaluation of
 conjunctions by replacing the normal conjunction operator with the
 parallel conjunction operator introduced by Thomas Conway in
-\cite{conway:2002:par,wang:parallel-mercury,wang:indep-and-par}.
+\cite{conway:2002:par,wang_hons_thesis,wang_dep_par_conj}.
 Since Mercury is a strict language it does not have Haskell's
 lazyness problems,
 programmers simply annotate where parallel execution
@@ -258,7 +258,7 @@ A number of parallel Prolog-like languages that were developed during the
 1980's are classified as implicitly parallel languages.
 These included Concurrent
 Prolog~\cite{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
-Parlog~\cite{parlog,clark84:parlog_sys_prog} and GHC~\cite{ueda:ghc}.
+Parlog~\cite{clark:84:parlog_sys_prog,clark:86:parlog} and GHC~\cite{ueda:ghc}.
 Nearly all tasks in these languages were carried out in
 parallel,
 as a result the overheads of parallel execution are typically
@@ -273,7 +273,7 @@ Both these effects often caused very poor performance.
 
 % Granularity control
 Granularity control was introduced in order to solve these
-problems~\cite{lopez96:distance_granularity,shen99:granularity_control}.
+problems~\cite{lopez96:distance_granularity,shen_98_granularity-control}.
 It attempts to reduce the amount of work being executed in parallel.
 There are a number of different methods, some incur a
 runtime cost in order to determine if there is already ample parallel
@@ -286,7 +286,7 @@ I'm going to have to find this in the literature and come back to this
 paragraph and possibly the previous one.}
 
 Some languages allow for the parallelisation of data parallel
-tasks such as NESL~\cite{nesl} and Data Parallel
+tasks such as NESL~\cite{blelloch:95:nesl} and Data Parallel
 Haskell (DpH)~\cite{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
 These languages use special datatypes to denote parallelism,
 sequences and parallel arrays in NESL and DpH respectivly.
@@ -346,8 +346,8 @@ into an equivalent program with more available parallelism.
 
 % Jerome's work.
 J\'er\"ome Tannier's implicit parallelism implementation for
-Mercury~\cite{tannier} also uses profiler feedback information to
-automatically parallelise a program.
+Mercury~\cite{tannier:2007:parallel_mercury} also uses profiler feedback
+information to automatically parallelise a program.
 Tannier's approach selects the most expensive predicates of a program
 and attempts to parallelise conjunctions within them.
 Tannier also makes use of compile-time granularity
