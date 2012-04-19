@@ -3,33 +3,34 @@ The low-level C backend of the Mercury implementation uses C as a
 pesudo-assembler;
 A Mercury \emph{engine} structure represents a CPU that can execute Mercury
 Abstract Machine instructions.
-These instructions are implemented as C macros and simply act on the
-engine structure as necesary.
-This engine structure has fields that represent virual registers,
-some of which are mapped (using a GCC extension) to physical machine
-registers - depending on the achitecture of the physical machine.
-These registers include 1024 general-purpose registers including
+An engine has fields that represent virual registers,
+some of which are mapped (using GCC's~\citep{gcc} global register extension) to
+physical machine registers - depending on the achitecture of the physical
+machine.
+These registers include 1024 general-purpose registers,
 three stack pointers for the two stacks,
-and a success continuation pointer for implementing tail-calls;
-the structure contains many other fields for bookkeeping,
+and a success continuation pointer for implementing tail-calls.
+The structure contains many other fields for bookkeeping,
 we will discuss them as they become relevant.
-More information about Mercury's execution algorithm should read
-\cite{mercury_jlp}.
+The abstract machine instructions are implemented as C preprocessor macros,
+which use the engine structure.
+More information about Mercury's execution algorithm can be found in
+\citet{mercury_jlp}.
 
-To make parallel execution possible Conway~\cite{conway:2002:par} allowed
-multiple instances of the engine structure to reside in memory at once.
+To make parallel execution possible \citet{conway:2002:par} allowed
+multiple instances of the engine structure to be used at once.
 The Operating System's threading library,
-namely POSIX Threads,
-is used to allow parallelism;
-each thread owning a single engine.
+namely POSIX Threads~\citep{pthreads},
+is used to expose parallelism to the OS.
+Each POSIX Thread (pthread) owns a single engine.
 The number of engines that a parallel Mercury program will allocate on startup
 is configurable by the user,
 but it defaults to the actual number of CPUs.
 Users can also configure the runtime system to pin engines to CPUs
 ensure there is an even distribution of engines across the machine.
-% XXX: Maybe discuss how thread pinning and SMT interact.  Although all
-% this thread pinning work is new work - it's not necessary part of the
-% background.
+\paul{Maybe discuss how thread pinning and SMT interact.  Although all
+this thread pinning work is new work - it's not necessary part of the
+background.  I think this discussion may belong in \ref{chap:rts}}
 
 Eacn POSIX Thread must maintain a pointer to its engine;
 this is kept in a physical machine register as it is accessed
@@ -40,8 +41,8 @@ so a compiled-in constant could easily be used.
 Therefore, in parallel builds there are fewer physical registers that
 virtual registers may be mapped onto.
 
-Conway~\cite{conway:2002:par} also introduced a new structure called a
-\emph{context}.
+\citet{conway:2002:par} also introduced a new structure called a
+\emph{context}, also known as a green thread.
 Contexts represent computations in progress.
 An engine may be idle, or it may be executing a context;
 a context can be running on an engine, or it may be suspended.
@@ -52,14 +53,21 @@ all other procedures use the det stack
 (which behaves like a stack in an imperative language).
 These stacks account for the majority of the context's memory usage.
 When a context finishes execution,
-its storage is put back into a pool of free contexts for
-later reuse.
+it can either be retained by the engine or have its storage released to the
+free context pool.
+This decision depends on what the engine will do next,
+if the engine will execute a different context or go to sleep
+(because there's no work to do);
+then the current context is released,
+otherwise it is retained.
+Contexts cannot be preempted.
 
-Following \cite{simonmar_2009_multicore_rts},
+Following \citet{simonmar_2009_multicore_rts},
 we economize on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
 when an engine executes a spark, it uses its current context,
+(the current context is always free when an engine attempts to run a spark),
 or if it does not have a context a new one is allocated
 (from the pool of free contexts if the pool is not empty,
 and a newly created context otherwise).
