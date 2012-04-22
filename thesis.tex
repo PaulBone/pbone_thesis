@@ -194,6 +194,18 @@ Lexington KY USA, July 2011.
 framework established by the deep profiler?
 Or is this section a montivation for a discussion of the deep profiler?}
 
+\chapter{Runtime system improvements}
+\label{chap:rts}
+
+\paul{Discuss thread pinning an SMT}
+
+\paul{Discuss changes to work stealing (queues are now owned by engines, not
+threads)}
+
+\paul{Work stealing was originally an unapplied patch written by Peter.
+I fixed it up and applied it.
+Then later refactored it.}
+
 \chapter{Overlap}
 \label{chap:overlap}
 \input{overlap}
@@ -213,16 +225,6 @@ Or is this section a montivation for a discussion of the deep profiler?}
 \chapter{Visualisation}
 \label{chap:tscope}
 \input{tscope}
-
-\chapter{Revising the RTS}
-\label{chap:rts}
-
-\paul{XXX}
-
-\paul{Discuss thread pinning an SMT}
-
-\paul{Discuss changes to work stealing (queues are now owned by engines, not
-threads)}
 
 \chapter{Order independent state update}
 \label{ref:order_indep_state_update}
