@@ -156,7 +156,7 @@ full, because there's already enough parallelism,
 then the spark is added to a queue owned by the current context.
 \citet{wang_hons_thesis} intended to use the local queues for work stealing
 but had not completed his implementation,
-The work-stealing dequeue structure that \citet{wang_hons_thesis} 
+The work-stealing dequeue structure
 is described in \cite{Chase_2005_wsdeque}.
 see Chapter \ref{chap:rts} for details.
 
@@ -182,7 +182,7 @@ contexts and their stacks.
 \code{~~}$\&$       & \code{~~join\_and\_continue(\&ST, Cont\_Label);} \\
                     & \code{Spawn\_Label:} \\
 \code{~~~~}$G_2$    & \code{~~}$G_2$ \\
-\code{~~}$)$        & \code{~~join\_and\_terminate(\&ST);} \\
+\code{~~}$)$        & \code{~~join\_and\_continue(\&ST, Cont\_Label);} \\
                     & \code{Cont\_Label:} \\
 \end{tabular}
 \end{center}
@@ -205,49 +205,6 @@ When all conjuncts have done so,
 the original context will continue execution after the parallel conjunction.
 An example of the instrumentation necessary to implement parallel
 conjunctions is shown in Figure \ref{fig:par_conj}.
-
-When an engine becomes idle, it will first try
-to resume a suspended but runnable context if there is one.
-If not, it will attempt to run a spark from the global spark queue.
-If it successfully finds a spark, it will allocate a context,
-and start running the spark in that context.
-
-Barrier code is placed at the end of each conjunct,
-this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
-This code starts by atomically decrementing the number of outstanding
-conjuncts in the conjunction's syncterm and checking the result for zero
-(the whole operation is atomic, not just the decrement).
-If there are no remaining conjuncts and the current context is the parent
-context,
-then execution jumps to the label after the parallel conjunction.
-If the current context is not the parent context then
-we can infer that the parent context is suspended
-(or in the process of being suspended),
-therefore, 
-the engine will schedule the parent context
-(the engine may busy-wait until the context is suspended before scheduling it). 
-Alternativly, if there are outstanding conjuncts and
-this is the parent context then it is suspended.
-Finally,
-if an engine with a context other than the original one finds that
-there are still outstanding jobs,
-they check their local spark queue for any such work,
-otherwise they look for global work.
-
-% XXX: revising this WRT the old code.
-
-An engine looks for global work first by checking the local spark
-queue of its context.
-In some cases this check can be optimized out, for example after there
-are no outstanding conjuncts in a parallel conjunction.
-It will then check for runnable but suspended contexts,
-If it finds a runnable context and is still holding a context from a
-previous execution, it saves the old context onto the free context list.
-If there are no runnable contexts,
-it will then attempt to steal work from other contexts.
-If unsuccessful, it will become idle and sleep for a period of time
-before it looks for work again
-or is woken up because a context has become runnable.
 
 \begin{figure}
 \begin{verbatim}
