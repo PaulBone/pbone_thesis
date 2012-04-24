@@ -47,8 +47,8 @@ concurrency.
 Those that do not support concurrency nativly can add support
 with the use of a library.
 For example, 
-C and C++ use the POSIX Threads~\cite{butenhof1997:pthreads} or Windows
-Threads~\cite{winthreads} libraries that are provided with operating systems.
+C and C++ use the POSIX Threads~\citep{butenhof1997:pthreads} or Windows
+Threads~\citep{winthreads} libraries that are provided with operating systems.
 These libraries tend to be low-level;
 they simply provide an interface to the operating system.
 These examples use the \emph{threading} model of concurrency:
@@ -60,7 +60,7 @@ concurrent read and write, and write and write operations are unsafe.
 Code that uses shared data is known as a critical section,
 Only one thread may execute a critical section for a given piece of shared data
 at once,
-this is known as \emph{mutual exclusion}~\cite{Dijkstra:Mutex}.
+this is known as \emph{mutual exclusion}~\citep{Dijkstra:Mutex}.
 Critical sections therefore need to be protected by locks.
 Upon entering a critical section a thread must acquire the lock associated with
 the data,
@@ -71,7 +71,7 @@ correctly.
 
 Many other languages and libraries support the threading model of concurrency.
 Many such languages support threading directly, buy building support into the
-language or its standard library such as Java~\cite{java-threads}.
+language or its standard library such as Java~\citep{java-threads}.
 
 Mutual exclusion locking is problematic,
 it is too easy to make mistakes when using locks.
@@ -94,13 +94,13 @@ a testament to just how frustrating it can be to find.
 % Message passing.
 Alternative models of concurrency exist,
 another popular model is \emph{message passing}.
-Notable examples of message passing libraries are MPI\cite{mpi} and
-PVM~\cite{pvm}.
+Notable examples of message passing libraries are MPI\citep{mpi} and
+PVM~\citep{pvm}.
 Unlike threads, message passing's \emph{processes} do not share static or heap data.
 They communicate by sending messages to one another.
 In MPI and PVM the programmer is responsible for encoding and decoding messages,
 which can be tedious.
-Languages such as Erlang~\cite{erlang} support message passing natively and
+Languages such as Erlang~\citep{erlang} support message passing natively and
 encoding and decoding is done for the programmer.
 The major benefit of message passing is that it doesn't make assumptions about where processes
 are executing:
@@ -112,7 +112,7 @@ However,
 it is often slower on shared memory systems since the same memory cannot easily
 be referenced.
 There are exceptions to this,
-Go~\cite{balbaert:2012:go} for example uses message passing but also allows
+Go~\citep{balbaert:2012:go} for example uses message passing but also allows
 access to shared memory,
 and therefore has all the problems of threading.
 Message passing does not avoid the problem of deadlocks,
@@ -125,7 +125,7 @@ Most deadlocks are much more subtle and harder to find and fix.
 % STM
 A better way to avoid all these problems in concurrent programing is to use
 software transational memory (STM)~%
-\cite{harris:2005:haskell-stm,mika:mercury-stm}.
+\citep{harris:2005:haskell-stm,mika:mercury-stm}.
 STM allows programmers to mark different variables as transactional
 and to define critical sections.
 Any changes to a transactional variable made during a critical section must
@@ -143,7 +143,7 @@ consistency may not be guaranteed.
 
 % Parallelism w/o concurrency in imperative languages.
 Parallelism can also be achieved without concurrency,
-a popular language and library for this is OpenMP~\cite{openmp},
+a popular language and library for this is OpenMP~\citep{openmp},
 which allows programmers to annotate parts of their programs for parallel
 execution without describing \textbf{how} this parallelism should be achieved;
 making it much easier for programmers to use.
@@ -164,8 +164,8 @@ passing.
 % Declarative languages.
 One of the easiest ways to make explicit parallelism easier is to prevent
 side-effects from occurring, usually by designing them out of the language.
-Pure declarative languages like Mercury~\cite{mercury_jlp},
-Haskell~\cite{haskell98} and Clean~\cite{1991:concurrent-clean} do not
+Pure declarative languages like Mercury~\citep{mercury_jlp},
+Haskell~\citep{haskell98} and Clean~\citep{1991:concurrent-clean} do not
 allow side-effects.
 \paul{I should be able to find a more useful citation for Clean.}
 This is done by ensuring that a function's declaration declares all of the
@@ -180,7 +180,7 @@ executed in parallel.
 Glasgow Parallel Haskell (GpH) allows programmers to request parallel
 evaluation of certain expressions by annotating them with a function
 whose operational semantics cause parallel
-evaluation~\cite{gph,loidi:2008:gph-semiexplicit-parallelism}.
+evaluation~\citep{gph,loidi:2008:gph-semiexplicit-parallelism}.
 Unfortunately Haskell's lazy evaluation strategy interacts poorly with
 parallelism.
 A parallelized computation will be evaluated to weak-head-normal-form,
@@ -190,8 +190,8 @@ This means that any parallelised work usually doesn't do enough work to
 make parallelization worthwhile.
 The GpH implementors have tried to solve this problem by allowing
 the programmer to express how deep evaluation should
-continue~\cite{trinder:98:strategies}.
-An alternative Haskell library called Monad.Par~\cite{marlow:monadpar}
+continue~\citep{trinder:98:strategies}.
+An alternative Haskell library called Monad.Par~\citep{marlow:monadpar}
 fully evaluates the result of any spawned-off computation.
 However, the programmer must still describe how any of their own
 datatypes can be fully evaluated.
@@ -208,7 +208,7 @@ a strict language.
 Mercury allows programmers to request parallel evaluation of
 conjunctions by replacing the normal conjunction operator with the
 parallel conjunction operator introduced by Thomas Conway in
-\cite{conway:2002:par,wang_hons_thesis,wang_dep_par_conj}.
+\citep{conway:2002:par,wang_hons_thesis,wang_dep_par_conj}.
 Since Mercury is a strict language it does not have Haskell's
 lazyness problems,
 programmers simply annotate where parallel execution
@@ -263,8 +263,8 @@ it is used in most places within the program.
 A number of parallel Prolog-like languages that were developed during the
 1980's are classified as implicitly parallel languages.
 These included Concurrent
-Prolog~\cite{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
-Parlog~\cite{clark:84:parlog_sys_prog,clark:86:parlog} and GHC~\cite{ueda:ghc}.
+Prolog~\citep{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
+Parlog~\citep{clark:84:parlog_sys_prog,clark:86:parlog} and GHC~\citep{ueda:ghc}.
 Nearly all tasks in these languages were carried out in
 parallel,
 as a result the overheads of parallel execution are typically
@@ -279,7 +279,7 @@ Both these effects often caused very poor performance.
 
 % Granularity control
 Granularity control was introduced in order to solve these
-problems~\cite{lopez96:distance_granularity,shen_98_granularity-control}.
+problems~\citep{lopez96:distance_granularity,shen_98_granularity-control}.
 It attempts to reduce the amount of work being executed in parallel.
 There are a number of different methods, some incur a
 runtime cost in order to determine if there is already ample parallel
@@ -292,8 +292,8 @@ I'm going to have to find this in the literature and come back to this
 paragraph and possibly the previous one.}
 
 Some languages allow for the parallelisation of data parallel
-tasks such as NESL~\cite{blelloch:95:nesl} and Data Parallel
-Haskell (DpH)~\cite{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
+tasks such as NESL~\citep{blelloch:95:nesl} and Data Parallel
+Haskell (DpH)~\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
 These languages use special datatypes to denote parallelism,
 sequences and parallel arrays in NESL and DpH respectivly.
 Only operations on elements of these collections are parallelized.
@@ -318,7 +318,7 @@ program than implicitly parallelising most independent computations.
 \label{sec:lit_automatic-parallelisation}
 
 % Look at automatic parallelisation in Haskell.
-Harris and Singh~\cite{harris_07_feedback_imp_par} developed a profiler
+\citet{harris_07_feedback_imp_par} developed a profiler
 feedback directed automatic parallelisation approach for Haskell programs.
 They have reported speed ups of up to 80\% compared to the sequential
 execution of their test programs on a four core machine.
@@ -334,7 +334,7 @@ In some cases it may be possible to transform common programming
 pasterns that lack parallelism into equivalent patterns with available
 parallelism.
 Furthermore, an advanced profiler --- such as Mercury's deep
-profiler~\cite{conway:2001:mercury-deep} --- can provide information
+profiler~\citep{conway:2001:mercury-deep} --- can provide information
 that enables a compiler to make good parallelisation choices.
 However there are a number of challenges facing automatic
 parallelisation.
@@ -351,11 +351,11 @@ We hope that in some cases the compiler can transform such a program
 into an equivalent program with more available parallelism.
 
 % Jerome's work.
-J\'er\"ome Tannier's implicit parallelism implementation for
-Mercury~\cite{tannier:2007:parallel_mercury} also uses profiler feedback
+\citet{tannier:2007:parallel} previously attempted to automatically
+parallelise Mercury programs using profiler feedback
 information to automatically parallelise a program.
-Tannier's approach selects the most expensive predicates of a program
-and attempts to parallelise conjunctions within them.
+\citet{tannier:2007:parallel} approach selects the most expensive predicates
+of a program and attempts to parallelise conjunctions within them.
 Tannier also makes use of compile-time granularity
 control to reduce the over-parallelisation that can occur in recursive
 code.
@@ -371,7 +371,7 @@ We believe that Tannier's algorithm is, in general, too optimistic
 about the parallelism available in dependant conjunctions.
 
 % My honours thesis.
-Paul Bone~\cite{bone:2008:hons} improved on this approach by using
+\citet{bone:2008:hons} improved on this approach by using
 information from a modification of Mercury's deep profiler to
 calculate when the producing conjunct is most likely to produce the
 dependant values and when the consuming conjunct is likely to need
@@ -380,7 +380,7 @@ This information can be used to estimate the parallel speedup of
 dependant conjunctions.
 The effectiveness of this approach is not yet clear.
 
-Mercury's deep profiler~\cite{conway:2001:mercury-deep} provides
+Mercury's deep profiler~\citep{conway:2001:mercury-deep} provides
 detailed and accurate profiling information,
 among other things the deep profiler records separate profiling
 information for separate uses of the same code.
@@ -389,8 +389,8 @@ parallel specialisation --- generating sequential and parallel
 versions of one procedure and using the sequential version
 in situations where parallelism is not an optimisation.
 Extracting information from the deep profiler to guide compiler
-optimisations is supported by Bone's feedback
-framework~\cite{bone:2008:hons}.
+optimisations is supported by the feedback framework developed by
+\citet{bone:2008:hons}.
 These are examples of the flexibility that the deep profiler provides,
 describing other ideas is outside the context of a literature review.
 No equivalent profiler exists for Haskell or Clean, making Mercury an

@@ -78,7 +78,7 @@ a spark),
 or if it does not have a context a new one is allocated
 (from the pool of free contexts if the pool is not empty,
 and a newly created context otherwise).
-Unlike \cite{simonmar_2009_multicore_rts},
+Unlike \citet{simonmar_2009_multicore_rts},
 Mercury's sparks cannot be garbage collected and must be executed.
 
 The only parallel construct in Mercury is parallel conjunction,
@@ -159,7 +159,7 @@ then the spark is added to a queue owned by the current context.
 \citet{wang_hons_thesis} intended to use the local queues for work stealing
 but had not completed his implementation,
 The work-stealing dequeue structure
-is described in \cite{Chase_2005_wsdeque}.
+is described in \citet{Chase_2005_wsdeque}.
 see Chapter \ref{chap:rts} for details.
 
 If the context finishes the execution of the first conjunct ($G_1$)
@@ -275,11 +275,11 @@ and hence the absence of deadlocks between the conjuncts,
 but it does allow a conjunct to depend on data that is yet to be computed
 by a conjunct running in parallel.
 We handle these dependencies through a source-to-source transformation
-\cite{wang_dep_par_conj}.
+\citep{wang_dep_par_conj}.
 The compiler knows which variables
 are produced by one parallel conjunct and consumed by another.
 For each of these shared variables,
-it creates a data structure called a \emph{future} \cite{multilisp}.
+it creates a data structure called a \emph{future} \citep{multilisp}.
 When the producer has finished computing the value of the variable,
 it puts the value in the future and signals its availability.
 When a consumer needs the value of the variable,
@@ -288,7 +288,7 @@ and then retrieves the value from the future.
 % Both operations are protected by mutexes.
 
 For each of these shared variables,
-the compiler creates a data structure called a \emph{future} \cite{multilisp},
+the compiler creates a data structure called a \emph{future} \citep{multilisp},
 which contains room for the value of the variable,
 a flag indicating whether the variable has been produced yet,
 a queue of consumer contexts waiting for the value, and a mutex.
