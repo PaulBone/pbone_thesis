@@ -255,54 +255,79 @@ Finally, My wife (new family).
 
 \section{Historic Automatic Parallelism in Mercury}
 
-\paul{Jerome's work}
-
-\paul{My honours thesis}
-
 \paul{Should this section occur before profiling in Mercury, since it uses the
 framework established by the deep profiler?
 Or is this section a montivation for a discussion of the deep profiler?}
 
+\status{The points that need discussing here are:}
+
+\begin{itemize}
+
+    \item Jerome's work
+
+    \item My honours thesis
+
+    \begin{itemize}
+        \item Callgraph search.
+
+        \item Variable use analysis
+        \paul{This needs to be moved from the overlap paper}
+
+        \item We did write code in the compiler to act on feedback, but no
+        feedback was ever identified by the analysis at this time, so this
+        was untested.
+    \end{itemize}
+
+\end{itemize}
+
 \chapter{Runtime system improvements}
 \label{chap:rts}
-
-\paul{Discuss thread pinning an SMT}
-
-\paul{Discuss changes to work stealing (queues are now owned by engines, not
-threads)}
-
-\paul{Work stealing was originally an unapplied patch written by Peter.
-I fixed it up and applied it.
-Then later refactored it.}
+\input{rts}
 
 \chapter{Overlap}
 \label{chap:overlap}
-\input{overlap}
+
+\status{This has not been revised since the paper. I've only removed parts
+of it to place elsewhere, for example, in the background section.}
 
 \paul{
     Add discussion about how our data-flow analysis doesn't recognize loops
     since they need to be treated specially.}
 
+\input{overlap}
+
 \chapter{Loop Control}
 \label{chap:loop_control}
-\input{loop_control}
+
+\status{This has not been revised since the paper. I've only removed parts
+of it to place elsewhere, for example, in the background section.}
 
 \paul{
     Add something about updating overlap's cost model, then we need to
     re-evaluate it.}
 
+\input{loop_control}
+
 \chapter{Visualisation}
 \label{chap:tscope}
+
+\status{This section needs a lot more work.  But it depends on unfinished
+implementation}
+
 \input{tscope}
-
-\chapter{Order independent state update}
-\label{ref:order_indep_state_update}
-
-\paul{This chapter may be removed}
 
 \chapter{Conclusion}
 
 % Each research chapter contains a discussion of related work.
+\status{No plan for this chapter yet}
+
+I guess in this chapter I have to unify the contributions of the other
+chapters.
+I think that perhaps this chapter could be used to relate the contribution
+of the thesis to the rest of the world, providing statements about future
+work, and applicability of this work to other languages and systems.
+
+\paul{How do you finish a thesis?}
 
 \bibliographystyle{plainnat}
 \bibliography{bib}

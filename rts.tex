@@ -1,4 +1,25 @@
 
+\status{This section is currently an outline,  the text below has been
+coppied here as I may use it or a modification of it}
+
+\begin{itemize}
+
+    \item Discuss changes to work stealing (queues are now owned by engines,
+          not threads)
+
+    \item Work stealing was originally an unapplied patch written by Peter.
+          I fixed it up and applied it.  Then later refactored it.
+
+    \item Discuss thread pinning and SMT
+
+    \item Should I describe our proposal for OS kernel's to help
+          applications with how many threads to use.
+          GCD is related but doesn't fit into a language runtime system so
+          easily~\cite{apple_gcd}.
+          See also N:M threading.
+
+\end{itemize}
+
 When an engine becomes idle, it will first try
 to resume a suspended but runnable context if there is one.
 If not, it will attempt to run a spark from the global spark queue.
