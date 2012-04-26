@@ -1,0 +1,90 @@
+#!/bin/sh
+# vim: ts=4 sw=4 et
+
+usage="seminar_psnup [3|4|7|8] dir basename"
+
+if test $# != 3
+then
+    echo "${usage}"
+    exit 1
+fi
+
+n=$1
+dir=$2
+basename=$3
+
+input_filename=".${dir}/${basename}.ps"
+output_filename="${dir}/${basename}.${n}.ps"
+error_filename=".${dir}/.psnup${n}.${basename}.out"
+
+case "${n}" in
+    3|4)
+        scale=0.49
+
+        ht0=800
+        ht1=410
+
+        wid0=300
+        wid1=580
+
+        page0="0U@${scale}(${wid0},${ht1})"
+        page1="1U@${scale}(${wid0},${ht0})"
+        page2="2U@${scale}(${wid1},${ht1})"
+        page3="3U@${scale}(${wid1},${ht0})"
+
+        case "${n}" in
+            3)
+                transform="3:${page0}+${page1}+${page2}"
+                ;;
+            4)
+                transform="4:${page0}+${page1}+${page2}+${page3}"
+                ;;
+        esac
+        ;;
+    7|8)
+        scale=0.32
+
+        ht0=60
+        ht1=235
+        ht2=410
+        ht3=585
+
+        wid0=590
+        wid1=360
+
+        page0="0L@${scale}(${wid1},${ht3})"
+        page1="1L@${scale}(${wid0},${ht3})"
+        page2="2L@${scale}(${wid1},${ht2})"
+        page3="3L@${scale}(${wid0},${ht2})"
+        page4="4L@${scale}(${wid1},${ht1})"
+        page5="5L@${scale}(${wid0},${ht1})"
+        page6="6L@${scale}(${wid1},${ht0})"
+        page7="7L@${scale}(${wid0},${ht0})"
+
+        case "${n}" in
+            7)
+                transform="7:${page0}+${page1}+${page2}+${page3}"
+                transform="${transform}+${page4}+${page5}+${page6}"
+                ;;
+            8)
+                transform="8:${page0}+${page1}+${page2}+${page3}"
+                transform="${transform}+${page4}+${page5}+${page6}+${page7}"
+                ;;
+        esac
+        ;;
+    *)
+        echo "${usage}"
+        exit 1
+        ;;
+esac
+
+pstops -q -w21cm -h29.7cm ${transform} \
+    ${input_filename} ${output_filename} 2> ${error_filename}
+status=$?
+
+if test ${status} != 0
+then
+    cat ${error_filename}
+fi
+
+exit ${status}

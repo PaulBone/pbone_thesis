@@ -1,0 +1,668 @@
+SCRIPTS_DIR		= lecture_support
+STYLES_DIR		= styles
+SUBJECT_DIR		= subject
+
+SCRIPTS 		= $(SCRIPTS_DIR)/do_slides \
+			  $(SCRIPTS_DIR)/transform.py \
+			  $(SCRIPTS_DIR)/beamer_psnup \
+			  $(SCRIPTS_DIR)/seminar_psnup \
+			  $(SCRIPTS_DIR)/pic_to_eps \
+			  $(SCRIPTS_DIR)/Makefile.lectures
+
+SUBJECTS 		= $(wildcard $(SUBJECT_DIR)/[a-z]*)
+STYLES			= $(wildcard $(STYLES_DIR)/[a-z]*)
+
+.SUFFIXES: 		.pdf .eps .ps .dvi .tex .pic
+
+ALL_COMPONENTS		= $(COMPONENTS) allslides
+
+# If there is only one component, then invoke do_slides with -a
+# for that component as well as for allslides.
+ALL_OPT			= $(if $(word 2, $(COMPONENTS)),,-a)
+RENUMBER_OPT		= $(if $(word 1, $(SECTION_NUMBER_START)),\
+				-r$(SECTION_NUMBER_START),)
+BOLD_TITLES_OPT		= $(if $(word 1, $(BOLD_TITLES)),-b,)
+DO_SLIDES_CMD		= $(SCRIPTS_DIR)/do_slides $(ALL_OPT) $(RENUMBER_OPT) \
+				$(BOLD_TITLES_OPT) $(TAB_OPT)
+
+PIC_TO_EPS_CMD		= $(SCRIPTS_DIR)/pic_to_eps
+FIG_TO_EPS_CMD		= fig2dev -L eps
+PS_TO_EPS_CMD		= ps2epsi
+
+BEAMER_PSNUP_CMD	= $(SCRIPTS_DIR)/beamer_psnup
+SEMINAR_PSNUP_CMD	= $(SCRIPTS_DIR)/seminar_psnup
+
+WORK_TEA_BEAMER_PSS	= $(ALL_COMPONENTS:%=.teacher_beamer/%.ps)
+WORK_STU_BEAMER_PSS	= $(ALL_COMPONENTS:%=.student_beamer/%.ps)
+WORK_TEA_SEMINAR_PSS	= $(ALL_COMPONENTS:%=.teacher_seminar/%.ps)
+WORK_STU_SEMINAR_PSS	= $(ALL_COMPONENTS:%=.student_seminar/%.ps)
+WORK_TEA_NOTES_PSS	= $(ALL_COMPONENTS:%=.teacher_notes/%.ps)
+WORK_STU_NOTES_PSS	= $(ALL_COMPONENTS:%=.student_notes/%.ps)
+
+ALL_WORK_TEA_PSS	= $(WORK_TEA_BEAMER_PSS)  \
+			  $(WORK_TEA_SEMINAR_PSS) \
+			  $(WORK_TEA_NOTES_PSS)
+
+ALL_WORK_STU_PSS	= $(WORK_STU_BEAMER_PSS) \
+			  $(WORK_STU_SEMINAR_PSS) \
+			  $(WORK_STU_NOTES_PSS)
+
+WORK_FILES		= $(ALL_WORK_TEA_PSS) $(ALL_WORK_STU_PSS)
+
+TEA_BEAMER_PSS		= $(ALL_COMPONENTS:%=teacher_beamer/%.ps)
+TEA_BEAMER_PDFS		= $(ALL_COMPONENTS:%=teacher_beamer/%.pdf)
+STU_BEAMER_PSS		= $(ALL_COMPONENTS:%=student_beamer/%.ps)
+STU_BEAMER_PDFS		= $(ALL_COMPONENTS:%=student_beamer/%.pdf)
+TEA_SEMINAR_PSS		= $(ALL_COMPONENTS:%=teacher_seminar/%.ps)
+TEA_SEMINAR_PDFS	= $(ALL_COMPONENTS:%=teacher_seminar/%.pdf)
+STU_SEMINAR_PSS		= $(ALL_COMPONENTS:%=student_seminar/%.ps)
+STU_SEMINAR_PDFS	= $(ALL_COMPONENTS:%=student_seminar/%.pdf)
+TEA_NOTES_PSS		= $(ALL_COMPONENTS:%=teacher_notes/%.ps)
+TEA_NOTES_PDFS		= $(ALL_COMPONENTS:%=teacher_notes/%.pdf)
+STU_NOTES_PSS		= $(ALL_COMPONENTS:%=student_notes/%.ps)
+STU_NOTES_PDFS		= $(ALL_COMPONENTS:%=student_notes/%.pdf)
+
+ALL_TEA_PSPDFS		= $(TEA_BEAMER_PSS)  $(TEA_BEAMER_PDFS) \
+			  $(TEA_SEMINAR_PSS) $(TEA_SEMINAR_PDFS) \
+			  $(TEA_NOTES_PSS)   $(TEA_NOTES_PDFS)
+
+ALL_STU_PSPDFS		= $(STU_BEAMER_PSS)  $(STU_BEAMER_PDFS) \
+			  $(STU_SEMINAR_PSS) $(STU_SEMINAR_PDFS) \
+			  $(STU_NOTES_PSS)   $(STU_NOTES_PDFS)
+
+FINAL_FILES		= $(ALL_TEA_PSS) $(ALL_STU_PSS)
+
+TEA_BEAMER_3_PSS	= $(ALL_COMPONENTS:%=teacher_beamer/%.3.ps)
+STU_BEAMER_3_PSS	= $(ALL_COMPONENTS:%=student_beamer/%.3.ps)
+TEA_SEMINAR_3_PSS	= $(ALL_COMPONENTS:%=teacher_seminar/%.3.ps)
+STU_SEMINAR_3_PSS	= $(ALL_COMPONENTS:%=student_seminar/%.3.ps)
+
+TEA_BEAMER_4_PSS	= $(ALL_COMPONENTS:%=teacher_beamer/%.4.ps)
+STU_BEAMER_4_PSS	= $(ALL_COMPONENTS:%=student_beamer/%.4.ps)
+TEA_SEMINAR_4_PSS	= $(ALL_COMPONENTS:%=teacher_seminar/%.4.ps)
+STU_SEMINAR_4_PSS	= $(ALL_COMPONENTS:%=student_seminar/%.4.ps)
+
+TEA_BEAMER_7_PSS	= $(ALL_COMPONENTS:%=teacher_beamer/%.7.ps)
+STU_BEAMER_7_PSS	= $(ALL_COMPONENTS:%=student_beamer/%.7.ps)
+TEA_SEMINAR_7_PSS	= $(ALL_COMPONENTS:%=teacher_seminar/%.7.ps)
+STU_SEMINAR_7_PSS	= $(ALL_COMPONENTS:%=student_seminar/%.7.ps)
+
+TEA_BEAMER_8_PSS	= $(ALL_COMPONENTS:%=teacher_beamer/%.8.ps)
+STU_BEAMER_8_PSS	= $(ALL_COMPONENTS:%=student_beamer/%.8.ps)
+TEA_SEMINAR_8_PSS	= $(ALL_COMPONENTS:%=teacher_seminar/%.8.ps)
+STU_SEMINAR_8_PSS	= $(ALL_COMPONENTS:%=student_seminar/%.8.ps)
+
+TEA_BEAMER_STYLES	= $(STYLES:$(STYLES_DIR)/%=.teacher_beamer/%)
+STU_BEAMER_STYLES	= $(STYLES:$(STYLES_DIR)/%=.student_beamer/%)
+TEA_SEMINAR_STYLES	= $(STYLES:$(STYLES_DIR)/%=.teacher_seminar/%)
+STU_SEMINAR_STYLES	= $(STYLES:$(STYLES_DIR)/%=.student_seminar/%)
+TEA_NOTES_STYLES	= $(STYLES:$(STYLES_DIR)/%=.teacher_notes/%)
+STU_NOTES_STYLES	= $(STYLES:$(STYLES_DIR)/%=.student_notes/%)
+
+PICS 			= $(wildcard pics/[a-z]*)
+TEA_BEAMER_PICS		= $(PICS:pics/%.pic=.teacher_beamer/pb_%.eps)
+STU_BEAMER_PICS		= $(PICS:pics/%.pic=.student_beamer/pb_%.eps)
+TEA_SEMINAR_PICS	= $(PICS:pics/%.pic=.teacher_seminar/ps_%.eps)
+STU_SEMINAR_PICS	= $(PICS:pics/%.pic=.student_seminar/ps_%.eps)
+TEA_NOTES_PICS		= $(PICS:pics/%.pic=.teacher_notes/pn_%.eps)
+STU_NOTES_PICS		= $(PICS:pics/%.pic=.student_notes/pn_%.eps)
+TEA_BEAMER_INCL_PICS	= $(PICS:pics/%.pic=.teacher_beamer/pb_%.tex)
+STU_BEAMER_INCL_PICS	= $(PICS:pics/%.pic=.student_beamer/pb_%.tex)
+TEA_SEMINAR_INCL_PICS	= $(PICS:pics/%.pic=.teacher_seminar/ps_%.tex)
+STU_SEMINAR_INCL_PICS	= $(PICS:pics/%.pic=.student_seminar/ps_%.tex)
+TEA_NOTES_INCL_PICS	= $(PICS:pics/%.pic=.teacher_notes/pn_%.tex)
+STU_NOTES_INCL_PICS	= $(PICS:pics/%.pic=.student_notes/pn_%.tex)
+
+FIGS 			= $(wildcard figs/[a-z]*)
+TEA_BEAMER_FIGS		= $(FIGS:figs/%.fig=.teacher_beamer/pb_%.eps)
+STU_BEAMER_FIGS		= $(FIGS:figs/%.fig=.student_beamer/pb_%.eps)
+TEA_SEMINAR_FIGS	= $(FIGS:figs/%.fig=.teacher_seminar/ps_%.eps)
+STU_SEMINAR_FIGS	= $(FIGS:figs/%.fig=.student_seminar/ps_%.eps)
+TEA_NOTES_FIGS		= $(FIGS:figs/%.fig=.teacher_notes/pn_%.eps)
+STU_NOTES_FIGS		= $(FIGS:figs/%.fig=.student_notes/pn_%.eps)
+
+RAWPSS 			= $(wildcard raw_ps/[a-z]*)
+TEA_BEAMER_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.teacher_beamer/pb_%.eps)
+STU_BEAMER_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.student_beamer/pb_%.eps)
+TEA_SEMINAR_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.teacher_seminar/ps_%.eps)
+STU_SEMINAR_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.student_seminar/ps_%.eps)
+TEA_NOTES_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.teacher_notes/pn_%.eps)
+STU_NOTES_RAWPSS	= $(RAWPSS:raw_ps/%.ps=.student_notes/pn_%.eps)
+
+RAWEPSS 		= $(wildcard raw_eps/[a-z]*)
+TEA_BEAMER_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.teacher_beamer/pb_%.eps)
+STU_BEAMER_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.student_beamer/pb_%.eps)
+TEA_SEMINAR_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.teacher_seminar/ps_%.eps)
+STU_SEMINAR_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.student_seminar/ps_%.eps)
+TEA_NOTES_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.teacher_notes/pn_%.eps)
+STU_NOTES_RAWEPSS	= $(RAWEPSS:raw_eps/%.eps=.student_notes/pn_%.eps)
+
+TEA_BEAMER_BASIS	= $(SCRIPTS) $(SUBJECTS) $(TEA_BEAMER_STYLES) \
+			  $(TEA_BEAMER_PICS) $(TEA_BEAMER_INCL_PICS) \
+			  $(TEA_BEAMER_FIGS) \
+			  $(TEA_BEAMER_RAWPSS) $(TEA_BEAMER_RAWEPSS)
+STU_BEAMER_BASIS	= $(SCRIPTS) $(SUBJECTS) $(STU_BEAMER_STYLES) \
+			  $(STU_BEAMER_PICS) $(STU_BEAMER_INCL_PICS) \
+			  $(STU_BEAMER_FIGS) \
+			  $(STU_BEAMER_RAWPSS) $(STU_BEAMER_RAWEPSS)
+TEA_SEMINAR_BASIS	= $(SCRIPTS) $(SUBJECTS) $(TEA_SEMINAR_STYLES) \
+			  $(TEA_SEMINAR_PICS) $(TEA_SEMINAR_INCL_PICS) \
+			  $(TEA_SEMINAR_FIGS) \
+			  $(TEA_SEMINAR_RAWPSS) $(TEA_SEMINAR_RAWEPSS)
+STU_SEMINAR_BASIS	= $(SCRIPTS) $(SUBJECTS) $(STU_SEMINAR_STYLES) \
+			  $(STU_SEMINAR_PICS) $(STU_SEMINAR_INCL_PICS) \
+			  $(STU_SEMINAR_FIGS) \
+			  $(STU_SEMINAR_RAWPSS) $(STU_SEMINAR_RAWEPSS)
+TEA_NOTES_BASIS		= $(SCRIPTS) $(SUBJECTS) $(TEA_NOTES_STYLES) \
+			  $(TEA_NOTES_PICS) $(TEA_NOTES_INCL_PICS) \
+			  $(TEA_NOTES_FIGS) \
+			  $(TEA_NOTES_RAWPSS) $(TEA_NOTES_RAWEPSS)
+STU_NOTES_BASIS		= $(SCRIPTS) $(SUBJECTS) $(STU_NOTES_STYLES) \
+			  $(STU_NOTES_PICS) $(STU_NOTES_INCL_PICS) \
+			  $(STU_NOTES_FIGS) \
+			  $(STU_NOTES_RAWPSS) $(STU_NOTES_RAWEPSS)
+
+.DELETE_ON_ERROR:
+
+.PRECIOUS:		.hide.allslides.orig \
+			\
+			$(WORK_TEA_BEAMER_PSS)  $(WORK_STU_BEAMER_PSS)  \
+			$(WORK_TEA_SEMINAR_PSS) $(WORK_STU_SEMINAR_PSS) \
+			$(WORK_TEA_NOTES_PSS)   $(WORK_STU_NOTES_PSS)   \
+			\
+			$(TEA_BEAMER_PSS)  $(TEA_BEAMER_PDFS) \
+			$(STU_BEAMER_PSS)  $(STU_BEAMER_PDFS) \
+			$(TEA_SEMINAR_PSS) $(TEA_SEMINAR_PDFS) \
+			$(STU_SEMINAR_PSS) $(STU_SEMINAR_PDFS) \
+			$(TEA_NOTES_PSS)   $(TEA_NOTES_PDFS) \
+			$(STU_NOTES_PSS)   $(STU_NOTES_PDFS) \
+			\
+			$(TEA_BEAMER_3_PSS)  $(STU_BEAMER_3_PSS) \
+			$(TEA_SEMINAR_3_PSS) $(STU_SEMINAR_3_PSS) \
+			$(TEA_BEAMER_4_PSS)  $(STU_BEAMER_4_PSS) \
+			$(TEA_SEMINAR_4_PSS) $(STU_SEMINAR_4_PSS) \
+			$(TEA_BEAMER_7_PSS)  $(STU_BEAMER_7_PSS) \
+			$(TEA_SEMINAR_7_PSS) $(STU_SEMINAR_7_PSS) \
+			$(TEA_BEAMER_8_PSS)  $(STU_BEAMER_8_PSS) \
+			$(TEA_SEMINAR_8_PSS) $(STU_SEMINAR_8_PSS) \
+			\
+			$(TEA_BEAMER_STYLES)  $(STU_BEAMER_STYLES) \
+			$(TEA_SEMINAR_STYLES) $(STU_SEMINAR_STYLES) \
+			$(TEA_NOTES_STYLES)   $(STU_NOTES_STYLES) \
+			\
+			$(TEA_BEAMER_PICS) $(TEA_BEAMER_FIGS) \
+			$(TEA_BEAMER_RAWPSS) $(TEA_BEAMER_RAWEPSS) \
+			$(STU_BEAMER_PICS) $(STU_BEAMER_FIGS) \
+			$(STU_BEAMER_RAWPSS) $(STU_BEAMER_RAWEPSS)
+			$(TEA_SEMINAR_PICS) $(TEA_SEMINAR_FIGS) \
+			$(TEA_SEMINAR_RAWPSS) $(TEA_SEMINAR_RAWEPSS)
+			$(STU_SEMINAR_PICS) $(STU_SEMINAR_FIGS) \
+			$(STU_SEMINAR_RAWPSS) $(STU_SEMINAR_RAWEPSS)
+			$(TEA_NOTES_PICS) $(TEA_NOTES_FIGS) \
+			$(TEA_NOTES_RAWPSS) $(TEA_NOTES_RAWEPSS)
+			$(STU_NOTES_PICS) $(STU_NOTES_FIGS) \
+			$(STU_NOTES_RAWPSS) $(STU_NOTES_RAWEPSS)
+
+##############################################################################
+
+.PHONY:		all_teacher_beamer
+.PHONY:		all_student_beamer
+.PHONY:		all_teacher_seminar
+.PHONY:		all_student_beamer
+.PHONY:		all_teacher_notes
+.PHONY:		all_student_beamer
+
+.PHONY:		all_teacher_beamer_3
+.PHONY:		all_student_beamer_3
+.PHONY:		all_teacher_seminar_3
+.PHONY:		all_student_seminar_3
+
+.PHONY:		all_teacher_beamer_4
+.PHONY:		all_student_beamer_4
+.PHONY:		all_teacher_seminar_4
+.PHONY:		all_student_seminar_4
+
+.PHONY:		all_teacher_beamer_7
+.PHONY:		all_student_beamer_7
+.PHONY:		all_teacher_seminar_7
+.PHONY:		all_student_seminar_7
+
+.PHONY:		all_teacher_beamer_8
+.PHONY:		all_student_beamer_8
+.PHONY:		all_teacher_seminar_8
+.PHONY:		all_student_seminar_8
+
+all_teacher_beamer:	$(TEA_BEAMER_PSS) $(TEA_BEAMER_PDFS)
+
+all_student_beamer:	$(STU_BEAMER_PSS) $(STU_BEAMER_PDFS)
+
+all_teacher_seminar:	$(TEA_SEMINAR_PSS) $(TEA_SEMINAR_PDFS)
+
+all_student_seminar:	$(STU_SEMINAR_PSS) $(STU_SEMINAR_PDFS)
+
+all_teacher_notes:	$(TEA_NOTES_PSS) $(TEA_NOTES_PDFS)
+
+all_student_notes:	$(STU_NOTES_PSS) $(STU_NOTES_PDFS)
+
+all_teacher_beamer_3:	$(TEA_BEAMER_3_PSS)
+all_student_beamer_3:	$(STU_BEAMER_3_PSS)
+all_teacher_seminar_3:	$(TEA_SEMINAR_3_PSS)
+all_student_seminar_3:	$(STU_SEMINAR_3_PSS)
+
+all_teacher_beamer_4:	$(TEA_BEAMER_4_PSS)
+all_student_beamer_4:	$(STU_BEAMER_4_PSS)
+all_teacher_seminar_4:	$(TEA_SEMINAR_4_PSS)
+all_student_seminar_4:	$(STU_SEMINAR_4_PSS)
+
+all_teacher_beamer_7:	$(TEA_BEAMER_7_PSS)
+all_student_beamer_7:	$(STU_BEAMER_7_PSS)
+all_teacher_seminar_7:	$(TEA_SEMINAR_7_PSS)
+all_student_seminar_7:	$(STU_SEMINAR_7_PSS)
+
+all_teacher_beamer_8:	$(TEA_BEAMER_8_PSS)
+all_student_beamer_8:	$(STU_BEAMER_8_PSS)
+all_teacher_seminar_8:	$(TEA_SEMINAR_8_PSS)
+all_student_seminar_8:	$(STU_SEMINAR_8_PSS)
+
+##############################################################################
+
+teacher_notes/coverpage_teacher.ps: 	coverpage_teacher.tex
+			@echo making teacher_notes/coverpage_teacher.ps
+			@mkdir -p .teacher_notes teacher_notes
+			@cp coverpage_teacher.tex .teacher_notes
+			@(cd .teacher_notes; \
+			latex coverpage_teacher > .coverpage_teacher.out ; \
+			latex coverpage_teacher >> .coverpage_teacher.out ; \
+			dvips coverpage_teacher >> .coverpage_teacher.out 2>&1 )
+			@mv .teacher_notes/coverpage_teacher.ps teacher_notes
+
+student_notes/coverpage_student.ps: 	coverpage_student.tex
+			@echo making student_notes/coverpage_student.ps
+			@mkdir -p .student_notes student_notes
+			@cp coverpage_student.tex .student_notes
+			@(cd .student_notes; \
+			latex coverpage_student > .coverpage_student.out ; \
+			latex coverpage_student >> .coverpage_student.out ; \
+			dvips coverpage_student >> .coverpage_student.out 2>&1 )
+			@mv .student_notes/coverpage_student.ps student_notes
+
+# .hide.allslides.orig depends on Makefile because it depends on the value
+# of $(COMPONENTS).
+.hide.allslides.orig: 	$(COMPONENTS:%=%.orig) Makefile
+			@if test -f .hide.allslides.orig ; then		      \
+				cat $(COMPONENTS:%=%.orig)		      \
+					> .allslides ;			      \
+				if cmp -s .hide.allslides.orig .allslides ;   \
+				then					      \
+					echo allslides has not changed ;      \
+					/bin/rm -f .allslides ;	      	      \
+				else					      \
+					echo allslides has changed ;          \
+					/bin/rm -f .hide.allslides.orig ;     \
+					mv .allslides .hide.allslides.orig ;  \
+					chmod a-w .hide.allslides.orig	      \
+						> /dev/null ;  		      \
+				fi					      \
+			else						      \
+				echo allslides created ;           	      \
+				cat $(COMPONENTS:%=%.orig) 		      \
+					> .hide.allslides.orig ;	      \
+				chmod a-w .hide.allslides.orig	      	      \
+					> /dev/null ;  		              \
+			fi
+
+.INTERMEDIATE:		allslides.orig
+allslides.orig: 	.hide.allslides.orig
+			@/bin/rm -f allslides.orig
+			@ln .hide.allslides.orig allslides.orig
+
+##############################################################################
+
+%.pdf:			%.ps
+			@echo making $*.pdf
+			@ps2pdf $*.ps $*.pdf
+
+##############################################################################
+
+teacher_beamer/%.ps:	.teacher_beamer/%.ps
+			@cp .teacher_beamer/$*.ps teacher_beamer/$*.ps
+
+student_beamer/%.ps:	.student_beamer/%.ps
+			@cp .student_beamer/$*.ps student_beamer/$*.ps
+
+teacher_seminar/%.ps:	.teacher_seminar/%.ps
+			@cp .teacher_seminar/$*.ps teacher_seminar/$*.ps
+
+student_seminar/%.ps:	.student_seminar/%.ps
+			@cp .student_seminar/$*.ps student_seminar/$*.ps
+
+teacher_notes/%.ps:	.teacher_notes/%.ps
+			@cp .teacher_notes/$*.ps teacher_notes/$*.ps
+
+student_notes/%.ps:	.student_notes/%.ps
+			@cp .student_notes/$*.ps student_notes/$*.ps
+
+##############################################################################
+
+# We do the echoing of "making ..." in these actions instead of the ones
+# above, because otherwise the echo takes places only *after* the
+# time-consuming tasks have already been done.
+
+.teacher_beamer/%.ps:	%.orig $(TEA_BEAMER_BASIS)
+			@echo making teacher_beamer/$*.ps
+			@$(DO_SLIDES_CMD) teacher beamer $*
+
+.student_beamer/%.ps:	%.orig $(STU_BEAMER_BASIS)
+			@echo making student_beamer/$*.ps
+			@$(DO_SLIDES_CMD) student beamer $*
+
+.teacher_seminar/%.ps:	%.orig $(TEA_SEMINAR_BASIS)
+			@echo making teacher_seminar/$*.ps
+			@$(DO_SLIDES_CMD) teacher seminar $*
+
+.student_seminar/%.ps:	%.orig $(STU_SEMINAR_BASIS)
+			@echo making student_seminar/$*.ps
+			@$(DO_SLIDES_CMD) student seminar $*
+
+.teacher_notes/%.ps:	%.orig $(TEA_NOTES_BASIS)
+			@echo making teacher_notes/$*.ps
+			@$(DO_SLIDES_CMD) teacher notes $*
+
+.student_notes/%.ps:	%.orig $(STU_NOTES_BASIS)
+			@echo making student_notes/$*.ps
+			@$(DO_SLIDES_CMD) student notes $*
+
+##############################################################################
+
+teacher_beamer/%.3.ps:	.teacher_beamer/%.ps
+			@echo making teacher_beamer/$*.3.ps
+			@$(BEAMER_PSNUP_CMD) 3 teacher_beamer $*
+
+teacher_beamer/%.4.ps:	.teacher_beamer/%.ps
+			@echo making teacher_beamer/$*.4.ps
+			@$(BEAMER_PSNUP_CMD) 4 teacher_beamer $*
+
+teacher_beamer/%.7.ps:	.teacher_beamer/%.ps
+			@echo making teacher_beamer/$*.7.ps
+			@$(BEAMER_PSNUP_CMD) 7 teacher_beamer $*
+
+teacher_beamer/%.8.ps:	.teacher_beamer/%.ps
+			@echo making teacher_beamer/$*.8.ps
+			@$(BEAMER_PSNUP_CMD) 8 teacher_beamer $*
+
+student_beamer/%.3.ps:	.student_beamer/%.ps
+			@echo making student_beamer/$*.3.ps
+			@$(BEAMER_PSNUP_CMD) 3 student_beamer $*
+
+student_beamer/%.4.ps:	.student_beamer/%.ps
+			@echo making student_beamer/$*.4.ps
+			@$(BEAMER_PSNUP_CMD) 4 student_beamer $*
+
+student_beamer/%.7.ps:	.student_beamer/%.ps
+			@echo making student_beamer/$*.7.ps
+			@$(BEAMER_PSNUP_CMD) 7 student_beamer $*
+
+student_beamer/%.8.ps:	.student_beamer/%.ps
+			@echo making student_beamer/$*.8.ps
+			@$(BEAMER_PSNUP_CMD) 8 student_beamer $*
+
+teacher_seminar/%.3.ps:	.teacher_seminar/%.ps
+			@echo making teacher_seminar/$*.3.ps
+			@$(SEMINAR_PSNUP_CMD) 3 teacher_seminar $*
+
+teacher_seminar/%.4.ps:	.teacher_seminar/%.ps
+			@echo making teacher_seminar/$*.4.ps
+			@$(SEMINAR_PSNUP_CMD) 4 teacher_seminar $*
+
+teacher_seminar/%.7.ps:	.teacher_seminar/%.ps
+			@echo making teacher_seminar/$*.7.ps
+			@$(SEMINAR_PSNUP_CMD) 7 teacher_seminar $*
+
+teacher_seminar/%.8.ps:	.teacher_seminar/%.ps
+			@echo making teacher_seminar/$*.8.ps
+			@$(SEMINAR_PSNUP_CMD) 8 teacher_seminar $*
+
+student_seminar/%.3.ps:	.student_seminar/%.ps
+			@echo making student_seminar/$*.3.ps
+			@$(SEMINAR_PSNUP_CMD) 3 student_seminar $*
+
+student_seminar/%.4.ps:	.student_seminar/%.ps
+			@echo making student_seminar/$*.4.ps
+			@$(SEMINAR_PSNUP_CMD) 4 student_seminar $*
+
+student_seminar/%.7.ps:	.student_seminar/%.ps
+			@echo making student_seminar/$*.7.ps
+			@$(SEMINAR_PSNUP_CMD) 7 student_seminar $*
+
+student_seminar/%.8.ps:	.student_seminar/%.ps
+			@echo making student_seminar/$*.8.ps
+			@$(SEMINAR_PSNUP_CMD) 8 student_seminar $*
+
+##############################################################################
+
+.teacher_beamer/pb_%.eps: pics/%.pic
+			@echo making teacher beamer picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .teacher_beamer pb pics/$*.pic
+
+.student_beamer/pb_%.eps: pics/%.pic
+			@echo making student beamer picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .student_beamer pb pics/$*.pic
+
+.teacher_seminar/ps_%.eps: pics/%.pic
+			@echo making teacher seminar picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .teacher_seminar ps pics/$*.pic
+
+.student_seminar/ps_%.eps: pics/%.pic
+			@echo making student seminar picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .student_seminar ps pics/$*.pic
+
+.teacher_notes/pn_%.eps: pics/%.pic
+			@echo making teacher notes picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .teacher_notes pn pics/$*.pic
+
+.student_notes/pn_%.eps: pics/%.pic
+			@echo making student notes picture from pics/$*.pic
+			@$(PIC_TO_EPS_CMD) .student_notes pn pics/$*.pic
+
+##############################################################################
+
+.teacher_beamer/pb_%.tex: pics/%.pic
+			@echo making teacher beamer include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .teacher_beamer/pb_$*.tex
+
+.student_beamer/pb_%.tex: pics/%.pic
+			@echo making student beamer include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .student_beamer/pb_$*.tex
+
+.teacher_seminar/ps_%.tex: pics/%.pic
+			@echo making teacher seminar include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .teacher_seminar/pb_$*.tex
+
+.student_seminar/ps_%.tex: pics/%.pic
+			@echo making student seminar include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .student_seminar/pb_$*.tex
+
+.teacher_notes/pn_%.tex: pics/%.pic
+			@echo making teacher notes include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .teacher_notes/pb_$*.tex
+
+.student_notes/pn_%.tex: pics/%.pic
+			@echo making student notes include from pics/$*.pic
+			@gpic -t < pics/$*.pic \
+				> .student_notes/pb_$*.tex
+
+##############################################################################
+
+.teacher_beamer/pb_%.eps: figs/%.fig
+			@echo making teacher beamer picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .teacher_beamer/pb_$*.eps \
+				2> .teacher_beamer/.fig_to_eps.$*.out
+
+.student_beamer/pb_%.eps: figs/%.fig
+			@echo making student beamer picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .student_beamer/pb_$*.eps \
+				2> .student_beamer/.fig_to_eps.$*.out
+
+.teacher_seminar/ps_%.eps: figs/%.fig
+			@echo making teacher seminar picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .teacher_seminar/ps_$*.eps \
+				2> .teacher_seminar/.fig_to_eps.$*.out
+
+.student_seminar/ps_%.eps: figs/%.fig
+			@echo making student seminar picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .student_seminar/ps_$*.eps \
+				2> .student_seminar/.fig_to_eps.$*.out
+
+.teacher_notes/pn_%.eps: figs/%.fig
+			@echo making teacher notes picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .teacher_notes/pn_$*.eps \
+				2> .teacher_notes/.fig_to_eps.$*.out
+
+.student_notes/pn_%.eps: figs/%.fig
+			@echo making student notes picture from figs/$*.fig
+			@$(FIG_TO_EPS_CMD) figs/$*.fig \
+				> .student_notes/pn_$*.eps \
+				2> .student_notes/.fig_to_eps.$*.out
+
+##############################################################################
+
+.teacher_beamer/pb_%.eps: raw_ps/%.ps
+			@echo making teacher beamer picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.teacher_beamer/pb_$*.eps \
+				> .teacher_beamer/.ps_to_eps.$*.out 2>&1
+
+.student_beamer/pb_%.eps: raw_ps/%.ps
+			@echo making student beamer picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.student_beamer/pb_$*.eps \
+				> .student_beamer/.ps_to_eps.$*.out 2>&1
+
+.teacher_seminar/ps_%.eps: raw_ps/%.ps
+			@echo making teacher seminar picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.teacher_seminar/ps_$*.eps \
+				> .teacher_seminar/.ps_to_eps.$*.out 2>&1
+
+.student_seminar/ps_%.eps: raw_ps/%.ps
+			@echo making student seminar picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.student_seminar/ps_$*.eps \
+				> .student_seminar/.ps_to_eps.$*.out 2>&1
+
+.teacher_notes/pn_%.eps: raw_ps/%.ps
+			@echo making teacher notes picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.teacher_notes/pn_$*.eps \
+				> .teacher_notes/.ps_to_eps.$*.out 2>&1
+
+.student_notes/pn_%.eps: raw_ps/%.ps
+			@echo making student notes picture from raw_ps/$*.ps
+			@$(PS_TO_EPS_CMD) raw_ps/$*.ps \
+				.student_notes/pn_$*.eps \
+				> .student_notes/.ps_to_eps.$*.out 2>&1
+
+##############################################################################
+
+.teacher_beamer/pb_%.eps: raw_eps/%.eps
+			@echo making teacher beamer picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .teacher_beamer/pb_$*.eps
+
+.student_beamer/pb_%.eps: raw_eps/%.eps
+			@echo making student beamer picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .student_beamer/pb_$*.eps
+
+.teacher_seminar/ps_%.eps: raw_eps/%.eps
+			@echo making teacher seminar picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .teacher_seminar/ps_$*.eps
+
+.student_seminar/ps_%.eps: raw_eps/%.eps
+			@echo making student seminar picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .student_seminar/ps_$*.eps
+
+.teacher_notes/pn_%.eps: raw_eps/%.eps
+			@echo making teacher notes picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .teacher_notes/pn_$*.eps
+
+.student_notes/pn_%.eps: raw_eps/%.eps
+			@echo making student notes picture from raw_eps/$*.eps
+			@cp raw_eps/$*.eps .student_notes/pn_$*.eps
+
+##############################################################################
+
+.teacher_beamer/%.sty:	styles/%.sty
+			@mkdir -p .teacher_beamer
+			@cp styles/$*.sty .teacher_beamer
+
+.student_beamer/%.sty:	styles/%.sty
+			@mkdir -p .student_beamer
+			@cp styles/$*.sty .student_beamer
+
+.teacher_seminar/%.sty:	styles/%.sty
+			@mkdir -p .teacher_seminar
+			@cp styles/$*.sty .teacher_seminar
+
+.student_seminar/%.sty:	styles/%.sty
+			@mkdir -p .student_seminar
+			@cp styles/$*.sty .student_seminar
+
+.teacher_notes/%.sty:	styles/%.sty
+			@mkdir -p .teacher_notes
+			@cp styles/$*.sty .teacher_notes
+
+.student_notes/%.sty:	styles/%.sty
+			@mkdir -p .student_notes
+			@cp styles/$*.sty .student_notes
+
+##############################################################################
+
+.PHONY: clean
+clean:
+			@echo removing working files
+			@/bin/rm -fr \
+				.teacher_beamer  .student_beamer  \
+				.teacher_seminar .student_seminar \
+				.teacher_notes   .student_notes   \
+				.allslides .hide.allslides.orig \
+				allslides.orig \
+				$(OTHER_CLEAN_FILES) \
+				> /dev/null 2>&1 ; exit 0
+
+.PHONY: realclean
+realclean:		clobber
+
+.PHONY: clobber
+clobber:		clean
+			@echo removing all regenerable files
+			@/bin/rm -fr \
+				teacher_beamer  student_beamer  \
+				teacher_seminar student_seminar \
+				teacher_notes   student_notes   \
+				$(OTHER_CLOBBER_FILES) \
+				> /dev/null 2>&1 ; exit 0
+
+##############################################################################
+
+$(WORK_TEA_BEAMER_PSS):	$(TEA_BEAMER_BASIS)
+$(WORK_STU_BEAMER_PSS):	$(STU_BEAMER_BASIS)
+$(WORK_TEA_SEMINAR_PSS):$(TEA_SEMINAR_BASIS)
+$(WORK_STU_SEMINAR_PSS):$(STU_SEMINAR_BASIS)
+$(WORK_TEA_NOTES_PSS):	$(TEA_NOTES_BASIS)
+$(WORK_STU_NOTES_PSS):	$(STU_NOTES_BASIS)
+
+$(TEA_BEAMER_PSS):	$(TEA_BEAMER_BASIS)
+$(STU_BEAMER_PSS):	$(STU_BEAMER_BASIS)
+$(TEA_SEMINAR_PSS):   	$(TEA_SEMINAR_BASIS)
+$(STU_SEMINAR_PSS):  	$(STU_SEMINAR_BASIS)
+$(TEA_NOTES_PSS):	$(TEA_NOTES_BASIS)
+$(STU_NOTES_PSS):	$(STU_NOTES_BASIS)

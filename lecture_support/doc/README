@@ -1,0 +1,5 @@
+This directory contains the source for the documentation of the lecture support
+package in lecture_support.texi. The versions of this documentation that are
+intended for the direct consumption of users are lecture_support.ps,
+lecture_support.pdf  and lecture_support.html; they are built using the
+Makefile.

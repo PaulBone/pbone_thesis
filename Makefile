@@ -1,9 +1,12 @@
 #
-# vim: noet sw=4 ts=5
+# vim: noet sw=8 ts=8
 #
 
 PIC =		$(wildcard pics/*.pic)
 PIC_TEX =	$(PIC:%.pic=%.tex)
+LS =		lecture_support/Makefile.lectures
+TALK_PICS =	$(wildcard pics/*.pic)
+TALK_PSS =	$(wildcard raw_ps/*.ps)
 
 TEX_PROSE = \
 		thesis.tex \
@@ -18,8 +21,8 @@ TEX_PROSE = \
 		loop_control.tex \
 		tscope.tex \
 
-TEXFILES = $(TEX_PROSE) macros.tex
-TABLES_TEX = mem_table.tex times_table.tex
+TEXFILES = 	$(TEX_PROSE) macros.tex
+TABLES_TEX = 	mem_table.tex times_table.tex
 
 # Results from Loop control.
 TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
@@ -27,10 +30,10 @@ MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
 BENCH_ALL=          lc_bench_all
 
 .PHONY : all
-all : thesis.pdf undefined.txt
+all : thesis.pdf undefined.txt talk.pdf
 
 .PHONY : wc
-wc : 
+wc :
 	wc -w $(TEX_PROSE)
 
 thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib
@@ -57,6 +60,10 @@ mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
 undefined.txt: thesis.log
 	cat $< | grep undefined | sort -u > undefined.txt
 
+talk.pdf: talk.orig $(TALK_PICS) $(TALK_PSS)
+	make -f $(LS) teacher_beamer/talk.pdf
+	cp teacher_beamer/talk.pdf talk.pdf
+
 .PHONY : clean
 clean :
 	rm -rf $(PIC_TEX) \
@@ -72,5 +79,10 @@ clean :
 		thesis.out \
 		thesis.pdf \
 		thesis.ps \
-		thesis.toc
+		thesis.toc \
+		talk.pdf \
+		.teacher_beamer \
+		teacher_beamer \
+		undefined.txt
+
 

@@ -1,0 +1,1292 @@
+% vim: ts=4 sw=4 et
+
+\input texinfo
+@exampleindent asis
+@setfilename lecture_support.info
+@settitle User's Guide for the Lecture Support Package
+
+@dircategory The Lecture Support Package
+@direntry
+* Lecture Support Package User's Guide: (lecture_support).
+@end direntry
+
+@c @smallbook
+@c @cropmarks
+@finalout
+@setchapternewpage off
+
+@c ----------------------------------------------------------------------------
+
+@c We use the following indices in this document:
+@c
+@c	The "@cindex" / "cp" (concept) index:
+@c		for general concepts (e.g. "Determinism", "Debugging", etc.)
+@c	The "@pindex" / "pg" (program) index:
+@c		for programs or shell scripts (mmc, mgnuc, etc.).
+@c	The "@findex" / "fn" (function) index:
+@c		for command-line options.
+@c	The "@kindex" / "ky" (keystroke) index:
+@c		for mdb commands.
+@c	The "@vindex" / "vr" (variable) index:
+@c		for environment variables and Mmake variables.
+@c
+@c That is in case we ever want to produce separate indices for the
+@c different categories.  Currently, however, we merge them all into
+@c a single index, via the commands below.
+
+@syncodeindex fn cp
+@syncodeindex ky cp
+@syncodeindex vr cp
+@syncodeindex pg cp
+
+@c ----------------------------------------------------------------------------
+
+@titlepage
+@title The Lecture Support Package
+@subtitle Version <2008.7>
+@author Zoltan Somogyi
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2008 The University of Melbourne.
+
+Permission is granted to make and distribute verbatim copies of
+this manual provided the copyright notice and this permission notice
+are preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided also that
+the entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions.
+@end titlepage
+
+@c ----------------------------------------------------------------------------
+
+@contents
+@page
+
+@c ----------------------------------------------------------------------------
+
+@ifnottex
+@node Top,,, (lecture_sypport)
+@top The Lecture Support Package User's Guide, version <2008.7>
+
+This guide describes how to use the lecture support package
+to format lecture material both for presentation and for printed lecture notes.
+
+@menu
+* Introduction::    	General overview.
+* How to get access:: 	What you need to do to get access to the package.
+* Lecture materials:: 	How the package expects you to format lecture materials.
+* Pictures:: 		How to include pictures and diagrams.
+* Auxiliary files:: 	The other files you need to set up to use the package.
+* Using the package::   How to create slides and lecture notes.
+* Troubleshooting::     How to diagnose and fix any problems.
+* History:: 		The history of the package.
+@c * Index::
+@end menu
+@end ifnottex
+
+@c ----------------------------------------------------------------------------
+
+@node Introduction
+@chapter Introduction
+
+Most subjects we offer have as their main materials
+a sequence of slides that we show the students.
+In lectures,
+we want students to listen to what we say and try to understand it,
+instead of trying just to copy down everything on the slides for later study,
+so we usually want to make the slides available to the students.
+(The exceptions are subjects in which the students have access
+to something even more comprehensive than the slides.)
+Yet the requirements for good slides and good lecture notes are different.
+
+The lecture support package was designed to allow instructors
+to create a single set of files from which we could automatically derive
+both slides to use in lectures and lecture notes to give to students.
+We wanted this package to accommodate
+as many of our current and desired future practices as possible
+(see the @ref{History} section below).
+We wanted it to help establish a common look-and-feel for our subjects.
+We also wanted it to be as easy to learn and to use as possible.
+Since almost everybody already uses latex (to write papers, if nothing else),
+the package is based on latex.
+
+This package assumes that the materials for a subject
+are divided into several sections,
+typically one section for each major topic in the subject.
+Each section may optionally be subdivided into subsections.
+The content of these sections and subsections is a sequence of slides.
+Most slides will be ordinary slides:
+slides you want to show in class and want to include in the lecture notes.
+Some slides you won't want to include in the lecture notes.
+This package supports two kinds of such slides:
+quizes, which have questions you want to pose for the audience,
+and demos, which outline some activity you want to demonstrate to students.
+
+This package can create six kinds of output from the same input.
+These six cover the possible combinations of two audiences and three formats.
+The two audiences are of course teacher and student:
+
+@table @asis
+@item teacher
+Output for teachers contains everything, including quizes and demos.
+@item student
+Output for student does not contain including quizes or demos.
+@end table
+
+The three formats are beamer, seminar and notes.
+The first two are intended mainly for slides to use in lectures,
+while the third is obviously useful only for lecture notes.
+
+@table @asis
+@item beamer
+The beamer format uses latex's beamer package.
+The resulting slides have an up-to-date look,
+with a bit of decoration around slides,
+and since Beamer is a flexible system,
+several aspects of the look-and-feel are configurable.
+@item seminar
+The seminar format uses latex's seminar package.
+The resulting slides have a minimalist look with no decoration.
+As a result, sometimes you can
+fit more text onto a single slide with seminar than with beamer.
+The seminar format is also free of the restrictions
+that the beamer package imposes on what latex commands may be used in slides.
+@item notes
+Whereas the beamer and seminar formats
+always generate output as discrete pages,
+the notes format generates output as flowing text.
+The main advantage of this is that
+it allows the inclusion of extra material in the lecture notes.
+We frequently don't have time in lectures
+to cover everything about a topic that we would like to cover,
+and have to leave something out.
+Those somethings can be caveats and limitations,
+more detailed explanations,
+extra examples,
+historical background,
+or pointers to related reading and/or further information.
+The notes format allows each slide to be accompanied by extra notes.
+Normally, the output will be in two columns,
+though one can request some material to be presented in one column format
+(usually because it would be too wide otherwise).
+@end table
+
+The rest of this document describes how to get access to this package,
+what it can do, and how to use it.
+
+@c ----------------------------------------------------------------------------
+
+@node How to get access
+@chapter How to get access
+
+Everything associated with the package is available on departmental machines
+in the subversion repository located at
+@file{//mundula.cs.mu.oz.au/local/dept/repositories/lecture_support}.
+If you are content to access this
+from a machine that imports the department's @file{/local/dept} filesystem,
+you can get the package using the command
+
+@example
+svn co file:///local/dept/repositories/lecture_support
+@end example
+
+@noindent
+If you want get access from a machine that does not import @file{/local/dept},
+you will need to set up ssh to allow you to access e.g. mundula remotely
+(preferably @samp{without} typing in your password).
+Once that is done, you can get access to the package using the command
+
+@example
+svn co svn+ssh://mundula.cs.mu.oz.au/local/dept/repositories/lecture_support
+@end example
+
+Both of these commands will create a directory named @file{lecture_support}.
+The package consists of the files in that directory;
+the documentation of the package
+is in the @file{lecture_support/doc} subdirectory.
+
+@c ----------------------------------------------------------------------------
+
+@node Lecture materials
+@chapter Lecture materials
+
+The best way to introduce the format for lecture materials
+expected by the package is with an example.
+
+The lecture notes for 252 are stored in the following files:
+
+@cartouche
+@example
+s0_intro.orig
+s1_sh.orig
+s2_test.orig
+s3_debug.orig
+s4_x86_assem.orig
+s5_link.orig
+s6_type_safety.orig
+s7_make.orig
+s8_group.orig
+s9_perf.orig
+s10_exam.orig
+@end example
+@end cartouche
+
+There is one file for each of the nine sections of the subject,
+plus one section each for admin issues at both the start and the end.
+This is one way to organize everything, but not the only way.
+You don't have to include section numbers in the names of files,
+and if you prefer, you can put everything into a single large file,
+or you can split things up into smaller pieces.
+However, we recommend this organization,
+because it makes the development of the material easier.
+The package allows you to build slides and notes versions
+of a single file as well as for everything,
+and most of the time you will want to focus on a single section at a time.
+
+The contents of these files look like this:
+
+@cartouche
+@verbatim
+        SECTION 1 Shell programming
+
+        SUBSECTION Why shell programming
+
+        SLIDE The software lifecycle
+
+        \begin{itemize}
+        \item requirements analysis
+        \item specification
+        \item design
+        \item implementation
+        \item testing and debugging
+        \item maintenance
+        \end{itemize}
+
+        In the ``waterfall model'' of software development,
+        each stage should be completed before starting the next.
+        However, there is no reason why
+        different parts of a program should not progress at different rates.
+        Also in practice, there is often some overlap between phases,
+        e.g. one may need to implement a small part of a proposed design
+        in order to find out whether it is feasible or not.
+
+        NOTE
+        433-341 will tell you more about the waterfall model
+        and other models of the software development process.
+
+        There is an old joke that says:
+        ``In theory there no difference between theory and practice,
+        but in practice there is.''
+        It applies here.
+@end verbatim
+@end cartouche
+
+As you can see,
+most of this is straight latex.
+The exceptions are lines
+starting with the keywords SECTION, SUBSECTION and SLIDE.
+These lines give the structure of the file,
+and it is these lines that the package looks for.
+The package is basically a configurable preprocessor for latex.
+
+Each line starting with @samp{SECTION} introduces a new section.
+The second thing on the line is the section number,
+while the rest of the @samp{SECTION} line is the title of the section.
+The section number is there because
+we expect most people will put each section into its own file,
+and this way when you build the slides or notes version of the file,
+you will get the right section number included in them.
+If you ever reordered or reorganized the sections of a subject,
+you would have to update the @samp{SECTION} lines
+if you wanted the right section numbers when printing only one file at a time,
+but we expect the sections of subjects to be very stable over time
+after their initial development.
+
+When you build slides or lecture notes for a whole subject,
+the package will by default take section numbers
+from the @samp{SECTION} lines themselves.
+You can start section numbers from zero or from one;
+the package will handle either,
+as long as the later section follow in contiguous sequence.
+However, if you wish, you can ask the package
+to assign contiguous sequence numbers to sections, 
+starting from any integer.
+The way you do this is by specifying the number of the first section
+as the value of the make variable @samp{SECTION_NUMBER_START},
+like this:
+@verbatim
+SECTION_NUMBER_START = 0
+@end verbatim
+This is useful during the initial development of a subject.
+
+Each line starting with @samp{SUBSECTION}
+introduces a new subsection within the current section.
+Since we expect most people will not put each subsection into its own file,
+and because we don't expect subsections to be stable over time,
+the package will assign each subsection its own number:
+in section 1, these will be 1.1, 1.2, 1.3 and so on.
+The rest of the @samp{SUBSECTION} line is the title of the subsection.
+Note that subsections are ignored for seminar targets.
+For notes targets, we generate a small heading
+and for beamer targets, the name of the current subsection
+is shown in a header at the top of each slide,
+but the seminar style has no header on each slide,
+and generating a separate slide for the start of each subsection
+would be too disruptive in lectures.
+
+Most of each file will consist of slides.
+The keyword that starts ordinary slides is @samp{SLIDE},
+while the keywords that start quiz slides and demo slides
+are @samp{QUIZ} and @samp{DEMO} respectively.
+You can end a slide with the appropriate one of
+@samp{ENDSLIDE}, @samp{ENDQUIZ} and @samp{ENDDEMO},
+but this is not required;
+the package will find out where the slide ends automatically.
+
+The intention here is that
+ordinary slides contain the information you want to present,
+quiz slides contain questions you want to ask the students
+both to keep up their interest and to gauge their progress,
+and demo slides contain notes to yourself about things you want to demonstrate.
+If you want to keep those notes to yourself,
+you can wrap them with @samp{NOTESONLY} and @samp{ENDNOTESONLY} (see below);
+that way, they will show up only in your printed notes,
+not on the slides on the screen in the lecture,
+but the slide will be there to remind you to do the demo.
+
+Normally, the rest of the line
+after the @samp{SLIDE}, @samp{QUIZ} or @samp{DEMO} keyword
+is the title of the slide.
+However, you can also ask for a slide to be processed specially
+by inserting one of two keywords between the initial
+@samp{SLIDE}, @samp{QUIZ} or @samp{DEMO}
+and the title.
+These two keywords are
+
+@table @samp
+@item ONECOLUMN
+This keyword asks for
+the slide to be printed in one column mode for the notes target;
+this is sometimes needed if the contents of the slide
+would not fit in one column.
+This keyword has no effect for the beamer and seminar targets.
+@item OPTION
+This keyword passes on an option to the beamer package;
+it has no effect for the seminar and notes targets.
+The @samp{fragile} option,
+which allows a wider class of latex commands to be used inside slides
+is always specified by the package,
+so you do not need to do so.
+The most useful beamer option is @samp{OPTION shrink=N}
+for some integer value of @var{N}.
+It tells beamer to shrink everything on the slide
+by at least @var{N} percent, and more
+if that is what is required to make it fit.
+For other options, please see the beamer documentation.
+@end table
+
+If necessary, you can specify both @samp{ONECOLUMN}
+and more than one beamer option for the same slide.
+
+Any line consisting entirely of the word NOTE
+says that the lines after it should be included only in the notes version.
+
+Sometimes, the slide and the notes
+should have the same stuff formatted differently,
+e.g. to use a single long line in the beamer and seminar targets
+(which use landscape orientation)
+and two shorter lines in the notes target
+(which has portrait orientation and two columns)
+And sometimes you just want them to have different stuff.
+The package has a mechanism you can use to arrange for this to happen.
+Any lines between two lines consisting entirely
+of the keywords @samp{NOTESONLY} and @samp{ENDNOTESONLY}
+will be included only if the target is notes;
+any lines between two lines consisting entirely
+of the keywords @samp{SLIDESONLY} and @samp{ENDSLIDESONLY}
+will be included only if the target is beamer or seminar.
+If you want finer control,
+any lines between two lines consisting entirely
+of the keywords @samp{BEAMERONLY} and @samp{ENDBEAMERONLY}
+will be included only if the target is beamer,
+and any lines between two lines consisting entirely
+of the keywords @samp{SEMINARONLY} and @samp{ENDSEMINARONLY}
+will be included only if the target is seminar.
+
+Sometimes, you want to withhold some material on a slide
+(say a minor quiz that doesn't warrant a whole QUIZ slide on its own)
+from students;
+you want it to appear only on the slides you show
+and on your own notes (the notes you prepare yourself with before a lecture),
+not on the students' notes.
+You should put two lines consisting entirely
+of the keywords @samp{INSTRUCTORONLY} and @samp{ENDINSTRUCTORONLY}
+around such material.
+
+You can include another file (as with #include in C)
+by writing a line with two words:
+the keyword INCLUDE, and the name of the file to be included.
+The intended uses of this facility is the inclusion of a program
+or other text whose formatting may be important.
+Since latex does not handle tabs properly,
+the package will replace any tabs in the included file with spaces.
+By default, each tab will be replaced by four spaces,
+but the number of spaces is configurable;
+see the @ref{Using the package} section below.
+Here is an example, again from 252:
+
+@cartouche
+@verbatim
+        SLIDE ONECOLUMN OPTION shrink=10 Example: cvslog
+
+        \begin{verbatim}
+        INCLUDE examples/cvslog
+        \end{verbatim}
+@end verbatim
+@end cartouche
+
+Sometimes you only want to show one part of the example file.
+It is very useful to make example programs self-contained,
+because compiling and running them is the only way to make sure
+that they do what they are intended to do.
+However, most programs have boring bits
+that there is no point in showing to students,
+especially since slides have room for so few lines.
+The package therefore allows you to control
+which lines in the included file are shown on the slide,
+and which are not.
+The package does this by not including on the slide any lines between
+a line containing the word @samp{HIDE_START} and
+a line containing the word @samp{HIDE_END}.
+You can add these words to the included file in comments, like this:
+
+@cartouche
+@verbatim
+        // HIDE_START
+        // vim: ts=4 sw=4 et
+        #include <stdio.h>
+
+        int
+        main(void)
+        {
+        // HIDE_END
+        ... the actual code of the program ...
+        // HIDE_START
+            return 0;
+        }
+        // HIDE_END
+@end verbatim
+@end cartouche
+
+When this file is included,
+the slide will show only the actual code of the program;
+it will not show the boilerplate parts of the file.
+
+Slides have only a limited amount of horizontal space,
+and you probably don't want to use up any of it
+just to show the level of indentation that is shared by
+@emph{all} the non-hidden lines of the included file.
+If the above included file is @samp{examples/program.c}
+and the base level of indentation of the shown part of the program
+is four spaces,
+then you can ask the package to undo this level of indentation
+by putting @samp{UNINDENT 4} between the @samp{INCLUDE} and the filename,
+like this:
+
+@cartouche
+@verbatim
+        INCLUDE UNINDENT 4 examples/program.c
+@end verbatim
+@end cartouche
+
+Quiz slides usually have two parts: the question, and the answer.
+You initially want to reveal only the question,
+and let students think about it and attempt to answer it;
+you want to show students your answer
+(which may not be the only correct answer anyway)
+only after the students have had a go.
+In situations like that,
+you can add a line consisting only of the keyword @samp{PAUSE}
+where you would like the initial display to stop,
+like this:
+
+@cartouche
+@verbatim
+        QUIZ Stratification
+
+        Is the following program stratified? Why or why not?
+
+        \begin{verbatim}
+        p(X, a) :- q(X).
+        p(X, Y) :- p(X, Z), p(Z, Y), not r(Z).
+        q(a).
+        q(b).
+        r(c).
+        \end{verbatim}
+
+        PAUSE
+
+        This program is stratified, because there are strata assignments
+        that satisfy the requirements.
+
+        One assignment: r in stratum 0, q in stratum 1, p in stratum 2.
+
+        Another assignment: r in stratum 0, p and q in stratum 1.
+@end verbatim
+@end cartouche
+
+It is ok to have more than one @samp{PAUSE} on a slide.
+If you have @var{N} @samp{PAUSE}s on a slide,
+the beamer and seminar targets will effectively generate @var{N+1} slides.
+The first one will have everything up to the first @samp{PAUSE},
+the second everything up to the second @samp{PAUSE},
+and so on, with the last containing everything in the slide.
+This capability is useful mostly
+when the answer to the first question naturally raises a second question,
+or if the answer consists of a list that you want to reveal gradually.
+
+PAUSEs are ignored for the notes target,
+since the notion of revealing things gradually
+does not make sense for printed notes.
+Therefore for notes, any PAUSE lines are ignored.
+
+PAUSEs are usually meant to stimulate students to think.
+They won't do that if they can see the answer in their lecture notes,
+so you usually need to make sure they do @emph{not} see the answer there.
+QUIZ slides are never included in students' versions of the lecture notes,
+so you don't need to worry about any PAUSEs on such slides,
+but the questions and answers revealed by PAUSEs on other slides
+should probably be surrounded by INSTRUCTORONLY and ENDINSTRUCTORONLY lines.
+
+You can also use @samp{PAUSE} for other (non-quiz) purposes as well,
+but be aware that many people (including this author)
+believe that to be a fairly obnoxious practice.
+@c and (if the students have access to the lecture notes) a futile one as well.
+
+For beamer targets,
+the package translates @samp{PAUSE} into beamer's @samp{\pause} command.
+Beamer also supports several other commands for pausing a presentation,
+but this is the only one supported by this package.
+If you use the others, the beamer targets will come out ok,
+but the seminar and notes targets will not.
+
+@c ----------------------------------------------------------------------------
+
+@node Pictures
+@chapter Pictures
+
+Since pictures and diagrams can be worth a thousand words,
+you often want to include them in slides.
+This package allows you to do so,
+provided there is a way to convert the picture
+to encapsulated postscript format, like this:
+
+@cartouche
+@verbatim
+        SLIDE Virtual memory mapping
+
+        The VM system divides the address space of each process into pages,
+        and maps each virtual page to a page
+        either in physical (main) memory or in swap space (on disk).
+
+        \begin{center}
+        \scalebox{0.4} {
+        \epsfbox{vmmap.eps}
+        }
+        \end{center}
+@end verbatim
+@end cartouche
+
+It is the @samp{\epsfbox} command that performs the inclusion.
+(This requires the use of the @samp{epsf} latex package;
+see the section on @ref{Auxiliary files} below.)
+
+The scalebox allows you to ensure that
+the picture is neither too big (and thus does not fit on the slide),
+nor too small (and thus hard or impossible to read),
+though unfortunately getting the scale right
+is sometimes a matter of trial and error.
+Note that sometimes you need a different scaling factor
+for the notes target than for the other targets;
+this can be done by providing two copies of the line with the scalebox command,
+and including one within @samp{NOTESONLY} and @samp{ENDNOTESONLY}
+and the other one within @samp{SLIDESSONLY} and @samp{ENDSLIDESSONLY}.
+
+You don't have to center pictures if you don't want to.
+
+This package knows about four kinds of sources for pictures:
+
+@table @samp
+@item encapsulated postscript
+The source could be a file that is already in encapsulated postscript format.
+@item postscript
+The source could be a plain postscript file.
+@item fig
+The source could be a file created using xfig,
+a tool that allows you to draw diagrams by hand (actually, by mouse).
+@item pic
+The source could be a file in PIC format.
+This is a text format for describing diagrams.
+While pic is a preprocessor for groff,
+it can generate encapsulated postscript files.
+@end table
+
+If you use any method for including pictures other than @samp{\epsfbox},
+the package won't know about it,
+and there are no guarantees about whether it will work.
+
+@c ----------------------------------------------------------------------------
+
+@node Auxiliary files
+@chapter Auxiliary files
+
+The top directory (which we will later refer to as @var{top})
+should contain the lecture materials themselves
+in one or more files with the @file{.orig} suffix,
+and two plain latex source files (files that won't be touched by this package)
+named @file{coverpage_teacher.tex} and @file{coverpage_student.tex}
+for the coverpages of the teacher and student versions of the lecture notes.
+Besides that, it should also contain the following:
+
+@table @samp
+@item lecture_support
+This subdirectory should be what you checked out with subversion from
+@file{//mundula.cs.mu.oz.au/local/dept/repositories/lecture_support}.
+@item Makefile
+A Makefile to control the package;
+see below for what it should look like.
+@item subject
+This subdirectory should contain information about the subject offering.
+See below for what files it needs to contain,
+and what they mean.
+@item styles
+This subdirectory should contain the style files
+that latex needs to process the lecture materials.
+See below for what files it should to contain, and what they mean.
+@end table
+
+It may also contain the following subdirectories:
+@table @samp
+@item raw_eps
+This subdirectory should contain all the encapsulated postscript files
+needed by any part of the lecture materials.
+All the files should have a @file{.eps} suffix.
+@item raw_ps
+This subdirectory should contain all the plain postscript files
+needed by any part of the lecture materials.
+All the files should have a @file{.ps} suffix.
+@item figs
+This subdirectory should contain all the fig files
+needed by any part of the lecture materials.
+All the files should have a @file{.fig} suffix.
+@item pics
+This subdirectory should contain all the pic files
+needed by any part of the lecture materials.
+All the files should have a @file{.pic} suffix.
+@end table
+
+The top level Makefile should look like this:
+
+@cartouche
+@verbatim
+        COMPONENTS = \
+                        s0_intro \
+                        s1_sh \
+                        s2_test \
+                        s3_debug \
+                        s4_x86_assem \
+                        s5_link \
+                        s6_type_safety \
+                        s7_make \
+                        s8_group \
+                        s9_perf \
+                        s10_exam
+
+        default:        all
+
+        all:            \
+                        all_teacher_beamer all_student_beamer \
+                        all_teacher_notes  all_student_notes \
+                        teacher_notes/coverpage_teacher.ps \
+                        student_notes/coverpage_student.ps
+
+        include         lecture_support/Makefile.lectures
+@end verbatim
+@end cartouche
+
+The first part of this @file{Makefile}
+defines the make variable @var{SECTIONS}
+to contain the list of the names of the files (without the @file{.orig} suffix)
+that contain the lecture materials;
+they should be in the order in which you want to present them.
+The @file{default} target tells @file{make}
+what to build if it is invoked without any arguments.
+The @file{all} target tells @file{make}
+what it makes sense to build.
+In general, each subject will choose between beamer and seminar,
+because a page that looks nice with beamer
+may not fit on a single page with seminar,
+and vice versa.
+The example above chose beamer;
+if you want to choose seminar,
+replace @samp{all_teacher_beamer all_student_beamer}
+with @samp{all_teacher_seminar all_student_seminar}.
+
+The first part of the makefile may also define
+make variables such as @samp{SECTION_NUMBER_START}
+(which, if set, this tells the package to number sections automatically
+when building all the slides, starting at the value of this make variable),
+and @samp{BOLD_TITLES} (which, if set to any non-empty string value,
+tells the package to make all titles in lecture notes bold).
+
+The last part includes the makefile fragment
+in the provided @file{lecture_support} directory
+that invoke the various parts of this package as needed.
+Be sure to include it after the default action;
+if you include it before,
+@file{make} will take the first action defined in
+@file{lecture_support/Makefile.lectures}
+to be the default action.
+
+The @file{Makefile} can of course also contain other things.
+For example, for 252, some of the examples we want to show
+are x86 assembly code fragments,
+and the 252 @file{Makefile} also includes
+the rules required to contruct them automatically
+from the supplied C source files,
+and a make variable named @file{X86SPROGS} that holds
+the names of the files that contain those x86 assembly code fragments.
+If you want to ensure that all the files that the package can build for you
+are rebuilt automatically when any of these files changes,
+then you should include a rule like this in your @file{Makefile}:
+
+@example
+$(WORK_FILES):  $(X86SPROGS)
+@end example
+
+The make variable @file{WORK_FILES} is defined by the package.
+Note that the package automatically takes care of dependencies
+on the files in the @file{raw_eps}, @file{raw_ps}, @file{figs}, @file{pics}
+@file{subject} and @file{styles} directories.
+That will cover dependencies on files
+included via @samp{\epsfbox} commands and by the package itself,
+but it will not cover dependencies
+on the files included via @samp{INCLUDE} directives.
+It is therefore good practice for you to make @samp{WORK_FILES}
+depend on every file that you have a @samp{INCLUDE} line for.
+
+If you want the number of spaces with which the package replaces tabs
+in included files to differ from the default four,
+you should add a line like this to the @file{Makefile}:
+
+@example
+TAB_OPT = -t 8
+@end example
+
+The @file{@var{top}/subject} subdirectory should contain
+the following files describing the subject:
+
+@table @file
+@item subject_name
+The name of the subject,
+e.g. @samp{Software Engineering: Principles and Tools}.
+@item subject_number
+The official university number of the subject, e.g. @samp{433-252}.
+@item semester
+The semester of this offering of the subject,
+for example, @samp{Semester 2, 2008}.
+@item organization
+The name of the organization offering the subject.
+Usually it will be @samp{The University of Melbourne}.
+@item department_1
+The name of the first (or only) department offering the subject.
+Usually it will be
+@samp{Department of Computer Science and Software Engineering}.
+@item department_2
+The name of the second department offering the subject,
+if there is more than one.
+For example, it could be @samp{Department of Information Systems}.
+If there is no second department, this file should be empty.
+@end table
+
+The @file{@var{top}/subject} subdirectory
+should also contain a file named @file{packages}.
+The contents of this file should be
+a list of latex @samp{\usepackage} commands, like this:
+
+@cartouche
+        @verbatim
+        \usepackage{epsf}
+        \usepackage{amssymb}
+        \usepackage{fancybox}
+        \usepackage{epic,eepic}
+        \usepackage{graphics}
+@end verbatim
+@end cartouche
+
+This file should list all the latex packages you use.
+If the materials include any pictures, you will need the @samp{epsf} package.
+
+If you want to generate any slides using beamer,
+you can use the following files in the @file{@var{top}/subject} subdirectory
+to control beamer's behavior:
+
+@table @samp
+@item beamer_options
+Suggested content: empty.
+@item beamer_theme
+Suggested content: CambridgeUS.
+@item beamer_outer_theme
+Suggested content: default.
+@item beamer_inner_theme
+Suggested content: default.
+@item beamer_color_theme
+Suggested content: dolphin.
+@item beamer_font_theme
+Suggested content: structurebold.
+@end table
+
+If any of these files are missing,
+the package will assume its suggested content as a default.
+
+The @samp{beamer_options} file should contain
+any options you want to include in the beamer document's documentclass.
+Since the defaults are ok, this will usually be empty.
+The other files each select a theme
+for controlling one aspect of the slides generated by beamer.
+Unfortunately, most of beamer's themes have meaningless names,
+and there is no way to find out what their effect is
+without trying them out.
+Unfortunately again, some of these themes
+increase the time required to format the slides almost exponentially,
+so that trying one out may require up to half an hour of time
+waiting for latex to finish (yes, really).
+
+The suggested contents (each just one word) work well.
+Their adoption by all subjects would establish a departmental look-and-feel,
+which some student reps in student-staff liaison meetings have indicated
+would increase their opinion of our competence :-)
+
+The package allows each of the theme files to contain
+any number of comment lines (lines started by hash signs)
+as well as the one word giving the theme name.
+The subject files in 252's subversion repository contain, in such comments,
+my opinions of the other possible themes in each category.
+
+The @file{@var{top}/styles} subdirectory should contain
+any latex style files (e.g. @samp{ma4.sty}) needed by the lecture materials.
+All the files in this directory should have a @file{.sty} suffix.
+
+@table @samp
+@item lecture_common
+Any latex definition needed for all targets.
+These can include the definitions of latex commands for use as shorthands,
+definitions of math symbols, etc.
+@item lecture_notes
+Any latex definition needed only for notes targets.
+Amongst other things, you can use this to tell latex
+to consider each page to be shorter than it actually is,
+reserving some space at the bottom of each page
+for notes to be taken by the students.
+This can be done by a latex command such as
+@verbatim
+\textheight 40\baselineskip
+@end verbatim
+@item lecture_beamer
+Any latex definition needed only for beamer targets.
+@item lecture_seminar
+Any latex definition needed only for seminar targets.
+This needs to contain definitions
+for the @samp{\Heading} and @samp{\ContHeading} macros,
+since the package will format the title of each slide using these macros,
+but you can change the definition of the macro if you wish.
+(The package will use @samp{\ContHeading}
+for any slides whose title is the same as the title of the previous slide.)
+@end table
+
+@c ----------------------------------------------------------------------------
+
+@node Using the package
+@chapter Using the package
+
+Once you have set up everything as shown above,
+you can ask @file{make} to build various versions
+of part or all of your lecture materials.
+
+The final files that make and this package can build for you,
+besides the teacher and student coverpages for the lecture notes,
+all have names that fit the template
+@file{@var{dir}/@var{file}@var{suffix}}.
+
+The @var{dir} component should be one of these six:
+@file{teacher_beamer},
+@file{teacher_seminar},
+@file{teacher_notes},
+@file{student_beamer},
+@file{student_seminar} and
+@file{student_notes}.
+
+The @var{file} component should be either the name of a file
+listed in the @var{SECTIONS} part of the @file{Makefile},
+or it should be @file{allslides}.
+
+The @var{suffix} component should be either @file{.ps} or @file{.pdf},
+indicating postscript and PDF files respectively.
+
+You can ask @file{make} to build any specified set of files
+just by giving their names on the command line.
+For example,
+
+@example
+make teacher_beamer/s1_sh.ps teacher_beamer/s1_sh.pdf
+@end example
+
+will build the teacher's beamer version of just @file{s1_sh.orig}
+(which in this case contains section 1 of the subject),
+while
+
+@example
+make teacher_beamer/allslides.pdf
+make student_notes/coverpage_student.ps student_notes/allslides.ps
+@end example
+
+will build the main things you need:
+the PDF file you want to download into the lectern computers
+in our lecture theaters to show to students with Acrobat Reader,
+and the postscript files you want to give to the printers
+for eventual sale to the students via the Bookroom.
+
+You can ask @file{make} to build all the files
+it can build in a particular directory
+(apart from the coverpages, which you have to ask for separately)
+using commands such as
+
+@example
+make all_teacher_beamer
+@end example
+
+Replacing @samp{teacher} with @samp{student}
+and @samp{beamer} with @samp{seminar} or @samp{notes} will also work.
+
+You can ask @file{make} to build versions
+of the postscript files it can build in a particular directory
+with three, four, seven or eight slides per page
+using commands such as
+
+@example
+make all_teacher_beamer_4
+@end example
+
+or
+
+@example
+make teacher_beamer/allslides.4.ps
+@end example
+
+Replacing @samp{teacher} with @samp{student}
+and @samp{beamer} with @samp{seminar} (but not @samp{notes}) will also work,
+as will replacing 4 with 3, 7 or 8.
+In the case of the versions with three or seven slides per page,
+the place of one the slides will be left blank.
+Students can then use this space to take their notes.
+
+You can ask @file{make} to remove the package's working files with
+
+@example
+make clean
+@end example
+
+and you can ask it to remove all regenerable files with either
+
+@example
+make realclean
+@end example
+
+or
+
+@example
+make clobber
+@end example
+
+The package understands both, use whichever your prefer.
+
+If you wish @samp{make clean} to remove some files
+that this package does not know about,
+you can specify their names
+in a make variable named @samp{OTHER_CLEAN_FILES}.
+If you wish @samp{make clobber} or @samp{make realclean} to remove some files
+that this package does not know about,
+you can specify their names
+in a make variable named @samp{OTHER_CLOBBER_FILES}.
+
+Three pieces of advice,
+one about make, one about vim, and one about subversion.
+
+@enumerate
+@item
+When you are working on a single part of the subject, e.g. @file{s1_sh.orig},
+set @file{default} to depend only
+on the files you need to build to check your work,
+which in this case will probably be
+@file{teacher_beamer/s1_sh.pdf} and @file{student_notes/s1_sh.ps}.
+
+@item
+Since latex mangles input that contains tabs,
+it is a good idea to tell your editor never to leave any tabs
+in the @file{.orig} files you edit.
+If your editor is @file{vim},
+you can achieve this by adding this line to the top of each file:
+
+@example
+% vim: ts=4 sw=4 expandtab syntax=tex
+@end example
+
+The last part allows you to turn on syntax highlighting,
+which can alert you quickly
+to at least some things that cause trouble for latex,
+such as underscores not preceded by backslashes.
+
+@item
+Your lecture materials
+should be in subversion just like this package.
+The department has created a bunch of directories with names of the form
+@file{/local/dept/repositories/@var{subjectnumber}}
+where the all the teaching materials for the subject with that number
+should be kept under the control of subversion.
+The subversion module stored there
+should typically have a subdirectory for the lectures,
+alongside other subdirectories for projects, exams etc.
+When you check out this module,
+you will get a workspace whose files come from this subversion repository.
+It is ok to check out modules from other subversion repositories
+into this workspace.
+For example, my 252 setup includes the following directories
+(as well as some others),
+listed together with the repository they come from:
+
+@verbatim
+directory			source subversion repository
+
+~zs/ed/252			/local/dept/repositories/252
+~zs/ed/252/proj			/local/dept/repositories/252
+~zs/ed/252/lec			/local/dept/repositories/252
+~zs/ed/252/lec/subject		/local/dept/repositories/252
+~zs/ed/252/lec/styles		/local/dept/repositories/252
+~zs/ed/252/lec/figs		/local/dept/repositories/252
+~zs/ed/252/lec/pics		/local/dept/repositories/252
+~zs/ed/252/lec/lecture_support	/local/dept/repositories/lecture_support
+@end verbatim
+@end enumerate
+
+@c ----------------------------------------------------------------------------
+
+@node Troubleshooting
+@chapter Troubleshooting
+
+This package does all its work in six directories named
+@file{.teacher_beamer},
+@file{.teacher_seminar},
+@file{.teacher_notes},
+@file{.student_beamer},
+@file{.student_seminar} and
+@file{.student_notes}.
+The initial dots in their names
+hide them from invocations of @file{ls} without the @samp{-a} argument,
+but you can look inside them if you want,
+and if you don't get the output that you expect,
+you will want to look.
+Each of these six working directories corresponds
+to one of the final directories;
+if you don't get what you want in e.g. @file{teacher_beamer/s1_sh.ps},
+you will want to look in @file{.teacher_beamer}
+at the files whose names include @file{s1_sh}.
+
+The obvious place to look for errors detected by latex
+is in @file{.teacher_beamer/s1_sh.log},
+which contains the log file created by latex in the usual manner.
+Another place to look that is not so obvious is
+@file{.teacher_beamer/.latex1.s1_sh.out},
+which contains the output from the package's first invocation of latex.
+Due to the way latex uses auxiliary files,
+latex must in general be invoked twice in a row,
+so that is what this package does.
+The output from the second invocation is of course in
+@file{.teacher_beamer/.latex2.s1_sh.out},
+but you typically don't have to look at that.
+Any errors will typically be found during the first invocation,
+so the package won't invoke latex a second time.
+
+Sometimes (rarely) errors occur
+during the conversion of the dvi file generated by latex to postscript.
+Any such errors will be reported in the output of dvips,
+which you can find in files with names such as
+@file{.teacher_beamer/.dvips.s1_sh.out}.
+
+Errors may also occur during the process of converting a picture
+from postscript, fig or pic format to encapsulated postscript.
+The output from these conversion steps, including any errors,
+will be in files with names such as
+@file{.ps_to_eps.vmmap.out},
+@file{.fig_to_eps.vmmap.out} and
+@file{.pic_to_eps.vmmap.out}
+in the relevant working directories.
+
+@c ----------------------------------------------------------------------------
+
+@node History
+@chapter History
+
+The origin of the lecture support package was a list of requirements
+I drew up with help from Peter Schachte after a discussion in the academic
+programs committe in May/June 2007.
+
+@table @file
+
+@item SLIDENOTE
+Ability to automatically generate both slides (presented in lectures) and
+lecture notes (printed for the bookroom) from same source.
+
+@item OUTPUTFORMAT
+Ability to generate the output in the desired format for each purpose,
+e.g. PDF and/or PowerPoint for slides, and PDF and/or PostScript and/or
+plain text for lecture notes.
+
+@item SPECFORMAT
+Ability to format each version differently, e.g. landscape for slides
+and portrait for lecture notes.
+
+@item SPECINCLUDE
+Ability to include material specific to each version (e.g. to include
+quizes and other material for discussion by students in the slides, and
+to include additional material in the lecture notes)
+
+@item MATHS
+Ability to include nicely presented math formulas and a wide variety
+of symbols.
+
+@item PICTURES
+Ability to include pictures (possibly arbitrary Postscript) in the material.
+
+@item POINTLIST
+Ability to include lists of points in the material which are revealed
+one at a time in the slide version (though courtesy requires its use
+to be limited).
+
+@item ANIMATION
+Ability to include more general animations in slides (and some representation
+of them in notes)
+
+@item LECTURERNOTES
+Ability to include notes for the lecturer about actions outside the
+presentation material itself.
+
+@item NOTETAKING
+Ability to include space for note-taking by students in the lecture notes.
+
+@item ALLTOGETHER
+Ability to put all related material (e.g. slide, pictures on slide and notes
+for slide) next to each other in the generated lecture notes.
+
+@item MANYSOURCES
+Ability to divide the source into arbitrarily many source files.
+
+@item CROSSREF
+Ability to include cross references from one slide to another.
+
+@item ALLSLIDES
+Ability to generate a single file containing all slides for the subject
+(to minimize the need to tinker with e.g. Acrobat Reader during lectures).
+
+@item LECSLIDES
+Ability to generate a separate files for different parts of the subject (e.g.
+to allow lecturers to restrict their attention to one file for each lecture).
+
+@item SECTIONS
+Ability to impose structure on the presentation, dividing it up into
+(optionally) numbered chapters (lectures), sections and maybe even
+subsections; would also be good to support structures larger than
+a single lecture (parts).
+
+@item AUTODIVIDE
+Ability to avoid dividing some material into slides, and having the system
+perform that division automatically and with some intelligence (e.g. avoiding
+splitting a paragraph across slide boundaries).
+
+@item SUBJECTSTYLE
+Ability to set a global style for the slides and/or notes for a single
+subject. The style includes fonts, font sizes, and maybe backgrounds or other
+decorations (though these should be as undistracting as possible),
+announcements for starts of chapters/sections etc via slides and/or headers
+etc.
+
+@item MACROS
+Ability to define macros that can be used across a lecture or whole subject
+and can be edited at will.
+
+@item DEPTSTYLE
+Ability to set up a global recommended style for all subjects. It should be
+easier for a lecturer to follow this style than to deviate from it.
+
+@item NOEXPENSE
+Ability to add users without extra expense (no requirement for proprietary
+software, no requirement for software that doesn't run on some of our
+platforms: Solaris, Linux, MacOS, Windows).
+
+@item CONTROL
+Ability to fully control the source files (no source in closed document
+formats).
+
+@item AUTOGEN
+Ability to generate (parts of) the "source" files automatically (e.g.
+to turn program fragments into slides).
+
+@item EASYREAD
+Ability to read and understand the source files with minimal training
+(one or two hours) given familiarity with document processing systems
+such as latex and the availability of the generated artifacts.
+
+@item EASYWRITE
+Ability to write most parts of the source files with minimal training
+(the same one or two hours), though some parts may require longer training.
+
+@item SIMPLECOMMANDS
+Ability to create the slides and lecture notes from the source automatically
+with simple commands (whose implementations lecturers don't need to learn).
+
+@item VERSIONCONTROL
+Ability to usefully recreate the history of each file under version control, 
+seeing the differences between successive versions.
+
+@end table
+
+This package meets all these requirements with the exception of
+CROSSREF, ANIMATION, and AUTODIVIDE.
+
+The package has no capability to refer from one slide to another,
+so it does not meet CROSSREF at all.
+
+You can write a demo slide containing a command that runs an animation.
+When you come to that slide, you can enter that command into a shell window.
+Some may view this as meeting the ANIMATION requirement partially.
+
+The beamer package divides too-long slides into pages automatically
+(dividing them preferentially at paragraph boundaries, just as we want),
+while for printed lecture notes, there is no such thing as a too-long slide.
+The package thus meets the AUTODIVIDE requirement for these targets,
+even though it does not meet the requirement for seminar targets.
+
+@c ----------------------------------------------------------------------------
+
+@c @node Index
+@c @unnumbered Index
+
+@c @printindex cp
+
+@c ----------------------------------------------------------------------------
+
+@bye

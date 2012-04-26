@@ -1,0 +1,4 @@
+\scalebox{0.2}{
+\epsfbox{logoMelbourneUni.eps}~%
+\epsfbox{nictalogo.eps}
+}

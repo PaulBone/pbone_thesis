@@ -1,0 +1,129 @@
+#!/bin/sh
+# vim: ts=4 sw=4 et
+
+usage="do_slides [-andq] [-tN] [teacher|student] [beamer|seminar|notes] basename"
+
+scripts_dir="lecture_support"
+
+allslides_opt=""
+bold_titles_opt=""
+include_note_opt=""
+instructor_opt=""
+disable_demo_opt=""
+disable_quiz_opt=""
+renumber_sections_opt=""
+tab_replacement_opt=""
+
+while getopts abndqr:t: flag
+do
+    case "${flag}" in
+    a)  allslides_opt="-a"
+        ;;
+    b)  bold_titles_opt="-b"
+        ;;
+    n)  include_note_opt="-n"
+        ;;
+    d)  disable_demo_opt="-d"
+        ;;
+    q)  disable_quiz_opt="-q"
+        ;;
+    r)  renumber_sections_opt="-r ${OPTARG}"
+        ;;
+    t)  tab_replacement_opt="-t ${OPTARG}"
+        ;;
+    \?) echo "${usage}"
+        exit 1
+        ;;
+    *)  echo "internal error in getopts"
+        exit 2
+        ;;
+    esac
+done
+shift `expr "$OPTIND" - 1`
+
+case "$#" in
+    3)  
+        who=$1
+        target=$2
+        basename=$3
+        ;;
+    *)  
+        echo "${usage}"
+        exit 1
+        ;;
+esac
+
+case ${who} in
+    teacher)
+        instructor_opt="-i"
+        ;;
+    student)
+        disable_demo_opt="-d"
+        disable_quiz_opt="-q"
+        ;;
+    *)  echo "${usage}"
+        exit 1
+        ;;
+esac
+
+case ${target} in
+    "beamer"|"seminar"|"notes")
+        ;;
+    *)  echo "${usage}"
+        exit 1
+        ;;
+esac
+
+if test "${basename}" = "allslides"
+then
+    allslides_opt="-a"
+    # Else leave allslides as it was set up by the options.
+fi
+
+work_dir=".${who}_${target}"
+target_dir="${who}_${target}"
+
+mkdir -p ${work_dir} ${target_dir}
+/bin/rm -f ${work_dir}/${basename}.tex .errors.$$ > /dev/null 2>&1
+# arg ${scripts_dir}/transform.py ${allslides_opt} ${bold_titles_opt} \
+#     ${include_note_opt} ${disable_demo_opt} ${disable_quiz_opt} \
+#     ${renumber_sections_opt} ${target} ${basename}
+python ${scripts_dir}/transform.py ${allslides_opt} ${bold_titles_opt} \
+    ${include_note_opt} ${instructor_opt} \
+    ${disable_demo_opt} ${disable_quiz_opt} \
+    ${renumber_sections_opt} ${target} ${basename} \
+    > ${work_dir}/${basename}.tex 2> .errors.$$
+chmod -w ${work_dir}/${basename}.tex
+
+if test -s .errors.$$
+then
+    cat .errors.$$
+    /bin/rm .errors.$$ > /dev/null 2>&1
+    exit 1
+fi
+
+/bin/rm .errors.$$ > /dev/null 2>&1
+
+rootdir=`/bin/pwd`
+cd ${work_dir}
+
+# Note that we cannot generate PDF files directly by using pdflatex; going
+# through PostScript is essential for including PostScript pictures in slides.
+
+/bin/rm -f ${basename}.dvi
+echo q | latex ${basename} > .latex1.${basename}.out 2>&1
+if test ! -s ${basename}.dvi
+then
+    echo "latex failed"
+    cat .latex1.${basename}.out
+    exit 1
+fi
+
+echo q | latex ${basename} >> .latex2.${basename}.out 2>&1
+
+dvips ${basename} -o > .dvips.${basename}.out 2>&1
+
+cd ${rootdir}
+cp ${work_dir}/${basename}.ps ${target_dir}/${basename}.ps
+
+exit 0

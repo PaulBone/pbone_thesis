@@ -1,0 +1,26 @@
+#!/bin/sh
+# vim: ts=4 sw=4 et
+
+usage="usage: pic_to_eps work_dir_name prefix filename"
+
+if test $# != 3
+then
+    echo $usage
+    exit 1
+fi
+
+work_dir_name="$1"
+prefix="$2"
+filename="$3"
+basename=`basename "${filename}" .pic`
+
+mkdir -p "${work_dir_name}"
+groff -mpic -p -Tps ${filename} \
+    > ${work_dir_name}/${prefix}_${basename}.ps \
+    2> ${work_dir_name}/.pic_to_eps.${basename}.out
+ps2epsi \
+    ${work_dir_name}/${prefix}_${basename}.ps \
+    ${work_dir_name}/${prefix}_${basename}.eps
+rm -f ${work_dir_name}/${prefix}_${basename}.ps
+
+exit 0

@@ -1,0 +1,4 @@
+\usepackage{epsf}
+
+\newcommand{\code}[1]{{\tt#1}}
+
