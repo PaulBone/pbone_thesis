@@ -1,0 +1,132 @@
+\newcommand{\Red}[1]{\textcolor{red}{#1}}
+\newcommand{\Green}[1]{\textcolor{green}{#1}}
+\newcommand{\Blue}[1]{\textcolor{blue}{#1}}
+
+% Like itemize, except doesn't waste as much vertical space.
+\newenvironment{Itemize}{%
+  \begin{itemize}%
+  \setlength{\itemsep}{0.5ex}%
+  \setlength{\parsep}{0.5ex}
+}{\end{itemize}}
+
+% Like enumerate, except doesn't waste as much vertical space.
+\newenvironment{Enumerate}{%
+  \begin{enumerate}%
+  \setlength{\itemsep}{1ex}%
+  \setlength{\parsep}{2ex}
+}{\end{enumerate}}
+
+% Like description, except doesn't waste as much vertical space.
+\newenvironment{Description}{%
+  \begin{description}%
+  \setlength{\itemsep}{1ex}%
+  \setlength{\parsep}{2ex}
+}{\end{description}}
+
+% description environment with long labels and hanging indent
+\newlength{\longlabellen}
+\def\longlistlabel#1{\makebox[\longlabellen][l]{#1}}
+\def\longlist#1{\list{}{
+        \settowidth{\longlabellen}{#1}
+        \labelwidth\longlabellen
+        \labelsep 0pt
+        \leftmargin \longlabellen
+%       \advance\leftmargin \leftmargini
+        \itemindent 0pt
+        \let\makelabel\longlistlabel}}
+\def\endlonglist{\endlist}
+
+% Indent space for code.
+\newcommand{\INDENT}{\hspace*{10pt}}
+
+% match (
+\newcommand{\halfopen}[2]{\mbox{$[#1,#2)$}}
+% match ]
+%\newcommand{\var}[1]{\mbox{\em #1\/}}
+\newcommand{\vars}[1]{\mbox{\scriptsize\em #1\/}}
+
+\newcommand{\trule}{\raisebox{0.5mm}{\textcolor{G2}{%
+  \rule{\textwidth}{0.8mm}}}}
+\newcommand{\brule}{\vfill\raisebox{0.5mm}{\textcolor{G2}{%
+  \rule{\textwidth}{0.8mm}}}\vspace*{-5mm}}
+
+\newenvironment{mylist}{\begin{list}{$\bullet$}
+  {\setlength\labelwidth{.5em}\setlength\leftmargin{1em}
+  \setlength{\itemsep}{-0.5ex}
+  \def\makelabel##1{##1\hfill}}}{\end{list}}
+
+\newcommand{\sect}[1]{\medskip\leftline{\large\bf#1}\nobreak\smallskip\noindent}
+\newcommand{\subsect}[1]{\smallskip\leftline{\bf#1}\nobreak\par\noindent\@gobblecr}
+
+\newcommand{\bsl}[1]{\renewcommand{\baselinestretch}{#1}\normalsize}
+
+\newcommand{\set}[1]{\left\{
+    \begin{array}{l}#1
+    \end{array}
+  \right\}}
+\newcommand{\sset}[2]{\left\{~#1 \left|
+      \begin{array}{l}#2\end{array}
+    \right.     \right\}} 
+
+\newcommand{\mybacks}{\char'134}	% Backslant 
+\newcommand{\mycaret}{\char'136}	% Caret 
+\newcommand{\mytilde}{\char'176}	% Tilde 
+\newcommand{\fun}{\rightarrow}
+
+\newcommand{\ignore}[1]{}
+
+\newcommand{\code}[1]{{\tt#1}}
+
+\newcommand{\fa}{\forall}
+\newcommand{\te}{\exists}
+
+\newcommand{\If}{\leftarrow}
+\newcommand{\Of}{\rightarrow}
+\newcommand{\Iff}{\leftrightarrow}
+
+\newcommand{\la}{\leftarrow}
+\newcommand{\imp}{\rightarrow}
+\newcommand{\up}{\uparrow}
+
+\newcommand{\LogicalOr}{\vee}
+\newcommand{\LogicalAnd}{\wedge}
+\newcommand{\LogicalNot}{\neg}
+
+\newcommand{\spacetab}{~~~}
+\newcommand{\spacestab}{~~}
+
+\newcommand{\var}[1]{{\it #1}\/}
+
+\newcommand{\Heading}[1]{%
+  % \trule
+  \vspace*{-5ex}
+  \begin{center}
+    \large\bf
+    \mbox{\quad#1\quad}%
+  \end{center}
+  \vspace*{2ex minus 1ex}}
+
+\newcommand{\ContHeading}[1]{%
+  % \trule
+  \vspace*{-5ex}
+  \begin{center}
+    \large\bf
+    \mbox{\quad#1{\small~(cont.)}\quad}%
+  \end{center}
+  \vspace*{2ex minus 1ex}}
+
+\newcommand{\frontpage}[1]{%
+  \trule
+  \vspace*{6ex}
+  \begin{center}
+  \colorbox{G1}{
+  \begin{minipage}{80mm}
+  \begin{center}
+  {\Large\bf
+  ~\\#1\\~
+  }\\[2ex]
+  \end{center}
+  \end{minipage}
+  }
+  \end{center}
+}

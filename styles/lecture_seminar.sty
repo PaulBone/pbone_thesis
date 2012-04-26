@@ -1,0 +1,35 @@
+\pagestyle{plain}
+
+\setlength{\parindent}{0ex}
+
+\centerslidesfalse
+
+\renewcommand{\slideframewidth}{0pt}
+
+\def\printlandscape{\special{landscape}}
+
+\newcommand{\hlctransform}[3]{
+\noindent
+\framebox{
+\noindent
+\begin{minipage}{0.99 \textwidth}
+\raggedright{\noindent{\bf#1}}
+{\tt
+\begin{tabular}{p{0in}p{0.98 \textwidth}}
+& #2 \\
+$\Longrightarrow$ \\
+&#3\\
+\end{tabular}
+}
+\end{minipage}
+}
+}
+
+\newcommand{\shorthlctransform}[3]{
+\noindent
+\framebox{
+\noindent
+\raggedright{\noindent{\bf#1}}
+{\tt #2 $\Longrightarrow$ #3}
+}
+}

@@ -1,0 +1,34 @@
+\pagestyle{plain}
+
+% Uncomment this to allow space at the bottom of each page for notes.
+% \textheight 40\baselineskip
+
+\setlength{\parindent}{0ex}
+\setlength{\parskip}{0.7ex}
+\setlength{\columnsep}{6ex}
+
+\newcommand{\hlctransform}[3]{
+\noindent
+\framebox{
+\noindent
+\begin{minipage}{0.45 \textwidth}
+\raggedright{\noindent{\bf#1}}
+{\tt
+\begin{tabular}{p{0in}p{0.90 \textwidth}}
+& #2 \\
+$\Longrightarrow$ \\
+&#3\\
+\end{tabular}
+}
+\end{minipage}
+}
+}
+
+\newcommand{\shorthlctransform}[3]{
+\noindent
+\framebox{
+\noindent
+\raggedright{\noindent{\bf#1}}
+{\tt #2 $\Longrightarrow$ #3}
+}
+}

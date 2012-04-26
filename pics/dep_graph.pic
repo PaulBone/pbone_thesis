@@ -1,0 +1,30 @@
+.PS 2
+boxht = 2
+boxwid = 2
+circlerad = 0.5
+arrowht = 0.4
+arrowwid = 0.3
+arrowhead = 7
+right
+A1: box invis
+A2: box invis
+A3: box invis
+B1: box invis with .n at A1.s
+B2: box invis
+B3: box invis
+C1: box invis with .n at B1.s
+C2: box invis
+C3: box invis
+X1: circle "1" with .c at A2.c
+X2: circle "2" with .c at B1.c
+X3: circle "3" with .c at B3.c
+X4: circle "4" with .c at C2.c
+arrow -> from X1.sw to X2.ne
+arrow -> from X1.se to X3.nw
+arrow -> from X2.se to X4.nw
+arrow -> from X3.sw to X4.ne
+box invis "Bigs0" width 2 with .e at X1.w + (0, -0.7)
+box invis "Smalls0" width 2.5 with .w at X1.e + (0, -0.7)
+box invis "Bigs" width 2 with .e at X4.w + (0, 0.7)
+box invis "Smalls" width 2.5 with .w at X4.e + (0, 0.7)
+.PE

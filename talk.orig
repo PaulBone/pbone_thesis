@@ -3,5 +3,709 @@ SECTION 1 Automatic Parallelism for Mercury
 
 SUBSECTION Introduction
 
-SLIDE Motivation
+SLIDE Motivation --- Multicore computing
+
+MOSFETs (Metal Oxide Semiconductor Feild Effect Trasistors) switch
+more quickly if the \emph{gate} in the transistor is thinner.
+Therefore, as Moore's law makes our processors smaller they should
+become faster.
+
+This was true up until roughly 2005 when physical limitations have begun
+to restrict speed.
+For example, The $SiO_2$ layer that isolates the channel from the gate
+is only 1.3nm thick in a 65nm processor,
+quantium tunneling can occur wasting energy and creating exess heat.
+% This doesn't quite explain the problem with speed.
+
+Manufacturers now ship multicore processors to continue to deliver
+better-performing processors without increasing clock speeds.
+
+Programmers who want to take advantage of the extra cores on these
+processors must write parallel programs.
+
+SLIDE Motivation --- Threaded Programming
+
+Threads are the most common method of parallel programming.
+When using threads,
+programmers use critical sections to protect shared resources from
+concurrent access.
+
+Critical sections are normally protected by locks, but it is easy to make
+errors when using locks.
+
+\begin{itemize}
+
+\item Forgetting to use locks can put the program into an inconsistent state,
+      corrupt memory and crash the program.
+
+\item Using multiple locks in different orders in different places
+      % including nested critical sections,
+      can lead to deadlocks.
+
+\item Misplacing lock operations can lead to critical sections
+      that are too wide (causing poor performance)
+      or too narrow (causing data corruption and crashes).
+
+\end{itemize}
+
+SLIDE Automatic Parallelism.
+
+An good compiler performs many optimizations on behalf of the
+programmer.
+Programmers rarely think about:
+
+\begin{itemize}
+
+    \item Register allocation,
+
+    \item Inlining,
+
+    \item Simplifiction such as constant propagation \& strength
+          reduction.
+
+\end{itemize}
+
+We beleive that parallelisation is just another optimization,
+and it would be best if the programmer handled it for us;
+so that, like any other optimization, we wouldn't need to think of it.
+
+SLIDE About Mercury
+
+\begin{itemize}
+\item Mercury is a \textbf{pure} logic/functional language
+designed to support the creation of large, reliable, efficient programs.
+
+\item It has a syntax similar to Prolog's,
+    however the operational semantics are very different.
+
+\item It is strongly typed using a Hindley Milner type system.
+
+\item It also has mode and determinism systems.
+      % making many bugs impossible.
+\end{itemize}
+
+\begin{verbatim}
+:- pred map(pred(T, U), list(T), list(U)).
+:- mode map(pred(in, out) is det, in, out) is det.
+
+map(_, [], []).
+map(P, [X | Xs], [Y, Ys]) :-
+    P(X, Y),
+    map(P, Xs, Ys).
+\end{verbatim}
+
+SLIDE Effects in Mercury
+
+In Mercury, all effects are explicit,
+which helps programmers as well as the compiler.
+
+\begin{verbatim}
+main(IO0, IO) :-
+    write_string("Hello ", IO0, IO1),
+    write_string("world!\n", IO1, IO).
+\end{verbatim}
+
+The I/O state represents
+the state of the world outside of this process.
+Mercury ensures that only one version
+is alive at any given time.
+
+This program has three versions of that state:
+\begin{description}
+\item[\code{IO0}]
+represents the state before the program is run
+\item[\code{IO1}]
+represents the state after printing \verb|Hello |
+\item[\code{IO}]
+represents the state after printing \verb|world!\n|.
+\end{description}
+
+SLIDE Data dependencies
+
+\begin{verbatim}
+qsort([], []).
+qsort([Pivot | Tail], Sorted) :-
+    partition(Pivot, Tail, Bigs0, Smalls0),     %1
+    qsort(Bigs0, Bigs),                         %2
+    qsort(Smalls0, Smalls),                     %3
+    Sorted = Smalls ++ [Pivot | Bigs].          %4
+\end{verbatim}
+
+\parbox{0.5\textwidth}{
+\epsfbox{dep_graph.eps}
+}~\parbox{0.5\textwidth}{
+\begin{itemize}
+  \item Steps 2 and 3 are independent.
+  \item \red{This is easy to prove because
+  there are never any \emph{side} effects.}
+  \item They may be executed in parallel.
+\end{itemize}
+}
+
+SLIDE Explicit Parallelism
+
+Mercury allows explicit, deterministic parallelism
+via the parallel conjunction operator \red{\&}.
+
+\vspace{1em}
+
+\begin{tabular}{l}
+\code{qsort([], []).} \\
+\code{qsort([Pivot $|$ Tail], Sorted) :-} \\
+\code{~~~~partition(Pivot, Tail, Bigs0, Smalls0), } \\
+\code{~~~~(} \\
+\code{~~~~~~~~qsort(Bigs0, Bigs) } \\
+\code{~~~~\red{\&}} \\
+\code{~~~~~~~~qsort(Smalls0, Smalls)} \\
+\code{~~~~),} \\
+\code{~~~~Sorted = Smalls ++ [Pivot $|$ Bigs].}
+\end{tabular}
+
+SLIDE Why make this automatic?
+
+We might expect parallelism to yield a speedup in the quicksort example,
+but it does not.
+
+The above parallelization creates $N$ parallel tasks for a list of length $N$.
+Most of these tasks are trivial and therefore the overheads of managing them
+slow the program down.
+
+Programmers rarely understand the performance of their programs,
+even when they think they do.
+
+SUBSECTION Runtime system changes
+
+SLIDE Runtime system changes
+
+Before we can automatically parallelise programs effectively we need to
+be able to manually parallelise them effectively.
+This meant making several improvements to the runtime system.
+
+The RTS has eeveral objects used in parallel Mercury programs.
+
+\begin{description}
+
+    \item[Engines]
+
+    \item[Contexts]
+
+    \item[Sparks]
+
+\end{description}
+
+SLIDE Work stealing
+
+80\& by Peter Wang, 20\& by me.
+
+SLIDE The max-contexts limit
+
+Describe the pathalogical max contexts problem.
+
+SLIDE Management of work queues
+
+Work queues where owned by contexts,
+
+Now they are owned by engines, therefore there are a fixed number of
+queues and the work stealing code is simpler.
+More importantly it is faster in the above pathalogical case.
+
+SLIDE Engine wakeup code
+
+Engines could be woken if a context was created but not if a spark was
+created.
+This could reduce the amount of parallelism exploited.
+
+The new engine wakeup code allows engines to be woken for either reason,
+engines will jump to the right procedure immediatly after waking.
+
+In the case of new context wakeup the engine can be given the context
+directly and need not synchronize on the context run queue.
+
+SUBSECTION Automatic parallelism
+
+SLIDE Dependent Parallelism
+
+XXX: Move this to where we need it (overlap).
+
+Mercury can handle dependencies between parallel conjuncts.
+\emph{Shared variables} are produced in one conjunction and consumed in
+another.
+
+\begin{tabular}{l}
+\code{map\_foldl(\_, \_, [], Acc, Acc).} \\
+\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~M(X, Y),} \\
+\code{~~~~~~~~F(Y, Acc0, \red{Acc1}} \\
+\code{~~~~) \&} \\
+\code{~~~~map\_foldl(M, F, Xs, \red{Acc1}}.} \\
+\end{tabular}
+
+\code{\red{Acc1}} will be replaced with a \emph{future},
+If the second conjunct attempts to read from the future before the first
+conjunct writes the future,
+its context (light-wight thread) will be blocked and resumed once the
+first conjunct has placed a value into the future.
+
+
+SLIDE Our approach
+
+\begin{itemize}
+  \item Profile the program to find the expensive parts.
+  \item Analyse the program to determine what parts \emph{can} be run in
+        parallel.
+  \item Select only the parts that can be parallelized \emph{profitably}.
+        This may involve trial and error when done by hand.
+  % Originally the above item was:
+  %\item Determine which parts it is \emph{profitable} run in parallel.
+  %      This may involve trial and error when done by hand.
+  \item Continue introducing parallel evaluation until the all processors are
+        fully utilised or there is no profitable parallelism left.
+\end{itemize}
+
+\begin{center}
+\epsfbox{prof_fb.eps}
+\end{center}
+
+SLIDE Finding parallelization candidates
+
+The deep profiler's call graph is a tree of strongly connected components
+(SCCs).
+Each SCC is a group of mutually recursive calls.
+The automatic parallelism analysis follows the following algorithm:
+
+\begin{itemize}
+
+    \item Recurse depth-first down the call graph from \code{main/2}.
+
+    \item Analyze each procedure of each SCC, identify conjunctions that have
+          two or more goals whose cost is greater than a configurable
+          threshold.
+
+    \item Stop recursing into children if either:
+
+    \begin{itemize}
+
+        \item the child's cost is below another configurable threshold; or
+
+        \item there is no free processor to exploit any parallelism the child
+              may have.
+
+    \end{itemize}
+
+\end{itemize}
+
+SLIDE Recursive calls
+
+Maybe talk about calculating cost in recursive calls?
+This may need a significant description of the deep profiler.
+
+SUBSECTION Overlap analysis
+
+SLIDE Calculating How would you parallelize this?
+
+XXX: I've given the solution to this problem above, but I want to
+discuss it anyway so I need to re-word it.
+
+%Assume that the call to \code{M} is expensive and the call to \code{F} is
+%cheap.
+
+\begin{verbatim}
+map_foldl(_, _, [], Acc, Acc).
+map_foldl(M, F, [X | Xs], Acc0, Acc) :-
+    M(X, Y),
+    F(Y, Acc0, Acc1),
+    map_foldl(M, F, Xs, Acc1, Acc).
+\end{verbatim}
+
+During parallel execution,
+a task will block if a variable it needs
+is not available when it needs it.
+
+\code{F} needs \code{Y} from \code{M},
+and the recursive call needs \code{Acc1} from \code{F}.
+
+Can \code{map\_foldl} be profitably parallelized
+despite these dependencies, and if yes, how?
+
+SLIDE Parallelizing \code{map\_foldl}
+
+\code{Y} is produced at the very end of \code{M}
+and consumed at the very start of \code{F},
+so the execution of these two calls cannot overlap.
+
+\code{Acc1} is produced at the end of \code{F},
+but it is \emph{not} consumed at the start of the recursive call,
+so some overlap \emph{is} possible.
+
+\begin{verbatim}
+map_foldl(_, _, [], Acc, Acc).
+map_foldl(M, F, [X | Xs], Acc0, Acc) :-
+    (
+        M(X, Y),
+        F(Y, Acc0, Acc1)
+    ) &
+    map_foldl(M, F, Xs, Acc1, Acc).
+\end{verbatim}
+
+SLIDE \code{map\_foldl} overlap
+
+The recursive call needs \code{Acc1} only when it calls \code{F}.
+The calls to \code{M} can be executed in parallel.
+
+\vspace{1em}
+\epsfbox{mapfoldl-overlap.eps}
+
+% SLIDE \code{map\_foldl} overlap
+% 
+% The more expensive \code{M} is relative to \code{F},
+% the bigger the overall speedup.
+% 
+% \vspace{1em}
+% \epsfbox{mapfoldl-overlap2.eps}
+
+SLIDE Simple overlap example
+
+\vspace{-1em}
+
+Tasks \code{p} and \code{q} have one shared variable.
+
+We conceptually split each task split into sections,
+each section ended by the production or consumption of a shared variable.
+
+$pR$ and $qR$ denote the time that the tasks take to compute any non-shared
+variables needed after the conjunction.
+
+\vspace{1em}
+\epsfbox{overlap1.eps}
+
+SLIDE Overlap with more than one dependency
+
+We calculate the execution time of \code{q} by iterating over its sections.
+In this case, that means iterating over the variables it consumes
+in the order that it consumes them.
+
+\vspace{2em}
+\epsfbox{overlap2-swap.eps}
+
+SLIDE Overlap of more than two tasks
+
+A task that consumes a variable can occur only on the \emph{right}
+of the task that generates its value.
+Therefore, we process conjuncts from left to right.
+
+\vspace{1em}
+\epsfbox{overlap3.eps}
+
+SLIDE Overlap algorithm --- Loop over conjuncts
+
+\begin{verbatim}
+find_par_time(Conjs, SeqTimes) returns TotalParTime:
+  N := length(Conjs)
+  ProdTimeMap := empty
+  TotalParTime := 0
+  for i in 1 to N:
+    CurParTime := 0 + ...
+    find_conjunct_par_time(Conjs[i], SeqTimes[i],
+      CurParTime, ProdTimeMap)
+    TotalParTime := max(TotalParTime, CurParTime)
+  TotalParTime := TotalParTime + ...
+\end{verbatim}
+
+The \verb|...|s represent estimates of overheads.
+
+SLIDE Overlap algorithm --- Loop over variables
+
+\begin{verbatim}
+find_conjunct_par_time(Conj, SeqTime,
+    inout CurParTime, inout ProdTimeMap):
+  ProdConsList := get_sorted_var_uses(Conj)
+  CurSeqTime := 0
+  forall (Var_j, Time_j) in ProdConsList:
+    Duration_j := Time_j - CurSeqTime
+    CurSeqTime := CurSeqTime + Duration_j
+    if Conj produces Var_j:
+      CurParTime := CurParTime + Duration_j + ...
+      ProdTimeMap[Var_j] := CurParTime
+    else Conj must consume Var_j:
+      ParWantTime := CurParTime + Duration_j + ...
+      CurParTime := max(ParWantTime, ProdTimeMap[Var_j]) + ...
+  DurationRest := SeqTime - CurSeqTime
+  CurParTime := CurParTime + DurationRest
+\end{verbatim}
+
+SLIDE Results on some small programs
+
+\scalebox{0.9}
+{
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\hline \hline
+\multicolumn{1}{c}{\textbf{Program}} &
+\multicolumn{1}{c}{\textbf{Seq}}    &
+\multicolumn{1}{c}{\textbf{1 CPU}}   &
+\multicolumn{1}{c}{\textbf{2 CPUs}}  &
+\multicolumn{1}{c}{\textbf{3 CPUs}}  &
+\multicolumn{1}{c}{\textbf{4 CPUs}}  \\
+\hline
+%\hhline{|-|-||-|-|-|-|-|}
+% \hline
+% matrixmult & indep & 14.7 (0.76) &  7.6 (1.47) &  5.2 (2.15) &  5.2 (2.15) \\
+% seq 11.2   & naive & 14.7 (0.76) &  8.0 (1.40) &  5.7 (1.96) &  4.7 (2.38) \\
+% par 14.6   & overlap  & 14.7 (0.76) &  7.6 (1.47) &  6.7 (1.67) &  5.2 (2.15)
+% \\
+matrixmult & 11.0     & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12)
+\\
+%\hhline{|-|-||-|-|-|-|-|}
+%\hhline{|-|-||-|-|-|-|-|}
+\hline
+raytracer  & 22.7     & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42)
+\\
+\hline
+mandelbrot & 33.4     & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67)
+\\
+%\hhline{|-|-||-|-|-|-|-|}
+\hline \hline
+\end{tabular}
+\end{center}
+}
+\vspace{3mm}
+
+Parallel code needs to use a machine register
+to point to thread-specific data,
+so enabling parallel execution but not using it leads to slowdowns.
+
+Matrixmult has one memory store for each FP multiply/add pair.
+Its speedup is limited by memory bus bandwidth,
+which it saturates relatively quickly.
+
+Raytracer generates many intermediate data structures.
+The GC system consumes 40\% of the execution time
+in stop-the-world collections when using 4 Mercury threads and 4 GC
+threads.
+When using 1 Mercury thread and 4 GC threads it uses only 5\% of the
+program's runtime.
+
+SLIDE Results on the Mercury compiler
+
+\begin{itemize}
+    \item There are 53 conjunctions in the compiler with two or more
+          expensive conjuncts.
+
+    \item 52 of these are dependent conjunctions.
+
+    \item 31 of these have a predicted speedup of greater than 1\% (the
+          default speedup threshold).
+
+    \item Therefore, our analysis can prevent the parallelization of 22
+          conjunctions that are not profitable.
+\end{itemize}
+
+Unfortunately, many parts of the compiler must be executed sequentially.
+Due to Amdahl's law, this limits the overall speedup of the compiler.
+
+SUBSECTION Conclusion
+
+SLIDE Progress to date
+
+\vspace{-0.5em}
+
+\begin{itemize}
+  \item Our analysis is able to find profitable parallelism in small
+        programs and generate advice for the compiler.
+
+  \item The analysis explores only the parts of the call graph that
+        might be profitably parallelized.
+
+  \item Our novel overlap analysis allows us to estimate how dependencies
+        affect parallel execution.
+
+  \item The compiler can act on this advice, and can profitably parallelize
+        small programs.
+\end{itemize}
+
+Not shown in this presentation:
+
+\begin{itemize}
+
+  \item We can rearrange some computations to make it easier to take
+        advantage of parallelism.
+
+  \item We can efficiently search a large space of possible
+        parallelizations.
+
+\end{itemize}
+
+SLIDE Further work
+
+\begin{itemize}
+  \item Account for barriers to effective parallelism,
+        including garbage collection and memory bandwidth limits.
+
+  \item Build an \emph{advice} system that informs programmers
+        why something they think can be profitably parallelized
+        in fact cannot be.
+
+  \item Support parallelization as a specialization.
+
+% \item Handle loops more efficiently.
+
+% \item Handle divide and conquer code more efficiently.
+
+% \item We are currently working on visualisation to help us
+%       tune our work.
+
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\Huge{Questions?}
+\end{center}
+
+SUBSECTION Choosing how to parallelize
+
+SLIDE Choosing how to parallelize
+
+\begin{verbatim}
+g1, g2, g3
+g1 & (g2, g3)
+(g1, g2) & g3
+g1 & g2 & g3
+\end{verbatim}
+
+Each of these is a parallel conjunction of sequential conjunctions,
+with some of the conjunctions having only one conjunct.
+
+If there is a \code{g4}, you can
+(a) execute it in parallel with all the other parallel conjuncts, or
+(b) execute it in sequence with the goals in the last sequential
+conjunction.
+
+There are thus $2^{N-1}$ ways
+to parallelize a conjunction of $N$ goals.
+
+If you allow goals to be reordered,
+the search space would become larger still.
+
+SLIDE Even simple code can have many conjuncts.
+
+\begin{verbatim}
+X = (-B + sqrt(pow(B, 2) - 4*A*C)) / 2 * A
+\end{verbatim}
+
+Flattening the above expression gives 12 small goals,
+each executing one primitive operation:
+
+\begin{verbatim}
+V1 = 0          V5 = 4          V9 = sqrt(V8)
+V2 = V1 - B     V6 = V5 * A     V10 = V2 + V9
+V3 = 2          V7 = V6 * C     V11 = V3 * A
+V4 = pow(B, V3) V8 = V4 - V7    X = V9 / V11
+\end{verbatim}
+
+Primitive goals are not worth spawning off.
+Nonetheless, they can appear between goals
+that should be parallelized against one another,
+greatly increasing the value of $N$.
+
+SLIDE Reducing the search space.
+
+Currently we do two things to reduce the size of the search space
+from $2^{N - 1}$:
+
+\begin{itemize}
+   \item Remove whole subtrees of the search tree that are worse than
+     the current best solution (a variant of ``branch and bound'').
+
+   \item During search we always follow the most promising-looking
+     branch before backtracking to the alternative branch.
+
+   \item If the search is still taking to long,
+     then switch to a greedy search that is approximately linear.
+\end{itemize}
+
+This allows us to fully explore the search space when it is small,
+while saving time by exploring only part of the search space when it is large.
+
+SUBSECTION Push-into-goal transformation
+
+SLIDE Expensive goals in different conjunctions
+
+The call to \code{typecheck} and the call to \testtt{typecheck\_preds} are
+expensive enough to be worth parallelizing.
+But the if-then-else that contains the call to \code{typecheck}
+has a typical cost 1/10th of the cost of \code{typecheck}.
+It is not worth parallelizing the if-then-else against \code{typecheck\_preds}.
+
+\small
+\begin{verbatim}
+   typecheck_preds([], [], ...).
+   typecheck_preds([Pred0 | Preds0], [Pred | Preds], ...) :-
+       ( if should_typecheck(Pred0) then
+ 10        typecheck(Pred0, Pred, ...)
+       else
+ 90        Pred = Pred0
+       ),
+100    typecheck_preds(Preds0, Preds, ...).
+\end{verbatim}
+\normalsize
+
+SLIDE Push later goals into earlier compound goals
+
+We can push the call to \code{typecheck\_preds} into the if-then-else
+and parallelize only the then-part:
+
+\small
+\begin{verbatim}
+typecheck_preds([], [], ...).
+typecheck_preds([Pred0 | Preds0], [Pred | Preds], ...) :-
+    ( if should_typecheck(Pred0) then
+        typecheck(Pred0, Pred, ...) &
+        typecheck_preds(Preds0, Preds, ...)
+    else
+        Pred = Pred0,
+        typecheck_preds(Preds0, Preds, ...)
+    ).
+\end{verbatim}
+\normalsize
+
+Our analysis can perform this transformation
+as part of deciding whether this parallelization is worthwhile.
+
+SUBSECTION More overlap examples
+
+SLIDE \code{map\_foldl} overlap
+
+The recursive call needs \code{Acc1} only when it calls \code{F}.
+The calls to \code{M} can be executed in parallel.
+
+\vspace{1em}
+\epsfbox{mapfoldl-overlap.eps}
+
+SLIDE \code{map\_foldl} overlap
+
+The more expensive \code{M} is relative to \code{F},
+the bigger the overall speedup.
+
+\vspace{1em}
+\epsfbox{mapfoldl-overlap2.eps}
+
+SLIDE Overlap of more than two tasks
+
+A task that consumes a variable can occur only on the \emph{right}
+of the task that generates its value.
+Therefore, we build the overlap information
+from \textbf{left to right}.
+
+\vspace{1em}
+\epsfbox{overlap3.eps}
+
+SLIDE Overlap of more than two tasks
+
+In this example, the rightmost task consumes a variable produced by the
+leftmost task.
+
+\vspace{1em}
+\epsfbox{overlap3-onevar.eps}
+
 
