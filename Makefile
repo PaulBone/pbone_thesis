@@ -11,6 +11,7 @@ TEX_PROSE = \
 		literature_review.tex \
 		backgnd_mercury.tex \
 		backgnd_merpar.tex \
+		backgnd_deppar.tex \
 		backgnd_deep.tex \
 		rts.tex \
 		overlap.tex \
@@ -26,7 +27,7 @@ MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
 BENCH_ALL=          lc_bench_all
 
 .PHONY : all
-all : thesis.pdf wc undefined.txt
+all : thesis.pdf undefined.txt
 
 .PHONY : wc
 wc : 

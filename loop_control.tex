@@ -115,28 +115,6 @@ When this limit is reached,
 Mercury effectively reverts to sequential execution
 for the remainder of the tail recursive computation.
 
-% This is a figure since there are a number of references to it.
-\begin{figure}[tb]
-\begin{verbatim}
-map_foldl(M, F, L, Acc0, Acc) :-
-    (
-        L = [],
-        Acc = Acc0
-    ;
-        L = [H | T],
-        (
-            M(H, MappedH),
-            F(MappedH, Acc0, Acc1)
-        &
-            map_foldl(M, F, T, Acc1, Acc)
-        )
-    ).
-\end{verbatim}
-%\vspace{2mm}
-\caption{Parallel \mapfoldl{}}
-\label{fig:mapfoldl}
-%\vspace{-1\baselineskip}
-\end{figure}
 
 In this paper, we propose a transformation
 for tail recursive and nearly tail recursive parallel procedures

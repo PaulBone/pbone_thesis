@@ -1,0 +1,169 @@
+
+\status{I'm currently working on this section.}
+
+% This is a figure since there are a number of references to it.
+\begin{figure}
+\begin{verbatim}
+map_foldl(M, F, L, Acc0, Acc) :-
+    (
+        L = [],
+        Acc = Acc0
+    ;
+        L = [H | T],
+        (
+            M(H, MappedH),
+            F(MappedH, Acc0, Acc1)
+        &
+            map_foldl(M, F, T, Acc1, Acc)
+        )
+    ).
+\end{verbatim}
+%\vspace{2mm}
+\caption{Parallel \mapfoldl{}}
+\label{fig:mapfoldl}
+%\vspace{-1\baselineskip}
+\end{figure}
+
+Mercury's mode system allows a parallel conjunct to consume variables
+that are produced by conjuncts to its left, but not to its right.
+This guarantees the absence of circular dependencies
+and hence the absence of deadlocks between the conjuncts,
+but it does allow a conjunct to depend on a variable that is yet to be
+computed by a conjunct running in parallel.
+These variables can be identified easily at compile time:
+% I mentioned compile time because anyone reading this with a Prolog
+% background may make a false assumption, even though we gave them the
+% background in the Mercury section above.
+they are bound by the parallel conjunction,
+and they appear in multiple conjuncts of the parallel conjunction.
+In Figure \ref{fig:mapfoldl} \code{Acc1} is an example of such a
+\emph{shared variable}.
+We handle these variables through a source-to-source transformation
+\citep{wang_dep_par_conj,wang_hons_thesis}.
+
+%For each of these shared variables,
+%it creates a data structure called a \emph{future} \citep{multilisp}.
+%When the producer has finished computing the value of the variable,
+%it puts the value in to the future which signals its availability.
+%When a consumer attempts to read a value from a future
+%it waits for this signal (if it has not yet happened),
+%and then retrieves the value.
+%Both operations are protected by mutexes.
+
+\begin{figure}
+\begin{verbatim}
+XXX: Maybe make the int an enum?
+struct MR_Future {
+    /* lock preventing concurrent accesses */
+    MercuryLock     MR_fut_lock;
+    /* whether this future has been signalled yet */
+    int             MR_fut_signalled;
+
+    /* linked list of all the contexts blocked on this future */
+    MR_Context      *MR_fut_suspended;
+    MR_Word         MR_fut_value;
+};
+\end{verbatim}
+\caption{Future datastructure}
+\label{fig:future}
+\end{figure}
+
+For each of these shared variables,
+the compiler creates a data structure called a \emph{future} \citep{multilisp},
+which contains room for the value of the variable,
+a flag indicating whether the variable has been produced yet,
+a queue of consumer contexts waiting for the value, and a mutex.
+The initial value of the future has the flag set to `not yet produced'.
+The signal operation on the future sets the value of the variable,
+sets the flag to `produced',
+and wakes up all the waiting consumers,
+all under the protection of the mutex.
+The wait operation on the future is also protected by the mutex:
+it checks the value of the flag,
+and if it says `not yet produced',
+the engine will put its context on the queue and suspend it before
+looking for global work.
+When it wakes up,
+or if the flag said that the value was already `produced',
+the wait operation simply gets the value of the variable.
+The wait operation includes an optimization,
+it is able to check the flag before it takes the mutex provided that it
+checks the flag once more within the critical section,
+This way it does not need to use the mutex if the value has already been
+produced.
+Futhermore, if the compiler sees mone than one read of the same future
+on the same execution path,
+it can optimize the later ones so they read the value without checking
+the flag or mutex.
+
+To minimize waiting,
+the compiler pushes signal operations on each future
+as far to the left into the producer conjunct as possible,
+and it pushes wait operations
+as far to the right into each of its consumer conjuncts as possible.
+This means not only pushing them
+into the body of the predicate called by the conjunct,
+but also into the bodies of the predicates they call,
+with the intention being that
+each signal is put immediately after
+the primitive goal that produces the value of the variable,
+and each wait is put immediately before
+the leftmost primitive goal that consumes the value of the variable.
+Since the compiler has complete information
+about which goals produce and consume which variables,
+the only things that can stop the pushing process from placing the
+wait immediately before the value is to be used and the signal
+immediately after it is produced are
+higher order calls and module boundaries:
+the compiler cannot push a wait or signal operation
+into the body of a predicate
+if it does not have access to the identity or to the body of the predicate.
+
+
+\begin{figure}
+\begin{verbatim}
+map_foldl(M, F, L, Acc0, Acc) :-
+    (
+        L = [],
+        Acc = Acc0
+    ;
+        L = [H | T],
+        new_future(FutureAcc1),
+        (
+            M(H, MappedH),
+            F(MappedH, Acc0, Acc1),
+            signal_future(FutureAcc1, Acc1)
+        &
+            map_foldl_par(M, F, T, FutureAcc1, Acc)
+        )
+    ).
+
+map_foldl_par(M, F, L, FutureAcc0, Acc) :-
+    (
+        L = [],
+        wait_future(FutureAcc0, Acc0),
+        Acc = Acc0
+    ;
+        L = [H | T],
+        new_future(FutureAcc1),
+        (
+            M(H, MappedH),
+            wait_future(FutureAcc0, Acc0),
+            F(MappedH, Acc0, Acc1),
+            signal_future(FutureAcc1, Acc1)
+        &
+            map_foldl_par(M, F, T, FutureAcc1, Acc)
+        )
+    ).
+\end{verbatim}
+%\vspace{2mm}
+\caption{\mapfoldl{} with synchronization}
+\label{fig:map_foldl_sync}
+%\vspace{-1\baselineskip}
+\end{figure}
+
+Given the \mapfoldl predicate in Figure~\ref{fig:mapfoldl},
+this synchronization transformation
+generates the code in Figure~\ref{fig:map_foldl_sync}.
+
+
