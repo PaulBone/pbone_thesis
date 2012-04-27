@@ -1,3 +1,4 @@
+% vim: ts=4 sw=4 expandtab ft=tex
 
 SECTION 1 Automatic Parallelism for Mercury
 
@@ -195,7 +196,7 @@ The RTS has eeveral objects used in parallel Mercury programs.
 
 SLIDE Work stealing
 
-80\& by Peter Wang, 20\& by me.
+80\% by Peter Wang, 20\% by me.
 
 SLIDE The max-contexts limit
 
@@ -385,6 +386,26 @@ We calculate the execution time of \code{q} by iterating over its sections.
 In this case, that means iterating over the variables it consumes
 in the order that it consumes them.
 
+SLIDE Overlap algorithm --- Loop over variables
+
+\begin{verbatim}
+find_conjunct_par_time(Conj, SeqTime,
+    inout CurParTime, inout ProdTimeMap):
+  ProdConsList := get_sorted_var_uses(Conj)
+  CurSeqTime := 0
+  forall (Var_j, Time_j) in ProdConsList:
+    Duration_j := Time_j - CurSeqTime
+    CurSeqTime := CurSeqTime + Duration_j
+    if Conj produces Var_j:
+      CurParTime := CurParTime + Duration_j + ...
+      ProdTimeMap[Var_j] := CurParTime
+    else Conj must consume Var_j:
+      ParWantTime := CurParTime + Duration_j + ...
+      CurParTime := max(ParWantTime, ProdTimeMap[Var_j]) + ...
+  DurationRest := SeqTime - CurSeqTime
+  CurParTime := CurParTime + DurationRest
+\end{verbatim}
+
 \vspace{2em}
 \epsfbox{overlap2-swap.eps}
 
@@ -413,154 +434,6 @@ find_par_time(Conjs, SeqTimes) returns TotalParTime:
 \end{verbatim}
 
 The \verb|...|s represent estimates of overheads.
-
-SLIDE Overlap algorithm --- Loop over variables
-
-\begin{verbatim}
-find_conjunct_par_time(Conj, SeqTime,
-    inout CurParTime, inout ProdTimeMap):
-  ProdConsList := get_sorted_var_uses(Conj)
-  CurSeqTime := 0
-  forall (Var_j, Time_j) in ProdConsList:
-    Duration_j := Time_j - CurSeqTime
-    CurSeqTime := CurSeqTime + Duration_j
-    if Conj produces Var_j:
-      CurParTime := CurParTime + Duration_j + ...
-      ProdTimeMap[Var_j] := CurParTime
-    else Conj must consume Var_j:
-      ParWantTime := CurParTime + Duration_j + ...
-      CurParTime := max(ParWantTime, ProdTimeMap[Var_j]) + ...
-  DurationRest := SeqTime - CurSeqTime
-  CurParTime := CurParTime + DurationRest
-\end{verbatim}
-
-SLIDE Results on some small programs
-
-\scalebox{0.9}
-{
-\begin{center}
-\begin{tabular}{lrrrrrr}
-\hline \hline
-\multicolumn{1}{c}{\textbf{Program}} &
-\multicolumn{1}{c}{\textbf{Seq}}    &
-\multicolumn{1}{c}{\textbf{1 CPU}}   &
-\multicolumn{1}{c}{\textbf{2 CPUs}}  &
-\multicolumn{1}{c}{\textbf{3 CPUs}}  &
-\multicolumn{1}{c}{\textbf{4 CPUs}}  \\
-\hline
-%\hhline{|-|-||-|-|-|-|-|}
-% \hline
-% matrixmult & indep & 14.7 (0.76) &  7.6 (1.47) &  5.2 (2.15) &  5.2 (2.15) \\
-% seq 11.2   & naive & 14.7 (0.76) &  8.0 (1.40) &  5.7 (1.96) &  4.7 (2.38) \\
-% par 14.6   & overlap  & 14.7 (0.76) &  7.6 (1.47) &  6.7 (1.67) &  5.2 (2.15)
-% \\
-matrixmult & 11.0     & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12)
-\\
-%\hhline{|-|-||-|-|-|-|-|}
-%\hhline{|-|-||-|-|-|-|-|}
-\hline
-raytracer  & 22.7     & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42)
-\\
-\hline
-mandelbrot & 33.4     & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67)
-\\
-%\hhline{|-|-||-|-|-|-|-|}
-\hline \hline
-\end{tabular}
-\end{center}
-}
-\vspace{3mm}
-
-Parallel code needs to use a machine register
-to point to thread-specific data,
-so enabling parallel execution but not using it leads to slowdowns.
-
-Matrixmult has one memory store for each FP multiply/add pair.
-Its speedup is limited by memory bus bandwidth,
-which it saturates relatively quickly.
-
-Raytracer generates many intermediate data structures.
-The GC system consumes 40\% of the execution time
-in stop-the-world collections when using 4 Mercury threads and 4 GC
-threads.
-When using 1 Mercury thread and 4 GC threads it uses only 5\% of the
-program's runtime.
-
-SLIDE Results on the Mercury compiler
-
-\begin{itemize}
-    \item There are 53 conjunctions in the compiler with two or more
-          expensive conjuncts.
-
-    \item 52 of these are dependent conjunctions.
-
-    \item 31 of these have a predicted speedup of greater than 1\% (the
-          default speedup threshold).
-
-    \item Therefore, our analysis can prevent the parallelization of 22
-          conjunctions that are not profitable.
-\end{itemize}
-
-Unfortunately, many parts of the compiler must be executed sequentially.
-Due to Amdahl's law, this limits the overall speedup of the compiler.
-
-SUBSECTION Conclusion
-
-SLIDE Progress to date
-
-\vspace{-0.5em}
-
-\begin{itemize}
-  \item Our analysis is able to find profitable parallelism in small
-        programs and generate advice for the compiler.
-
-  \item The analysis explores only the parts of the call graph that
-        might be profitably parallelized.
-
-  \item Our novel overlap analysis allows us to estimate how dependencies
-        affect parallel execution.
-
-  \item The compiler can act on this advice, and can profitably parallelize
-        small programs.
-\end{itemize}
-
-Not shown in this presentation:
-
-\begin{itemize}
-
-  \item We can rearrange some computations to make it easier to take
-        advantage of parallelism.
-
-  \item We can efficiently search a large space of possible
-        parallelizations.
-
-\end{itemize}
-
-SLIDE Further work
-
-\begin{itemize}
-  \item Account for barriers to effective parallelism,
-        including garbage collection and memory bandwidth limits.
-
-  \item Build an \emph{advice} system that informs programmers
-        why something they think can be profitably parallelized
-        in fact cannot be.
-
-  \item Support parallelization as a specialization.
-
-% \item Handle loops more efficiently.
-
-% \item Handle divide and conquer code more efficiently.
-
-% \item We are currently working on visualisation to help us
-%       tune our work.
-
-\end{itemize}
-
-\vspace{1em}
-\begin{center}
-\Huge{Questions?}
-\end{center}
 
 SUBSECTION Choosing how to parallelize
 
@@ -672,40 +545,128 @@ typecheck_preds([Pred0 | Preds0], [Pred | Preds], ...) :-
 Our analysis can perform this transformation
 as part of deciding whether this parallelization is worthwhile.
 
-SUBSECTION More overlap examples
+SLIDE Results on some small programs
 
-SLIDE \code{map\_foldl} overlap
+\scalebox{0.9}
+{
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\hline \hline
+\multicolumn{1}{c}{\textbf{Program}} &
+\multicolumn{1}{c}{\textbf{Seq}}    &
+\multicolumn{1}{c}{\textbf{1 CPU}}   &
+\multicolumn{1}{c}{\textbf{2 CPUs}}  &
+\multicolumn{1}{c}{\textbf{3 CPUs}}  &
+\multicolumn{1}{c}{\textbf{4 CPUs}}  \\
+\hline
+%\hhline{|-|-||-|-|-|-|-|}
+% \hline
+% matrixmult & indep & 14.7 (0.76) &  7.6 (1.47) &  5.2 (2.15) &  5.2 (2.15) \\
+% seq 11.2   & naive & 14.7 (0.76) &  8.0 (1.40) &  5.7 (1.96) &  4.7 (2.38) \\
+% par 14.6   & overlap  & 14.7 (0.76) &  7.6 (1.47) &  6.7 (1.67) &  5.2 (2.15)
+% \\
+matrixmult & 11.0     & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12)
+\\
+%\hhline{|-|-||-|-|-|-|-|}
+%\hhline{|-|-||-|-|-|-|-|}
+\hline
+raytracer  & 22.7     & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42)
+\\
+\hline
+mandelbrot & 33.4     & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67)
+\\
+%\hhline{|-|-||-|-|-|-|-|}
+\hline \hline
+\end{tabular}
+\end{center}
+}
+\vspace{3mm}
 
-The recursive call needs \code{Acc1} only when it calls \code{F}.
-The calls to \code{M} can be executed in parallel.
+Parallel code needs to use a machine register
+to point to thread-specific data,
+so enabling parallel execution but not using it leads to slowdowns.
 
-\vspace{1em}
-\epsfbox{mapfoldl-overlap.eps}
+Matrixmult has one memory store for each FP multiply/add pair.
+Its speedup is limited by memory bus bandwidth,
+which it saturates relatively quickly.
 
-SLIDE \code{map\_foldl} overlap
+Raytracer generates many intermediate data structures.
+The GC system consumes 40\% of the execution time
+in stop-the-world collections when using 4 Mercury threads and 4 GC
+threads.
+When using 1 Mercury thread and 4 GC threads it uses only 5\% of the
+program's runtime.
 
-The more expensive \code{M} is relative to \code{F},
-the bigger the overall speedup.
+SLIDE Results on the Mercury compiler
 
-\vspace{1em}
-\epsfbox{mapfoldl-overlap2.eps}
+\begin{itemize}
+    \item There are 53 conjunctions in the compiler with two or more
+          expensive conjuncts.
 
-SLIDE Overlap of more than two tasks
+    \item 52 of these are dependent conjunctions.
 
-A task that consumes a variable can occur only on the \emph{right}
-of the task that generates its value.
-Therefore, we build the overlap information
-from \textbf{left to right}.
+    \item 31 of these have a predicted speedup of greater than 1\% (the
+          default speedup threshold).
 
-\vspace{1em}
-\epsfbox{overlap3.eps}
+    \item Therefore, our analysis can prevent the parallelization of 22
+          conjunctions that are not profitable.
+\end{itemize}
 
-SLIDE Overlap of more than two tasks
+Unfortunately, many parts of the compiler must be executed sequentially.
+Due to Amdahl's law, this limits the overall speedup of the compiler.
 
-In this example, the rightmost task consumes a variable produced by the
-leftmost task.
+SUBSECTION Loop control
 
-\vspace{1em}
-\epsfbox{overlap3-onevar.eps}
+SLIDE Dependent right-recursive parallel code
+
+Programmers are encouraged to write tail recursive code.
+In Mercury, this means that the last call in a clause is often a recursive call.
+
+Mercury's mode system restricts the order of conjunctions,
+produces of varizbles (such as \code{Acc1}) must occur before consumers.
+Therefore,
+the parallel conjunction $G_1 \& G_2 \& \ldots \& G_N$ will be executed by spawning
+off $G_2 \& \ldots \& G_N$.
+Mercury will fork off the $G_2, \ldots, 
+
+\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~M(X, Y),} \\
+\code{~~~~~~~~F(Y, Acc0, {\color{green}{Acc1}}}) \\
+\code{~~~~) \color{red}{\&}} \\
+\code{~~~~map\_foldl(M, F, Xs, {\color{green}{Acc1}}, Acc).}
+
+
+SUBSECTION Conclusion
+
+SLIDE Progress to date
+
+\vspace{-0.5em}
+
+\begin{itemize}
+  \item Our analysis is able to find profitable parallelism in small
+        programs and generate advice for the compiler.
+
+  \item The analysis explores only the parts of the call graph that
+        might be profitably parallelized.
+
+  \item Our novel overlap analysis allows us to estimate how dependencies
+        affect parallel execution.
+
+  \item The compiler can act on this advice, and can profitably parallelize
+        small programs.
+\end{itemize}
+
+Not shown in this presentation:
+
+\begin{itemize}
+
+  \item We can rearrange some computations to make it easier to take
+        advantage of parallelism.
+
+  \item We can efficiently search a large space of possible
+        parallelizations.
+
+\end{itemize}
 
 
