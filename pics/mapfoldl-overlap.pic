@@ -1,0 +1,45 @@
+.PS 4.5i
+right
+boxht = 0.5
+vspace = 0.75
+
+define AccM { 2 }
+define TM { 2 }
+
+define AccF { 0 }
+define TF { 2 }
+
+define AL { 0.5 }
+define AH { -0.25 }
+define LB { -0.55 }
+define LS { -0.60 }
+
+#P0: box invis "p" wid 0.5i
+M1: box wid TM "M"
+F1: box wid TF "F"
+#Q0: box invis "q" wid 0.5i
+
+arrow -> from F1.sw + (AccM, AH) to F1.sw + (AccM, 0)
+box invis "Acc1" wid 0.75 with .n at F1.sw + (AccM - AL, 0)
+
+#arrow -> from F1.sw + (AccF, AH) to F1.sw + (AccF, 0)
+#box invis "Acc1" wid 0.75 with .n at F1.sw + (AccF + AL, 0)
+
+M2: box wid TM "M" with .n at M1.s + (0, -vspace)
+move TF
+F2: box wid TF "F"
+
+arrow -> from F2.sw + (AccM, AH) to F2.sw + (AccM, 0)
+box invis "Acc1'" wid 0.75 with .n at F2.sw + (AccM - AL, 0)
+
+arrow -> from F2.sw + (0, AH) to F2.sw + (0, 0)
+box invis "Acc1" wid 0.75 with .n at F2.sw + (1 - AL, 0)
+
+M3: box wid TM "M" with .n at M2.s + (0, -vspace)
+move TF*2
+F3: box wid TF "F"
+
+arrow -> from F3.sw + (0, AH) to F3.sw + (0, 0)
+box invis "Acc1'" wid 0.75 with .n at F3.sw + (1 - AL, 0)
+
+.PE

@@ -1,0 +1,67 @@
+.PS 3.5i
+right
+boxht = 0.5
+vspace = 1.25 
+
+define BP { 3 }
+define TP { 5 }
+
+define BQ { 1 }
+define CQ { 2 }
+define TQ { 4 }
+
+define CR { 2 }
+define TR { 5 }
+
+define AL { 0.25 }
+define AH { -0.25 }
+define LB { -0.55 }
+define LS { -0.60 }
+
+P0: box invis "p" wid 1i
+P: box wid TP "pA + pR"
+# Q: box wid TQ "qA + qR"
+# Q0: box invis "q" wid 1i
+
+arrow -> from P.sw + (BP, AH) to P.sw + (BP, 0)
+box invis "A" wid 0.5 with .n at P.sw + (BP - AL, 0)
+arrow <-> from P.sw + (0, LB) to P.sw + (BP, LB)
+arrow <-> from P.sw + (BP, LB) to P.sw + (TP, LB)
+box invis "pA" with .n at P.sw + (BP/2, LS)
+box invis "pR" with .n at P.sw + ((BP+TP)/2, LS)
+
+# arrow -> from Q.sw + (BQ, AH) to Q.sw + (BQ, 0)
+# box invis "A" wid 0.5 with .n at Q.sw + (BQ + AL, 0)
+# arrow <-> from Q.sw + (0, LB) to Q.sw + (BQ, LB)
+# arrow <-> from Q.sw + (BQ, LB) to Q.sw + (TQ, LB)
+# box invis "qA" with .n at Q.sw + (BQ/2, LS)
+# box invis "qR" with .n at Q.sw + ((BQ + TQ)/2, LS)
+
+QQ0: box invis "q" wid 1i with .n at P0.s + (0, -vspace)
+QQ: box wid BQ "qA"
+QQR: box wid TQ-BQ "qB + qR" with .w at QQ.w + (max(BP, BQ), 0)
+
+arrow -> from QQR.sw + (0, AH) to QQR.sw + (0, 0)
+box invis "A" wid 0.5 with .n at QQR.sw + (AL, 0)
+arrow <-> from QQ.sw + (0, LB) to QQ.sw + (BQ, LB)
+arrow <-> from QQR.sw + (0, LB) to QQR.sw + (CQ - BQ, LB)
+arrow <-> from QQR.sw + (CQ - BQ, LB) to QQR.se + (0, LB)
+box invis "qA" with .n at QQ.sw + (BQ/2, LS)
+box invis "qB" with .n at QQR.sw + ((CQ - BQ)/2, LS)
+box invis "qR" with .n at QQR.se + (-(TQ - BQ - CQ + BQ)/2, LS)
+
+arrow -> from QQR.sw + (CQ - BQ, AH) to QQR.sw + (CQ - BQ, 0)
+box invis "B" wid 0.5 with .n at QQR.sw + (CQ - BQ - AL, 0)
+
+RR0: box invis "r" wid 1i with .n at QQ0.s + (0, -vspace)
+RR: box wid CR "rB"
+RRR: box wid TR-CR "rR" with .w at RR.w + (max(BP + CQ - BQ, CR), 0)
+
+arrow -> from RRR.sw + (0, AH) to RRR.sw + (0, 0)
+box invis "B" wid 0.5 with .n at RRR.sw + (AL, 0)
+arrow <-> from RR.sw + (0, LB) to RR.sw + (CR, LB)
+arrow <-> from RRR.sw + (0, LB) to RRR.se + (0, LB)
+box invis "rB" with .n at RR.sw + (CR/2, LS)
+box invis "rR" with .n at RRR.s + (0, LS)
+
+.PE

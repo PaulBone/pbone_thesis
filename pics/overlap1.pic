@@ -1,0 +1,45 @@
+.PS 5i
+right
+boxht = 0.5
+
+define BP { 3 }
+define TP { 5 }
+
+define BQ { 1 }
+define TQ { 4 }
+
+define AL { 0.25 }
+define AH { -0.25 }
+define LB { -0.55 }
+define LS { -0.60 }
+
+P0: box invis "p" wid 1i
+P: box wid TP "pA + pR"
+Q: box wid TQ "qA + qR"
+Q0: box invis "q" wid 1i
+
+arrow -> from P.sw + (BP, AH) to P.sw + (BP, 0)
+box invis "A" wid 0.5 with .n at P.sw + (BP - AL, 0)
+arrow <-> from P.sw + (0, LB) to P.sw + (BP, LB)
+arrow <-> from P.sw + (BP, LB) to P.sw + (TP, LB)
+box invis "pA" with .n at P.sw + (BP/2, LS)
+box invis "pR" with .n at P.sw + ((BP+TP)/2, LS)
+
+arrow -> from Q.sw + (BQ, AH) to Q.sw + (BQ, 0)
+box invis "A" wid 0.5 with .n at Q.sw + (BQ + AL, 0)
+arrow <-> from Q.sw + (0, LB) to Q.sw + (BQ, LB)
+arrow <-> from Q.sw + (BQ, LB) to Q.sw + (TQ, LB)
+box invis "qA" with .n at Q.sw + (BQ/2, LS)
+box invis "qR" with .n at Q.sw + ((BQ + TQ)/2, LS)
+
+QQ0: box invis "q" wid 1i with .n at P0.s + (0, -1.5)
+QQ: box wid BQ "qA"
+QQR: box wid TQ-BQ "qR" with .w at QQ.w + (max(BP, BQ), 0)
+
+arrow -> from QQ.sw + (BQ, AH) to QQ.sw + (BQ, 0)
+box invis "A" wid 0.5 with .n at QQ.sw + (BQ + AL, 0)
+arrow <-> from QQ.sw + (0, LB) to QQ.sw + (BQ, LB)
+arrow <-> from QQR.sw + (0, LB) to QQR.se + (0, LB)
+box invis "qA" with .n at QQ.sw + (BQ/2, LS)
+box invis "qR" with .n at QQR.s + (0, LS)
+.PE
