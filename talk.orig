@@ -6,17 +6,9 @@ SUBSECTION Introduction
 
 SLIDE Motivation --- Multicore computing
 
-MOSFETs (Metal Oxide Semiconductor Feild Effect Trasistors) switch
-more quickly if the \emph{gate} in the transistor is thinner.
-Therefore, as Moore's law makes our processors smaller they should
-become faster.
-
-This was true up until roughly 2005 when physical limitations have begun
-to restrict speed.
-For example, The $SiO_2$ layer that isolates the channel from the gate
-is only 1.3nm thick in a 65nm processor,
-quantium tunneling can occur wasting energy and creating exess heat.
-% This doesn't quite explain the problem with speed.
+Computing has traditionally seen a logarithmic increase in CPU clock
+speeds.
+However, due to phyiscal limitations this trend no-longer continues.
 
 Manufacturers now ship multicore processors to continue to deliver
 better-performing processors without increasing clock speeds.
@@ -40,8 +32,10 @@ errors when using locks.
       corrupt memory and crash the program.
 
 \item Using multiple locks in different orders in different places
-      % including nested critical sections,
       can lead to deadlocks.
+
+\item Critical sections are not composable, nesting critical sections
+      may aquire locks in different orders in different places.
 
 \item Misplacing lock operations can lead to critical sections
       that are too wide (causing poor performance)
@@ -57,17 +51,17 @@ Programmers rarely think about:
 
 \begin{itemize}
 
-    \item Register allocation,
+    \item register allocation,
 
-    \item Inlining,
+    \item inlining,
 
-    \item Simplifiction such as constant propagation \& strength
+    \item simplification such as constant propagation \& strength
           reduction.
 
 \end{itemize}
 
-We beleive that parallelisation is just another optimization,
-and it would be best if the programmer handled it for us;
+We believe that parallelisation is just another optimization,
+and it would be best if the compiler handled it for us;
 so that, like any other optimization, we wouldn't need to think of it.
 
 SLIDE About Mercury
@@ -168,7 +162,7 @@ We might expect parallelism to yield a speedup in the quicksort example,
 but it does not.
 
 The above parallelization creates $N$ parallel tasks for a list of length $N$.
-Most of these tasks are trivial and therefore the overheads of managing them
+Most of these tasks are trivial and the overheads of managing them
 slow the program down.
 
 Programmers rarely understand the performance of their programs,
@@ -182,25 +176,109 @@ Before we can automatically parallelise programs effectively we need to
 be able to manually parallelise them effectively.
 This meant making several improvements to the runtime system.
 
-The RTS has eeveral objects used in parallel Mercury programs.
+The RTS has several objects used in parallel Mercury programs.
 
 \begin{description}
 
-    \item[Engines]
+    \item[Engines] represent abstract CPUs, the RTS will create as many
+    engines as there are processors in the system, and control each one
+    from a POSIX Thread.
 
-    \item[Contexts]
+    \item[Contexts] represent a computation in progress,
+    they contain the stacks for that computation,
+    and a copy of the engine's registers when the context is suspended.
 
-    \item[Sparks]
+    \item[Sparks] are a very small structure representing a computation
+    that has not yet been started,
+    and therefore has no allocated stack space.
 
 \end{description}
 
 SLIDE Work stealing
 
-80\% by Peter Wang, 20\% by me.
+Peter Wang introduced sparks and a partial work stealing implementation.
+
+Work stealing reduces contention on a global queue of work by allowing
+each context to maintain its own work stack.
+Contexts can:
+
+\begin{itemize}
+
+    \item Push a spark onto their own stack.
+
+    \item Pop a spark off their own stack.
+    
+    \item Steal a spark from the cold end of another's stack.
+
+\end{itemize}
+
+All of these operations are lock free,
+the first two operations are wait free and do not use any atomic
+operations.
+The stealing operation uses an atomic compare-and-swap that may
+busy-wait.
+
+Credit: 80\% Peter Wang, 20\% myself, excluding the queue data structure.
+
+SLIDE Dependent right-recursive parallel code
+
+The parallel conjunction $G_1~\&~G_2~\&~\ldots~\&~G_N$ will be executed by spawning
+off $G_2~\&~\ldots~\&~G_N$, then executing $G_1$ immediatly.
+If the forked-off task is not taken up by another engine then a context
+switch is not needed.
+
+\code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
+\code{~~~~P(X, Y) \red{\&}} \\
+\code{~~~~map(P, Xs, Ys).}
+
+The recursive call to \code{map(P, Xs, Ys)} will be forked off as a spark.
+Then, the current context will call \code{P(X, Y)}.
+Then, it will wait for the execution of \code{map(P, Xs, Ys)}
+before it can construct \code{[Y $|$ Ys]} and return to its
+caller.
+
+SLIDE Decomposing a parallel conjunction
+
+Psudeo compiler output:
+
+\code{case\_label:} \\
+\code{~~~~SyncTerm st;} \\
+\code{~~~~\red{init\_sync\_term}(\&st);} \\
+\code{~~~~\red{spawn\_off}(spawn\_off\_label, \&st);} \\
+\code{~~~~P(X, Y);} \\
+\code{~~~~\red{join\_and\_continue}(resume\_label, \&st);} \\
+\code{spawn\_off\_label:} \\
+\code{~~~~map(P, Xs, Ys);} \\
+\code{~~~~\red{join\_and\_continue}(resume\_label, \&st);} \\
+\code{resume\_label:} \\
+\code{~~~~HeadVar2 := [Y $|$ Ys];}
+\code{~~~~return;} \\
+
+SLIDE Execution of dependent right-recursive parallel code
+
+\vspace{-2mm}
+The original context has to stay around until the recursive call finishes,
+so it can resume.
+Parallelizing such a loop in this way will cause it to use a
+number of contexts \textbf{linear} in the depth of the recursion.
+If each context contains 4 megabytes of stack space,
+a loop only has to iterate 256 times to consume a gigabyte of memory!
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{linear_context_usage.eps}
+\end{center}
+\vspace{-2mm}
 
 SLIDE The max-contexts limit
 
-Describe the pathalogical max contexts problem.
+To avoid this Peter added a maximum limit on the number of
+contexts that could be in memory at the same time.
+After the limit is reached no context can be created to handle
+the spawned off computation.
+
+Therefore, this limit trades memory usage for sequential
+execution.
 
 SLIDE Management of work queues
 
@@ -617,24 +695,15 @@ Due to Amdahl's law, this limits the overall speedup of the compiler.
 
 SUBSECTION Loop control
 
-SLIDE Dependent right-recursive parallel code
+SLIDE XXX
 
 Programmers are encouraged to write tail recursive code.
-In Mercury, this means that the last call in a clause is often a recursive call.
+In Mercury,
+this means that the last call in a clause is often a recursive call.
 
-Mercury's mode system restricts the order of conjunctions,
+Mercury's mode system restricts the order of conjunctions:
 produces of varizbles (such as \code{Acc1}) must occur before consumers.
 Therefore,
-the parallel conjunction $G_1 \& G_2 \& \ldots \& G_N$ will be executed by spawning
-off $G_2 \& \ldots \& G_N$.
-Mercury will fork off the $G_2, \ldots, 
-
-\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
-\code{~~~~(} \\
-\code{~~~~~~~~M(X, Y),} \\
-\code{~~~~~~~~F(Y, Acc0, {\color{green}{Acc1}}}) \\
-\code{~~~~) \color{red}{\&}} \\
-\code{~~~~map\_foldl(M, F, Xs, {\color{green}{Acc1}}, Acc).}
 
 
 SUBSECTION Conclusion
