@@ -220,22 +220,47 @@ busy-wait.
 
 Credit: 80\% Peter Wang, 20\% myself, excluding the queue data structure.
 
-SLIDE Dependent right-recursive parallel code
+SLIDE Dependent Parallelism
 
-The parallel conjunction $G_1~\&~G_2~\&~\ldots~\&~G_N$ will be executed by spawning
+Mercury can handle dependencies between parallel conjuncts.
+\emph{Shared variables} are produced in one conjunction and consumed in
+another.
+
+\begin{tabular}{l}
+\code{map\_foldl(\_, \_, [], Acc, Acc).} \\
+\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~M(X, Y),} \\
+\code{~~~~~~~~F(Y, Acc0, \red{Acc1})} \\
+\code{~~~~) \&} \\
+\code{~~~~map\_foldl(M, F, Xs, \red{Acc1}).} \\
+\end{tabular}
+
+\code{\red{Acc1}} will be replaced with a \emph{future},
+If the second conjunct attempts to read from the future before the first
+conjunct writes the future,
+its context will be blocked and resumed once the first conjunct has placed a
+value into the future.
+
+SLIDE Right-recursive parallel code
+
+Mode correctness requires that all producers of variables occur before
+consumers in conjunctions.
+
+Programmers are encouraged to make their code tail-recursive.
+This means that the recursive call is placed lasted in a conjunction so that it
+can become a tail call.
+
+A parallel conjunction $G_1~\&~G_2~\&~\ldots~\&~G_N$ will be executed by spawning
 off $G_2~\&~\ldots~\&~G_N$, then executing $G_1$ immediatly.
-If the forked-off task is not taken up by another engine then a context
-switch is not needed.
+In the common case that the forked-off task is not taken up by another engine
+then,
+a dependency between the tasks would not require a context switch.
 
-\code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
-\code{~~~~P(X, Y) \red{\&}} \\
-\code{~~~~map(P, Xs, Ys).}
-
-The recursive call to \code{map(P, Xs, Ys)} will be forked off as a spark.
-Then, the current context will call \code{P(X, Y)}.
-Then, it will wait for the execution of \code{map(P, Xs, Ys)}
-before it can construct \code{[Y $|$ Ys]} and return to its
-caller.
+However, if the forked-off task was taken by another engine,
+the original context must be suspended until that task completes.
+When the last conjunct is a tail call, it often takes far longer to execute than the other conjuncts.
+Causing the original context to be blocked for a long time.
 
 SLIDE Decomposing a parallel conjunction
 
@@ -245,50 +270,97 @@ Psudeo compiler output:
 \code{~~~~SyncTerm st;} \\
 \code{~~~~\red{init\_sync\_term}(\&st);} \\
 \code{~~~~\red{spawn\_off}(spawn\_off\_label, \&st);} \\
-\code{~~~~P(X, Y);} \\
+\code{~~~~M(X, Y);} \\
+\code{~~~~F(Y, Acc0, Acc1);} \\
 \code{~~~~\red{join\_and\_continue}(resume\_label, \&st);} \\
 \code{spawn\_off\_label:} \\
-\code{~~~~map(P, Xs, Ys);} \\
+\code{~~~~map\_foldl(M, F, Xs, Acc1, Acc);} \\
 \code{~~~~\red{join\_and\_continue}(resume\_label, \&st);} \\
 \code{resume\_label:} \\
-\code{~~~~HeadVar2 := [Y $|$ Ys];}
 \code{~~~~return;} \\
 
-SLIDE Execution of dependent right-recursive parallel code
+SLIDE Execution of right-recursive parallel code
 
 \vspace{-2mm}
-The original context has to stay around until the recursive call finishes,
-so it can resume.
-Parallelizing such a loop in this way will cause it to use a
-number of contexts \textbf{linear} in the depth of the recursion.
-If each context contains 4 megabytes of stack space,
-a loop only has to iterate 256 times to consume a gigabyte of memory!
+Blocking the original context can create a pathological worst-case behaviour:
+the same behavior will occur at each level of recursion.
+
+This will cause it to use a number of contexts \textbf{linear} in the depth of
+the recursion.
 
 \vspace{-2mm}
 \begin{center}
 \epsfbox{linear_context_usage.eps}
 \end{center}
-\vspace{-2mm}
+\vspace{-4mm}
 
-SLIDE The max-contexts limit
+If each context contains 4MB of stack space,
+a loop only of 256 iterations will consume 1GB!
 
-To avoid this Peter added a maximum limit on the number of
+SLIDE Workarround --- Reorder conjuncts
+
+The compiler understands recursion including mutual recursion.
+Therefore,
+it can move conjuncts with recursive calls to the left of those without.
+This avoids the problem above.
+
+However, where dependencies exist conjuncts cannot be moved without violating
+the program's mode-correctness.
+Therefore this solution only works in the rare cases that
+parallel conjunctions are independant.
+
+SLIDE Workarround --- The max-contexts limit
+
+To reduce the impact of  this Peter added a maximum limit on the number of
 contexts that could be in memory at the same time.
-After the limit is reached no context can be created to handle
+
+When the limit is reached no context can be created to handle
 the spawned off computation.
 
-Therefore, this limit trades memory usage for sequential
-execution.
+This limit trades memory usage for sequential execution.
 
 SLIDE Management of work queues
 
-Work queues where owned by contexts,
+Work queues where originally owned by contexts,
+if there where 100's of contexts active then there where 100's of work queues
+to steal work from, most of which are usually empty.
+This makes work stealing slower.
 
-Now they are owned by engines, therefore there are a fixed number of
-queues and the work stealing code is simpler.
-More importantly it is faster in the above pathalogical case.
+Futhermore, as contexts are created and destoryed the number of work queues
+changes.
+This required a global lock to manage the set of work queues,
 
-SLIDE Engine wakeup code
+Work queues are now owned by engines, which means that there are a small
+fixed number of queues.
+Greatly simplifying the work stealing code.
+
+More importantly it is faster in the pathalogical right-recursive case.
+
+SLIDE Old engine wakeup code
+
+When a new context is created or an existing one becomes runnable and an engine
+is sleeping,
+the engine is woken up.
+
+If the context must be executed on a particular engine
+(because foreign code needs to use the C-stack owned by that engine)
+then all the engines are woken up so that the correct one can execute the
+context.
+
+Because sparks are created often it would be too expensive to wake an engine
+for each spark.  Instead sleeping engines wakeup periodically to attempt to
+steal sparks.
+
+We expeirmented with disabling this timeout and explicitly waking engines when
+a spark queue became non-empty.
+However, a race condition could occur and the engine often failed to wake up.
+In rare cases a race can occur and an engine can be 
+
+SLIDE New engine wakeup code
+
+In the new system each engine has a semaphore,  Engines wait on the semaphore
+when they are idle.
+
 
 Engines could be woken if a context was created but not if a spark was
 created.
@@ -301,31 +373,6 @@ In the case of new context wakeup the engine can be given the context
 directly and need not synchronize on the context run queue.
 
 SUBSECTION Automatic parallelism
-
-SLIDE Dependent Parallelism
-
-XXX: Move this to where we need it (overlap).
-
-Mercury can handle dependencies between parallel conjuncts.
-\emph{Shared variables} are produced in one conjunction and consumed in
-another.
-
-\begin{tabular}{l}
-\code{map\_foldl(\_, \_, [], Acc, Acc).} \\
-\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
-\code{~~~~(} \\
-\code{~~~~~~~~M(X, Y),} \\
-\code{~~~~~~~~F(Y, Acc0, \red{Acc1}} \\
-\code{~~~~) \&} \\
-\code{~~~~map\_foldl(M, F, Xs, \red{Acc1}}.} \\
-\end{tabular}
-
-\code{\red{Acc1}} will be replaced with a \emph{future},
-If the second conjunct attempts to read from the future before the first
-conjunct writes the future,
-its context (light-wight thread) will be blocked and resumed once the
-first conjunct has placed a value into the future.
-
 
 SLIDE Our approach
 
