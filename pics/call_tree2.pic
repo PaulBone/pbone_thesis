@@ -1,0 +1,21 @@
+.PS 3
+
+sep = 0.25;
+circlerad = 0.4;
+
+MAIN: circle "main";
+MAINCS: circle "main.cs1" with .w at MAIN.e + (sep, 0);
+G: circle "g" with .w at MAINCS.e + (sep, 0);
+GCS1: circle "g.cs1" with .sw at G.ne + (sep, sep);
+GCS2: circle "g.cs2" with .nw at G.se + (sep, -sep);
+F1: circle "f" with .w at GCS1.e + (sep, 0);
+F2: circle "f" with .w at GCS2.e + (sep, 0);
+
+arrow from MAIN.e to MAINCS.w;
+arrow from MAINCS.e to G.w;
+arrow from G.ne to GCS1.sw;
+arrow from G.se to GCS2.nw;
+arrow from GCS1.e to F1.w;
+arrow from GCS2.e to F2.w;
+
+.PE

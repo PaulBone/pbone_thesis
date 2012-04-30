@@ -311,8 +311,9 @@ parallel conjunctions are independant.
 
 SLIDE Workarround --- The max-contexts limit
 
-To reduce the impact of  this Peter added a maximum limit on the number of
-contexts that could be in memory at the same time.
+To reduce the impact of this,
+Peter added a maximum limit on the number of contexts that could be in memory
+at the same time.
 
 When the limit is reached no context can be created to handle
 the spawned off computation.
@@ -338,7 +339,7 @@ More importantly it is faster in the pathalogical right-recursive case.
 
 SLIDE Old engine wakeup code
 
-When a new context is created or an existing one becomes runnable and an engine
+When a new context is created or an existing one becomes runnable and an engineV
 is sleeping,
 the engine is woken up.
 
@@ -347,30 +348,29 @@ If the context must be executed on a particular engine
 then all the engines are woken up so that the correct one can execute the
 context.
 
-Because sparks are created often it would be too expensive to wake an engine
-for each spark.  Instead sleeping engines wakeup periodically to attempt to
-steal sparks.
-
-We expeirmented with disabling this timeout and explicitly waking engines when
-a spark queue became non-empty.
-However, a race condition could occur and the engine often failed to wake up.
-In rare cases a race can occur and an engine can be 
+Engines sleep using a posix condition variable associated with the runqueue lock.
+Sleeping engines wakeup periodically to attempt to steal sparks.
 
 SLIDE New engine wakeup code
 
-In the new system each engine has a semaphore,  Engines wait on the semaphore
-when they are idle.
+In the new system each engine has a semaphore,
+Engines wait on the semaphore when they are idle.
 
+When a context becomes runnable and an engine is sleeping the runtime system
+wakes the enigne by pusting to the semaphore.
+This prevents races that could occur in the previous system.
 
-Engines could be woken if a context was created but not if a spark was
-created.
-This could reduce the amount of parallelism exploited.
+Individual engines can be targeted specifically,
+so if a context has only one valid engine,
+then only that engine will be woken.
 
-The new engine wakeup code allows engines to be woken for either reason,
-engines will jump to the right procedure immediatly after waking.
+We can also pass contexts directly to engines,
+avoiding the runqueue and synchronization in many cases.
 
-In the case of new context wakeup the engine can be given the context
-directly and need not synchronize on the context run queue.
+When a spark is created a sleeping engine is woken and told which spark queue contains
+a spark it can execute.
+
+The hew code is much more responsive.
 
 SUBSECTION Automatic parallelism
 
@@ -423,8 +423,37 @@ The automatic parallelism analysis follows the following algorithm:
 
 SLIDE Recursive calls
 
-Maybe talk about calculating cost in recursive calls?
-This may need a significant description of the deep profiler.
+The deep profiler records profiling data not just for a call,
+for for a call-chain.
+The chain is an alternating list of call, call-site, call, call-site entries.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree.eps}
+\end{center}
+\vspace{-2mm}
+
+The two calls to $f$ are recorded seperatly as the first one is:
+$main~\calls~g~\calls~map~\calls~f$
+and the second one is:
+$main~\calls~map~\calls~f$
+
+This even works with higher order calls such as the one in map.
+
+SLIDE Recursive calls
+
+Because recursive calls are included in this chain,
+multiple calls to the same procedure from a single procedure will have their
+profiling data recorded seperatly.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree2.eps}
+\end{center}
+
+If $g$ contains two call sites that both call $f$,
+then these also record seperate profiling data for $f$ and its descendants.
+
 
 SUBSECTION Overlap analysis
 

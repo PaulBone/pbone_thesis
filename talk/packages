@@ -1,4 +1,4 @@
 \usepackage{epsf}
 
 \newcommand{\code}[1]{{\tt#1}}
-
+\newcommand{\calls}[0]{{\rightarrow}}
