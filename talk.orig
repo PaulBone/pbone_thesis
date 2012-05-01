@@ -2,6 +2,7 @@
 
 SECTION 1 Automatic Parallelism for Mercury
 
+
 SUBSECTION Introduction
 
 SLIDE Motivation --- Multicore computing
@@ -168,6 +169,7 @@ slow the program down.
 Programmers rarely understand the performance of their programs,
 even when they think they do.
 
+
 SUBSECTION Runtime system changes
 
 SLIDE Runtime system changes
@@ -304,6 +306,12 @@ Therefore,
 it can move conjuncts with recursive calls to the left of those without.
 This avoids the problem above.
 
+\begin{verbatim}
+map(P, [X | Xs], [Y, Ys]) :-
+    map(P, Xs, Ys) &
+    P(X, Y).
+\end{verbatim}
+
 However, where dependencies exist conjuncts cannot be moved without violating
 the program's mode-correctness.
 Therefore this solution only works in the rare cases that
@@ -337,40 +345,6 @@ Greatly simplifying the work stealing code.
 
 More importantly it is faster in the pathalogical right-recursive case.
 
-SLIDE Old engine wakeup code
-
-When a new context is created or an existing one becomes runnable and an engineV
-is sleeping,
-the engine is woken up.
-
-If the context must be executed on a particular engine
-(because foreign code needs to use the C-stack owned by that engine)
-then all the engines are woken up so that the correct one can execute the
-context.
-
-Engines sleep using a posix condition variable associated with the runqueue lock.
-Sleeping engines wakeup periodically to attempt to steal sparks.
-
-SLIDE New engine wakeup code
-
-In the new system each engine has a semaphore,
-Engines wait on the semaphore when they are idle.
-
-When a context becomes runnable and an engine is sleeping the runtime system
-wakes the enigne by pusting to the semaphore.
-This prevents races that could occur in the previous system.
-
-Individual engines can be targeted specifically,
-so if a context has only one valid engine,
-then only that engine will be woken.
-
-We can also pass contexts directly to engines,
-avoiding the runqueue and synchronization in many cases.
-
-When a spark is created a sleeping engine is woken and told which spark queue contains
-a spark it can execute.
-
-The hew code is much more responsive.
 
 SUBSECTION Automatic parallelism
 
@@ -390,8 +364,119 @@ SLIDE Our approach
 \end{itemize}
 
 \begin{center}
-\epsfbox{prof_fb.eps}
+\epsfbox{prof_fb_talk.eps}
 \end{center}
+
+SLIDE Deep profiler call graphs
+
+The deep profiler records profiling data not just for a call,
+but for a call-chain.
+The chain is an alternating list of call and call-site objects.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree.eps}
+\end{center}
+\vspace{-2mm}
+
+The two calls to $f$ are recorded seperatly as the first one 
+goes via $g$ and the second does not.
+
+This even works with higher order calls such as the one in map.
+
+SLIDE Deep profiler call graphs
+
+Because recursive calls are included in this chain,
+multiple calls to the same procedure from a single procedure will have their
+profiling data recorded seperatly.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree2.eps}
+\end{center}
+\vspace{-2mm}
+
+If $g$ contains two call sites that both call $f$,
+then these also record seperate profiling data for $f$ and its descendants.
+
+SLIDE Deep profiler call graphs
+
+This is very powerful and helps to collect a lot of very useful data
+about a programs performance.
+However, it does not seperate recursions or mutual recursions.
+
+The call tree:
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree3.eps}
+\end{center}
+\vspace{-2mm}
+
+Is actually recorded as:
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{call_tree4.eps}
+\end{center}
+\vspace{-2mm}
+
+This creates a tree of strongly connected components (SCCs).
+
+SLIDE Recursion types
+
+\begin{tabular}{lrr}
+\textbf{Recursion type} &
+\textbf{\% of procedures} & 
+\textbf{\% of runtime}\\
+\hline
+Not recursive               & 78.04\% & 57.53\% \\
+Single recursion            & 12.91\% & 28.96\% \\
+Mutual recursion (3 procs)  &  2.52\% &  4.78\% \\
+Mutual recursion (2 procs)  &  1.09\% &  2.20\% \\
+Divide \& Conquer           &  0.51\% &  3.27\% \\
+Mutual recursion (4 procs)  &  0.29\% &  1.39\% \\
+Mutual recursion (5 procs)  &  0.28\% &  1.10\% \\
+\hline
+Recursion with levels 0, 2, 3, 4 & 0.15\% & 1.04\% \\
+\hline
+Unclassified/unknown        &  3.09\% &  0.26\% \\ 
+\end{tabular}
+
+Taken from an analysis on the mercury compiler.
+
+Unclassified/unknown recursions include builtin code and code with
+determinisms the analysis cannot handle.
+
+Most recursions with multiple levels such as 0, 2, 3, 4 are in the
+\code{tree234} module of the standard library.
+
+SLIDE Cost of recursive calls
+
+\vspace{-2mm}
+For a singlely-recursive procedure we know:
+
+\begin{tabular}{ll}
+no. of outside calls    & no. of inside (recursive) calls \\
+cost of base case       & cost of recursive case (minus recursive call)
+\\
+cost of shared code
+\end{tabular}
+
+We can calculate:
+
+\vspace{-4mm}
+\begin{eqnarray*}
+MaxDepth & = & \frac{NumInsideCalls}{NumOutsideCalls} \\
+AvgDepth & = & \frac{MaxDepth}{2} \\
+RecCost(Depth) & = & Shared + Base + Depth ( Shared + RecBranch )
+\end{eqnarray*}
+\vspace{-4mm}
+
+Depending on the situation, we can calculate the cost of a recursive
+call at any depth.
+
+Different equations can be derrived for each recursion type.
 
 SLIDE Finding parallelization candidates
 
@@ -421,49 +506,13 @@ The automatic parallelism analysis follows the following algorithm:
 
 \end{itemize}
 
-SLIDE Recursive calls
-
-The deep profiler records profiling data not just for a call,
-for for a call-chain.
-The chain is an alternating list of call, call-site, call, call-site entries.
-
-\vspace{-2mm}
-\begin{center}
-\epsfbox{call_tree.eps}
-\end{center}
-\vspace{-2mm}
-
-The two calls to $f$ are recorded seperatly as the first one is:
-$main~\calls~g~\calls~map~\calls~f$
-and the second one is:
-$main~\calls~map~\calls~f$
-
-This even works with higher order calls such as the one in map.
-
-SLIDE Recursive calls
-
-Because recursive calls are included in this chain,
-multiple calls to the same procedure from a single procedure will have their
-profiling data recorded seperatly.
-
-\vspace{-2mm}
-\begin{center}
-\epsfbox{call_tree2.eps}
-\end{center}
-
-If $g$ contains two call sites that both call $f$,
-then these also record seperate profiling data for $f$ and its descendants.
-
 
 SUBSECTION Overlap analysis
 
-SLIDE Calculating How would you parallelize this?
+SLIDE Overlap
 
-XXX: I've given the solution to this problem above, but I want to
-discuss it anyway so I need to re-word it.
-
-%Assume that the call to \code{M} is expensive and the call to \code{F} is
-%cheap.
+Dependencies between variables can greatly effect the amount of
+parallelism that can be gained.
 
 \begin{verbatim}
 map_foldl(_, _, [], Acc, Acc).
@@ -473,15 +522,10 @@ map_foldl(M, F, [X | Xs], Acc0, Acc) :-
     map_foldl(M, F, Xs, Acc1, Acc).
 \end{verbatim}
 
-During parallel execution,
-a task will block if a variable it needs
-is not available when it needs it.
-
 \code{F} needs \code{Y} from \code{M},
 and the recursive call needs \code{Acc1} from \code{F}.
 
-Can \code{map\_foldl} be profitably parallelized
-despite these dependencies, and if yes, how?
+There are 3 ways to parallelise the conjunction in \code{map\_foldl}.
 
 SLIDE Parallelizing \code{map\_foldl}
 
@@ -522,17 +566,25 @@ The calls to \code{M} can be executed in parallel.
 SLIDE Simple overlap example
 
 \vspace{-1em}
-
-Tasks \code{p} and \code{q} have one shared variable.
-
 We conceptually split each task split into sections,
 each section ended by the production or consumption of a shared variable.
-
 $pR$ and $qR$ denote the time that the tasks take to compute any non-shared
 variables needed after the conjunction.
 
-\vspace{1em}
-\epsfbox{overlap1.eps}
+\vspace{-1mm}
+\begin{center}
+\epsfbox{overlap4.eps}
+\end{center}
+
+SLIDE Pesimal overlap example
+
+If variables are produced or consumed at different times within goals,
+then the overlap can vary greatly.
+
+\vspace{-1mm}
+\begin{center}
+\epsfbox{overlap6.eps}
+\end{center}
 
 SLIDE Overlap with more than one dependency
 
@@ -540,28 +592,35 @@ We calculate the execution time of \code{q} by iterating over its sections.
 In this case, that means iterating over the variables it consumes
 in the order that it consumes them.
 
+\begin{center}
+\epsfbox{overlap2-swap.eps}
+\end{center}
+
+
 SLIDE Overlap algorithm --- Loop over variables
 
+\vspace{-2mm}
+\small
 \begin{verbatim}
-find_conjunct_par_time(Conj, SeqTime,
+find_conjunct_par_time(Goal, SeqTime,
     inout CurParTime, inout ProdTimeMap):
-  ProdConsList := get_sorted_var_uses(Conj)
+  ProdConsList := get_sorted_var_uses(Goal)
   CurSeqTime := 0
   forall (Var_j, Time_j) in ProdConsList:
     Duration_j := Time_j - CurSeqTime
     CurSeqTime := CurSeqTime + Duration_j
-    if Conj produces Var_j:
+    if Goal produces Var_j:
       CurParTime := CurParTime + Duration_j + ...
       ProdTimeMap[Var_j] := CurParTime
-    else Conj must consume Var_j:
+    else Goal must consume Var_j:
       ParWantTime := CurParTime + Duration_j + ...
       CurParTime := max(ParWantTime, ProdTimeMap[Var_j]) + ...
   DurationRest := SeqTime - CurSeqTime
   CurParTime := CurParTime + DurationRest
 \end{verbatim}
+\normalsize
 
-\vspace{2em}
-\epsfbox{overlap2-swap.eps}
+The \verb|...|s represent estimates of overheads.
 
 SLIDE Overlap of more than two tasks
 
@@ -588,6 +647,200 @@ find_par_time(Conjs, SeqTimes) returns TotalParTime:
 \end{verbatim}
 
 The \verb|...|s represent estimates of overheads.
+
+SLIDE Results
+
+\begin{center}
+{\small
+\begin{tabular}{|l|r|r|r|r|r|r|}
+\hline
+& \multicolumn{1}{|c|}{\textbf{mandelbrot}}
+& \multicolumn{1}{|c|}{\textbf{raytracer}}
+& \multicolumn{1}{|c|}{\textbf{matrixmult}}
+\\
+\hline
+\textbf{~~~~~~~~seq}      & 19.6~~~(0.95) & 17.8~~~(1.26) &  7.7~~~(1.43)\\
+\hline
+\textbf{thread-safe seq}  & 18.6~~~(1.00) & 22.4~~~(1.00) & 11.0~~~(1.00)\\
+\hline
+\multicolumn{4}{|c|}{\textbf{thread-safe  p1}} \\
+\hline
+\textbf{Indep only}       & 18.6~~~(1.00) & 22.3~~~(1.00) & 11.0~~~(1.00)\\
+\textbf{Naive}            & 18.6~~~(1.00) & 22.4~~~(1.00) & 11.0~~~(1.00)\\
+\textbf{Overlap}          & 18.5~~~(1.01) & 22.4~~~(1.00) & 11.0~~~(1.00)\\
+\hline
+\multicolumn{4}{|c|}{\textbf{thread-safe  p2}} \\
+\hline
+\textbf{Indep only}       & 18.6~~~(1.00) & 22.4~~~(1.00) &  5.5~~~(1.99) \\
+\textbf{Naive}            &  9.4~~~(1.98) & 13.0~~~(1.72) & 11.0~~~(1.00) \\
+\textbf{Overlap}          &  9.5~~~(1.96) & 12.8~~~(1.75) &  5.5~~~(1.99) \\
+\hline
+\multicolumn{4}{|c|}{\textbf{thread-safe  p4}} \\
+\hline
+\textbf{Indep only}       & 18.7~~~(0.99) & 22.6~~~(0.99) &  2.9~~~(3.85)\\
+\textbf{Naive}            &  4.8~~~(3.88) &  7.9~~~(2.84) & 11.0~~~(1.00)\\
+\textbf{Overlap}          &  4.8~~~(3.88) &  7.8~~~(2.87) &  2.9~~~(3.85)\\
+\hline
+\end{tabular}
+}
+\end{center}
+
+SUBSECTION Loop control
+
+SLIDE Execution of right-recursive parallel code
+
+Recall the problem with parallel right recursion.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{linear_context_usage.eps}
+\end{center}
+\vspace{-4mm}
+
+If each context contains 4MB of stack space,
+a loop only of 256 iterations will consume 1GB!
+
+SLIDE Loop control structure
+
+Our solution of this problem
+associates a \emph{loop control structure} with each loop.
+This structure contains a fixed number of slots,
+each of which has a pointer to a single context.
+
+Once a context is allocated to a slot,
+the context is not released until the loop has finished.
+Instead, it is reused for later iterations.
+
+% The structure also has bookkeeping fields,
+% such as a mutex to manage concurrent access
+% and per-slot booleans indicating whether a slot is currently in-use.
+
+We replace the original looping procedure
+with code that creates the loop control structure,
+before calling a renamed and transformed version of its old self.
+
+\code{map\_foldl(M, F, Xs, Acc0, Acc) :-} \\
+\code{~~~~\red{create\_loop\_control}(LC),} \\
+\code{~~~~map\_foldl\red{\_lc}(LC, M, F, Xs, Acc0, Acc).} \\
+
+SLIDE Loop control transformation
+
+\code{map\_foldl\red{\_lc}(LC, M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~LCS = \red{lc\_wait\_for\_free\_slot}(LC),} \\
+\code{~~~~\red{lc\_spawn\_off}(LC, LCS, spawn\_off\_label),} \\
+\code{~~~~map\_foldl\red{\_lc}(LC, M, F, Xs, Acc1, Acc). \% Tail call} \\
+\code{spawn\_off\_label:} \\
+\code{~~~~M(X, Y);} \\
+\code{~~~~F(Y, Acc0, Acc1);} \\
+\code{~~~~\red{lc\_free\_slot}(LC, LCS);} \\
+\vspace{4mm}
+\code{map\_foldl\red{\_lc}(LC, \_, \_, [], Acc, Acc).} \\
+\code{~~~~\red{lc\_finish}(LC).} \\
+
+\vspace{\baselineskip}
+
+Only as many iterations of the loop can be active as there are slots in
+the loop control structure.
+
+SLIDE Execution of loop controlled code
+
+The first time each slot is used, we create a context for that slot.
+After the initial rampup period,
+the loop always uses the configured number of contexts, never more.
+After the loop terminates, we free the contexts.
+
+\vspace{-2mm}
+\begin{center}
+\epsfbox{lc_context_usage.eps}
+\end{center}
+
+SLIDE Memory usage results: contexts and megabytes
+
+\vspace{-1\baselineskip}
+
+\begin{center}
+\scalebox{0.93}{
+\input{../mem_table_talk}}
+\end{center}
+
+SLIDE Time results: seconds and speedups
+
+\begin{center}
+\scalebox{0.97}{
+\input{../times_table_talk}}
+\end{center}
+
+
+SUBSECTION Conclusion
+
+SLIDE Conclusion 
+
+\vspace{-0.5em}
+
+\begin{itemize}
+  \item We're able to find and exploit profitable parallelism in small
+        programs.
+
+  \item The analysis explores only the parts of the call graph that
+        might be profitably parallelized.
+
+  \item Our novel overlap analysis allows us to estimate how dependencies
+        affect parallel execution.
+
+  \item Our loop control transformation elimiates excessive memory usage
+        and maintain tail recursion   
+
+  \item Several modifications to the runtime system have improved
+        efficiently.
+
+  \item We have addapted the ThreadScope parallel profile visualisation
+        system for use with Mercury (not shown).
+
+\end{itemize}
+
+\Large
+\begin{center}
+Thank you
+\end{center}
+\normalsize
+
+SUBSECTION Spare slides
+
+SLIDE Old engine wakeup code
+
+When a new context is created or an existing one becomes runnable and an engineV
+is sleeping,
+the engine is woken up.
+
+If the context must be executed on a particular engine
+(because foreign code needs to use the C-stack owned by that engine)
+then all the engines are woken up so that the correct one can execute the
+context.
+
+Engines sleep using a posix condition variable associated with the runqueue lock.
+Sleeping engines wakeup periodically to attempt to steal sparks.
+
+SLIDE New engine wakeup code
+
+In the new system each engine has a semaphore,
+Engines wait on the semaphore when they are idle.
+
+When a context becomes runnable and an engine is sleeping the runtime system
+wakes the enigne by pusting to the semaphore.
+This prevents races that could occur in the previous system.
+
+Individual engines can be targeted specifically,
+so if a context has only one valid engine,
+then only that engine will be woken.
+
+We can also pass contexts directly to engines,
+avoiding the runqueue and synchronization in many cases.
+
+When a spark is created a sleeping engine is woken and told which spark queue contains
+a spark it can execute.
+
+The hew code is much more responsive.
+
 
 SUBSECTION Choosing how to parallelize
 
@@ -654,6 +907,7 @@ from $2^{N - 1}$:
 This allows us to fully explore the search space when it is small,
 while saving time by exploring only part of the search space when it is large.
 
+
 SUBSECTION Push-into-goal transformation
 
 SLIDE Expensive goals in different conjunctions
@@ -698,120 +952,4 @@ typecheck_preds([Pred0 | Preds0], [Pred | Preds], ...) :-
 
 Our analysis can perform this transformation
 as part of deciding whether this parallelization is worthwhile.
-
-SLIDE Results on some small programs
-
-\scalebox{0.9}
-{
-\begin{center}
-\begin{tabular}{lrrrrrr}
-\hline \hline
-\multicolumn{1}{c}{\textbf{Program}} &
-\multicolumn{1}{c}{\textbf{Seq}}    &
-\multicolumn{1}{c}{\textbf{1 CPU}}   &
-\multicolumn{1}{c}{\textbf{2 CPUs}}  &
-\multicolumn{1}{c}{\textbf{3 CPUs}}  &
-\multicolumn{1}{c}{\textbf{4 CPUs}}  \\
-\hline
-%\hhline{|-|-||-|-|-|-|-|}
-% \hline
-% matrixmult & indep & 14.7 (0.76) &  7.6 (1.47) &  5.2 (2.15) &  5.2 (2.15) \\
-% seq 11.2   & naive & 14.7 (0.76) &  8.0 (1.40) &  5.7 (1.96) &  4.7 (2.38) \\
-% par 14.6   & overlap  & 14.7 (0.76) &  7.6 (1.47) &  6.7 (1.67) &  5.2 (2.15)
-% \\
-matrixmult & 11.0     & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12)
-\\
-%\hhline{|-|-||-|-|-|-|-|}
-%\hhline{|-|-||-|-|-|-|-|}
-\hline
-raytracer  & 22.7     & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42)
-\\
-\hline
-mandelbrot & 33.4     & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67)
-\\
-%\hhline{|-|-||-|-|-|-|-|}
-\hline \hline
-\end{tabular}
-\end{center}
-}
-\vspace{3mm}
-
-Parallel code needs to use a machine register
-to point to thread-specific data,
-so enabling parallel execution but not using it leads to slowdowns.
-
-Matrixmult has one memory store for each FP multiply/add pair.
-Its speedup is limited by memory bus bandwidth,
-which it saturates relatively quickly.
-
-Raytracer generates many intermediate data structures.
-The GC system consumes 40\% of the execution time
-in stop-the-world collections when using 4 Mercury threads and 4 GC
-threads.
-When using 1 Mercury thread and 4 GC threads it uses only 5\% of the
-program's runtime.
-
-SLIDE Results on the Mercury compiler
-
-\begin{itemize}
-    \item There are 53 conjunctions in the compiler with two or more
-          expensive conjuncts.
-
-    \item 52 of these are dependent conjunctions.
-
-    \item 31 of these have a predicted speedup of greater than 1\% (the
-          default speedup threshold).
-
-    \item Therefore, our analysis can prevent the parallelization of 22
-          conjunctions that are not profitable.
-\end{itemize}
-
-Unfortunately, many parts of the compiler must be executed sequentially.
-Due to Amdahl's law, this limits the overall speedup of the compiler.
-
-SUBSECTION Loop control
-
-SLIDE XXX
-
-Programmers are encouraged to write tail recursive code.
-In Mercury,
-this means that the last call in a clause is often a recursive call.
-
-Mercury's mode system restricts the order of conjunctions:
-produces of varizbles (such as \code{Acc1}) must occur before consumers.
-Therefore,
-
-
-SUBSECTION Conclusion
-
-SLIDE Progress to date
-
-\vspace{-0.5em}
-
-\begin{itemize}
-  \item Our analysis is able to find profitable parallelism in small
-        programs and generate advice for the compiler.
-
-  \item The analysis explores only the parts of the call graph that
-        might be profitably parallelized.
-
-  \item Our novel overlap analysis allows us to estimate how dependencies
-        affect parallel execution.
-
-  \item The compiler can act on this advice, and can profitably parallelize
-        small programs.
-\end{itemize}
-
-Not shown in this presentation:
-
-\begin{itemize}
-
-  \item We can rearrange some computations to make it easier to take
-        advantage of parallelism.
-
-  \item We can efficiently search a large space of possible
-        parallelizations.
-
-\end{itemize}
-
 

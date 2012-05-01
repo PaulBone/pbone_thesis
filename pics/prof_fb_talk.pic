@@ -1,0 +1,22 @@
+.PS 4
+
+sep = 0.25;
+
+SRC: box "source" wid 0.5
+arrow sep
+circle "compile" "prof"
+arrow sep
+circle "profile" 
+arrow sep
+circle "analyse"
+arrow sep
+FEED: box "feedback" wid 0.5
+
+COMP: circle "compile" "par" at 1st circle - (0, 0.753)
+RES: box "result" wid 0.5 with .c at COMP.c + (1.2, 0)
+arrow from COMP.e to RES.w
+
+arrow from SRC.e to COMP.nw
+arrow from FEED.sw to COMP.ne
+
+.PE

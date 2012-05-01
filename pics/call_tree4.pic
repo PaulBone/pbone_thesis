@@ -1,0 +1,14 @@
+.PS 2
+
+sep = 0.25;
+
+MAIN: circle "main";
+G: circle "g" with .w at MAIN.e + (sep, 0);
+F1: circle "f" with .w at G.e + (sep, 0);
+
+arrow from MAIN.e to G.w;
+arrow from G.e to F1.w;
+
+spline from F1.e right sep then up sep*2 then left sep*2 then down sep ->;
+
+.PE

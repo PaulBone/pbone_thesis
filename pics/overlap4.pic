@@ -1,0 +1,52 @@
+.PS 4i
+right
+boxht = 0.5
+arrowhead = 2
+
+define BP { 1 }
+define TP { 4 }
+
+define BQ { 0.5 }
+define TQ { 3 }
+
+define AL { 0.25 }
+define AH { -0.5 }
+define LB { -1 }
+define LS { -1.05 }
+
+define VarBoxWid { 1.7 }
+
+Sequential: box invis "Sequential" wid 1.75 ht (2*boxht-LB)
+PA: box invis wid BP "pA" with .nw at Sequential.ne
+PR: box invis wid TP-BP "pR"
+line dotted 0.125 from PA.ne to PA.se
+P: box wid TP with .nw at Sequential.ne
+Q: box wid TQ with .nw at P.ne
+QA: box invis wid BQ "qA" with .nw at Q.nw
+QR: box invis wid TQ-BQ "qR"
+line dotted 0.125 from QA.ne to QA.se
+
+arrow -> wid 0.1 ht 0.2 from P.sw + (BP, AH) to P.sw + (BP, 0)
+box invis "produce A" wid VarBoxWid with .w at P.sw + (BP, AH)
+
+arrow -> wid 0.1 ht 0.2 from Q.sw + (BQ, AH) to Q.sw + (BQ, 0)
+box invis "consume A" wid VarBoxWid with .w at Q.sw + (BQ, AH)
+
+TotalSeqArrow: arrow <-> from (P.w.x, P.s.y+LB) to (Q.e.x, P.s.y+LB)
+box invis "Seq Time" with .n at ((P.w.x + Q.e.x)/2, P.s.y+LS)
+
+Parallel: box invis "Parallel" wid 1.75i ht boxht*3-LB with .n at Sequential.s + (0, -boxht)
+PPA: box invis wid BP "pA" with .nw at Parallel.ne
+PPR: box invis wid TP-BP "pR"
+line dotted 0.125 from PPA.ne to PPA.se
+PP: box wid TP with .nw at Parallel.ne
+QQ: box wid BQ "qA" with .nw at PP.sw
+QQR: box wid TQ-BQ "qR" with .w at QQ.w + (max(BP, BQ), 0)
+
+arrow -> wid 0.1 ht 0.2 from QQR.sw + (0, AH) to QQR.sw + (0, 0)
+box invis "consume A" wid VarBoxWid with .w at QQR.sw + (0, AH)
+
+arrow <-> from (QQ.w.x, QQ.s.y+LB) to (max(P.e.x, QQR.e.x), QQ.s.y+LB)
+box invis "Par Time" with .n at (P.w.x + (QQR.e.x - P.w.x)/2, QQ.s.y+LS)
+
+.PE

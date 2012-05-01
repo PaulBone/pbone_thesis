@@ -1,0 +1,31 @@
+{\small
+\begin{tabular}{|l|rr|rr|rr|rr|rr|rr|}
+\hline
+& \multicolumn{2}{|c|}{\textbf{mandelbrot}}
+& \multicolumn{2}{|c|}{\textbf{raytracer}}
+& \multicolumn{2}{|c|}{\textbf{spectral}}
+\\
+\hline
+\textbf{                           seq}  &    1 &  0.62 &    1 &  0.62 &    1 &  0.62\\
+\textbf{                    par, no \&}  &    1 &  0.62 &    1 &  0.62 &    1 &  0.62\\
+\hline
+\textbf{       par, \&, 1c, nolc, c128}  &    1 &  0.62 &    1 &  0.62 &    1 &  1.12\\
+\textbf{       par, \&, 1c, nolc, c512}  &    1 &  0.62 &    1 &  0.62 &    1 &  1.12\\
+\textbf{              par, \&, 1c, lc1}  &    2 &  1.25 &    2 &  1.25 &    2 &  1.75\\
+\textbf{              par, \&, 1c, lc2}  &    3 &  1.88 &    3 &  1.88 &    3 &  2.38\\
+\textbf{              par, \&, 1c, lc4}  &    5 &  3.12 &    5 &  3.12 &    5 &  3.62\\
+\hline
+\textbf{       par, \&, 2c, nolc, c128}  &  257 & 160.62 &  257 & 160.62 &  257 & 161.12\\
+\textbf{       par, \&, 2c, nolc, c512}  &  601 & 375.62 & 1025 & 640.62 & 1025 & 641.12\\
+\textbf{              par, \&, 2c, lc1}  &    4 &  2.50 &    4 &  2.50 &    3 &  2.38\\
+\textbf{              par, \&, 2c, lc2}  &    6 &  3.75 &    6 &  3.75 &    5 &  3.62\\
+\textbf{              par, \&, 2c, lc4}  &   10 &  6.25 &   10 &  6.25 &    9 &  6.12\\
+\hline
+\textbf{       par, \&, 4c, nolc, c128}  &  513 & 320.62 &  513 & 320.62 &  513 & 321.12\\
+\textbf{       par, \&, 4c, nolc, c512}  &  601 & 375.62 & 1201 & 750.62 & 2049 & 1281.12\\
+\textbf{              par, \&, 4c, lc1}  &    6 &  3.75 &    6 &  3.75 &    5 &  3.62\\
+\textbf{              par, \&, 4c, lc2}  &   10 &  6.25 &   10 &  6.25 &    9 &  6.12\\
+\textbf{              par, \&, 4c, lc4}  &   18 & 11.25 &   18 & 11.25 &   17 & 11.12\\
+\hline
+\end{tabular}
+}

@@ -1,0 +1,16 @@
+.PS 3 
+
+sep = 0.25;
+
+MAIN: circle "main";
+G: circle "g" with .w at MAIN.e + (sep, 0);
+F1: circle "f" with .w at G.e + (sep, 0);
+F2: circle "f" with .w at F1.e + (sep, 0);
+F3: circle "f" with .w at F2.e + (sep, 0);
+
+arrow from MAIN.e to G.w;
+arrow from G.e to F1.w;
+arrow from F1.e to F2.w;
+arrow from F2.e to F3.w;
+
+.PE

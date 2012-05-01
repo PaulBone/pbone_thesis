@@ -1,20 +1,20 @@
-.PS 1 
+.PS 2
 
 sep = 0.25;
 
 MAIN: circle "main";
-G: circle "g" with .ne at MAIN.sw + (-sep, -sep);
-M1: circle "map" with .n at G.s + (0, -sep);
-F1: circle "f" with .n at M1.s + (0, -sep);
+G: circle "g" with .sw at MAIN.ne + (sep, sep);
+M1: circle "map" with .w at G.e + (sep, 0);
+F1: circle "f" with .w at M1.e + (sep, 0);
 
 M2: circle "map" with .nw at MAIN.se + (sep, -sep);
-F2: circle "f" with .n at M2.s + (0, -sep);
+F2: circle "f" with .w at M2.e + (sep, 0);
 
-arrow from MAIN.sw to G.ne;
-arrow from G.s to M1.n;
-arrow from M1.s to F1.n;
+arrow from MAIN.ne to G.sw;
+arrow from G.e to M1.w;
+arrow from M1.e to F1.w;
 
 arrow from MAIN.se to M2.nw;
-arrow from M2.s to F2.n;
+arrow from M2.e to F2.w;
 
 .PE
