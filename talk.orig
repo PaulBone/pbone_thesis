@@ -9,7 +9,7 @@ SLIDE Motivation --- Multicore computing
 
 Computing has traditionally seen a logarithmic increase in CPU clock
 speeds.
-However, due to phyiscal limitations this trend no-longer continues.
+However, due to physical limitations this trend no-longer continues.
 
 Manufacturers now ship multicore processors to continue to deliver
 better-performing processors without increasing clock speeds.
@@ -36,7 +36,7 @@ errors when using locks.
       can lead to deadlocks.
 
 \item Critical sections are not composable, nesting critical sections
-      may aquire locks in different orders in different places.
+      may acquire locks in different orders in different places.
 
 \item Misplacing lock operations can lead to critical sections
       that are too wide (causing poor performance)
@@ -46,7 +46,7 @@ errors when using locks.
 
 SLIDE Automatic Parallelism.
 
-An good compiler performs many optimizations on behalf of the
+An good compiler performs many optimisations on behalf of the
 programmer.
 Programmers rarely think about:
 
@@ -61,9 +61,9 @@ Programmers rarely think about:
 
 \end{itemize}
 
-We believe that parallelisation is just another optimization,
+We believe that parallelisation is just another optimisation,
 and it would be best if the compiler handled it for us;
-so that, like any other optimization, we wouldn't need to think of it.
+so that, like any other optimisation, we wouldn't need to think of it.
 
 SLIDE About Mercury
 
@@ -162,7 +162,7 @@ SLIDE Why make this automatic?
 We might expect parallelism to yield a speedup in the quicksort example,
 but it does not.
 
-The above parallelization creates $N$ parallel tasks for a list of length $N$.
+The above parallelisation creates $N$ parallel tasks for a list of length $N$.
 Most of these tasks are trivial and the overheads of managing them
 slow the program down.
 
@@ -254,7 +254,7 @@ This means that the recursive call is placed lasted in a conjunction so that it
 can become a tail call.
 
 A parallel conjunction $G_1~\&~G_2~\&~\ldots~\&~G_N$ will be executed by spawning
-off $G_2~\&~\ldots~\&~G_N$, then executing $G_1$ immediatly.
+off $G_2~\&~\ldots~\&~G_N$, then executing $G_1$ immediately.
 In the common case that the forked-off task is not taken up by another engine
 then,
 a dependency between the tasks would not require a context switch.
@@ -266,7 +266,7 @@ Causing the original context to be blocked for a long time.
 
 SLIDE Decomposing a parallel conjunction
 
-Psudeo compiler output:
+Pseudo compiler output:
 
 \code{case\_label:} \\
 \code{~~~~SyncTerm st;} \\
@@ -285,7 +285,7 @@ SLIDE Execution of right-recursive parallel code
 
 \vspace{-2mm}
 Blocking the original context can create a pathological worst-case behaviour:
-the same behavior will occur at each level of recursion.
+the same behaviour will occur at each level of recursion.
 
 This will cause it to use a number of contexts \textbf{linear} in the depth of
 the recursion.
@@ -299,7 +299,7 @@ the recursion.
 If each context contains 4MB of stack space,
 a loop only of 256 iterations will consume 1GB!
 
-SLIDE Workarround --- Reorder conjuncts
+SLIDE Workaround --- Reorder conjuncts
 
 The compiler understands recursion including mutual recursion.
 Therefore,
@@ -315,9 +315,9 @@ map(P, [X | Xs], [Y, Ys]) :-
 However, where dependencies exist conjuncts cannot be moved without violating
 the program's mode-correctness.
 Therefore this solution only works in the rare cases that
-parallel conjunctions are independant.
+parallel conjunctions are independent.
 
-SLIDE Workarround --- The max-contexts limit
+SLIDE Workaround --- The max-contexts limit
 
 To reduce the impact of this,
 Peter added a maximum limit on the number of contexts that could be in memory
@@ -335,7 +335,7 @@ if there where 100's of contexts active then there where 100's of work queues
 to steal work from, most of which are usually empty.
 This makes work stealing slower.
 
-Futhermore, as contexts are created and destoryed the number of work queues
+Furthermore, as contexts are created and destroyed the number of work queues
 changes.
 This required a global lock to manage the set of work queues,
 
@@ -343,7 +343,7 @@ Work queues are now owned by engines, which means that there are a small
 fixed number of queues.
 Greatly simplifying the work stealing code.
 
-More importantly it is faster in the pathalogical right-recursive case.
+More importantly it is faster in the pathological right-recursive case.
 
 
 SUBSECTION Automatic parallelism
@@ -354,7 +354,7 @@ SLIDE Our approach
   \item Profile the program to find the expensive parts.
   \item Analyse the program to determine what parts \emph{can} be run in
         parallel.
-  \item Select only the parts that can be parallelized \emph{profitably}.
+  \item Select only the parts that can be parallelised \emph{profitably}.
         This may involve trial and error when done by hand.
   % Originally the above item was:
   %\item Determine which parts it is \emph{profitable} run in parallel.
@@ -379,7 +379,7 @@ The chain is an alternating list of call and call-site objects.
 \end{center}
 \vspace{-2mm}
 
-The two calls to $f$ are recorded seperatly as the first one 
+The two calls to $f$ are recorded separately as the first one 
 goes via $g$ and the second does not.
 
 This even works with higher order calls such as the one in map.
@@ -388,7 +388,7 @@ SLIDE Deep profiler call graphs
 
 Because recursive calls are included in this chain,
 multiple calls to the same procedure from a single procedure will have their
-profiling data recorded seperatly.
+profiling data recorded separately.
 
 \vspace{-2mm}
 \begin{center}
@@ -397,13 +397,13 @@ profiling data recorded seperatly.
 \vspace{-2mm}
 
 If $g$ contains two call sites that both call $f$,
-then these also record seperate profiling data for $f$ and its descendants.
+then these also record separate profiling data for $f$ and its descendants.
 
 SLIDE Deep profiler call graphs
 
 This is very powerful and helps to collect a lot of very useful data
 about a programs performance.
-However, it does not seperate recursions or mutual recursions.
+However, it does not separate recursions or mutual recursions.
 
 The call tree:
 
@@ -476,9 +476,9 @@ RecCost(Depth) & = & Shared + Base + Depth ( Shared + RecBranch )
 Depending on the situation, we can calculate the cost of a recursive
 call at any depth.
 
-Different equations can be derrived for each recursion type.
+Different equations can be derived for each recursion type.
 
-SLIDE Finding parallelization candidates
+SLIDE Finding parallelisation candidates
 
 The deep profiler's call graph is a tree of strongly connected components
 (SCCs).
@@ -489,7 +489,7 @@ The automatic parallelism analysis follows the following algorithm:
 
     \item Recurse depth-first down the call graph from \code{main/2}.
 
-    \item Analyze each procedure of each SCC, identify conjunctions that have
+    \item Analyse each procedure of each SCC, identify conjunctions that have
           two or more goals whose cost is greater than a configurable
           threshold.
 
@@ -527,7 +527,7 @@ and the recursive call needs \code{Acc1} from \code{F}.
 
 There are 3 ways to parallelise the conjunction in \code{map\_foldl}.
 
-SLIDE Parallelizing \code{map\_foldl}
+SLIDE Parallelising \code{map\_foldl}
 
 \code{Y} is produced at the very end of \code{M}
 and consumed at the very start of \code{F},
@@ -576,7 +576,7 @@ variables needed after the conjunction.
 \epsfbox{overlap4.eps}
 \end{center}
 
-SLIDE Pesimal overlap example
+SLIDE Pessimal overlap example
 
 If variables are produced or consumed at different times within goals,
 then the overlap can vary greatly.
@@ -782,18 +782,18 @@ SLIDE Conclusion
         programs.
 
   \item The analysis explores only the parts of the call graph that
-        might be profitably parallelized.
+        might be profitably parallelised.
 
   \item Our novel overlap analysis allows us to estimate how dependencies
         affect parallel execution.
 
-  \item Our loop control transformation elimiates excessive memory usage
+  \item Our loop control transformation eliminates excessive memory usage
         and maintain tail recursion   
 
   \item Several modifications to the runtime system have improved
         efficiently.
 
-  \item We have addapted the ThreadScope parallel profile visualisation
+  \item We have adapted the ThreadScope parallel profile visualisation
         system for use with Mercury (not shown).
 
 \end{itemize}
@@ -808,7 +808,7 @@ SUBSECTION Spare slides
 
 SLIDE Old engine wakeup code
 
-When a new context is created or an existing one becomes runnable and an engineV
+When a new context is created or an existing one becomes runnable and an engine
 is sleeping,
 the engine is woken up.
 
@@ -817,7 +817,7 @@ If the context must be executed on a particular engine
 then all the engines are woken up so that the correct one can execute the
 context.
 
-Engines sleep using a posix condition variable associated with the runqueue lock.
+Engines sleep using a POSIX condition variable associated with the runqueue lock.
 Sleeping engines wakeup periodically to attempt to steal sparks.
 
 SLIDE New engine wakeup code
@@ -826,7 +826,7 @@ In the new system each engine has a semaphore,
 Engines wait on the semaphore when they are idle.
 
 When a context becomes runnable and an engine is sleeping the runtime system
-wakes the enigne by pusting to the semaphore.
+wakes the engine by posting to the semaphore.
 This prevents races that could occur in the previous system.
 
 Individual engines can be targeted specifically,
@@ -834,7 +834,7 @@ so if a context has only one valid engine,
 then only that engine will be woken.
 
 We can also pass contexts directly to engines,
-avoiding the runqueue and synchronization in many cases.
+avoiding the runqueue and synchronisation in many cases.
 
 When a spark is created a sleeping engine is woken and told which spark queue contains
 a spark it can execute.
@@ -842,9 +842,9 @@ a spark it can execute.
 The hew code is much more responsive.
 
 
-SUBSECTION Choosing how to parallelize
+SUBSECTION Choosing how to parallelise
 
-SLIDE Choosing how to parallelize
+SLIDE Choosing how to parallelise
 
 \begin{verbatim}
 g1, g2, g3
@@ -862,7 +862,7 @@ If there is a \code{g4}, you can
 conjunction.
 
 There are thus $2^{N-1}$ ways
-to parallelize a conjunction of $N$ goals.
+to parallelise a conjunction of $N$ goals.
 
 If you allow goals to be reordered,
 the search space would become larger still.
@@ -885,7 +885,7 @@ V4 = pow(B, V3) V8 = V4 - V7    X = V9 / V11
 
 Primitive goals are not worth spawning off.
 Nonetheless, they can appear between goals
-that should be parallelized against one another,
+that should be parallelised against one another,
 greatly increasing the value of $N$.
 
 SLIDE Reducing the search space.
@@ -912,11 +912,11 @@ SUBSECTION Push-into-goal transformation
 
 SLIDE Expensive goals in different conjunctions
 
-The call to \code{typecheck} and the call to \testtt{typecheck\_preds} are
-expensive enough to be worth parallelizing.
+The call to \code{typecheck} and the call to \code{typecheck\_preds} are
+expensive enough to be worth parallelising.
 But the if-then-else that contains the call to \code{typecheck}
 has a typical cost 1/10th of the cost of \code{typecheck}.
-It is not worth parallelizing the if-then-else against \code{typecheck\_preds}.
+It is not worth parallelising the if-then-else against \code{typecheck\_preds}.
 
 \small
 \begin{verbatim}
@@ -934,7 +934,7 @@ It is not worth parallelizing the if-then-else against \code{typecheck\_preds}.
 SLIDE Push later goals into earlier compound goals
 
 We can push the call to \code{typecheck\_preds} into the if-then-else
-and parallelize only the then-part:
+and parallelise only the then-part:
 
 \small
 \begin{verbatim}
@@ -951,5 +951,5 @@ typecheck_preds([Pred0 | Preds0], [Pred | Preds], ...) :-
 \normalsize
 
 Our analysis can perform this transformation
-as part of deciding whether this parallelization is worthwhile.
+as part of deciding whether this parallelisation is worthwhile.
 
