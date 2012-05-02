@@ -17,7 +17,7 @@ better-performing processors without increasing clock speeds.
 Programmers who want to take advantage of the extra cores on these
 processors must write parallel programs.
 
-SLIDE Motivation --- Threaded Programming
+SLIDE Motivation --- Threaded programming
 
 Threads are the most common method of parallel programming.
 When using threads,
@@ -44,9 +44,9 @@ errors when using locks.
 
 \end{itemize}
 
-SLIDE Automatic Parallelism.
+SLIDE Automatic parallelism
 
-An good compiler performs many optimisations on behalf of the
+A good compiler performs many optimisations on behalf of the
 programmer.
 Programmers rarely think about:
 
@@ -257,7 +257,7 @@ A parallel conjunction $G_1~\&~G_2~\&~\ldots~\&~G_N$ will be executed by spawnin
 off $G_2~\&~\ldots~\&~G_N$, then executing $G_1$ immediately.
 In the common case that the forked-off task is not taken up by another engine
 then,
-a dependency between the tasks would not require a context switch.
+a dependency between the tasks does not require a context switch.
 
 However, if the forked-off task was taken by another engine,
 the original context must be suspended until that task completes.
@@ -314,7 +314,7 @@ map(P, [X | Xs], [Y, Ys]) :-
 
 However, where dependencies exist conjuncts cannot be moved without violating
 the program's mode-correctness.
-Therefore this solution only works in the rare cases that
+Therefore, this solution only works in the rare cases that
 parallel conjunctions are independent.
 
 SLIDE Workaround --- The max-contexts limit
