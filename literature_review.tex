@@ -124,7 +124,7 @@ Most deadlocks are much more subtle and harder to find and fix.
 
 % STM
 A better way to avoid all these problems in concurrent programing is to use
-software transational memory (STM)~%
+software transactional memory (STM)~%
 \citep{harris:2005:haskell-stm,mika:mercury-stm}.
 STM allows programmers to mark different variables as transactional
 and to define critical sections.
@@ -172,7 +172,7 @@ This is done by ensuring that a function's declaration declares all of the
 functions effects.
 Therefore,
 the programmer or the compiler can read a function's declaration to see if it
-is safe to parallelize.
+is safe to parallelise.
 Mercury and Haskell both support explicit parallelism,
 the programmer need only annotate their code, indicating that it should be
 executed in parallel.
@@ -183,11 +183,11 @@ whose operational semantics cause parallel
 evaluation~\citep{gph,loidi:2008:gph-semiexplicit-parallelism}.
 Unfortunately Haskell's lazy evaluation strategy interacts poorly with
 parallelism.
-A parallelized computation will be evaluated to weak-head-normal-form,
+A parallelised computation will be evaluated to weak-head-normal-form,
 that is to say that if it is a data term with parameters,
 the parameters will not be evaluated.
 This means that any parallelised work usually doesn't do enough work to
-make parallelization worthwhile.
+make parallelisation worthwhile.
 The GpH implementors have tried to solve this problem by allowing
 the programmer to express how deep evaluation should
 continue~\citep{trinder:98:strategies}.
@@ -243,10 +243,10 @@ Furthermore programmers must know whether there will be enough
 processors free at runtime to execute the parallelised computation:
 the additional costs of parallel execution will have an effect even
 if there is not a processor available to execute the parallel work.
-Parallelisation is another optimization such as inlining or efficient
+Parallelisation is another optimisation such as inlining or efficient
 register allocation.
 Therefore,
-it would be better for an optimizing compiler to handle parallelization
+it would be better for an optimising compiler to handle parallelisation
 automatically;
 the programmer will not need to worry about parallel evaluation any more
 than they currently worry about inlining and register allocation.
@@ -273,7 +273,7 @@ Furthermore implicitly parallel programs have an \emph{embarrassingly
   parallel} workload,
 this occurs when much more parallel work is available than the parallel
 processing capacity of the machine;
-thereby dramatically reducing the benifit of parallel execution while
+thereby dramatically reducing the benefit of parallel execution while
 the cost remained the same.
 Both these effects often caused very poor performance.
 
@@ -295,8 +295,8 @@ Some languages allow for the parallelisation of data parallel
 tasks such as NESL~\citep{blelloch:95:nesl} and Data Parallel
 Haskell (DpH)~\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
 These languages use special datatypes to denote parallelism,
-sequences and parallel arrays in NESL and DpH respectivly.
-Only operations on elements of these collections are parallelized.
+sequences and parallel arrays in NESL and DpH respectively.
+Only operations on elements of these collections are parallelised.
 We have none-the-less classified these systems as implicitly parallel,
 since every action on these data types is executed in parallel.
 Because operations are data-parallel they're independent and suitable
@@ -304,8 +304,8 @@ Because operations are data-parallel they're independent and suitable
 for execution on vector machines as well as SMP machines.
 By transforming code and arranging for one thread to work on more than
 one data item at a time granularity can be improved.
-The drawback of these data-parallel aproches is that they can
-parallelize data parallel programs
+The drawback of these data-parallel approaches is that they can
+parallelise data parallel programs
 --- only a small subset of computer programs.
 
 With the exception of DpH, implicit parallelism often performs worse

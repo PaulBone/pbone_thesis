@@ -126,10 +126,10 @@ A clobbered instantiation state describes variables whose values are no-longer
 available.
 Ground and bound instantiation states may also be described as unique,
 meaning they are not aliased with any other value.
-When variables are used their instiation state may change,
+When variables are used their instantiation state may change,
 such a change is described by a transition between two instantiation states.
 This is also known as a mode (of an argument),
-and is easily confused with the closly related mode of a predicate.
+and is easily confused with the closely related mode of a predicate.
 When a variable is used as an argument or in a unification it can only
 become 'more instantiated',
 that is to say 'free to ground' is legal but 'ground to free' is not.
@@ -346,7 +346,7 @@ Since numbering each version of the state of the world
 Mercury has syntactic sugar to avoid the need for this,
 but this sugar does not affect
 the compiler's internal representation of the program.
-This syntactic suger is shown below, along with the convention of naming
+This syntactic sugar is shown below, along with the convention of naming
 the I/O state \code{!IO}.
 
 \begin{verbatim}

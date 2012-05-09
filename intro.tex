@@ -26,13 +26,13 @@ Until at a 45nm process the width of the oxide
 (actually silicon oxide, not metal oxide)
 was roughly 1nm thick.
 about the size of only five silicon atoms.
-At this size quantum tunneling is problematic and current is leaked from the
+At this size quantum tunnelling is problematic and current is leaked from the
 gate to the silicon beneath,
 wasting power and therefore producing excess heat.
 Novel solutions,
 such as using hafnium-based compound rather than silicon
 oxide~\cite{intel-high-k},
-are necessary to manufacture power efficent CPUs on a 45nm process.
+are necessary to manufacture power efficient CPUs on a 45nm process.
 Smaller processes are being used, shrinking the area in MOSFETs,
 however, the thickness of the oxide layer is not decreasing.
 Similarly, as the connections between transistors become thinner,
@@ -42,16 +42,16 @@ smaller.
 
 To overcome these clock speed limitations manufacturers must build processors
 that can do more work concurrently.
-There are a number of ways to acheive this including:
+There are a number of ways to achieve this including:
 SIMD instruction sets,
 pipelining,
 and executing multiple instructions in a single clock cycle.
 One of the most notable of these techniques is multicore execution.
 Multiple processing cores can be placed in the same package,
 and usually on the same die.
-Individiual cores work individually, communicating through the memory
-heirachy;
-this makes additional cores relativly easy to add to a processor design.
+Individual cores work individually, communicating through the memory
+hierarchy;
+this makes additional cores relatively easy to add to a processor design.
 Therefore, this is a popular solution to the physical limitations of
 transistors.
 
@@ -69,9 +69,9 @@ stream.
 This is usually done by programming with \emph{threads}.
 The programmer creates multiple threads of exececution and the operating system
 multiplexes these threads onto processors.
-Threads communicate through shared memory and must synchronize to ensure that
+Threads communicate through shared memory and must synchronise to ensure that
 memory is kept in a consistent state.
-The most common synchronization method is the use of mutual exclusion locks.
+The most common synchronisation method is the use of mutual exclusion locks.
 Locks prevent concurrent access to the same resource by different threads,
 however they pose particular problems: XXX
 
@@ -83,7 +83,7 @@ modern processors have simply been faster.
 
 
 However, they are difficult to program because the task of scheduling work and
-communicating between them is now the responsability of the programmer.
+communicating between them is now the responsibility of the programmer.
 
 
 

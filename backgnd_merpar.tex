@@ -2,12 +2,12 @@
 \status{This section is complete}
 
 The low-level C backend of the Mercury implementation uses C as a
-pesudo-assembler;
+pseudo-assembler;
 A Mercury \emph{engine} structure represents a CPU that can execute Mercury
 Abstract Machine instructions.
-An engine has fields that represent virual registers,
+An engine has fields that represent virtual registers,
 some of which are mapped (using GCC's~\citep{gcc} global register extension) to
-physical machine registers - depending on the achitecture of the physical
+physical machine registers - depending on the architecture of the physical
 machine.
 These registers include 1024 general-purpose registers,
 three stack pointers for the two stacks,
@@ -34,7 +34,7 @@ ensure there is an even distribution of engines across the machine.
 this thread pinning work is new work - it's not necessary part of the
 background.  I think this discussion may belong in \ref{chap:rts}}
 
-Eacn POSIX Thread must maintain a pointer to its engine;
+Each POSIX Thread must maintain a pointer to its engine;
 this is kept in a physical machine register as it is accessed
 frequently.
 In sequential code,
@@ -65,7 +65,7 @@ otherwise it is retained.
 Contexts cannot be preempted.
 
 Following \citet{simonmar_2009_multicore_rts},
-we economize on memory by using \emph{sparks}
+we economise on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
 Sparks are very light weight being only three words long.
@@ -105,10 +105,10 @@ and most programs spend an even greater fraction of their time in \ddet code.
   is spent in det code?  That would be a more relevant statistic.}
 Existing algorithms for executing nondeterministic code in parallel
 have very significant overheads, generating slowdowns by integer factors.
-Thus we have given priority to parallelizing deterministic code,
+Thus we have given priority to parallelising deterministic code,
 which we can do with \emph{much} lower overhead.
 We think that avoiding such slowdowns is a good idea,
-even if it does mean foregoing the parallelization of 10 to 25\% of a program.
+even if it does mean foregoing the parallelisation of 10 to 25\% of a program.
 
 \begin{figure}
 \begin{verbatim}
@@ -145,14 +145,14 @@ a pointer to the stack frame for the procedure containing this parallel
 conjunction,
 and a thread safe counter that tracks the number of conjuncts that have not
 yet executed their barrier.
-After initializing this syncterm, the engine then
-spanws off $(G_2~\&~\ldots~\&~G_n)$ as a spark and continues by executing
-$G_1$ itsself.
+After initialising this syncterm, the engine then
+spawns off $(G_2~\&~\ldots~\&~G_n)$ as a spark and continues by executing
+$G_1$ itself.
 The spark contains a pointer to the syncterm,
 as well as a pointer to the code it must execute
 and another pointer to any thread local mutables that should be available to the
 spawned off code.
-Figure \ref{fig:spark_and_syncterm} shows these two datastructures.
+Figure \ref{fig:spark_and_syncterm} shows these two data structures.
 The spark is added to a global run queue of sparks, or if that queue is too
 full, because there's already enough parallelism,
 then the spark is added to a queue owned by the current context.
@@ -165,11 +165,11 @@ see Chapter \ref{chap:rts} for details.
 If the context finishes the execution of the first conjunct ($G_1$)
 and finds that spark is still at the head of its queue,
 it will pick it up and run it itself.
-This is a useful optimization,
+This is a useful optimisation,
 % it's also really well-known.
 since it avoids using a separate context in the relatively common case
 that all the other CPUs are busy with their own work.
-This optimization is also useful since it can avoid the creation of supurfluous
+This optimisation is also useful since it can avoid the creation of superfluous
 contexts and their stacks.
 
 \begin{figure}
@@ -201,7 +201,7 @@ and then executes $G_2$ itself.
 Eventually, the spawned-off remainder of the conjunction
 consists only of the final conjunct, $G_n$,
 and the context just executes it.
-The code of each conjunct synchronizes on the barrier once it has
+The code of each conjunct synchronises on the barrier once it has
 completed its job.
 When all conjuncts have done so,
 the original context will continue execution after the parallel conjunction.

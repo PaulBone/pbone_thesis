@@ -38,7 +38,7 @@ struct MR_Future {
     MR_Word         MR_fut_value;
 };
 \end{verbatim}
-\caption{Future datastructure}
+\caption{Future data structure}
 \label{fig:future}
 \end{figure}
 
@@ -60,23 +60,23 @@ shared variables are identified at compile time.
 The compiler replaces each shared variable with a \emph{future} \citep{multilisp},
 which is used to safely communicate the variable's value between conjuncts.
 
-Figure \ref{fig:future} shows the future datastructure,
+Figure \ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,
 a flag indicating whether the variable has been produced yet,
 a queue of consumer contexts waiting for the value, and a mutex.
 The initial value of the future has the flag set to `not yet produced'.
 
-Consumers call \wait when they want to retrive a value from the future,
-this acquires the lock, and if \code{MR\_fut\_signalled} is true, retrives
+Consumers call \wait when they want to retrieve a value from the future,
+this acquires the lock, and if \code{MR\_fut\_signalled} is true, retrieves
 \code{MR\_fut\_value} before releasing the lock.
 If \code{MR\_fut\_signalled} was false, then the current context is added to
 the list of suspended contexts before unlocking the future.
 The engine will then suspend the context and look for other work.
 Once the value of the future is provided,
 the context will be woken up along with the others on the list of suspended contexts.
-\wait contains an optimization; it will check \code{MR\_fut\_signalled} before
-acquireing the lock as well as after.
-If it is true before the lock is aquired then it can safely retrive the
+\wait contains an optimisation; it will check \code{MR\_fut\_signalled} before
+acquiring the lock as well as after.
+If it is true before the lock is acquired then it can safely retrieve the
 future's value without using the lock.
 
 A producer will call \signal to place a value into a future and wake up any
@@ -85,22 +85,22 @@ suspended contexts.
 The value of the future is written to memory,
 before 
 \code{MR\_fut\_signalled} is set to true.
-These operations are seperated by a memory barrier to ensure that they are
+These operations are separated by a memory barrier to ensure that they are
 visible to other threads in this order.
-After releasing the lock, \signal will schedule the suspsended contexts.
+After releasing the lock, \signal will schedule the suspended contexts.
 Because \signal has no outputs and is deterministic,
-it must be declared as impure so that the compiler will not optimize away calls
+it must be declared as impure so that the compiler will not optimise away calls
 to it.
 
 \get is provided as an alternative to \wait,
-however, it may only be used if the future's value is gaurenteed to be
+however, it may only be used if the future's value is guaranteed to be
 available, which can happen if the same execution path has already called
 either \signal or \wait.
-It is therefore necessary that \wait is never optimized away, even if its
+It is therefore necessary that \wait is never optimised away, even if its
 output is not used by other code;
 \wait is therefore declared as impure.
 
-To minimize waiting,
+To minimise waiting,
 the compiler pushes signal operations on each future
 as far to the left into the producer conjunct as possible,
 and it pushes wait operations
@@ -161,13 +161,13 @@ map_foldl_par(M, F, L, FutureAcc0, Acc) :-
     ).
 \end{verbatim}
 %\vspace{2mm}
-\caption{\mapfoldl{} with synchronization}
+\caption{\mapfoldl{} with synchronisation}
 \label{fig:map_foldl_sync}
 %\vspace{-1\baselineskip}
 \end{figure}
 
 Given the \mapfoldl predicate in Figure~\ref{fig:mapfoldl},
-this synchronization transformation
+this synchronisation transformation
 generates the code in Figure~\ref{fig:map_foldl_sync}.
 
 
