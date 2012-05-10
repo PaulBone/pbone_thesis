@@ -1,19 +1,135 @@
 
 \status{
-    This section is currently a copy of prose used elsewhere.
-    The intention is to discuss:
+    This section and 2.5 have been merged, as they provide motivation for one
+    another.
+    This will likly be a large section, so I've broken it into sub-sections
 }
 
 \begin{itemize}
+\item Why profile directed parallelisation.
+\item Prior auto-parallelism work.
+\begin{itemize}
+    \item My honours thesis
+\end{itemize}
 \item the deep profiler,
 \item including a description of why deep profiling provides us with
       more useful data than conventional profiling.
 \item also explain the limitations of deep profiling,
       for example, that levels within recorsive code don't have seperate
       data recorded for them.
-\item Coverage profiling 
-\item profiling feedback framework
+      (The solution to this will probably be in the overlap chapter)
+\item Callgraph search
+\item Variable use analysis
+\item Motivation for coverage profiling (variable production times) (prereq:
+      varuse analysis)
+\item Coverage profiling. 
+\item profiling feedback framework.
 \end{itemize}
+
+\picfigure{prof_fb}{Profiler feedback loop}
+
+Most compiler optimizations operate only on the representation of the program
+in the compiler's memory.
+For most optimizations this is sufficient.
+However,
+automatic parallelisation is sensative to variations in the runtime cost of
+parallelised tasks.
+This sensativity increases when dependent parallelisation is used.
+For example,
+a search operation on a small list is cheap, compared to the same operation on
+a large list.
+It may not be useful to parallelise the search on the small list against some
+other computation,
+but it will usually be useful to parallelise the search on the large list
+against another computation.
+\paul{XXX: DOn't over-parallelize}
+It's important 
+The only way we can know the actual cost of most peices of code,
+is by understanding their typical inputs,
+or measuring their runtime cost while operating on typical inputs.
+Therefore, profiling data can be used in parallelisation, and many other
+optimisations.
+
+By using profiling data,
+we can more accuratly predict the costs of different parts of a program.
+These predictions are used to drive parallelisation decisions,
+which are, in turn, used to select where and how parallelism is introduced.
+
+
+One established exception to this is the creation of branch hints.
+If the CPU can predict whether or not a program will take a particular branch
+it is less likly to have to flush and re-fill its pipeline;
+making the program more efficient.
+
+Some systems use profile drivien optimization more generally, such as the
+Hotspot Java VM \citep{java-hotspot} which
+dynamically recompiles parts of the program during runtime.
+
+
+Rarely, compiler optimizations take data from other sources.
+
+% Introduce feedback concept, assert that it is needed for
+% feedback-directed implicit parallelism.
+% This is the motivation for the rest of the section.
+
+Our implicit parallelism analysis operates on profiling data and a
+bytecode representation of the program.
+A program compiled for both deep profiling and coverage profiling
+produces both of these when executed.
+% with the correct environment variable set.
+
+An automatic parallelisation tool
+may wish to traverse the entire call tree of the program.
+For example, to limit the amount of parallelism at each stage of execution
+to the number of CPUs available.
+Such a tool needs to be able to work on the whole program.
+The Mercury compiler never operates on the whole program:
+it compiles separate modules separately.
+We therefore implemented our implicit parallelisation analysis in a new tool called
+\texttt{mdprof\_feedback}.
+For now, its task is to use profiling data and our variable use analysis
+to choose the conjunctions that are most profitable to parallelise,
+and to record this information in a \emph{feedback file}
+that can then be given to the compiler.
+The data flow of the feedback process is shown in Figure
+\ref{fig:prof_feedback_loop}.
+
+Telling the compiler what to parallelise is just one use of profiler feedback.
+Other optimisations (such as inlining) could also benefit
+from profiling feedback.
+
+Using a feedback-directed optimisation requires that the user compile
+and run their program before feedback information is produced, 
+which takes a significant amount of time.
+Because of this, feedback-directed optimisations do not make sense
+unless
+the total execution time of the optimised program --- which depends
+mostly on how many times it will be executed --- is significantly
+greater than the time it takes to compile and execute the profiling
+version of the program.
+We expect that feedback-directed optimisations would normally be used
+when the programmer is building a \emph{release candidate} version of their
+program, after they have performed testing and fixed any bugs.
+
+In all cases the program should be profiled on an input that is
+representative of the inputs the program is expected to handle when
+it is used normally.
+This is important to ensure the compiler makes decisions using
+feedback information that improves rather than degrades the performance
+of the program in general.
+How a representative input is chosen and how important the exact choice
+of the profiling input is will change from program to program.
+
+
+
+\subsection{Prior auto-parallelism work}
+
+\paul{This section \emph{must} say that this work contributed to my honours degree.
+This statement goes beyond self-citation.
+This is MSGR's rule.}
+
+
+\subsection{The deep profiler}
 
 Typical Mercury programs make heavy use of code reuse in the form of
 parametric polymorphism and higher order calls.
@@ -69,7 +185,7 @@ Unfortunately, even on modern machines
 the usual, and portable infrastructure for clock interrupts
 (\emph{e.g}., SIGPROF on Unix)
 supports only one frequency for such interrupts,
-which is usually 60 or 100 Hz.
+which is usually 60 or 100Hz.
 This frequency is far too low for the kind of detailed measurements
 the Mercury deep profiler wants to make,
 since for typical program runs of few seconds,
@@ -109,62 +225,8 @@ by the wraparound of the global CSC counter;
 on 64 bit platforms, the problem would occur
 only on a profiling run that lasts for years.
 
-% Feedback
-%%%%%%%%%%
 
-% Introduce feedback concept, assert that it is needed for
-% feedback-directed implicit parallelism.
-% This is the motivation for the rest of the section.
-
-Our implicit parallelism analysis operates on profiling data and a
-bytecode representation of the program.
-A program compiled for both deep profiling and coverage profiling
-produces both of these when executed.
-% with the correct environment variable set.
-
-An automatic parallelisation tool
-may wish to traverse the entire call tree of the program.
-For example, to limit the amount of parallelism at each stage of execution
-to the number of CPUs available.
-Such a tool needs to be able to work on the whole program.
-The Mercury compiler never operates on the whole program:
-it compiles separate modules separately.
-We therefore implemented our implicit parallelisation analysis in a new tool called
-\texttt{mdprof\_feedback}.
-For now, its task is to use profiling data and our variable use analysis
-to choose the conjunctions that are most profitable to parallelise,
-and to record this information in a \emph{feedback file}
-that can then be given to the compiler.
-The data flow of the feedback process is shown in Figure
-\ref{fig:prof_feedback_loop}.
-
-\picfigure{prof_fb}{Profiler feedback loop}
-
-Telling the compiler what to parallelise is just one use of profiler feedback.
-Other optimisations (such as inlining) could also benefit
-from profiling feedback.
-
-Using a feedback-directed optimisation requires that the user compile
-and run their program before feedback information is produced, 
-which takes a significant amount of time.
-Because of this, feedback-directed optimisations do not make sense
-unless
-the total execution time of the optimised program --- which depends
-mostly on how many times it will be executed --- is significantly
-greater than the time it takes to compile and execute the profiling
-version of the program.
-We expect that feedback-directed optimisations would normally be used
-when the programmer is building a \emph{release candidate} version of their
-program, after they have performed testing and fixed any bugs.
-
-In all cases the program should be profiled on an input that is
-representative of the inputs the program is expected to handle when
-it is used normally.
-This is important to ensure the compiler makes decisions using
-feedback information that improves rather than degrades the performance
-of the program in general.
-How a representative input is chosen and how important the exact choice
-of the profiling input is will change from program to program.
+
 
 % Describe data types: the feedback data can be any mercury data
 % types.  One can query the feedback data by asking it to complete the
