@@ -15,34 +15,35 @@
 \item profiling feedback framework
 \end{itemize}
 
-% XXX not sure if we need this intro para.
-% The first profiler we built for Mercury
-% was basically a port of the Unix utility \code{gprof}\cite{gprof}.
-% However, we soon found that this style of profiling
-% usually produced less-than-useful results,
-% due mostly to the prevalence of parametric polymorphism and higher order calls
-% in typical Mercury code.
-% For example, while a C program may have
-% separate tables for different kinds of entities,
-% for whose access functions
-% the profiler would gather separate performance data,
-% most Mercury programs would use
-% the same polymorphic code to handle all those tables,
-% making the task of disentangling the characteristics of the different tables
-% unfeasibly hard.
+Typical Mercury programs make heavy use of code reuse in the form of
+parametric polymorphism and higher order calls.
+This is also true for other declarative languages.
+For example, while a C program may have
+separate tables for different kinds of entities,
+for whose access functions
+the profiler would gather separate performance data,
+most Mercury programs would use
+the same polymorphic code to handle all those tables,
+making the task of disentangling the characteristics of the different tables
+unfeasibly hard.
 
-The Mercury deep profiler~\cite{conway:2001:mercury-deep}
-gathers much more information about the context of each measurement
-than traditional profilers like \code{gprof}\cite{gprof}.
-When it records the occurrence
-of a call, a memory allocation or a profiling clock interrupt,
-it records with it the chain of ancestor cliques
-\paul{SCCs}
-(groups of mutually recursive procedures)
+This problem has been solved for Mercury by introducing deep profiling
+\citep{conway:2001:mercury-deep}.
+Mercury's deep profiler gathers much more information about the context of
+each measurement than traditional profilers like \code{gprof}\cite{gprof}.
+When it records the occurrence of a call,
+a memory allocation or a profiling clock interrupt,
+it records with it the chain of ancestor calls,
 all the way from the current call to the entry point of the program,
 a procedure named \code{main}.
-This detail allows the deep profiler
-to find and present to the user
+To make this tractable,
+recursive and mutually recursive calls,
+known as \emph{strongly connected components} (SCCs),
+must be folded into a single memory structure.
+Therefore, the call graph of the program is a tree (there are no cycles)
+and SCCs are represented as single nodes in this tree.
+
+This detail allows the deep profiler to find and present to the user
 not just information such as the total number of calls to a procedure
 and the average cost of a call,
 or even information such as the total number of calls to a procedure
@@ -52,21 +53,21 @@ but also information such as the total number of calls to a procedure
 when invoked from a particular chain of ancestor cliques}
 and the average cost of a call \emph{in that context}.
 For example, it could tell that
-procedure \code{h} called procedure \code{i} ten times
-when \code{h}'s chain of ancestors was \code{main -> f -> h},
-while \code{h} called \code{i} only seven times
-when \code{h}'s chain of ancestors was \code{main -> g -> h},
-the calls from \code{h} to \code{i} took on average twice as long
-from the \code{main -> g -> h} context as from \code{main -> f -> h},
+procedure $h$ called procedure $i$ ten times
+when $h$'s chain of ancestors was $main \calls f \calls h$,
+while $h$ called $i$ only seven times
+when $h$'s chain of ancestors was $main \calls g \calls h$,
+the calls from $h$ to $i$ took on average twice as long
+from the $main \calls g \calls h$ context as from $main \calls f \calls h$,
 so that despite the fewer calls,
-\code{main -> g -> h -> i} took more time than \code{main -> f -> h -> i}.
-\paul{Reinforce why this is useful for auto-parallelism.
-The reader may want to know why they're being given this information.}
+$main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
+\paul{Draw a figure}
 
 Profilers have traditionally measured time
 by sampling the program counter at clock interrupts.
 Unfortunately, even on modern machines
-the usual infrastructure for clock interrupts (\emph{e.g}., SIGPROF on Unix)
+the usual, and portable infrastructure for clock interrupts
+(\emph{e.g}., SIGPROF on Unix)
 supports only one frequency for such interrupts,
 which is usually 60 or 100 Hz.
 This frequency is far too low for the kind of detailed measurements
@@ -80,7 +81,7 @@ being selected almost at random.
 We have therefore implemented a finer-grained measure of time
 that turned out to be very useful
 even though it is inherently approximate.
-This measure is call sequence counts or CSCs:
+This measure is call sequence counts (CSCs):
 the profiled program basically behaves
 as if the occurrence of a call signified
 the occurrence of a new kind of profiling interrupt.
@@ -91,8 +92,6 @@ what a programmer would do with a loop in an imperative language
 must be done by a recursive call.
 This means that the only thing that the program can execute between two calls
 is a sequence of primitive operations such as unifications and arithmetic.
-% \paul{usually but not necessarily straight line code}
-% \peter{doesn't seem important}
 For any given program,
 there is a strict upper bound on the maximum length of such sequences,
 and the distribution of the length of such sequences
@@ -101,7 +100,7 @@ of half-a-dozen to a dozen operations.
 In practice, we have found that
 the fluctuations between the lengths of different such sequences
 can be ignored for any measurement
-that covers any significant number of call sequence counts (CSCs),
+that covers any significant number of call sequence counts,
 say more than a hundred.
 The only drawback of this scheme that we have found
 is that on 32 bit platforms,
