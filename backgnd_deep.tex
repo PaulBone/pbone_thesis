@@ -21,11 +21,13 @@ There are some exceptions,
 most sagnificantly the coverage profiling transformation (Section \ref{sec:coverage})
 developed for my honours research project was complete, and is used, largly
 unchanged in my Ph.D.\ research.
-The other exceptions are the ideas within the variable use analsys code
-(Section \ref{sec:var_use_analysis} and
-the call graph traversal code \ref{sec:call_graph_traversal}.
-Still other parts of this section are not my own work, namely
-\citet{tannier:2007:parallel_mercury} and \citet{conway:2001:mercury-deep}.
+The related analysis described in Section \ref{sec:var_use_analysis}
+and the feedback framework in Section \ref{sec:feedback}
+were also writen as part of my honours research project.
+Still other parts of this section are not my own work,
+namely the work described in
+\citet{conway:2001:mercury-deep} and
+\citet{tannier:2007:parallel_mercury}.
 
 \status{Plan for this section:}
 
@@ -34,20 +36,23 @@ Still other parts of this section are not my own work, namely
 \item the deep profiler,
 \item including a description of why deep profiling provides us with
       more useful data than conventional profiling.
-\item also explain the limitations of deep profiling,
-      for example, that levels within recorsive code don't have seperate
-      data recorded for them.
-      (The solution to this will probably be in the overlap chapter)
 \item Prior auto-parallelism work.
 \begin{itemize}
     \item My honours thesis
 \end{itemize}
-\item Callgraph search
+\item Coverage profiling.
 \item Variable use analysis
-\item Motivation for coverage profiling (variable production times) (prereq:
-      varuse analysis)
-\item Coverage profiling. 
 \item profiling feedback framework.
+\end{itemize}
+
+\paul{XXX: These items aren't background.}
+\begin{itemize}
+\item also explain the limitations of deep profiling,
+      for example, that levels within recorsive code don't have seperate
+      data recorded for them.
+      (The solution to this will probably be in the overlap chapter)
+      XXX: This problem didn't exist in my honours work, it
+\item Callgraph search
 \end{itemize}
 
 Most compiler optimizations operate only on the representation of the program
@@ -109,6 +114,11 @@ single execution.
 A program will usually be used many times, and by many people.
 Each time the optimization will have a benifit,
 this benifit will pay off the cost of the feedback directed optimisation.
+We expect that feedback-directed optimisations would normally be used
+when the programmer is building a \emph{release candidate} version of their
+program,
+after they have performed testing and fixed any bugs.
+
 Another criticism is that if the program is profiled with one set of input and
 used with another that the profile will not necessarly represent the actual use
 of the program,
@@ -229,92 +239,226 @@ as at that time the profiler did not support that capability.
 Nor did it use any advanced features of the profiler.
 Parallelisation decisions were made in the compiler:
 each procedure was searched for calls that appeared in the list of top procedures
-and calls to these where parallelised against similar calls
-provided that some other critera not important here was true.
+and calls to these where parallelised against similar calls if they
+where independent or had fewer than some $N$ shared variables.
 
+\paul{XXX:  'my' or 'our' in this work.  I know we usually use plural
+first person in papers,
+Is this true for dissertations as well?}
 For my honours project I attempted automatic parallelism of Mercury
 \citep{paul_hons}.
-This approch also used profiling feedback data and some of the advanced
-features of the deep profiler.
-The deep profiler was modified to export a representation of the profiled
-program.
-This representation, along with the profiling data could both be accessed by
-the analysis.
-My approch differed from Tannier's in that the analysis was done outside of the
-compiler in an analysis tool.
-The feedback given to the compiler was the result of this analysis:
-a list of candidate parallel conjunctions that the compiler would attempt to parallelise.
-Each candidate parallel conjunction describes its location in the origianal
-program and how its conjuncts should be constructed of smaller goals.
-However, at the completion of my honours project the implementation was incomplete
-and no feedback data was actually given to the compiler.
-Figure \ref{fig:prof_fb} closely describes the workflow for our feedback
-analysis.
+There where a number of differences between my work and Tannier's.
+The first differences is that at the time of my work the deep profiler
+was able to export a representation of the program
+(my work was the motivation for this feature).
+This allowed my analysis to access profiling data and a representation
+of the program at the same time.
+This allows the analysis to measure when variables are produced and
+consumed within parallel conjuncts,
+and therefore calculate,
+for conjunctions with a single shared variable,
+how much parallelism is available.
+The formula used was:
 
-% call graph traversal.
+\begin{eqnarray*}
+T_{Sequential} & = & T_A + T_B \\
+T_{DependantB} & = & max(T_{BeforeProduceA}, T_{BeforeConsumeB}) +
+T_{AfterConsumeB} \\
+T_{Parallel} & = & max(T_A, T_{DependantB}) + T_{Overheads} \\
+Speedup & = & \frac{T_{Sequntial}}{T_{Parallel}}
+%\label{eqn:time_deppar}
+\end{eqnarray*}
 
-The auto-parallelism analysis traverses the call graph looking for parallelism
-opertunities.
-The traversal begins at the root of the call graph,
-namely \code{main/2}.
-Each node in the graph is an SCC, and each edge is a call from a call site to a
-distinct callee.
-Each procedure in an SCC is searched for parallelisation candidates before any
-child-nodes are checked (which are also SCCs).
-The search continues in this fassion until it finds an edge
-representing a call whose cost is too low such that it is not worth parallelising
-anything within the callee, and therefore, in the callee's callees.
-In practice, only a small part of the callgraph is traversed,
-since most parts of a program have a very low runtime cost and are not worth
-parallelising.
-The search will also track the number of processors available for spawned-off work
-at any point in the call graph,
-as parallelisation candidates are found, this number will decrease.
-Once it reaches zero, the search will stop as parallelising anything below this
-point in the call graph will not create any useful parallelism.
-This traversal could only be done with access to both a representation of the
-program being profiled and profiling data of the program.
-Therefore, implementing the analysis in a seperate tool was the obvious choice.
+This describes the speedup due to parallelism of two conjuncts, $A$ and $B$.
+whose secution times are $T_A$ and $T_B$.
+In the parallel case $B$'s execution time is $T_{DependantB}$ since it
+accounts for the $B$'s dependency on $A$.
+Except for this small difference,
+the calculation of parallel execution time and speedup are the commonly
+used formulas for many parallel execution cost models.
 
-\status{XXX Currently here}
+This cost model requires information about when a shared variable is
+produced by the first conjunct and consumed by the second.
+To provide this information we introduced coverage profiling to
+Mercury's deep profiler,
+and used the resulting coverage data in a variable use time analysis.
 
-Telling the compiler what to parallelise is just one use of profiler feedback.
-Other optimisations (such as inlining) could also benefit
-from profiling feedback.
+\subsection{Coverage Profiling}
+\label{sec:coverage}
 
-Using a feedback-directed optimisation requires that the user compile
-and run their program before feedback information is produced, 
-which takes a significant amount of time.
-Because of this, feedback-directed optimisations do not make sense
-unless
-the total execution time of the optimised program --- which depends
-mostly on how many times it will be executed --- is significantly
-greater than the time it takes to compile and execute the profiling
-version of the program.
-We expect that feedback-directed optimisations would normally be used
-when the programmer is building a \emph{release candidate} version of their
-program, after they have performed testing and fixed any bugs.
+The deep profiler records port counts for predicates.
+The traditional port model~\cite{port_model} describes each predicate as
+having four ports through which control may flow.
+Control can flow into a predicate through either the call or redo ports,
+control flows out of a predicate through either the exit or fail ports.
+These describe:
+    a call being made to the predicate,
+    a call to the predicate being re-entered because there may be more
+    solutions,
+    the predicate exiting with a solution,
+    or the predicate failing because there are no more solutions.
+Mercury adds an extra port to these semantics known as the exception port,
+which a predicate uses to return control to its caller when it throws an
+exception.
+The following invarient must hold,
+control must leave a predicate the same number of times that it enters.
 
-In all cases the program should be profiled on an input that is
-representative of the inputs the program is expected to handle when
-it is used normally.
-This is important to ensure the compiler makes decisions using
-feedback information that improves rather than degrades the performance
-of the program in general.
-How a representative input is chosen and how important the exact choice
-of the profiling input is will change from program to program.
+\begin{equation*}
+Calls + Redos = Exits + Fails + Exceptions
+\end{equation*}
 
+\noindent
+Mercury adds additional invariants for many determinism types.
+For example, determinisitic code may not Redo or Fail.
+The deep profiler tracks the number of times each port is used for a given
+call.
+This data can be uesd to measure code coverage in a Mercury program.
+
+However, port counts alone will not provide complete coverge information.
+We introduced coverage points to address this problem.
+When the compiler instruments the program for deep profiling it will make
+a forward pass through the goal tree of each predicate.
+During this pass it will track whether or not it will be possible to
+calculate the coverage of the current goal based on those that came before
+it.
+For example, a unifcation (which does not have any port counts of its own)
+that follows a call will be called the same number of times as the call
+exits.
+If the unification is determinstic then it will also have the same number of
+exits.
+Coverage points are introduced often at the beginning of braches such as
+switches --- but never in the last case of a swich whose coverage can be
+inferred from the others.
+They're also inserted after any goal whose exit port count is unknown.
+Each coverage point referrs to a counter which is incremented each time the
+coverage point is executed.
+These counters are not associated with context the way other performance
+data in Mercury is.
+Therefore,
+coverage data of a particular predicate covers the general use of that
+predicate,
+The auto-parallelisation work described in my honours report
+\citep{pbone_hons}
+would not have benifited from context specific coverage data.
+
+\begin{figure}
+\begin{verbatim}
+\code{map(P, Xs0, Ys) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~}\instr{coverage\_point(ProcStatic, 0);} \\
+\code{~~~~~~~~Xs0 = [],} \\
+\code{~~~~~~~~Ys = []} \\
+\code{~~~~;
+\code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
+\code{~~~~~~~~P(X, Y),} \\
+\code{~~~~~~~~map(P, Xs, Ys0),} \\
+\code{~~~~~~~~Ys = [Y $|$ Ys0]} \\
+\code{~~~~).} \\
+\end{verbatim}
+\caption{Coverage annotated \code{map/3}.}
+\label{fig:map_coverage}
+\end{figure}
+
+\paul{Explain changes to data structures.}
+
+Figure \ref{fig:map_coverage} shows \code{map/3} instrumented for coverage
+profiling.
+There is a single coverage point inserted in the beginning of the first
+case of the switch on the list.
+The call to the instrumetnation code 
+refers to the ProcStatic structure,
+and an index into the coverage point array contained in it.
+
+a structure from the deep profiler where information about this procedure is
+stored.
+\paul{XXX Write about ProcStatic and other structures in the deep profiler
+section.}
+
+
+\paul{XXX: Add example}
+
+\status{These two subsections are the only ones not written in this chapter
+now.}
+
+\subsection{Variable Use Time Analysis}
+\label{sec:var_use_analysis}
 
 
+% Incorrect background, some of this prose can be used later.
+%This approch also used profiling feedback data similar to Tannier's
+%work.
+%However, it also made use of and some of the advanced
+%features of the deep profiler.
+%The deep profiler was modified to export a representation of the profiled
+%program.
+%This representation, along with the profiling data could both be accessed by
+%the analysis.
+%My approch differed from Tannier's in that the analysis was done outside of the
+%compiler in an analysis tool.
+%The feedback given to the compiler was the result of this analysis:
+%a list of candidate parallel conjunctions that the compiler would attempt to parallelise.
+%Each candidate parallel conjunction describes its location in the origianal
+%program and how its conjuncts should be constructed of smaller goals.
+%However, at the completion of my honours project the implementation was incomplete
+%and no feedback data was actually given to the compiler.
+%Figure \ref{fig:prof_fb} closely describes the workflow for our feedback
+%analysis.
+%
+%% call graph traversal.
+%
+%The auto-parallelism analysis traverses the call graph looking for parallelism
+%opertunities.
+%The traversal begins at the root of the call graph,
+%namely \code{main/2}.
+%Each node in the graph is an SCC, and each edge is a call from a call site to a
+%distinct callee.
+%Each procedure in an SCC is searched for parallelisation candidates before any
+%child-nodes are checked (which are also SCCs).
+%The search continues in this fassion until it finds an edge
+%representing a call whose cost is too low such that it is not worth parallelising
+%anything within the callee, and therefore, in the callee's callees.
+%In practice, only a small part of the callgraph is traversed,
+%since most parts of a program have a very low runtime cost and are not worth
+%parallelising.
+%The search will also track the number of processors available for spawned-off work
+%at any point in the call graph,
+%as parallelisation candidates are found, this number will decrease.
+%Once it reaches zero, the search will stop as parallelising anything below this
+%point in the call graph will not create any useful parallelism.
+%This traversal could only be done with access to both a representation of the
+%program being profiled and profiling data of the program.
+%Therefore, implementing the analysis in a seperate tool was the obvious choice.
+%
+%Because each node in the graph is an SCC, and the graph is a tree
+%the traversal does not need to worry about following cycles infinitly.
+%However,
+%determining the cost of recursive code is problematic.
+%If a predicate calls itsself, we cannot know the cost of the recursive
+%call,
+%this cost is attributed to the cost of the call of that predicate which
+%is already active.
+%The automatic parallelism analysis described in \citet{paul_hons}
+%treats recursive calls naively,
+%A solution to this is presented in Section
+%\ref{sec:recursive_call_costs}.
 
-% Describe data types: the feedback data can be any mercury data
-% types.  One can query the feedback data by asking it to complete the
-% instantiation of a type.
+
+\subsection{Feedback framework}
+\label{sec:feedback}
+
+Automatic parallelism is just one use of profiler feedback.
+Other optimisations
+such as inlining,
+branch hints
+and type specialisation
+can also benefit from profiling feedback.
+
 We have designed and implemented a generic feedback framework that allows
-tools (both inside or outside the compiler)
-to create feedback information for the compiler.
-The feedback information can be expressed as any Mercury type, making the
-feedback framework very flexible.
+tools to create feedback information for the compiler.
+These tools may include the profiler, the compiler its self,
+or any other tool that is able to link to the feedback library code.
+Any Mercury type can be used as feedback information,
+making the feedback framework very flexible.
 New feedback-directed optimisations may require feedback information
 from new analyses.
 We expect that many new feedback information types will be added to
@@ -322,15 +466,20 @@ support these optimisations.
 We also expect that an optimisation may use more than one type of
 feedback information and that more than one optimisation may use the
 same feedback information.
+These where considered requirements of the feedback framework.
 
 % Describe on-disk format,
-The on-disc format of the feedback information file is very simple, it
-contains a header that identifies the file format, including a version number.
+The on-disc format for the feedback information is very simple,
+it contains a header that identifies the file format,
+including a version number.
 What follows is a list of feedback information items.
 When the file is read in the file format identifier and revision
 number are checked,
 the list of information items is checked to ensure that no two items
-describe the same feedback information, for example there can only be at
-most one item in this list that describes how to automatically
-parallelise a program.
+describe the same feedback information,
+for example,
+at most one item in this list can describe how to automatically parallelise
+a program.
+
+\paul{Should I explain the API in more detail.}
 
