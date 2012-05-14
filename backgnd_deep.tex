@@ -180,6 +180,75 @@ so that despite the fewer calls,
 $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
 \paul{Draw a figure}
 
+% XXX: I considered moving this to the Mercury section, but if I
+% introduce it here then it's right next to its use, which is better.
+% I also considered a larger example such as the quadratic equation, but
+% it is not necessary.
+During compilation the arguments of functors and predicate calls are
+simplified so that they are single variables.
+For instance \code{foo(a(3), X)} is simplified to:
+
+\begin{verbatim}
+V_1 = 3,
+V_2 = a(X1),
+foo(V_2, X)
+\end{verbatim}
+
+\noindent
+This new conjunction is flattened into the conjunction that contained the
+original expression.
+Code that is represented in this way is referred to as being in \emph{super
+homogeneous form}.
+This can create many small conjuncts from just a single expression,
+for instance, the quadratic equation
+($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$) which can be written on one line
+is flattened into 12 individual conjuncts (excluding the plus-or-minus).
+
+Therefore the profiler
+(and other tools such as the debugger) introduced \emph{goal paths}
+to uniquly identify a sub goal in any goal tree such as a procedure's%
+\footnote{
+A procedure is either a predicate \& mode or a function (Section
+\ref{sec:backgnd_mer})}
+body.
+A goal path is a list of goal path steps, each step describes which
+sub-goal to recurse into when traversing a goal structure.
+\paul{XXX: An example would make this easier to follow,
+but I feel I might be yack-shaving by introducing too many examples.}
+Since the debugger was written first goal paths where introduced then,
+\paul{XXX: Check that the mdb paper really does describe goal paths}
+and the deep profiler was able to re-use this concept~\cite{mdb}.
+
+There are four structures used during profiling,
+each one is also reflected in the profiling data.
+These are: {\PS}, {\PD}, {\CSS} and {\CSD}.
+{\PS} represents the static data about a procedure
+This data includes the procedure's name and arity,
+the source file it can be found in and the line number within that source file.
+\CSS represents static data for a call cite.
+This includes the procedure the call site is found in, the line number,
+the goal path and the callee (if known statically).
+The dynamic variants of these structures, \PD and {\CSD},
+form the call tree beginning at \code{main/2} (a \PD structure)
+which has a number of \CSD structures each having \PD structures
+beneith them.
+The actual profiling data for a call and its context are stored in
+the \CSD structure for that call,
+the context is identified by the sequence of structures pointing to this
+structure.
+When the profiling data file is read,
+the profiling tool will build the call graph and perform a topological
+sort.
+The result of the sort is a list of SCCs
+(which \citet{conway-deep} calls \emph{cliques})
+each SCC is used to create a \Clique data structure.
+A number of indexes are also constructed.
+The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
+efficently traverse the program's profile in both
+the easy to browse user interface,
+and automated tools, such as the automatic parallelism analysis.
+
+% Callseqs
 Profilers have traditionally measured time
 by sampling the program counter at clock interrupts.
 Unfortunately, even on modern machines
@@ -198,7 +267,7 @@ being selected almost at random.
 We have therefore implemented a finer-grained measure of time
 that turned out to be very useful
 even though it is inherently approximate.
-This measure is call sequence counts (CSCs):
+This measure is \emph{call sequence counts} (CSCs):
 the profiled program basically behaves
 as if the occurrence of a call signified
 the occurrence of a new kind of profiling interrupt.
@@ -342,19 +411,19 @@ The auto-parallelisation work described in my honours report
 would not have benifited from context specific coverage data.
 
 \begin{figure}
-\begin{verbatim}
+\begin{tabular}{l}
 \code{map(P, Xs0, Ys) :-} \\
 \code{~~~~(} \\
 \code{~~~~~~~~}\instr{coverage\_point(ProcStatic, 0);} \\
 \code{~~~~~~~~Xs0 = [],} \\
 \code{~~~~~~~~Ys = []} \\
-\code{~~~~;
+\code{~~~~;} \\
 \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
 \code{~~~~~~~~P(X, Y),} \\
 \code{~~~~~~~~map(P, Xs, Ys0),} \\
 \code{~~~~~~~~Ys = [Y $|$ Ys0]} \\
 \code{~~~~).} \\
-\end{verbatim}
+\end{tabular}
 \caption{Coverage annotated \code{map/3}.}
 \label{fig:map_coverage}
 \end{figure}
