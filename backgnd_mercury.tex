@@ -67,8 +67,6 @@ $$
 % \end{figure}
 %\vspace{-1mm}
 
-\paul{XXX: Complete/incomplete switches}
-
 \noindent
 The atomic goals are unifications
 (which the compiler breaks down until they contain
@@ -97,6 +95,12 @@ A switch is a disjunction in which
 each disjunct unifies the same bound variable
 with a different function symbol.
 Switches in Mercury are thus analogous to switches in languages like C.
+If there is a case in the switch for each function symbol in the
+switched-on value's type, then the switch is said to be complete.
+Otherwise the switch is incomplete,
+that is to say,
+there are function symbols in the variable's type that are not covered
+by a case in the switch.
 The purity promise is described on page \pageref{page:purity}.
 
 Mercury has a strong Hindley-Milner~\citep{hindly69:types,milner78:types} type
@@ -234,21 +238,29 @@ which may put upper and lower bounds on the number of its possible solutions
 (in the absence of infinite loops and exceptions).
 A determinism may impose an upper bound of one solution,
 and it may impose a lower bound of either zero solutions or one solution.
-\code{det} procedures succeed exactly once
+\ddet procedures succeed exactly once
 (upper bound is one, lower bound is one);
-\code{semidet} procedures succeed at most once
+\dsemidet procedures succeed at most once
 (upper bound is one, no lower bound);
-\code{multi} procedures succeed at least once
+\dmulti procedures succeed at least once
 (lower bound is one, no upper bound);
-\code{nondet} procedures may succeed any number of times
+\dnondet procedures may succeed any number of times
 (no bound of either kind).
-Goals with determinism \code{failure} can never succeed
+Goals with determinism \dfailure can never succeed
 (upper bound is zero, no lower bound).
-Goals with determinism \code{erroneous}
+Goals with determinism \derroneous
 have an upper bound of zero and a lower bound of one,
 which means they can neither succeed nor fail,
 they must either throw an exception or loop forever.
-\paul{XXX: Committed choice}
+There are two committed choice determinisms:
+\dccmulti is analogous to \dmulti and
+\dccnondet is analogous to \dnondet;
+except that the code will commit to the first solution.
+Code generation therefore handles these determinisms as if they are
+\ddet and \dsemidet respectively.
+The programmer may be required to promise
+(through a special goal type)
+that the multiple solutions to committed choice code are equivalent.
 
 Each procedure's mode declaration
 typically declares its determinism (see the mode declarations for append above).
