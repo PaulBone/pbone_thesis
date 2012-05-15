@@ -355,22 +355,23 @@ and used the resulting coverage data in a variable use time analysis.
 \subsection{Coverage Profiling}
 \label{sec:coverage}
 
-The deep profiler records port counts for predicates.
-The traditional port model~\cite{port_model} describes each predicate as
+The traditional Prolog port model~\cite{port_model} describes each predicate as
 having four ports through which control may flow.
-Control can flow into a predicate through either the call or redo ports,
-control flows out of a predicate through either the exit or fail ports.
+Control can flow into a predicate through either the \emph{call} or
+\emph{redo} ports,
+control flows out of a predicate through either the \emph{exit} or
+\emph{fail} ports.
 These describe:
     a call being made to the predicate,
     a call to the predicate being re-entered because there may be more
     solutions,
     the predicate exiting with a solution,
     or the predicate failing because there are no more solutions.
-Mercury adds an extra port to these semantics known as the exception port,
+Mercury adds an extra port to these semantics known as the
+\emph{exception} port,
 which a predicate uses to return control to its caller when it throws an
 exception.
-The following invarient must hold,
-control must leave a predicate the same number of times that it enters.
+Control must leave a predicate the same number of times that it enters:
 
 \begin{equation*}
 Calls + Redos = Exits + Fails + Exceptions
@@ -378,13 +379,45 @@ Calls + Redos = Exits + Fails + Exceptions
 
 \noindent
 Mercury adds additional invariants for many determinism types.
-For example, determinisitic code may not Redo or Fail.
+For example, determinisitic code may not redo or fail,
+therefore these port counts will be zero for deterministic code.
 The deep profiler tracks the number of times each port is used for a given
 call.
-This data can be uesd to measure code coverage in a Mercury program.
+This data can be uesd to generate some idea of code coverage in a
+Mercury program.
+
+Code coverage of many goals can be inferred,
+in the simple case of a conjunction containing deterministic conjuncts.
+each conjunct will have the same coverage as the one before it,
+(we make the assumption that the code does not thrown an exception
+as doing so is rare).
+Simiarly,
+the sum of the coverage at the beginning of the \emph{then} and \emph{else}
+branches of an \emph{if-then-else} will be the same as the coverage
+before that if-then-else.
+The same is true for the ends of these branches and the end of the
+if-then-else.
+The coverage at the beginning of the then part is also equal to the
+number of times the \emph{condition} of the if-then-else succeeds.
+Therefore,
+in a single forward pass,
+we will attempt to infer the coverage at the beginning of the branches
+based on the coverage before the if then else and at the end of the
+condition.
+A similar inference can be made for switches,
+except that they do not have branches, we simply infer the
+coverage of the final switch branch based on the coverage of the other
+branches and before the switch provided that it is a complete switch.
 
 However, port counts alone will not provide complete coverge information.
-We introduced coverage points to address this problem.
+for example, a conjunction containing a sequence of semidet
+unifictations will have incomplete coverage information:
+We can not know how often each individual unifcation fails.
+We introduced coverage profiling as part of Mercury's deep profiler to
+add extra instrumentation to gather coverage data where it would
+otherwise be unknown.
+
+% XXX: Make it clear that complete coverage data can be inferred.
 When the compiler instruments the program for deep profiling it will make
 a forward pass through the goal tree of each predicate.
 During this pass it will track whether or not it will be possible to
@@ -396,19 +429,37 @@ exits.
 If the unification is determinstic then it will also have the same number of
 exits.
 Coverage points are introduced often at the beginning of braches such as
-switches --- but never in the last case of a swich whose coverage can be
+switches --- 
+but never in the last case of a swich whose coverage can be
 inferred from the others.
-They're also inserted after any goal whose exit port count is unknown.
-Each coverage point referrs to a counter which is incremented each time the
-coverage point is executed.
-These counters are not associated with context the way other performance
-data in Mercury is.
-Therefore,
+They are also inserted after any goal whose exit port count is unknown.
+
+Coverage data is tracked in the \PS structure
+which we introduced in Section \ref{sec:backgnd_deep}.
+Three new fields where added to the \PS structure:
+a constant integer representing the number of coverage points in this
+procedure and the sizes of the following arrays;
+an array of constant coverage point static structures,
+each describing the static details of the coverage point;
+and an array of integers representing the number of times each coverage
+point has been executed.
+The coverage point instrumentation code referrs to the procedure's \PS
+structure and increments the coverage point at the approprite index.
+The static coverage data,
+which includes the goal path of the coverage point and the type of the
+coverage point (branch or post-goal),
+is written out with the profile.
+Because coverage points are associated with \PS structures,
+and not either \PD or \CSD structures,
+they are not associated with context in the way that other profiling
+data is.
+That is to say,
 coverage data of a particular predicate covers the general use of that
 predicate,
 The auto-parallelisation work described in my honours report
 \citep{pbone_hons}
 would not have benifited from context specific coverage data.
+
 
 \begin{figure}
 \begin{tabular}{l}
@@ -428,29 +479,33 @@ would not have benifited from context specific coverage data.
 \label{fig:map_coverage}
 \end{figure}
 
-\paul{Explain changes to data structures.}
-
 Figure \ref{fig:map_coverage} shows \code{map/3} instrumented for coverage
 profiling.
 There is a single coverage point inserted in the beginning of the first
 case of the switch on the list.
-The call to the instrumetnation code 
-refers to the ProcStatic structure,
-and an index into the coverage point array contained in it.
+This point along with the coverage of the procedure as a whole
+is enough to infer coverage for the whole procedure on a single pass.
+It is true that the the coverage point could be removed and the port
+counts of the recursive code in this example could be used,
+doing so would require multiple passes.
+Coverage profiling adds only a small cost to profiling,
+it was not, and has never been, a high priority to optimise this
+further.
+The coverage point in the figure has two arguments,
+the first points the instrumetation code at the \PS containing
+this procedure's coverage points,
+the second is the index within this procedure's coverage point arrays
+for this coverage ooint.
+Although the instrumentation code appears to be a call,
+it is only a few lines in C and is therefore implemented as a C
+preprocessor macro, and therefore inlined into the compiled procedure. 
 
-a structure from the deep profiler where information about this procedure is
-stored.
-\paul{XXX Write about ProcStatic and other structures in the deep profiler
-section.}
-
-
-\paul{XXX: Add example}
-
-\status{These two subsections are the only ones not written in this chapter
-now.}
 
 \subsection{Variable Use Time Analysis}
 \label{sec:var_use_analysis}
+
+\status{These two subsections are the only ones not written in this chapter
+now.}
 
 
 % Incorrect background, some of this prose can be used later.
