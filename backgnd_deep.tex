@@ -2,7 +2,7 @@
 \status{
     This section and 2.5 have been merged, as they provide motivation for one
     another.
-    This will likly be a large section, so I've broken it into sub-sections
+    This will likely be a large section, so I've broken it into sub-sections
 }
 
 % Declaration of work done that contributed to a previous award,
@@ -10,20 +10,20 @@ Some of the work described in this section contributed towards my honours resear
 % Note that my degree is not '... with Honours', it's just 'Honours', despite
 % what my degree actually says.  Basically, I've been erroneously awarded an
 % extra bachelor's degree.
-which was in partial forfillment of the Degree of Batchelor of Computer Science
+which was in partial fulfillment of the Degree of Bachelor of Computer Science
 Honours.
 Most parts of the implementation were incomplete and did not work correctly or
 at all.
 Therefore,
 their evaluation could not be included in my honours report.
-They have since been completed and corrected during my Ph.D.\ candidature.
+They have since been completed and corrected during my Ph.D.\ Candidature.
 There are some exceptions,
-most sagnificantly the coverage profiling transformation (Section \ref{sec:coverage})
-developed for my honours research project was complete, and is used, largly
+most significantly the coverage profiling transformation (Section \ref{sec:coverage})
+developed for my honours research project was complete, and is used, largely
 unchanged in my Ph.D.\ research.
 The related analysis described in Section \ref{sec:var_use_analysis}
 and the feedback framework in Section \ref{sec:feedback}
-were also writen as part of my honours research project.
+were also written as part of my honours research project.
 Still other parts of this section are not my own work,
 namely the work described in
 \citet{conway:2001:mercury-deep} and
@@ -48,20 +48,20 @@ namely the work described in
 \paul{XXX: These items aren't background.}
 \begin{itemize}
 \item also explain the limitations of deep profiling,
-      for example, that levels within recorsive code don't have seperate
+      for example, that levels within recursive code don't have separate
       data recorded for them.
       (The solution to this will probably be in the overlap chapter)
       XXX: This problem didn't exist in my honours work, it
 \item Callgraph search
 \end{itemize}
 
-Most compiler optimizations operate only on the representation of the program
+Most compiler optimisations operate only on the representation of the program
 in the compiler's memory.
-For most optimizations this is sufficient.
+For most optimisations this is sufficient.
 However,
-automatic parallelisation is sensative to variations in the runtime cost of
+automatic parallelisation is sensitive to variations in the runtime cost of
 parallelised tasks.
-This sensativity increases when dependent parallelisation is used.
+This sensitivity increases when dependent parallelisation is used.
 For example,
 a search operation on a small list is cheap, compared to the same operation on
 a large list.
@@ -74,7 +74,7 @@ overheads of parallelisation for which there is no speed up will slow the
 program down.
 Therefore, not just sub-optimal to parallelise the search of the small list,
 but detrimental.
-The only way we can know the actual cost of most peices of code,
+The only way we can know the actual cost of most pieces of code,
 is by understanding their typical inputs,
 or measuring their runtime cost while operating on typical inputs.
 Therefore,
@@ -86,13 +86,13 @@ which are, in turn, used to select where and how parallelism is introduced.
 
 \picfigure{prof_fb}{Profiler feedback loop}
 
-To use profiling data for optimizations the usual workflow for compiling
+To use profiling data for optimisations the usual workflow for compiling
 software must change.
 Figure \ref{fig:prof_fb} shows a profiler-feedback workflow.
-The source code is compiled, with profling enabled and the resulting program is
+The source code is compiled, with profiling enabled and the resulting program is
 executed on a representative input.
 As the program terminates it writes its profiling data to disk,
-The profling data includes a bytecode representation of the program
+The profiling data includes a bytecode representation of the program
 similar to the compiler's representation.
 The analysis tool reads this file,
 and writes out a description of how to parallelise the program in the form of a
@@ -106,28 +106,28 @@ Figure \ref{fig:prof_fb} shows this workflow.
 A common criticism of profile directed optimisation is that the programmer will
 have to compile the program twice,
 and run it at least once to generate profiling data.
-"If I have to run the program in order to optimize it, then the program has
+"If I have to run the program in order to optimise it, then the program has
 already
 done its job and there's no point continuing with the optimisation?"
 The answer to this is that a program's life time is often far more than a
 single execution.
 A program will usually be used many times, and by many people.
-Each time the optimization will have a benifit,
-this benifit will pay off the cost of the feedback directed optimisation.
+Each time the optimisation will have a benefit,
+this benefit will pay off the cost of the feedback directed optimisation.
 We expect that feedback-directed optimisations would normally be used
 when the programmer is building a \emph{release candidate} version of their
 program,
 after they have performed testing and fixed any bugs.
 
 Another criticism is that if the program is profiled with one set of input and
-used with another that the profile will not necessarly represent the actual use
+used with another that the profile will not necessarily represent the actual use
 of the program,
 and that the optimisation may not be as good as it could be.
 There are many different types of programs, and therefore many different
 program inputs;
 we cannot hope to address this particular problem directly.
 Selecting a typical input for a given program must be done by the programmer.
-Other stratergies exist that avoid this problem
+Other strategies exist that avoid this problem
 such as dynamic recompilation.
 
 \subsection{The deep profiler}
@@ -142,7 +142,7 @@ the profiler would gather separate performance data,
 most Mercury programs would use
 the same polymorphic code to handle all those tables,
 making the task of disentangling the characteristics of the different tables
-infeasibly hard.
+Infeasibly hard.
 
 This problem has been solved for Mercury by introducing deep profiling
 \citep{conway:2001:mercury-deep}.
@@ -206,7 +206,7 @@ is flattened into 12 individual conjuncts (excluding the plus-or-minus).
 
 Therefore the profiler
 (and other tools such as the debugger) introduced \emph{goal paths}
-to uniquly identify a sub goal in any goal tree such as a procedure's%
+to uniquely identify a sub goal in any goal tree such as a procedure's%
 \footnote{
 A procedure is either a predicate \& mode or a function (Section
 \ref{sec:backgnd_mer})}
@@ -214,7 +214,7 @@ body.
 A goal path is a list of goal path steps, each step describes which
 sub-goal to recurse into when traversing a goal structure.
 \paul{XXX: An example would make this easier to follow,
-but I feel I might be yack-shaving by introducing too many examples.}
+but I feel I might be yak-shaving by introducing too many examples.}
 Since the debugger was written first goal paths where introduced then,
 \paul{XXX: Check that the mdb paper really does describe goal paths}
 and the deep profiler was able to re-use this concept~\cite{mdb}.
@@ -231,7 +231,7 @@ the goal path and the callee (if known statically).
 The dynamic variants of these structures, \PD and {\CSD},
 form the call tree beginning at \code{main/2} (a \PD structure)
 which has a number of \CSD structures each having \PD structures
-beneith them.
+beneath them.
 The actual profiling data for a call and its context are stored in
 the \CSD structure for that call,
 the context is identified by the sequence of structures pointing to this
@@ -244,7 +244,7 @@ The result of the sort is a list of SCCs
 each SCC is used to create a \Clique data structure.
 A number of indexes are also constructed.
 The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
-efficently traverse the program's profile in both
+efficiently traverse the program's profile in both
 the easy to browse user interface,
 and automated tools, such as the automatic parallelism analysis.
 
@@ -299,10 +299,10 @@ only on a profiling run that lasts for years.
 
 \citet{tannier:2007:parallel_mercury} describes a prior attempted at automatic
 parallelism in Mercury.
-In this approch, the parallelisation feedback data was gathered by an analysis
+In this approach, the parallelisation feedback data was gathered by an analysis
 tool,
 this feedback was a list of the procedures with the highest cost in the program,
-these were choosen by a configurable measurement and threshold.
+these were chosen by a configurable measurement and threshold.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.
 Nor did it use any advanced features of the profiler.
@@ -339,7 +339,7 @@ Speedup & = & \frac{T_{Sequntial}}{T_{Parallel}}
 \end{eqnarray*}
 
 This describes the speedup due to parallelism of two conjuncts, $A$ and $B$.
-whose secution times are $T_A$ and $T_B$.
+whose execution times are $T_A$ and $T_B$.
 In the parallel case $B$'s execution time is $T_{DependantB}$ since it
 accounts for the $B$'s dependency on $A$.
 Except for this small difference,
@@ -379,13 +379,13 @@ Calls + Redos = Exits + Fails + Exceptions
 
 \noindent
 Mercury adds additional invariants for many determinism types.
-For example, determinisitic code may not redo or fail,
+For example, deterministic code may not redo or fail,
 therefore these port counts will be zero for deterministic code.
 The deep profiler tracks the number of times each port is used for a given
 call.
 Port counts provide code coverage data predicate and call-site entry and exit.
 
-% XXX: Actually implment the case for inferring Elses' coverage.
+% XXX: Actually implement the case for inferring Elses' coverage.
 Code coverage of many goals can be inferred,
 in the simple case of a conjunction containing deterministic conjuncts.
 each conjunct will have the same coverage as the one before it,
@@ -393,7 +393,7 @@ each conjunct will have the same coverage as the one before it,
 as doing so is rare).
 It follows that a deterministic conjunction containing a single call.
 can have complete coverage information inferred for all of its conjuncts.
-Simiarly,
+Similarly,
 the coverage before an \emph{if-then-else} can be inferred as the sum
 of the coverage at the beginning of the \emph{then} and \emph{else}
 branches,
@@ -413,14 +413,14 @@ except that they do not have a condition,
 we simply infer the
 coverage of the final switch branch based on the coverage of the other
 branches and before the switch provided that it is a complete switch.
-% A good reader might realize that we've only discussed a foward pass,
+% A good reader might realize that we've only discussed a forward pass,
 % more complicated passes are possible but the reader will have to take
 % in on faith that this will be discussed later in this chapter.
 
-However, port counts alone will not provide complete coverge information.
+However, port counts alone will not provide complete coverage information.
 for example, a conjunction containing a sequence of semidet
-unifictations will have incomplete coverage information:
-We can not know how often each individual unifcation fails.
+unifications will have incomplete coverage information:
+We can not know how often each individual unification fails.
 We introduced coverage profiling as part of Mercury's deep profiler to
 add extra instrumentation to gather coverage data where it would
 otherwise be unknown.
@@ -485,8 +485,8 @@ an array of constant structures,
 each describing the static details of a coverage point;
 and an array of integers representing the number of times each coverage
 point has been executed.
-The coverage point instrumentation code referrs to the procedure's \PS
-structure and increments the coverage point's counter at the approprite index.
+The coverage point instrumentation code refers to the procedure's \PS
+structure and increments the coverage point's counter at the appropriate index.
 The static coverage data,
 which includes the goal path of the coverage point and the type of the
 coverage point (branch or post-goal),
@@ -500,14 +500,14 @@ coverage data of a particular predicate covers the general use of that
 predicate,
 The auto-parallelisation work described in my honours report
 \citep{pbone_hons}
-would not have benifited from context specific coverage data.
+would not have benefited from context specific coverage data.
 
 The coverage point in the Figure \ref{fig:map_coverage}
 has two arguments,
 the first points the instrumetation code at the \PS containing
 this procedure's coverage points,
 the second is the index within this procedure's coverage point arrays
-for this coverage ooint.
+for this coverage point.
 Although the instrumentation code appears to be a call,
 it is only a few lines in C and is therefore implemented as a C
 preprocessor macro, and therefore inlined into the compiled procedure. 
@@ -521,7 +521,7 @@ now.}
 
 
 % Incorrect background, some of this prose can be used later.
-%This approch also used profiling feedback data similar to Tannier's
+%This approach also used profiling feedback data similar to Tannier's
 %work.
 %However, it also made use of and some of the advanced
 %features of the deep profiler.
@@ -529,11 +529,11 @@ now.}
 %program.
 %This representation, along with the profiling data could both be accessed by
 %the analysis.
-%My approch differed from Tannier's in that the analysis was done outside of the
+%My approach differed from Tannier's in that the analysis was done outside of the
 %compiler in an analysis tool.
 %The feedback given to the compiler was the result of this analysis:
 %a list of candidate parallel conjunctions that the compiler would attempt to parallelise.
-%Each candidate parallel conjunction describes its location in the origianal
+%Each candidate parallel conjunction describes its location in the original
 %program and how its conjuncts should be constructed of smaller goals.
 %However, at the completion of my honours project the implementation was incomplete
 %and no feedback data was actually given to the compiler.
@@ -543,14 +543,14 @@ now.}
 %% call graph traversal.
 %
 %The auto-parallelism analysis traverses the call graph looking for parallelism
-%opertunities.
+%opportunities.
 %The traversal begins at the root of the call graph,
 %namely \code{main/2}.
 %Each node in the graph is an SCC, and each edge is a call from a call site to a
 %distinct callee.
 %Each procedure in an SCC is searched for parallelisation candidates before any
 %child-nodes are checked (which are also SCCs).
-%The search continues in this fassion until it finds an edge
+%The search continues in this fashion until it finds an edge
 %representing a call whose cost is too low such that it is not worth parallelising
 %anything within the callee, and therefore, in the callee's callees.
 %In practice, only a small part of the callgraph is traversed,
@@ -563,13 +563,13 @@ now.}
 %point in the call graph will not create any useful parallelism.
 %This traversal could only be done with access to both a representation of the
 %program being profiled and profiling data of the program.
-%Therefore, implementing the analysis in a seperate tool was the obvious choice.
+%Therefore, implementing the analysis in a venerate tool was the obvious choice.
 %
 %Because each node in the graph is an SCC, and the graph is a tree
-%the traversal does not need to worry about following cycles infinitly.
+%the traversal does not need to worry about following cycles infinitely.
 %However,
 %determining the cost of recursive code is problematic.
-%If a predicate calls itsself, we cannot know the cost of the recursive
+%If a predicate calls itself, we cannot know the cost of the recursive
 %call,
 %this cost is attributed to the cost of the call of that predicate which
 %is already active.
