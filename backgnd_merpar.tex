@@ -22,7 +22,7 @@ More information about Mercury's execution algorithm can be found in
 To make parallel execution possible \citet{conway:2002:par} allowed
 multiple instances of the engine structure to be used at once.
 The Operating System's threading library,
-namely POSIX Threads~\citep{pthreads},
+namely POSIX Threads~\citep{butenhof1997:pthreads},
 is used to expose parallelism to the OS.
 Each POSIX Thread (pthread) owns a single engine.
 The number of engines that a parallel Mercury program will allocate on startup

@@ -105,6 +105,7 @@ Other strategies exist that avoid this problem
 such as dynamic recompilation.
 
 \subsection{The deep profiler}
+\label{sec:backgnd_deep}
 
 Typical Mercury programs make heavy use of code reuse in the form of
 parametric polymorphism and higher order calls.
@@ -121,7 +122,7 @@ infeasibly hard.
 This problem has been solved for Mercury by introducing deep profiling
 \citep{conway:2001:mercury-deep}.
 Mercury's deep profiler gathers much more information about the context of
-each measurement than traditional profilers like \code{gprof}\cite{gprof}.
+each measurement than traditional profilers like \code{gprof}\citet{gprof}.
 When it records the occurrence of a call,
 a memory allocation or a profiling clock interrupt,
 it records with it the chain of ancestor calls,
@@ -183,15 +184,16 @@ Therefore the profiler
 to uniquely identify a sub goal in any goal tree such as a procedure's%
 \footnote{
 A procedure is either a predicate \& mode or a function (Section
-\ref{sec:backgnd_mer})}
+\ref{sec:back_mercury})}
 body.
 A goal path is a list of goal path steps, each step describes which
-sub-goal to recurse into when traversing a goal structure.
-\paul{XXX: An example would make this easier to follow,
-but I feel I might be yak-shaving by introducing too many examples.}
+sub-goal to recurse into when traversing a goal structure fromits root
+to either its leaves or some compound goal.
+The goal path "c3;d2" refers to the second disjunct "d2" within the
+third conjunct "c3".
+Goal paths are stored as lists and canonicalised as strings.
 Since the debugger was written first goal paths where introduced then,
-\paul{XXX: Check that the mdb paper really does describe goal paths}
-and the deep profiler was able to re-use this concept~\cite{mdb}.
+and the deep profiler was able to re-use this concept~\citep{mdb}.
 
 There are four structures used during profiling,
 each one is also reflected in the profiling data.
@@ -214,7 +216,7 @@ When the profiling data file is read,
 the profiling tool will build the call graph and perform a topological
 sort.
 The result of the sort is a list of SCCs
-(which \citet{conway-deep} calls \emph{cliques})
+(which \citet{conway:2001:mercury-deep} calls \emph{cliques})
 each SCC is used to create a \Clique data structure.
 A number of indexes are also constructed.
 The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
@@ -289,7 +291,7 @@ where independent or had fewer than some $N$ shared variables.
 first person in papers,
 Is this true for dissertations as well?}
 For my honours project I attempted automatic parallelism of Mercury
-\citep{paul_hons}.
+\citep{bone:2008:hons}.
 There where a number of differences between my work and Tannier's.
 The first differences is that at the time of my work the deep profiler
 was able to export a representation of the program
@@ -329,8 +331,11 @@ and used the resulting coverage data in a variable use time analysis.
 \subsection{Coverage Profiling}
 \label{sec:coverage}
 
-The traditional Prolog port model~\cite{port_model} describes each predicate as
-having four ports through which control may flow.
+\paul{I can't get a paper of the reference I want
+\cite{box-model}, so I don't know what's in the paper}
+The traditional Prolog box
+model~\citep{adventures_in_prolog} describes each predicate
+as having four ports through which control may flow.
 Control can flow into a predicate through either the \emph{call} or
 \emph{redo} ports,
 control flows out of a predicate through either the \emph{exit} or
@@ -473,7 +478,7 @@ That is to say,
 coverage data of a particular predicate covers the general use of that
 predicate,
 The auto-parallelisation work described in my honours report
-\citep{pbone_hons}
+\citep{bone:2008:hons}
 would not have benefited from context specific coverage data.
 
 The coverage point in the Figure \ref{fig:map_coverage}
@@ -488,10 +493,10 @@ preprocessor macro, and therefore inlined into the compiled procedure.
 
 
 \subsection{Variable Use Time Analysis}
-\label{sec:var_use_analysis}
+\label{sec:var_use_time}
 
 As described above,
-the automatic parallelism analysis used in \citet{pbone-hons} considers
+the automatic parallelism analysis used in \citet{bone:2008:hons} considers
 conjunctions with at most two conjuncts and one shared variable.
 To predict how much parallelism is available it needs to know
 when that variable is produced by the first conjunct
