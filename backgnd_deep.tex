@@ -383,18 +383,21 @@ For example, determinisitic code may not redo or fail,
 therefore these port counts will be zero for deterministic code.
 The deep profiler tracks the number of times each port is used for a given
 call.
-This data can be uesd to generate some idea of code coverage in a
-Mercury program.
+Port counts provide code coverage data predicate and call-site entry and exit.
 
+% XXX: Actually implment the case for inferring Elses' coverage.
 Code coverage of many goals can be inferred,
 in the simple case of a conjunction containing deterministic conjuncts.
 each conjunct will have the same coverage as the one before it,
-(we make the assumption that the code does not thrown an exception
+(we make the assumption that the code does not throw an exception
 as doing so is rare).
+It follows that a deterministic conjunction containing a single call.
+can have complete coverage information inferred for all of its conjuncts.
 Simiarly,
-the sum of the coverage at the beginning of the \emph{then} and \emph{else}
-branches of an \emph{if-then-else} will be the same as the coverage
-before that if-then-else.
+the coverage before an \emph{if-then-else} can be inferred as the sum
+of the coverage at the beginning of the \emph{then} and \emph{else}
+branches,
+assuming that the condition has at most one solution.
 The same is true for the ends of these branches and the end of the
 if-then-else.
 The coverage at the beginning of the then part is also equal to the
@@ -402,12 +405,17 @@ number of times the \emph{condition} of the if-then-else succeeds.
 Therefore,
 in a single forward pass,
 we will attempt to infer the coverage at the beginning of the branches
-based on the coverage before the if then else and at the end of the
-condition.
+based on the coverage before the if-then-else and at the end of the
+condition,
+and the condition's determinism.
 A similar inference can be made for switches,
-except that they do not have branches, we simply infer the
+except that they do not have a condition,
+we simply infer the
 coverage of the final switch branch based on the coverage of the other
 branches and before the switch provided that it is a complete switch.
+% A good reader might realize that we've only discussed a foward pass,
+% more complicated passes are possible but the reader will have to take
+% in on faith that this will be discussed later in this chapter.
 
 However, port counts alone will not provide complete coverge information.
 for example, a conjunction containing a sequence of semidet
@@ -417,49 +425,22 @@ We introduced coverage profiling as part of Mercury's deep profiler to
 add extra instrumentation to gather coverage data where it would
 otherwise be unknown.
 
-% XXX: Make it clear that complete coverage data can be inferred.
-When the compiler instruments the program for deep profiling it will make
-a forward pass through the goal tree of each predicate.
-During this pass it will track whether or not it will be possible to
-calculate the coverage of the current goal based on those that came before
-it.
-For example, a unifcation (which does not have any port counts of its own)
-that follows a call will be called the same number of times as the call
-exits.
-If the unification is determinstic then it will also have the same number of
-exits.
-Coverage points are introduced often at the beginning of braches such as
-switches --- 
-but never in the last case of a swich whose coverage can be
-inferred from the others.
-They are also inserted after any goal whose exit port count is unknown.
-
-Coverage data is tracked in the \PS structure
-which we introduced in Section \ref{sec:backgnd_deep}.
-Three new fields where added to the \PS structure:
-a constant integer representing the number of coverage points in this
-procedure and the sizes of the following arrays;
-an array of constant coverage point static structures,
-each describing the static details of the coverage point;
-and an array of integers representing the number of times each coverage
-point has been executed.
-The coverage point instrumentation code referrs to the procedure's \PS
-structure and increments the coverage point at the approprite index.
-The static coverage data,
-which includes the goal path of the coverage point and the type of the
-coverage point (branch or post-goal),
-is written out with the profile.
-Because coverage points are associated with \PS structures,
-and not either \PD or \CSD structures,
-they are not associated with context in the way that other profiling
-data is.
-That is to say,
-coverage data of a particular predicate covers the general use of that
-predicate,
-The auto-parallelisation work described in my honours report
-\citep{pbone_hons}
-would not have benifited from context specific coverage data.
-
+When the compiler instruments the program for deep profiling,
+it will make a forward pass through the goal tree of each procedure.
+During this pass,
+a boolean value is maintained that describes whether or not coverage
+data would be available at this point on the program.
+When this boolean becomes false,
+the algorithm will introduce a coverage point at that place in the code
+ans set the value to true.
+The value will be set to false after a goal with a determinism other than
+\ddet or \dccmulti and which does not provide coverage data of its own,
+or at the beginning of a branch where the coverage can not be inferred.
+This algorithm has the same structure as the coverage inference
+algorithm,
+this way,
+a coverage point will always be placed where the coverage inference
+algorithm would expect to find one.
 
 \begin{figure}
 \begin{tabular}{l}
@@ -479,19 +460,50 @@ would not have benifited from context specific coverage data.
 \label{fig:map_coverage}
 \end{figure}
 
-Figure \ref{fig:map_coverage} shows \code{map/3} instrumented for coverage
-profiling.
-There is a single coverage point inserted in the beginning of the first
-case of the switch on the list.
+Figure \ref{fig:map_coverage} shows \code{map/3} annotated with a
+coverage point.
+The forward pass through the procedure would not be able to infer
+coverage at the beginning of this switch arm,
+and therefore the similar pass in the deep profiler introduced a
+coverage point at that position.
 This point along with the coverage of the procedure as a whole
 is enough to infer coverage for the whole procedure on a single pass.
 It is true that the the coverage point could be removed and the port
 counts of the recursive code in this example could be used,
-doing so would require multiple passes.
-Coverage profiling adds only a small cost to profiling,
+doing so would require multiple passes
+for both inference and instrumentation..
+Coverage profiling adds only a small cost to profiling;
 it was not, and has never been, a high priority to optimise this
 further.
-The coverage point in the figure has two arguments,
+
+Coverage data is tracked in the \PS structure
+which we introduced in Section \ref{sec:backgnd_deep}.
+Three new fields where added to the \PS structure:
+a constant integer representing the number of coverage points in this
+procedure;
+an array of constant structures,
+each describing the static details of a coverage point;
+and an array of integers representing the number of times each coverage
+point has been executed.
+The coverage point instrumentation code referrs to the procedure's \PS
+structure and increments the coverage point's counter at the approprite index.
+The static coverage data,
+which includes the goal path of the coverage point and the type of the
+coverage point (branch or post-goal),
+is written out with the profile.
+Because coverage points are associated with \PS structures,
+and not either \PD or \CSD structures,
+they are not associated with context in the way that other profiling
+data is.
+That is to say,
+coverage data of a particular predicate covers the general use of that
+predicate,
+The auto-parallelisation work described in my honours report
+\citep{pbone_hons}
+would not have benifited from context specific coverage data.
+
+The coverage point in the Figure \ref{fig:map_coverage}
+has two arguments,
 the first points the instrumetation code at the \PS containing
 this procedure's coverage points,
 the second is the index within this procedure's coverage point arrays
