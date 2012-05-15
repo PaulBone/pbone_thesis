@@ -10,7 +10,7 @@ Some of the work described in this section contributed towards my honours resear
 % Note that my degree is not '... with Honours', it's just 'Honours', despite
 % what my degree actually says.  Basically, I've been erroneously awarded an
 % extra bachelor's degree.
-which was in partial fulfillment of the Degree of Bachelor of Computer Science
+which was in partial fulfilment of the Degree of Bachelor of Computer Science
 Honours.
 Most parts of the implementation were incomplete and did not work correctly or
 at all.
@@ -28,32 +28,6 @@ Still other parts of this section are not my own work,
 namely the work described in
 \citet{conway:2001:mercury-deep} and
 \citet{tannier:2007:parallel_mercury}.
-
-\status{Plan for this section:}
-
-\begin{itemize}
-\item Why profile directed parallelisation.
-\item the deep profiler,
-\item including a description of why deep profiling provides us with
-      more useful data than conventional profiling.
-\item Prior auto-parallelism work.
-\begin{itemize}
-    \item My honours thesis
-\end{itemize}
-\item Coverage profiling.
-\item Variable use analysis
-\item profiling feedback framework.
-\end{itemize}
-
-\paul{XXX: These items aren't background.}
-\begin{itemize}
-\item also explain the limitations of deep profiling,
-      for example, that levels within recursive code don't have separate
-      data recorded for them.
-      (The solution to this will probably be in the overlap chapter)
-      XXX: This problem didn't exist in my honours work, it
-\item Callgraph search
-\end{itemize}
 
 Most compiler optimisations operate only on the representation of the program
 in the compiler's memory.
@@ -142,7 +116,7 @@ the profiler would gather separate performance data,
 most Mercury programs would use
 the same polymorphic code to handle all those tables,
 making the task of disentangling the characteristics of the different tables
-Infeasibly hard.
+infeasibly hard.
 
 This problem has been solved for Mercury by introducing deep profiling
 \citep{conway:2001:mercury-deep}.
@@ -331,16 +305,16 @@ The formula used was:
 
 \begin{eqnarray*}
 T_{Sequential} & = & T_A + T_B \\
-T_{DependantB} & = & max(T_{BeforeProduceA}, T_{BeforeConsumeB}) +
+T_{DependentB} & = & max(T_{BeforeProduceA}, T_{BeforeConsumeB}) +
 T_{AfterConsumeB} \\
-T_{Parallel} & = & max(T_A, T_{DependantB}) + T_{Overheads} \\
-Speedup & = & \frac{T_{Sequntial}}{T_{Parallel}}
+T_{Parallel} & = & max(T_A, T_{DependentB}) + T_{Overheads} \\
+Speedup & = & \frac{T_{Sequential}}{T_{Parallel}}
 %\label{eqn:time_deppar}
 \end{eqnarray*}
 
 This describes the speedup due to parallelism of two conjuncts, $A$ and $B$.
 whose execution times are $T_A$ and $T_B$.
-In the parallel case $B$'s execution time is $T_{DependantB}$ since it
+In the parallel case $B$'s execution time is $T_{DependentB}$ since it
 accounts for the $B$'s dependency on $A$.
 Except for this small difference,
 the calculation of parallel execution time and speedup are the commonly
@@ -415,10 +389,10 @@ coverage of the final switch branch based on the coverage of the other
 branches and before the switch provided that it is a complete switch.
 % A good reader might realize that we've only discussed a forward pass,
 % more complicated passes are possible but the reader will have to take
-% in on faith that this will be discussed later in this chapter.
+% in on faith that this will be discussed later in this section.
 
 However, port counts alone will not provide complete coverage information.
-for example, a conjunction containing a sequence of semidet
+for example, a conjunction containing a sequence of \dsemidet
 unifications will have incomplete coverage information:
 We can not know how often each individual unification fails.
 We introduced coverage profiling as part of Mercury's deep profiler to
@@ -516,29 +490,52 @@ preprocessor macro, and therefore inlined into the compiled procedure.
 \subsection{Variable Use Time Analysis}
 \label{sec:var_use_analysis}
 
-\status{XXX: Currently working on this subsection}
+As described above,
+the automatic parallelism analysis used in \citet{pbone-hons} considers
+conjunctions with at most two conjuncts and one shared variable.
+To predict how much parallelism is available it needs to know
+when that variable is produced by the first conjunct
+and the first time it is consumed by the second.
+These times are calculated in the unit of call sequence counts.
 
-The algorithm for computing the expected production time
-of a given shared variable looks at the form of the conjunct:
+During compilation of dependent conjunctions a future is created to
+replace any shared variable.
+The compiler will attempt to push that future into the goal that
+produces the value so that,
+if possible,
+the \signal operation will be placed immediately after the unification
+that binds the variable.
+
+Therefore,
+the algorithm for computing the expected production time
+of a shared variable looks at the form of the conjunct that produces it.
+For each goal type it determines if it is possible to push the future
+into that goal so that the future is signaled as early as possible.
+As noted above,
+a future cannot be pushed into certain goal types,
+such as higher order calls, foreign code or calls that cross module
+boundaries.
+
 \begin{itemize}
 \item
 If the goal is a unification,
-the expected production time is zero,
-because our unit of time is the time between two successive calls.
-\tr{
+the expected production time is zero.
+Because call sequence counts measure the time between calls
+and the unification is not a call. 
 \item
 If the goal is a foreign code goal,
 the expected production time is the total cost of the goal.
-Unless the foreign code calls back into Mercury,
-we will measure this as exactly one CSC.
-}
+If the foreign code calls back into Mercury,
+then the cost of the goal is one CSC plus the cost of the goals executed
+when re-entering mercury.
+Otherwise, it is as exactly one CSC.
 \item
 If the goal is a first order call,
 we recurse on the body of the callee.
 \item
 If the goal is a higher order call,
 the expected production time is the cost of the call,
-because the compiler cannot (yet) insert
+because the compiler cannot insert
 the signalling of the future into the callee's body.
 \item
 If the goal is a conjunction $G_1,~\ldots,~G_n$,
@@ -549,16 +546,17 @@ and add the sum to the result of invoking the algorithm recursively on $G_k$.
 If the goal is a switch,
 we invoke the algorithm recursively on each switch arm,
 and compute a weighted average of the results,
-with the weights being the arms' entry counts.
+with the weights being the arms' entry counts as determined by coverage
+inference.
 \item
 If the goal is an if-then-else,
 we need the weighted average of the two possible cases:
 the variable being generated by the then arm versus the else arm.
 (It cannot be generated by the condition:
 variables generated by the condition are visible only from the then-arm.)
-% if they were visible from anywhere else,
-% they would not have a value if the condition failed.)
-% TODO: implement this behavior
+if they were visible from anywhere else,
+they would not have a value if the condition failed.)
+% TODO: implement this behaviour
 To find the first number,
 we invoke the algorithm on the then-arm,
 and add the result to the time taken by the condition.
@@ -573,13 +571,13 @@ with the count of the number of times the condition was entered.
 \item
 The goal cannot be a negation, because negated goals cannot bind variables.
 \item
-The goal cannot be a disjunction, because
-disjunctions cannot produce variables visible from det code.
-(To transition from nondet or multi code to det code,
-the programmer must quantify away the outputs of the nondet code.)
-% (a) semidet disjunctions cannot bind any variable, and
-% (b) if the disjunction were nondet or multi,
-% the original goal would have been nondet or multi as well.
+The goal cannot be a disjunction,
+Disjunctions may only be {\dsemidet}, \dmulti or {\dnondet}.
+\dsemidet code cannot be embedded in \ddet code,
+which is the only type of code that we consider parallelising.
+And \dmulti and \dnondet disjunctions would have to have their solutions
+quantified away to be used in \ddet code,
+meaning that they cannot produce any variables.
 \item
 If the goal is a quantification,
 then the inner goal must be det,
@@ -594,11 +592,11 @@ Using the weighted average for switches and if-then-elses is meaningful because
 the Mercury mode system dictates
 that if one arm of a switch or if-then-else generates a variable,
 then they \emph{all} must do so.
-\tr{
 The sole exception is arms that are guaranteed to abort the program,
 whose determinism is erroneous.
 We use a weight of zero for erroneous arms.
-}
+Coverage profiling was introduced to provide the weights of switch and
+if-then-else arms used by this algorithm.
 
 The algorithm we use for computing the time
 at which a shared variable is first consumed by the second conjunct
@@ -607,14 +605,21 @@ the main differences being that
 negated goals, conditions and disjunctions are allowed to consume variables,
 and some arms of a switch or if-then-else
 may consume a variable even if other arms do not.
-% In switches and if-then-elses that wait on a future in some arms but
-% not in all,
-% we assume that a wait operation will be inserted at the end of each
-% switch arm that does not wait on a future ---
-% this is a conservative assumption and could prevent introducing
-% parallelism that leads to a slow-down.
+In switches and if-then-elses that wait on a future in some arms but
+not in all,
+we assume that a wait operation will be inserted at the end of each
+switch arm that does not wait on a future ---
+this is a conservative assumption and could prevent introducing
+parallelism that leads to a slow-down.
+A similar assumption may be made when a variable is not used in a goal,
+such as when a procedure (followed by a call) never used one of its
+arguments.
 % XXX: This is not yet implemented.
-
+The other important difference is that when making 
+any other conservative assumption 
+such as when the algorithm finds a higher order call,
+the consumption time used is zero
+(it was the cost of the call when analysing for productions) 
 
 \subsection{Feedback framework}
 \label{sec:feedback}
@@ -645,7 +650,9 @@ These where considered requirements of the feedback framework.
 The on-disc format for the feedback information is very simple,
 it contains a header that identifies the file format,
 including a version number.
-What follows is a list of feedback information items.
+What follows is a list of feedback information items,
+these are stored in the format that Mercury uses for reading and writing
+terms.
 When the file is read in the file format identifier and revision
 number are checked,
 the list of information items is checked to ensure that no two items
@@ -654,7 +661,13 @@ for example,
 at most one item in this list can describe how to automatically parallelise
 a program.
 
-\paul{Should I explain the API in more detail.}
+The API allows developers to open an existing file or create a new one,
+query and set information in the in-memory copy of the file,
+and write the file back out to disk.
+It is easy to open the file,
+update a specific feedback item in it,
+and close it;
+essentially leaving the other feedback items in the file unchanged.
 
 
 
