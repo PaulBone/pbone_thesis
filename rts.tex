@@ -2,23 +2,65 @@
 \status{This section is currently an outline,  the text below has been
 coppied here as I may use it or a modification of it}
 
-\begin{itemize}
+\section{Premature scheduling decisions}
 
-    \item Discuss changes to work stealing (queues are now owned by engines,
-          not threads)
+This is the way the runtime system used to work,
+I should describe its pesimistic behavour to motiviate work steeling.
 
-    \item Work stealing was originally an unapplied patch written by Peter.
-          I fixed it up and applied it.  Then later refactored it.
+\section{Work stealing}
 
-    \item Discuss thread pinning and SMT
+\subsection{Initial work stealing implementation}
 
-    \item Should I describe our proposal for OS kernel's to help
-          applications with how many threads to use.
-          GCD is related but doesn't fit into a language runtime system so
-          easily~\cite{apple_gcd}.
-          See also N:M threading.
+This subsection was joint work with Peter Wang.
 
-\end{itemize}
+\subsection{Engine local spark stacks}
+
+\section{Thread pinning}
+
+Thread pinning
+
+SMT
+
+Busy waiting?
+
+Hardware locality
+
+\section{Idle loop}
+
+Idle loop structure
+
+Independent engine wakeup
+
+Engine work notification
+
+\section{Scheduling tweeks}
+
+Not implemented,
+
+Feedback from threadscope?
+
+\section{Garbage collector tweeks}
+
+Large initial heap
+
+Marking \& cache thrashing
+
+Local free lists
+
+\section{Proposed kernel support to manage processor resources}
+
+\status{This may not be worth discussing until someone actually does it}
+    
+Should I describe our proposal for OS kernel's to help
+applications with how many threads to use.
+GCD is related but doesn't fit into a language runtime system so
+easily~\cite{apple_gcd}.
+See also N:M threading.
+
+\section{Spare text}
+
+\status{This text will be moved up into one of the work stealing sections
+once those sections are ready}
 
 When an engine becomes idle, it will first try
 to resume a suspended but runnable context if there is one.
