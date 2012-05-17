@@ -2,10 +2,42 @@
 \status{This section is currently an outline,  the text below has been
 coppied here as I may use it or a modification of it}
 
+Before beginning sagnificant amounts of work on automatic parallelism we
+choose to ensure that manual parallelisation worked correctly.
+In Mercury, parallelisation can be introduced with the parallel conjunction
+operator (\code{\&}).
+A programmer can replacing a sequential conjunction with a parallel one,
+this declares that the conjuncts should be executed in parallel with
+one-another.
+However doing so did not speed up Mercury programs as expected.
+In this chapter we will discuss many of the improvments that have made
+parallel execution faster.
+
 \section{Premature scheduling decisions}
 
-This is the way the runtime system used to work,
-I should describe its pesimistic behavour to motiviate work steeling.
+Parallel conjunctions are evaluated as described in Section
+\ref{sec:backgnd_merpar}.
+Sparks are added to the global spark queue if the global queue has room,
+otherwise they're pushed onto a context-local spark stack.
+Creating a lot of parallel work and using a single global work queue can be
+pesimistic,
+the queue itself can become a bottleneck:
+when many processors try to access it the same location in memory there will
+be many cache misses and delays.
+This is why \citet{wang-hons} choose to introduce local queues,
+and place work on them when there is a surplus of work on the global queue.
+
+When a engine finishes executing a context and reaches the barrier at the
+end of a parallel conjunct,
+it will check the context's local spark stack for any other work and attempt
+to execute it.
+Otherwise, it will either save the context to resume later or release the
+context before checking the global spark queue and global context queue.
+
+XXX Algorithm.
+
+Deciding too early, results.
+
 
 \section{Work stealing}
 
