@@ -7,8 +7,13 @@ While the syntax of Mercury is based on the syntax of Prolog,
 semantically the two languages are very different
 due to Mercury's purity and its type, mode, determinism and module systems.
 
-Code is organised into predicates and functions,
-$P$ is either a predicate or a function.
+Code is organised into predicates and functions.
+\peter{Better to make this look like a grammar:  $\mathit{decl} \to
+  \mathit{name}(\mathit{var},\ldots,\mathit{var}) \texttt{:-}
+  \mathit{goal}$ etc.
+It's best to put terminal is typewriter font, and nonterminals in math
+italic.}
+%$P$ is either a predicate or a function.
 
 %\vspace{-1\baselineskip}
 % \begin{figure}[htb]
@@ -72,8 +77,10 @@ The atomic goals are unifications
 (which the compiler breaks down until they contain
 at most one function symbol each),
 plain first-order calls,
-higher-order calls.
+higher-order calls,
 and calls to predicates defined by code in a foreign language (usually C).
+\peter{You only need to cover enough about Mercury for the purposes of
+  your thesis.  I don't think how inlining of foreign code works is important.}
 The compiler can inline foreign code definitions when generating code
 for a Mercury predicate.
 To allow this, the representation of a foreign code construct includes
@@ -84,20 +91,21 @@ to the names of the variables that stand for them in the foreign code.
 The composite goals include
 sequential and parallel conjunctions,
 disjunctions, if-then-elses, negations and existential quantifications.
-These should all be self-explanatory,
+These should all be self-explanatory;
 a detailed description of parallel conjunctions can be found in Section
 \ref{sec:back_mer_par}.
 The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
 but the compiler turns them into
 combinations of existential quantifications and negations.
+
 A switch is a disjunction in which
 each disjunct unifies the same bound variable
 with a different function symbol.
 Switches in Mercury are thus analogous to switches in languages like C.
 If there is a case in the switch for each function symbol in the
 switched-on value's type, then the switch is said to be complete.
-Otherwise the switch is incomplete,
+Otherwise the switch is incomplete;
 that is to say,
 there are function symbols in the variable's type that are not covered
 by a case in the switch.
@@ -109,6 +117,10 @@ Mercury programs are statically typed; the compiler knows the type of every
 argument of every predicate (from declarations or inference) and every local
 variable (from inference).
 The body and type declaration of \code{list.append} is:
+
+\peter{Why give pred declaration, but not the type declaration for
+  list or the mode declarations for append?  Maybe just leave out the
+  pred declaration.}
 
 \begin{verbatim}
 :- pred append(list(T), list(T), list(T)).
@@ -122,23 +134,27 @@ append([X | Xs], Ys, [X | Zs]) :-
 Mercury also has a strong mode system.
 The mode of a predicate describes \emph{instantiation state} changes of the
 predicate's arguments.
-A variable may be free, ground, clobbered or to be bound to any of a set of
+A variable may be free, ground, clobbered or bound to any of a set of
 function symbols.
+\peter{Probably best to leave out partial instantiation altogether.}
 Further instantiation states describe the state of each of the function symbols'
 arguments recursively.
 Partial instantiation is not fully supported,
 therefore, it is rarely used in typical Mercury programs.
-A clobbered instantiation state describes variables whose values are no-longer
+A clobbered instantiation state describes variables whose values are no longer
 available.
 Ground and bound instantiation states may also be described as unique,
 meaning they are not aliased with any other value.
-When variables are used their instantiation state may change,
+When variables are used, their instantiation state may change;
 such a change is described by a transition between two instantiation states.
 This is also known as a mode (of an argument),
 and is easily confused with the closely related mode of a predicate.
+\peter{Wrong quotes here:  use backquote for left single quote, and
+  two backquotes for left double quote.  Do a query replace throughout
+  your thesis.}
 When a variable is used as an argument or in a unification it can only
-become 'more instantiated',
-that is to say 'free to ground' is legal but 'ground to free' is not.
+become more instantiated;
+that is to say 'free to ground' is legal, but 'ground to free' is not.
 Similarly, uniqueness cannot be added to a value that is already
 bound or ground.
 Commonly used modes such as input (\code{in}), output (\code{out}),
@@ -151,10 +167,14 @@ defined in the standard library:
 :- mode di == unique >> clobbered.
 :- mode uo == free >> unique.
 \end{verbatim}
+\peter{Looks like you'll need to discuss the \verb+>>+ operator and
+  the whole inst system.  Or handwave through it here, and leave out
+  the Mercury definitions of these modes.  The latter is probably good
+  enough.}
 
 \noindent
 There may be multiple modes for any given predicate.
-Here are two mode declarations for the append predicate above,
+Here are two mode declarations for the append predicate above;
 these are usually written immediately after the type declaration.
 
 \begin{verbatim}
@@ -170,8 +190,8 @@ variables passed as input arguments must be ground before and after the call
 while variables passed as output arguments must be free before the call and
 ground after the call.
 Similarly, a variable passed in a destructive input argument will be destroyed
-before the end of the call,
-it must be unique before the call and clobbered after, it is illegal to
+before the end of the call;
+it must be unique before the call and clobbered afterwords. It is illegal to
 reference a clobbered variable.
 A variable passed in a unique output argument must initially be free and
 will become unique.
@@ -180,9 +200,9 @@ destructively update data structures such as arrays.
 The compiler will infer the instantiation states of all variables before and
 after every goal in a predicate or function's body.
 
-When a predicate or function has more than one mode;
-for example \code{list.append} above.
-We call each mode of a predicate or function a \emph{procedure}.
+When a predicate or function has more than one mode,
+for example \code{list.append} above,
+we call each mode of a predicate or function a \emph{procedure}.
 The Mercury compiler generates separate code
 for each procedure of a predicate or function.
 In fact, different procedures are handled as separate entities by
@@ -191,6 +211,8 @@ This allows the mode checking pass of the compiler to minimally
 reorder conjuncts (in both sequential and parallel conjunctions)
 as necessary to support the instantiatedness constraints imposed by arguments
 of calls.
+\peter{I think this is simpler if you leave out partial instantiation,
+  and stick to ground and free.}
 This means that,
 for each variable shared between conjuncts,
 the goal that makes a variable more instantiated,
@@ -198,11 +220,11 @@ the goal that makes a variable more instantiated,
 comes before all goals that require the variable to be in at least
 the particular instantiation state, (the \emph{consumers}).
 This means that for each variable in each procedure,
-the compiler knows exactly where that variable gets grounded.
+the compiler knows exactly where that variable becomes ground.
 
 % Mode invariants
 The mode system both establishes and requires three invariants
-that we need to refer to later in the dissertation.
+that we need to refer to later in the dissertation:
 
 \begin{description}
 
@@ -212,13 +234,17 @@ that we need to refer to later in the dissertation.
   but also the condition and then-part of an if-then-else,
   each variable that is consumed by any one of the goals
   is produced by exactly one goal.
+\peter{also mention the else port}
   
   \item[Branched goal invariant:]
   In disjunctions, switches or if-then-elses,
   the goal types that contain alternative branches of execution,
   each branch of execution must produce
   the exact same set of variables
-  that are visible from outside the branched goal,
+  that are visible from
+\peter{``used''?  Unless explicitly quantified, all variables are
+  visible throughout the clause.}
+ outside the branched goal,
   with one exception:
   a branch of execution that cannot succeed (see determinisms below)
   may produce a subset of this set of variables.
@@ -252,6 +278,9 @@ Goals with determinism \derroneous
 have an upper bound of zero and a lower bound of one,
 which means they can neither succeed nor fail,
 they must either throw an exception or loop forever.
+\peter{Can we just leave out the \verb+cc_*+ determinisms?  They don't
+  really add anything to your work, and handling them seems pretty
+  straightforward.}
 There are two committed choice determinisms:
 \dccmulti is analogous to \dmulti and
 \dccnondet is analogous to \dnondet;
@@ -311,10 +340,10 @@ that defines the predicate or function being called,
 with the module qualifier and the predicate or function name
 separated by a dot.
 The \io (Input/Output) module of the Mercury standard library
-defines an abstract type called the \io state
-which represents the entire state of the world outside the program,
-and a large set of predicates that perform I/O.
-These predicates all have determinism \code|det|,
+defines an abstract type called the \io state,
+which represents the entire state of the world outside the program.
+The \I/O module also defines a large set of predicates that perform I/O.
+These predicates all have determinism \code{det}.
 and besides other arguments,
 they all take a pair of \io states
 whose modes are respectively \di and \uo,
@@ -356,6 +385,9 @@ This threaded state sequentialises I/O operations:
 ``\code{world\n}'' cannot be printed until the value for \code{S1}
 is available.
 
+\peter{This isn't relevant to your work, unless you're intent on
+  including code with state variables in your discussion.  I think
+  it's a complication better left out.}
 Since numbering each version of the state of the world
 (or any other state that a program may pass around) is cumbersome,
 Mercury has syntactic sugar to avoid the need for this,
@@ -378,6 +410,7 @@ variables.
 The variable names created sequence conjunctions from left to right in
 conjunctions when used with pairs of \code{di/uo} or \code{in/out}
 modes.
+\peter{End of stuff I think you should leave out.}
 
 \label{page:purity}
 Mercury divides goals into three purity categories:
@@ -390,7 +423,8 @@ Mercury divides goals into three purity categories:
     \item[semipure goals] have no side effects
     but their outputs may depend side effects;
 
-    \item[impure goals] may have side effects.
+    \item[impure goals] may have side effects, and may produce outputs
+      that depend on other side effects.
 
 \end{description}
 
@@ -405,6 +439,8 @@ where it is used to implement pure interfaces.
 (For example, the implementation of the all-solutions predicates
 in the Mercury standard library uses impure and semipure code.)
 Programmers can wrap
+\peter{Unclear how you ``wrap'' a word around a goal.  Don't you
+  really \textit{precede} the goal with the promise?}
 \code{promise\_pure} or \code{promise\_semipure} around a goal
 to promise to the compiler (and to human readers) that
 the goal itself is pure or semipure respectively,
