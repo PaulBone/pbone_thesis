@@ -10,8 +10,152 @@ A programmer can replacing a sequential conjunction with a parallel one,
 this declares that the conjuncts should be executed in parallel with
 one-another.
 However doing so did not speed up Mercury programs as expected.
-In this chapter we will discuss many of the improvments that have made
-parallel execution faster.
+In this chapter we will discuss
+some of the problems affectiong performance and
+many of the improvments that have made parallel execution faster.
+
+\section{Spark queueing}
+
+When a spark is spawned off by a parallel conjunction
+it is added to a global spark queue provided that there is not to much
+globaly-available parallel work.
+This is true if:
+an engine is idle and,
+the number of contexts in use plus the number of sparks in the global queue
+does not exceed the maximum number of contexts permitted.
+If these tests fail then the spark will be placed on the local context's
+spark stack,
+which is done safely without locking.
+This is an optimisation in the common case that there is already enough
+parallel work a spark can be scheduled without contending for a lock which
+could slow the system down.
+Additionally, even if engines are idle, the context limit prevents a large
+number of contexts from being allocated and consuming a lot of memory,
+(recall that each context contains space for stacks).
+
+\begin{algorithm}
+\begin{algorithmic}
+\Procedure{join\_and\_continue}{$ST, ContLabel$}
+  \State aquire\_lock($ST.lock$)
+  \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
+  \If{$ST.num\_outstanding = 0$}
+    \If{$ST.parent = this_context$}
+      \State release\_lock($ST.lock$)
+      \Goto{$ContLabel$}
+    \Else
+      \State schedule($ST.parent$)
+      \State release\_lock($ST.lock$)
+      \Goto{get\_global\_work}
+    \EndIf
+  \Else
+    \State $spark \gets$ pop\_compatible\_spark
+    \If{$spark$}
+       \State release\_lock($ST.lock$)
+       \Goto{$spark.code\_label$}
+    \Else
+      \If{$ST.parent = this\_context$}
+         \State suspend($this\_context$)
+         \State $this\_context \gets$ NULL
+      \EndIf
+      \State release\_lock($ST.lock$)
+      \Goto{get\_global\_work}
+    \EndIf
+  \EndIf
+\EndProcedure
+\end{algorithmic}
+\caption{join\_and\_continue}
+\label{alg:join_and_continue_peterw}
+\end{algorithm}
+
+An engine can become idle either when it is created,
+in which case it looks for global work.
+Or by executing the barrier at the end of a parallel conjunct.
+The barrier at the end of a parallel conjunct 
+is named {\joinandcontinue}
+and shown in Algorithm \ref{alg:join_and_continue_peterw}.
+This code has a fast path to be used when it is known that the parallel
+conjunction has only been executed by one context,
+making it sequential and therefore allowing \joinandcontinue to execute
+without locking.
+This optimization is not shown in the figure and is not important for our
+discussion;
+it is described only for completeness.
+
+The algorithm begins by checking if there are any outstanding conjuncts in
+the parallel conjunction.
+If there are none and the current context is the parent
+context,
+then execution jumps to the label after the parallel conjunction.
+If the current context is not the parent context then
+we can infer that the parent context is suspended,
+therefore, 
+the engine will schedule the parent context, before looking for global work.
+It looks for global work because its local work queue is gaurenteed to be
+empty since this conjunction and any nested conjunctions are complete.
+Alternativly, if there are outstanding conjuncts then
+the local spark stack is checked for compatible work ---
+a spark whose parent context is the same as the current syncterm's parent
+context.
+If a compatible spark is at the top of the spark stack then it is removed
+and executed.
+Otherwise,
+if this context is the parent context it must be suspended
+before the engine looks for global work.
+
+An engine looks for global work first by check the global context run queue.
+If it finds a runnable context and is still holding a context from a
+previous execution, it saves the old context onto the free context list.
+If there are no runnable contexts,
+it will take a spark from the global spark queue,
+and either use its current context to execute the spark,
+or allocate a new context (from the free context list if possible).
+If it is unsuccessful at finding work,
+it will go to sleep using a pthread condition variable and the global run
+queue's lock.
+This condition is used to wake engines when either contexts are added to the
+run queue,
+or soarks are added to the spark run queue.
+
+\section{Right vs.\ left recursion}
+
+\begin{figure}
+\begin{center}
+\subfigure[Right recursive]{%
+\label{fig:map_right_recursive}
+\begin{tabular}{l}
+\code{map(\_, [], []).} \\
+\code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
+\code{~~~~P(X, Y) \&} \\
+\code{~~~~map(P, Xs, Ys).} \\
+\end{tabular}}
+\subfigure[Left recursive]{%
+\label{fig:map_left_recursive}
+\begin{tabular}{l}
+\code{map(\_, [], []).} \\
+\code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
+\code{~~~~map(P, Xs, Ys) \&} \\
+\code{~~~~P(X, Y).} \\
+\end{tabular}}%
+\end{center}
+\caption{Right and left recursive map/3}
+\label{fig:map_right_and_left_recursive}
+\end{figure}
+
+Figure \ref{fig:map_right_and_left_recursion} shows two alternative, parallel
+implementations of \code{map/3}.
+While their declarative semantics are identical,
+their operational semantics are very different.  In Section
+\ref{sec:backgnd_merpar} we explained that parallel conjunctions are
+implemented by spawning off the tail of the conjunction and executing the
+head directly.
+This means that in the right recursive case (Figure
+\ref{fig:map_right_recursive}), the recursive call is spawned off as a
+spark,
+and that in the left recursive case (Figure \ref{fig:map_left_recursion},
+the recursive call is executed directly, and the loops \emph{body} is
+spawned off.
+These two alternatives perform very differently.
+
 
 \section{Premature scheduling decisions}
 
@@ -94,6 +238,25 @@ See also N:M threading.
 \status{This text will be moved up into one of the work stealing sections
 once those sections are ready}
 
+%The spark is added to a global run queue of sparks, or if that queue is too
+%full, because there's already enough parallelism,
+%then the spark is added to a queue owned by the current context.
+%\citet{wang_hons_thesis} intended to use the local queues for work stealing
+%but had not completed his implementation,
+%The work-stealing dequeue structure
+%is described in \citet{Chase_2005_wsdeque}.
+%see Chapter \ref{chap:rts} for details.
+%
+%and finds that spark is still at the head of its queue,
+%it will pick it up and run it itself.
+%This is a useful optimisation,
+%% it's also really well-known.
+%since it avoids using a separate context in the relatively common case
+%that all the other CPUs are busy with their own work.
+%This optimisation is also useful since it can avoid the creation of superfluous
+%contexts and their stacks.
+%
+
 When an engine becomes idle, it will first try
 to resume a suspended but runnable context if there is one.
 If not, it will attempt to run a spark from the global spark queue.
@@ -103,66 +266,11 @@ and start running the spark in that context.
 % XXX: Mention global spark queue and spark sheduling above.
 % XXX:  
 
-\begin{algorithm}
-\begin{algorithmic}
-\Procedure{join\_and\_continue}{$ST, ContLabel$}
-  \State $last\_conjs \gets$ atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
-  \If{$last\_conjs$}
-    \If{$ST.parent = this_context$}
-      \Goto{$ContLabel$}
-    \Else
-      \State schedule($ST.parent$)
-      \Goto{get\_global\_work}
-    \EndIf
-  \Else
-    \State $spark \gets$ pop\_compatible\_spark
-    \If{$spark$}
-       \Goto{$spark.code\_label$}
-    \Else
-      \If{$ST.parent = this\_context$}
-         \State suspend($this\_context$)
-         \State $this\_context \gets$ NULL
-      \EndIf
-      \Goto{get\_global\_work}
-    \EndIf
-  \EndIf
-\EndProcedure
-\end{algorithmic}
-\caption{join\_and\_continue}
-\label{alg:join_and_continue}
-\end{algorithm}
-
 Barrier code is placed at the end of each conjunct,
 this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
 This code starts by atomically decrementing the number of outstanding
 conjuncts in the conjunction's syncterm and checking the result for zero
 (the whole operation is thread-safe, not just the decrement).
-If there are no remaining conjuncts and the current context is the parent
-context,
-then execution jumps to the label after the parallel conjunction.
-If the current context is not the parent context then
-we can infer that the parent context is suspended,
-therefore, 
-the engine will schedule the parent context, before looking for global work.
-It looks for global work because its local work queue is gaurenteed to be
-empty since this conjunction and any nested conjunctions are complete.
-Alternativly, if there are outstanding conjuncts then
-the local spark stack is checked for compatible work ---
-a spark whose parent context is the same as the current syncterm's parent
-context.
-If a compatible spark is at the top of the spark stack then it is removed
-and executed.
-Otherwise,
-if this context is the parent context it must be suspended
-before the engine looks for global work.
 Algorithm \ref{alg:join_and_continue} shows the pesudo code for
 join\_and\_continue.
 
-An engine looks for global work first by check the global context run queue.
-If it finds a runnable context and is still holding a context from a
-previous execution, it saves the old context onto the free context list.
-If there are no runnable contexts,
-it will then attempt to steal work from other contexts.
-If unsuccessful, it will become idle and sleep
-until it is woken up because a context has become runnable,
-or a spark is added to the global spark queue.
