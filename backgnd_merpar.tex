@@ -153,24 +153,10 @@ as well as a pointer to the code it must execute
 and another pointer to any thread local mutables that should be available to the
 spawned off code.
 Figure \ref{fig:spark_and_syncterm} shows these two data structures.
-The spark is added to a global run queue of sparks, or if that queue is too
-full, because there's already enough parallelism,
-then the spark is added to a queue owned by the current context.
-\citet{wang_hons_thesis} intended to use the local queues for work stealing
-but had not completed his implementation,
-The work-stealing dequeue structure
-is described in \citet{Chase_2005_wsdeque}.
-see Chapter \ref{chap:rts} for details.
+Chapter \ref{chap:rts} describes how sparks are managed.
 
 If the context finishes the execution of the first conjunct ($G_1$)
-and finds that spark is still at the head of its queue,
-it will pick it up and run it itself.
-This is a useful optimisation,
-% it's also really well-known.
-since it avoids using a separate context in the relatively common case
-that all the other CPUs are busy with their own work.
-This optimisation is also useful since it can avoid the creation of superfluous
-contexts and their stacks.
+it can execute the spark it spawned off, or look for other work.
 
 \begin{figure}
 \begin{center}
