@@ -1,3 +1,14 @@
-pics teacher_beamer talk.pdf .teacher_beamer
-pics/*
+teacher_beamer talk.pdf .teacher_beamer
 thesis.pdf
+mem_table.tex
+times_table.tex
+thesis.aux
+thesis.bbl
+thesis.blg
+thesis.dvi
+thesis.loa
+thesis.lof
+thesis.log
+thesis.lot
+thesis.out
+thesis.toc
