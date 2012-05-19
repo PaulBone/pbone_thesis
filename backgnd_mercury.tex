@@ -17,10 +17,10 @@ argument.
 The intention is that
 predicates define relationships between their arguments and
 functions define a mapping from their arguments to their result.
-in the remainder of this thesis we will use the word predicate to refer to
+in the remainder of this dissertation we will use the word predicate to refer to
 either a predicate or a function.
 
-A predicate or function $P$ is defined as:
+A predicate or function $P$ is defined in terms of a goal $G$:
 
 %\vspace{-1\baselineskip}
 % \begin{figure}[htb]
@@ -42,8 +42,9 @@ it's not the same as showing terminals and non-terminals differently but
 perhaps it's clearer.}
 
 \noindent
-Both predicates and functions are defined in terms of a goal ($G$),
-there a many different goal types:
+Atomic goals do not refer to other goals;
+compisite goals are defined in terms of other goals.
+Mercury's goal types are:
 
 $$
 \begin{array}{lll}
@@ -51,13 +52,15 @@ G
     & :~ X = Y ~|~ X = f(Y_1,~\ldots,~Y_n)
         & \hbox{unifications}\\
     & |~ p(X_1,~\ldots,~X_n)
-        & \hbox{first order calls} \\
+        & \hbox{predicate calls} \\
+    & |~ X_{n+1} = f(X_1,~\ldots,~X_n)
+        & \hbox{function calls} \\
     & |~ X_0(X_1,~\ldots,~X_n)
         & \hbox{higher order calls} \\
     & |~ m(X_1,~\ldots,~X_n)
         & \hbox{method calls} \\
     & |~ \hbox{foreign}(p,
-        [x_1:~f_1,~\ldots,x_n:~f_n],
+        [X_1:~Y_1,~\ldots,X_n:~Y_n],
         \hbox{\emph{foreign code}}),
         & \hbox{foreign code} \\
     & |~ (G_1,~\ldots,~G_n)
@@ -66,7 +69,7 @@ G
         & \hbox{parallel conjunctions}\\
     & |~ (G_1 ; \ldots ; G_n)
         & \hbox{disjunctions}\\
-    & |~ \hbox{switch}~X~(\ldots;~f_i: G_i ; \ldots)
+    & |~ \hbox{switch}~X~(f_1:~G_1~;~\ldots~,f_n:~G_n)
         & \hbox{switches}\\
     & |~ (if~G_{cond}~then~G_{then}~else~G_{else})
         & \hbox{if-then-elses}\\
@@ -92,7 +95,8 @@ The atomic goals are unifications
 (which the compiler breaks down until they contain
 at most one function symbol each),
 plain first-order calls,
-higher-order calls
+higher-order calls,
+method calls,
 and calls to predicates defined by code in a foreign language (usually C).
 \peter{You only need to cover enough about Mercury for the purposes of
   your thesis.  I don't think how inlining of foreign code works is important.}
@@ -129,11 +133,11 @@ Otherwise the switch is incomplete.
 That is to say,
 there are function symbols in the variable's type that are not covered
 by a case in the switch.
-The purity promise is described on page \pageref{page:purity}.
+The purity promise will be described on page \pageref{page:purity}.
 
 \paul{XXX: Need to describe semidet disjunctions somewhere}
 
-Mercury has a strong Hindley-Milner~\citep{hindly69:types,milner78:types} type
+Mercury has a strong Hindley-Milner~\citep{hindley69:types,milner78:types} type
 system that was inspired by that of Hope~\citep{hope_types}
 and similar to Haskell's~\citep{haskell98}.
 Mercury programs are statically typed; the compiler knows the type of every
@@ -163,7 +167,7 @@ more information can be found in \citet{mercury_refman}.
 \end{description}
 
 \noindent
-The body and type declaration of \code{list.append} is:
+The definition and type signature of \code{append/3} is:
 
 \begin{verbatim}
 :- pred append(list(T), list(T), list(T)).
@@ -175,8 +179,8 @@ append([X | Xs], Ys, [X | Zs]) :-
 
 \noindent
 Mercury also has a strong mode system.
-The mode of a predicate describes any \emph{instantiation state} changes of
-the predicate's arguments.
+The mode of a predicate describes the \emph{instantiation state} changes,
+if any, of the predicate's arguments.
 A variable may be free, ground or clobbered.
 Free variables currently have no value,
 ground variables have a fixed value,
@@ -212,6 +216,9 @@ defined in the standard library:
 There may be multiple modes for any given predicate.
 Here are two mode declarations for the append predicate above;
 these are usually written immediately after the type declaration.
+When a predicate has only a single mode,
+the mode declration can be combined with the type signature as a single
+declration.
 
 \begin{verbatim}
 :- mode append(in, in, out) is det.
