@@ -227,18 +227,17 @@ declration.
 
 \noindent
 The compiler enforces the instantiation state constraints on variables passed
-as arguments.
-That is to say,
-variables passed as input arguments must be ground before and after the call
+as arguments:
+Variables passed as input arguments must be ground before and after the call
 while variables passed as output arguments must be free before the call and
 ground after the call.
 Similarly, a variable passed in a destructive input argument will be destroyed
 before the end of the call;
-it must be unique before the call and clobbered afterwords. It is illegal to
-reference a clobbered variable.
+it must be unique before the call and clobbered afterwords.
+It is illegal to reference a clobbered variable.
 A variable passed in a unique output argument must initially be free and
 will become unique.
-These two instantiation types are often used together to allow the compiler to
+These two modes are often used together to allow the compiler to
 destructively update data structures such as arrays.
 The compiler will infer the instantiation states of all variables before and
 after every goal in a predicate or function's body.
@@ -257,7 +256,7 @@ This means that for each variable in each procedure,
 the compiler knows exactly where that variable becomes ground.
 
 % Mode invariants
-The mode system both establishes and requires three invariants
+The mode system both enforces three invariants
 that we need to refer to later in the dissertation:
 
 \begin{description}
@@ -267,7 +266,7 @@ that we need to refer to later in the dissertation:
   which includes not just conjuncts in conjunctions
   but also the condition and then-part of an if-then-else,
   each variable that is consumed by any one of the goals
-  is produced by exactly one goal.
+  is produced by exactly one earlier goal.
   This does not effect the else part of an if-then-else, it is not conjoined
   with the cond part.
 
@@ -294,22 +293,32 @@ that we need to refer to later in the dissertation:
 Each procedure and goal has a determinism,
 which may put upper and lower bounds on the number of its possible solutions
 (in the absence of infinite loops and exceptions).
-A determinism may impose an upper bound of one solution,
-and it may impose a lower bound of either zero solutions or one solution.
-\ddet procedures succeed exactly once
-(upper bound is one, lower bound is one);
-\dsemidet procedures succeed at most once
-(upper bound is one, no lower bound);
-\dmulti procedures succeed at least once
-(lower bound is one, no upper bound);
-\dnondet procedures may succeed any number of times
-(no bound of either kind).
-Goals with determinism \dfailure can never succeed
-(upper bound is zero, no lower bound).
-Goals with determinism \derroneous
-have an upper bound of zero and a lower bound of one,
-which means they can neither succeed nor fail,
-they must either throw an exception or loop forever.
+Mercury's determinisms are:
+
+\begin{description}
+    \item[\ddet] procedures succeed exactly once
+    (upper bound is one, lower bound is one);
+    \item[\dsemidet] procedures succeed at most once
+    (upper bound is one, no lower bound);
+    \item[\dmulti] procedures succeed at least once
+    (lower bound is one, no upper bound);
+    \item[\dnondet] procedures may succeed any number of times
+    (no bound of either kind);
+    \item[\dfailure] procedures can never succeed
+    (upper bound is zero, no lower bound);
+    \item[\derroneous] procedures have an upper bound of zero and a lower
+    bound of one, which means they can neither succeed nor fail,
+    they 
+    they must either throw an exception or loop forever.
+\end{description}
+
+\noindent
+In practice, most parts of a Mercury program are deterministic (\ddet).
+Each procedure's mode declaration
+typically declares its determinism (see the mode declarations for append above).
+If this is omitted, the compiler can infer the missing information.
+
+
 % XXX: Committed choice, if I need it.
 % There are two committed choice determinisms:
 % \dccmulti is analogous to \dmulti and
@@ -317,10 +326,6 @@ they must either throw an exception or loop forever.
 % except that the code will commit to the first solution.
 % Code generation therefore handles these determinisms as if they are
 % \ddet and \dsemidet respectively.
-
-Each procedure's mode declaration
-typically declares its determinism (see the mode declarations for append above).
-If this is omitted, the compiler can infer the missing information.
 
 % Switch detection.
 
@@ -374,7 +379,9 @@ For example, if each of the $G_i$ is deterministic
 (i.e. it has determinism \code{det})
 and the various $f_i$ comprise all the function symbols in $x$'s type,
 then the switch can be inferred to be deterministic as well,
-whereas a disjunction that is \emph{not} a switch cannot be deterministic,
+whereas a disjunction that is \emph{not} a switch and produces at least one
+variable
+cannot be deterministic,
 since each disjunct may generate a solution.
 
 Mercury has a module system.
