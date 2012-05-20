@@ -297,19 +297,27 @@ Mercury's determinisms are:
 
 \begin{description}
     \item[\ddet] procedures succeed exactly once
-    (upper bound is one, lower bound is one);
+    (upper bound is one, lower bound is one).
     \item[\dsemidet] procedures succeed at most once
-    (upper bound is one, no lower bound);
+    (upper bound is one, no lower bound).
     \item[\dmulti] procedures succeed at least once
-    (lower bound is one, no upper bound);
+    (lower bound is one, no upper bound).
     \item[\dnondet] procedures may succeed any number of times
-    (no bound of either kind);
+    (no bound of either kind).
     \item[\dfailure] procedures can never succeed
-    (upper bound is zero, no lower bound);
+    (upper bound is zero, no lower bound).
     \item[\derroneous] procedures have an upper bound of zero and a lower
-    bound of one, which means they can neither succeed nor fail,
-    they 
-    they must either throw an exception or loop forever.
+    bound of one, which means they can neither succeed nor fail.
+    They must either throw an exception or loop forever.
+    % We use the cc detisms a little bit, since parallelism may be used in
+    % cc_multi predicates.
+    \item[\dccmulti] procedures may have more than one solutions, like \dmulti
+    but they commit to the first solultion.
+    In practice, they succeed exactly once.
+    \item[\dccnondet] procedures may have any number of solutions, like
+    \dnondet
+    but they commit to the first solution.
+    In practice, they succeed at most once.
 \end{description}
 
 \noindent
@@ -317,15 +325,6 @@ In practice, most parts of a Mercury program are deterministic (\ddet).
 Each procedure's mode declaration
 typically declares its determinism (see the mode declarations for append above).
 If this is omitted, the compiler can infer the missing information.
-
-
-% XXX: Committed choice, if I need it.
-% There are two committed choice determinisms:
-% \dccmulti is analogous to \dmulti and
-% \dccnondet is analogous to \dnondet;
-% except that the code will commit to the first solution.
-% Code generation therefore handles these determinisms as if they are
-% \ddet and \dsemidet respectively.
 
 % Switch detection.
 

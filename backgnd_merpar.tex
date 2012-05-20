@@ -1,4 +1,3 @@
-
 \status{This section is complete}
 
 The low-level C backend of the Mercury implementation uses C as a
@@ -6,7 +5,7 @@ pseudo-assembler;
 A Mercury \emph{engine} structure represents a CPU that can execute Mercury
 Abstract Machine instructions.
 An engine has fields that represent virtual registers,
-some of which are mapped (using GCC's~\citep{gcc} global register extension) to
+some of which are mapped (using GCC's \citep{gcc} global register extension) to
 physical machine registers - depending on the architecture of the physical
 machine.
 These registers include 1024 general-purpose registers,
@@ -22,7 +21,7 @@ More information about Mercury's execution algorithm can be found in
 To make parallel execution possible \citet{conway:2002:par} allowed
 multiple instances of the engine structure to be used at once.
 The Operating System's threading library,
-namely POSIX Threads~\citep{butenhof1997:pthreads},
+POSIX Threads~\citep{butenhof1997:pthreads},
 is used to expose parallelism to the OS.
 Each POSIX Thread (pthread) owns a single engine.
 The number of engines that a parallel Mercury program will allocate on startup
@@ -30,9 +29,6 @@ is configurable by the user,
 but it defaults to the actual number of CPUs.
 Users can also configure the runtime system to pin engines to CPUs
 ensure there is an even distribution of engines across the machine.
-\paul{Maybe discuss how thread pinning and SMT interact.  Although all
-this thread pinning work is new work - it's not necessary part of the
-background.  I think this discussion may belong in \ref{chap:rts}}
 
 Each POSIX Thread must maintain a pointer to its engine;
 this is kept in a physical machine register as it is accessed
@@ -57,9 +53,9 @@ These stacks account for the majority of the context's memory usage.
 When a context finishes execution,
 it can either be retained by the engine or have its storage released to the
 free context pool.
-This decision depends on what the engine will do next,
+This decision depends on what the engine will do next:
 if the engine will execute a different context or go to sleep
-(because there's no work to do);
+(because there's no work to do),
 then the current context is released,
 otherwise it is retained.
 Contexts cannot be preempted.
@@ -68,16 +64,19 @@ Following \citet{simonmar_2009_multicore_rts},
 we economise on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
-Sparks are very light weight being only three words long.
+Sparks are very light weight,
+being only three words long.
 Therefore, compared to contexts,
 they represent outstanding parallel work very efficiently.
 When an engine executes a spark it will convert the spark into a context.
-If the engine was already holding a context that context will be used
+If the engine was already holding a context,
+that context will be used
 (the engine's current context is always free when the engine attempts to run
 a spark),
-or if it does not have a context a new one is allocated
+or if it does not have a context,
+a new one is allocated
 (from the pool of free contexts if the pool is not empty,
-and a newly created context otherwise).
+otherwise a new context is created).
 Unlike \citet{simonmar_2009_multicore_rts},
 Mercury's sparks cannot be garbage collected and must be executed.
 
@@ -108,7 +107,7 @@ have very significant overheads, generating slowdowns by integer factors.
 Thus we have given priority to parallelising deterministic code,
 which we can do with \emph{much} lower overhead.
 We think that avoiding such slowdowns is a good idea,
-even if it does mean foregoing the parallelisation of 10 to 25\% of a program.
+even if it does mean foregoing the parallelisation of 15 to 25\% of a program.
 
 \begin{figure}
 \begin{verbatim}
@@ -139,7 +138,7 @@ The Mercury compiler implements $(G_1~\&~G_2~\&~\ldots~\&~G_n)$
 by creating a \emph{syncterm} (synchronisation term), a data structure
 representing a barrier for the whole conjunction.
 The syncterm contains:
-a pointer to the context that begun executing the parallel conjunction
+a pointer to the context that began executing the parallel conjunction
 (the parent context),
 a pointer to the stack frame for the procedure containing this parallel
 conjunction,
@@ -150,13 +149,20 @@ spawns off $(G_2~\&~\ldots~\&~G_n)$ as a spark and continues by executing
 $G_1$ itself.
 The spark contains a pointer to the syncterm,
 as well as a pointer to the code it must execute
-and another pointer to any thread local mutables that should be available to the
-spawned off code.
+and another pointer to a set of thread local mutables.\footnote{
+    Mercury's has a module-local mutable feature that supports
+    per thread mutable.
+    They're not relevant to this dissertation.}
 Figure \ref{fig:spark_and_syncterm} shows these two data structures.
 Chapter \ref{chap:rts} describes how sparks are managed.
 
-If the context finishes the execution of the first conjunct ($G_1$)
-it can execute the spark it spawned off, or look for other work.
+When the engine finishes the execution of the first conjunct ($G_1$)
+it executes the barrier code \joinandcontinue and the end of the conjunct.
+The barrier ensures that the orignal context cannot execute the code that
+follows the parallel conjunction
+until every one of the conjuncts has been exexuted.
+It also makes several scheduling decisions which are described in Chapter
+\ref{chap:rts},
 
 \begin{figure}
 \begin{center}
@@ -167,10 +173,10 @@ it can execute the spark it spawned off, or look for other work.
                     & \code{~~MR\_SyncTerm ST;} \\
 \code{~~}$($        & \code{~~spawn\_off(\&ST, Spawn\_Label);} \\
 \code{~~~~}$G_1$    & \code{~~}$G_1$ \\
-\code{~~}$\&$       & \code{~~join\_and\_continue(\&ST, Cont\_Label);} \\
+\code{~~}$\&$       & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
                     & \code{Spawn\_Label:} \\
 \code{~~~~}$G_2$    & \code{~~}$G_2$ \\
-\code{~~}$)$        & \code{~~join\_and\_continue(\&ST, Cont\_Label);} \\
+\code{~~}$)$        & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
                     & \code{Cont\_Label:} \\
 \end{tabular}
 \end{center}
@@ -181,15 +187,13 @@ it can execute the spark it spawned off, or look for other work.
 Since $(G_2~\&~\ldots~\&~G_n)$ is itself a conjunction,
 it is handled in a similar way:
 the context executing it
-first spawns off $(G_3~\&~\ldots~\&~G_n)$ as a spark that points to the barrier
-created earlier,
+first spawns off $(G_3~\&~\ldots~\&~G_n)$ as a spark that points to the sync
+term created earlier,
 and then executes $G_2$ itself.
 Eventually, the spawned-off remainder of the conjunction
 consists only of the final conjunct, $G_n$,
 and the context just executes it.
-The code of each conjunct synchronises on the barrier once it has
-completed its job.
-When all conjuncts have done so,
+Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
 An example of the instrumentation necessary to implement parallel
 conjunctions is shown in Figure \ref{fig:par_conj}.
