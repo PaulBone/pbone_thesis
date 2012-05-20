@@ -1,65 +1,91 @@
 \status{This section is complete}
 
-The low-level C backend of the Mercury implementation uses C as a
-pseudo-assembler;
-A Mercury \emph{engine} structure represents a CPU that can execute Mercury
-Abstract Machine instructions.
-An engine has fields that represent virtual registers,
-some of which are mapped (using GCC's \citep{gcc} global register extension) to
-physical machine registers - depending on the architecture of the physical
+Mercury has a number of backends
+the low-level C backend uses an asbract machine implemented using the C
+preprocessor.
+The compiler writes out procedures as sequences of macro uses.
+The C compiler is used to expand the macros and generate native code.
+The abstract machine has 1024 general purpose registers and a number of
+special registers, such as the program counter.
+These registers are virtual:
+they are C macros which expand to global variables.
+Commonly used virtual registers are mapped to real machine registers
+using GCC's \citep{gcc} global register extension.
+The number of mapped registers depends upon the achitecture of the physical
 machine.
-These registers include 1024 general-purpose registers,
-three stack pointers for the two stacks,
-and a success continuation pointer for implementing tail-calls.
-The structure contains many other fields for bookkeeping,
-we will discuss them as they become relevant.
-The abstract machine instructions are implemented as C preprocessor macros,
-which use the engine structure.
+
+The compiler hass access to determinism information of a procedure.
+This means that if a procedure is known to be determinisic more efficient
+code can be generated for it.
+In particular,
+code with at most one solution uses the \emph{det stack} (deterministic
+stack),
+which operatates in much the same way as a stack in an imperative or
+functional language.
+The detstack has one pointer to the top of the stack,
+called the stack pointer.
+Code with more than one solution uses the \emph{nondet stack}:
+When a nondeterministic procedure produces a solution it returns control to
+its caller,
+however, its stack frame is kept on the nondet stack incase backtracking
+requires it to check for other solutions.
+Therefore,
+two stack pointers are used with the nondet stack,
+one points to the top of the stack where new frames are allocated,
+the other points to the current stack frame.
+Parallel conjunctions are only supported in deterministic code,
+therefore the nondet stack and its two stack pointers are largly irrelevent.
 More information about Mercury's execution algorithm can be found in
 \citet{mercury_jlp}.
 
-To make parallel execution possible \citet{conway:2002:par} allowed
-multiple instances of the engine structure to be used at once.
-The Operating System's threading library,
-POSIX Threads~\citep{butenhof1997:pthreads},
-is used to expose parallelism to the OS.
-Each POSIX Thread (pthread) owns a single engine.
+To support parallel exececution \citet{conway_par} grouped the variables
+used to implement the abstract machine's registers into a structure
+called an \emph{engine}.
+Each engine corresponds to a POSIX Thread (pthread)
+\citep{butenhof1997:pthreads}.
+Multiple engines can reside in memory at the same time,
+allowing each pthread to maintain its own execution state.
 The number of engines that a parallel Mercury program will allocate on startup
 is configurable by the user,
 but it defaults to the actual number of CPUs.
-Users can also configure the runtime system to pin engines to CPUs
-ensure there is an even distribution of engines across the machine.
 
-Each POSIX Thread must maintain a pointer to its engine;
-this is kept in a physical machine register as it is accessed
-frequently.
-In sequential code,
-there was only one engine structure,
-so a compiled-in constant could easily be used.
-Therefore, in parallel builds there are fewer physical registers that
-virtual registers may be mapped onto.
+In non-parallel grades a signel engine is allocated statically and is known
+to reside at a particular address.
+However,
+in parallel grades the multiple engine's addresses are uknown at compile
+time.
+An extra real cpu register\footnote{
+    If GCC global registers are unavailable,
+    POSIX thread-local storage is used.
+}
+is used if available to maintain the address of
+the pthread's engine,
+therefore there is one less real cpu register that can be used for mapping
+virtual registers.
 
 \citet{conway:2002:par} also introduced a new structure called a
-\emph{context}, also known as a green thread.
+\emph{context}, known elsewhere as a green thread.
 Contexts represent computations in progress.
 An engine may be idle, or it may be executing a context;
 a context can be running on an engine, or it may be suspended.
-Each context has two stacks, a det stack and a nondet stack;
-Procedures that can succeed more than once
-store their frames on the nondet stack;
-all other procedures use the det stack
-(which behaves like a stack in an imperative language).
-These stacks account for the majority of the context's memory usage.
-When a context finishes execution,
-it can either be retained by the engine or have its storage released to the
-free context pool.
+Separate computations are required to have seperate stacks,
+therefore the storage for stacks is associated with a context.
+When a computation is suspended,
+the registers from the engine are copied into the context,
+making the engine free to load a new context.
+
+Stacks account for the majority of a context's memory usage.
+When a context finishes execution
+it can either be retained by the engine or
+have its storage released to the free context pool.
 This decision depends on what the engine will do next:
 if the engine will execute a different context or go to sleep
-(because there's no work to do),
-then the current context is released,
-otherwise it is retained.
+(because there is no work to do),
+then the current context is released.
 Contexts cannot be preempted.
 
+\paul{Not really following Simon, It's Peter who proposed this and I'm not
+sure where he got the idea from. (but it is pretty common)}
 Following \citet{simonmar_2009_multicore_rts},
 we economise on memory by using \emph{sparks}
 to represent goals that have been spawned off
@@ -150,9 +176,9 @@ $G_1$ itself.
 The spark contains a pointer to the syncterm,
 as well as a pointer to the code it must execute
 and another pointer to a set of thread local mutables.\footnote{
-    Mercury's has a module-local mutable feature that supports
-    per thread mutable.
-    They're not relevant to this dissertation.}
+    Mercury has a module-local mutable feature that supports
+    per thread mutables.
+    However, this is not relevant to this dissertation.}
 Figure \ref{fig:spark_and_syncterm} shows these two data structures.
 Chapter \ref{chap:rts} describes how sparks are managed.
 
