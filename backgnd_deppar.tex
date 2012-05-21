@@ -49,11 +49,14 @@ where no communication was allowed between conjunctions.
 \citet{wang_dep_par_conj,wang_hons_thesis} relaxed this;
 now parallel conjunctions have the same mode constraints as sequential
 conjunctions.
-Parallel conjunctions such as the one in Figure \ref{fig:mapfoldl} may now
+Parallel conjunctions,
+such as the one in Figure \ref{fig:mapfoldl},
+may now
 communicate through \emph{shared variables} such as \code{Acc1}.
 A shared variable is a variable that is bound sometime within the parallel
 conjunction and occurs in more than one conjunct.
-Recall that in Mercury the code location where a variable become bound is known
+Recall that in Mercury,
+the code location where a variable becomes bound is known
 at compile time;
 therefore,
 shared variables are identified at compile time.
@@ -66,15 +69,16 @@ a flag indicating whether the variable has been produced yet,
 a queue of consumer contexts waiting for the value, and a mutex.
 The initial value of the future has the flag set to `not yet produced'.
 
-Consumers call \wait when they want to retrieve a value from the future,
-this acquires the lock, and if \code{MR\_fut\_signalled} is true, retrieves
+Consumers call \wait when they want to retrieve a value from the future.
+This acquires the lock, and if \code{MR\_fut\_signalled} is true, retrieves
 \code{MR\_fut\_value} before releasing the lock.
 If \code{MR\_fut\_signalled} was false, then the current context is added to
 the list of suspended contexts before unlocking the future.
 The engine will then suspend the context and look for other work.
 Once the value of the future is provided,
 the context will be woken up along with the others on the list of suspended contexts.
-\wait contains an optimisation; it will check \code{MR\_fut\_signalled} before
+\wait contains an optimisation:
+it will check \code{MR\_fut\_signalled} before
 acquiring the lock as well as after.
 If it is true before the lock is acquired then it can safely retrieve the
 future's value without using the lock.
@@ -92,37 +96,41 @@ Because \signal has no outputs and is deterministic,
 it must be declared as impure so that the compiler will not optimise away calls
 to it.
 
-\get is provided as an alternative to \wait,
-however, it may only be used if the future's value is guaranteed to be
-available, which can happen if the same execution path has already called
-either \signal or \wait.
-It is therefore necessary that \wait is never optimised away, even if its
-output is not used by other code;
-\wait is therefore declared as impure.
+When \wait and \signal operations are introduced
+a new variable is also introduced
+that represents the value of the future
+either before the call to \signal or after the call to \wait.
+If another goal on the same execution path also wants to use the value of
+the future, and the variable cannot be passed to it then it would have to
+use an extra call to \wait.
+In this case it is known the the value of the future is already available.
+Therefore,
+\get is introduced as a non thread-safe operation with lower runtime costs.
+\get observes a side-effect that \wait and \signal ensures is visible.
+If \wait's output is never used it could be optimized away,
+and therefore \get would be unsafe when it follows a call to \wait.
+\wait must therefore be impure and \get must be semipure.
 
 To minimise waiting,
-the compiler pushes signal operations on each future
+the compiler pushes \signal operations on each future
 as far to the left into the producer conjunct as possible,
-and it pushes wait operations
+and it pushes \wait operations
 as far to the right into each of its consumer conjuncts as possible.
 This means not only pushing them
 into the body of the predicate called by the conjunct,
 but also into the bodies of the predicates they call,
-with the intention being that
-each signal is put immediately after
+with the intention that
+each \signal is put immediately after
 the primitive goal that produces the value of the variable,
-and each wait is put immediately before
+and each \wait is put immediately before
 the leftmost primitive goal that consumes the value of the variable.
 Since the compiler has complete information
 about which goals produce and consume which variables,
-the only things that can stop the pushing process from placing the
-wait immediately before the value is to be used and the signal
-immediately after it is produced are
-higher order calls and module boundaries:
-the compiler cannot push a wait or signal operation
-into the body of a predicate
-if it does not have access to the identity or to the body of the predicate.
-
+the only things that can stop the pushing process
+are higher order calls and module boundaries:
+the compiler cannot push a \wait or \signal operation
+into the body of a predicate that it does not have access to
+or into a predicate that it can not identifiy.
 
 \begin{figure}
 \begin{verbatim}
