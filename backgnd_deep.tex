@@ -20,11 +20,11 @@ They have since been completed and corrected during my Ph.D.\ Candidature.
 There are some exceptions,
 most significantly the coverage profiling transformation (Section \ref{sec:coverage})
 developed for my honours research project was complete, and is used, largely
-unchanged in my Ph.D.\ research.
+unchanged, in my Ph.D.\ research.
 The related analysis described in Section \ref{sec:var_use_analysis}
 and the feedback framework in Section \ref{sec:feedback}
 were also written as part of my honours research project.
-Still other parts of this section are not my own work,
+Some other parts of this section are not my own work,
 namely the work described in
 \citet{conway:2001:mercury-deep} and
 \citet{tannier:2007:parallel_mercury}.
@@ -43,29 +43,29 @@ It may not be useful to parallelise the search on the small list against some
 other computation,
 but it will usually be useful to parallelise the search on the large list
 against another computation.
-It's important not to create too much parallelism;
-overheads of parallelisation for which there is no speed up will slow the
-program down.
-Therefore, not just sub-optimal to parallelise the search of the small list,
+It is important not to create too much parallelism:
+The hardware can only handle so much parallelism,
+any more and the overheads of parallel execution will slow the program down.
+Therefore, it is not just sub-optimal to parallelise the search of the small list,
 but detrimental.
-The only way we can know the actual cost of most pieces of code,
+The only way we can know the actual cost of most pieces of code
 is by understanding their typical inputs,
 or measuring their runtime cost while operating on typical inputs.
 Therefore,
 profiling data can be used in auto-parallelisation;
 it allows us to predict the runtime cost of computations whose
 code is the same but whose inputs are different.
-These predictions are used to drive parallelisation decisions,
-which are, in turn, used to select where and how parallelism is introduced.
+These predictions are used to drive parallelisation speedup analysis,
+which is, in turn, used to select where and how parallelism is introduced.
 
 \picfigure{prof_fb}{Profiler feedback loop}
 
 To use profiling data for optimisations the usual workflow for compiling
 software must change.
-Figure \ref{fig:prof_fb} shows a profiler-feedback workflow.
-The source code is compiled, with profiling enabled and the resulting program is
+The source code is compiled with profiling enabled, and the resulting program is
 executed on a representative input.
-As the program terminates it writes its profiling data to disk,
+As the program terminates,
+it writes its profiling data to disk.
 The profiling data includes a bytecode representation of the program
 similar to the compiler's representation.
 The analysis tool reads this file,
@@ -80,16 +80,16 @@ Figure \ref{fig:prof_fb} shows this workflow.
 A common criticism of profile directed optimisation is that the programmer will
 have to compile the program twice,
 and run it at least once to generate profiling data.
-"If I have to run the program in order to optimise it, then the program has
+``If I have to run the program in order to optimise it, then the program has
 already
-done its job and there's no point continuing with the optimisation?"
-The answer to this is that a program's life time is often far more than a
+done its job and there is no point continuing with the optimisation?''
+The answer to this is that a program's lifetime is often far more than a
 single execution.
 A program will usually be used many times, and by many people.
 Each time the optimisation will have a benefit,
 this benefit will pay off the cost of the feedback directed optimisation.
 We expect that feedback-directed optimisations would normally be used
-when the programmer is building a \emph{release candidate} version of their
+when the programmer is building a release candidate version of their
 program,
 after they have performed testing and fixed any bugs.
 
@@ -101,7 +101,7 @@ There are many different types of programs, and therefore many different
 program inputs;
 we cannot hope to address this particular problem directly.
 Selecting a typical input for a given program must be done by the programmer.
-Other strategies exist that avoid this problem
+Other strategies exist to avoid this problem,
 such as dynamic recompilation.
 
 \subsection{The deep profiler}
@@ -122,7 +122,7 @@ infeasibly hard.
 This problem has been solved for Mercury by introducing deep profiling
 \citep{conway:2001:mercury-deep}.
 Mercury's deep profiler gathers much more information about the context of
-each measurement than traditional profilers like \code{gprof}\citet{gprof}.
+each measurement than traditional profilers like \code{gprof} \citep{gprof}.
 When it records the occurrence of a call,
 a memory allocation or a profiling clock interrupt,
 it records with it the chain of ancestor calls,
@@ -151,7 +151,7 @@ while $h$ called $i$ only seven times
 when $h$'s chain of ancestors was $main \calls g \calls h$,
 the calls from $h$ to $i$ took on average twice as long
 from the $main \calls g \calls h$ context as from $main \calls f \calls h$,
-so that despite the fewer calls,
+so that despite making fewer calls to $i$,
 $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
 \paul{Draw a figure}
 
@@ -159,7 +159,7 @@ $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \c
 % introduce it here then it's right next to its use, which is better.
 % I also considered a larger example such as the quadratic equation, but
 % it is not necessary.
-During compilation the arguments of functors and predicate calls are
+During compilation, the arguments of functors and predicate calls are
 simplified so that they are single variables.
 For instance \code{foo(a(3), X)} is simplified to:
 
@@ -172,69 +172,104 @@ foo(V_2, X)
 \noindent
 This new conjunction is flattened into the conjunction that contained the
 original expression.
-Code that is represented in this way is referred to as being in \emph{super
-homogeneous form}.
+Code flatterned in this way is said to be in
+\emph{super homogeneous form}.
 This can create many small conjuncts from just a single expression,
 for instance, the quadratic equation
-($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$) which can be written on one line
+($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$), which can be written on one line,
 is flattened into 12 individual conjuncts (excluding the plus-or-minus).
 
 Therefore the profiler
 (and other tools such as the debugger) introduced \emph{goal paths}
-to uniquely identify a sub goal in any goal tree such as a procedure's%
-\footnote{
-A procedure is either a predicate \& mode or a function (Section
-\ref{sec:back_mercury})}
+to uniquely identify a sub goal in any goal tree such as a procedure's
 body.
 A goal path is a list of goal path steps, each step describes which
 sub-goal to recurse into when traversing a goal structure fromits root
 to either its leaves or some compound goal.
-The goal path "c3;d2" refers to the second disjunct "d2" within the
-third conjunct "c3".
-Goal paths are stored as lists and canonicalised as strings.
-Since the debugger was written first goal paths where introduced then,
-and the deep profiler was able to re-use this concept~\citep{mdb}.
+The goal path ``c3;d2'' refers to the second disjunct ``d2'' within the
+third conjunct ``c3''.
+Goal paths where first introduced to support debugging in Mercury \citep{mdb}.
+The deep profiler was written after the debugger and was able to re-use them.
 
-There are four structures used during profiling,
+There are four structures used during profiling;
 each one is also reflected in the profiling data.
-These are: {\PS}, {\PD}, {\CSS} and {\CSD}.
-{\PS} represents the static data about a procedure
-This data includes the procedure's name and arity,
-the source file it can be found in and the line number within that source file.
-\CSS represents static data for a call cite.
-This includes the procedure the call site is found in, the line number,
-the goal path and the callee (if known statically).
-The dynamic variants of these structures, \PD and {\CSD},
-form the call tree beginning at \code{main/2} (a \PD structure)
-which has a number of \CSD structures each having \PD structures
-beneath them.
-The actual profiling data for a call and its context are stored in
-the \CSD structure for that call,
-the context is identified by the sequence of structures pointing to this
-structure.
+
+\begin{description}
+
+    \item[\PD]
+    represents a procedure within the program's call tree.
+    There may be multiple \PD structures for any given procedure as the
+    same procedure will usually be from a number of different contexts
+    in the program.
+    
+    \item[\CSD]
+    represents a call site in the program's call tree.
+    As with \PD, there may be multiple \CSD structures for any given
+    call site.
+    Profiling for the call site \& context is stored within its \CSD
+    structure.
+    Each \CSD structure has one pointer to the \PD stucture representing
+    its callee\footnote{
+        This is not exactly true,
+        thare are rare circumstances where a dynamic call site can have
+        multiple callees.
+        However, the conditions that create this and how it is handled
+        are not important.}.
+    Likewise, each \PD structure has an array of pointers to the \CSD
+    structures representing the calls used during the execution of the
+    procedure.
+    These links represent the call graph of the program.
+
+    \item[\PS]
+    represents the static data about a procedure
+    This data includes the procedure's name, arity, source file and line
+    number.
+    \paul{Does a \PS point to its {\CSS}s?}
+    Because multiple \PD structures may exist for the same procedure,
+    this stucture is used to factor out common information.
+    Each \PD structure has a pointer to its \PS structure.
+    There is exactly one \PS structure for each procedure in the
+    program.
+
+    \item[\CSS]
+    represents static data for a call site.
+    This includes the procedure the call site is found in, the line number,
+    the goal path and a pointer to the \PS of the callee (if known
+    statically).
+    \paul{Does a \CSS really point to its \PS?}
+    As with \PS structures,
+    \CSS structures reduce the memory usage of \CSD structures by
+    factoring out common information.
+    Each \CSD structure has a pointer to its \CSS structure.
+    There is exactly one \CSS structure for each call site in the
+    program.
+
+\end{description}
+
+\noindent
 When the profiling data file is read,
 the profiling tool will build the call graph and perform a topological
 sort.
 The result of the sort is a list of SCCs
-(which \citet{conway:2001:mercury-deep} calls \emph{cliques})
+(which \citet{conway:2001:mercury-deep} call \emph{cliques})
 each SCC is used to create a \Clique data structure.
 A number of indexes are also constructed.
 The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
 efficiently traverse the program's profile in both
-the easy to browse user interface,
+the easy-to-browse user interface,
 and automated tools, such as the automatic parallelism analysis.
 
 % Callseqs
 Profilers have traditionally measured time
 by sampling the program counter at clock interrupts.
-Unfortunately, even on modern machines
-the usual, and portable infrastructure for clock interrupts
+Unfortunately, even on modern machines,
+the usual portable infrastructure for clock interrupts
 (\emph{e.g}., SIGPROF on Unix)
 supports only one frequency for such interrupts,
 which is usually 60 or 100Hz.
 This frequency is far too low for the kind of detailed measurements
-the Mercury deep profiler wants to make,
-since for typical program runs of few seconds,
+the Mercury deep profiler wants to make.
+For typical program runs of few seconds,
 it results in almost all calls having a recorded time of zero,
 with the calls recording a nonzero time
 (signifying the occurrence of an interrupt during their execution)
@@ -249,7 +284,7 @@ as if the occurrence of a call signified
 the occurrence of a new kind of profiling interrupt.
 In imperative programs, this would be a horrible measure,
 since calls to different functions can have hugely different runtimes.
-However, in declarative language like Mercury there are no explicit loops;
+However, in declarative languages like Mercury there are no explicit loops;
 what a programmer would do with a loop in an imperative language
 must be done by a recursive call.
 This means that the only thing that the program can execute between two calls
@@ -269,16 +304,16 @@ is that on 32 bit platforms,
 its usability is limited to short program runs (a few seconds)
 by the wraparound of the global CSC counter;
 on 64 bit platforms, the problem would occur
-only on a profiling run that lasts for years.
+only on a profiling run that lasted for years.
 
 \subsection{Prior Auto-parallelism Work}
 
 \citet{tannier:2007:parallel_mercury} describes a prior attempted at automatic
 parallelism in Mercury.
-In this approach, the parallelisation feedback data was gathered by an analysis
-tool,
-this feedback was a list of the procedures with the highest cost in the program,
-these were chosen by a configurable measurement and threshold.
+In his approach, the parallelisation feedback data was gathered by an analysis
+tool.
+This feedback was a list of the procedures with the highest cost in the program,
+chosen by a configurable measurement and threshold.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.
 Nor did it use any advanced features of the profiler.
