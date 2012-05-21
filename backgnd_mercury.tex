@@ -9,7 +9,7 @@ semantically the two languages are very different
 due to Mercury's purity and its type, mode, determinism and module systems.
 
 Mercury programs consist of modules,
-each has a seperate namespace and sperate compilation is used making it easy
+each has a separate namespace and separate compilation is used making it easy
 to create large programs.
 Each module contains predicates and functions.
 Functions are a syntactic sugar for predicates with an extra (result)
@@ -34,16 +34,16 @@ $$
 \end{array}
 $$
 
-\paul{Peter suggested using a more grammer-like description of the language.
+\paul{Peter suggested using a more grammar-like description of the language.
 I think that his motivation was that terminals and non-terminals should look
 more distinct.
-I've capitalized the variable names since that's closer to mercury syntax,
+I've capitalised the variable names since that's closer to mercury syntax,
 it's not the same as showing terminals and non-terminals differently but
 perhaps it's clearer.}
 
 \noindent
 Atomic goals do not refer to other goals;
-compisite goals are defined in terms of other goals.
+composite goals are defined in terms of other goals.
 Mercury's goal types are:
 
 $$
@@ -100,7 +100,7 @@ method calls,
 and calls to predicates defined by code in a foreign language (usually C).
 \peter{You only need to cover enough about Mercury for the purposes of
   your thesis.  I don't think how inlining of foreign code works is important.}
-\paul{We use it to implement primatives on which our transformations are
+\paul{We use it to implement primitives on which our transformations are
 built,
 I may remove it later if the detail of how this is done is unimportant.}
 The compiler can inline foreign code definitions when generating code
@@ -147,7 +147,7 @@ Types may be parametric,
 type parameters are written in uppercase while
 concrete types are written in lower case.
 The following are references to types.
-Type declrations are not covered here,
+Type declarations are not covered here,
 more information can be found in \citet{mercury_refman}.
 
 \begin{description}
@@ -186,7 +186,7 @@ Free variables currently have no value,
 ground variables have a fixed value,
 clobbered variables once had a value, but it is no longer available.
 Partial instantiation can also occur,
-however, the compiler does not fully support partial instantiaton
+however, the compiler does not fully support partial instantiation
 and therefore it is rarely used.
 Ground and bound instantiation states may also be described as unique,
 meaning they are not aliased with any other value.
@@ -217,8 +217,8 @@ There may be multiple modes for any given predicate.
 Here are two mode declarations for the append predicate above;
 these are usually written immediately after the type declaration.
 When a predicate has only a single mode,
-the mode declration can be combined with the type signature as a single
-declration.
+the mode declaration can be combined with the type signature as a single
+declaration.
 
 \begin{verbatim}
 :- mode append(in, in, out) is det.
@@ -312,7 +312,7 @@ Mercury's determinisms are:
     % We use the cc detisms a little bit, since parallelism may be used in
     % cc_multi predicates.
     \item[\dccmulti] procedures may have more than one solutions, like \dmulti
-    but they commit to the first solultion.
+    but they commit to the first solution.
     In practice, they succeed exactly once.
     \item[\dccnondet] procedures may have any number of solutions, like
     \dnondet

@@ -107,7 +107,7 @@ In this case it is known the the value of the future is already available.
 Therefore,
 \get is introduced as a non thread-safe operation with lower runtime costs.
 \get observes a side-effect that \wait and \signal ensures is visible.
-If \wait's output is never used it could be optimized away,
+If \wait's output is never used it could be optimised away,
 and therefore \get would be unsafe when it follows a call to \wait.
 \wait must therefore be impure and \get must be semipure.
 
@@ -130,7 +130,7 @@ the only things that can stop the pushing process
 are higher order calls and module boundaries:
 the compiler cannot push a \wait or \signal operation
 into the body of a predicate that it does not have access to
-or into a predicate that it can not identifiy.
+or into a predicate that it can not identify.
 
 \begin{figure}
 \begin{verbatim}

@@ -1,7 +1,7 @@
 \status{This section is complete}
 
 Mercury has a number of backends
-the low-level C backend uses an asbract machine implemented using the C
+the low-level C backend uses an abstract machine implemented using the C
 preprocessor.
 The compiler writes out procedures as sequences of macro uses.
 The C compiler is used to expand the macros and generate native code.
@@ -11,34 +11,34 @@ These registers are virtual:
 they are C macros which expand to global variables.
 Commonly used virtual registers are mapped to real machine registers
 using GCC's \citep{gcc} global register extension.
-The number of mapped registers depends upon the achitecture of the physical
+The number of mapped registers depends upon the architecture of the physical
 machine.
 
-The compiler hass access to determinism information of a procedure.
-This means that if a procedure is known to be determinisic more efficient
+The compiler has access to determinism information of a procedure.
+This means that if a procedure is known to be deterministic more efficient
 code can be generated for it.
 In particular,
 code with at most one solution uses the \emph{det stack} (deterministic
 stack),
-which operatates in much the same way as a stack in an imperative or
+which operates in much the same way as a stack in an imperative or
 functional language.
-The detstack has one pointer to the top of the stack,
+The det stack has one pointer to the top of the stack,
 called the stack pointer.
 Code with more than one solution uses the \emph{nondet stack}:
 When a nondeterministic procedure produces a solution it returns control to
 its caller,
-however, its stack frame is kept on the nondet stack incase backtracking
+however, its stack frame is kept on the nondet stack in case backtracking
 requires it to check for other solutions.
 Therefore,
 two stack pointers are used with the nondet stack,
 one points to the top of the stack where new frames are allocated,
 the other points to the current stack frame.
 Parallel conjunctions are only supported in deterministic code,
-therefore the nondet stack and its two stack pointers are largly irrelevent.
+therefore the nondet stack and its two stack pointers are largely irrelevant.
 More information about Mercury's execution algorithm can be found in
 \citet{mercury_jlp}.
 
-To support parallel exececution \citet{conway_par} grouped the variables
+To support parallel execution \citet{conway_par} grouped the variables
 used to implement the abstract machine's registers into a structure
 called an \emph{engine}.
 Each engine corresponds to a POSIX Thread (pthread)
@@ -49,10 +49,10 @@ The number of engines that a parallel Mercury program will allocate on startup
 is configurable by the user,
 but it defaults to the actual number of CPUs.
 
-In non-parallel grades a signel engine is allocated statically and is known
+In non-parallel grades a single engine is allocated statically and is known
 to reside at a particular address.
 However,
-in parallel grades the multiple engine's addresses are uknown at compile
+in parallel grades the multiple engine's addresses are unknown at compile
 time.
 An extra real cpu register\footnote{
     If GCC global registers are unavailable,
@@ -68,7 +68,7 @@ virtual registers.
 Contexts represent computations in progress.
 An engine may be idle, or it may be executing a context;
 a context can be running on an engine, or it may be suspended.
-Separate computations are required to have seperate stacks,
+Separate computations are required to have separate stacks,
 therefore the storage for stacks is associated with a context.
 When a computation is suspended,
 the registers from the engine are copied into the context,
@@ -184,9 +184,9 @@ Chapter \ref{chap:rts} describes how sparks are managed.
 
 When the engine finishes the execution of the first conjunct ($G_1$)
 it executes the barrier code \joinandcontinue and the end of the conjunct.
-The barrier ensures that the orignal context cannot execute the code that
+The barrier ensures that the original context cannot execute the code that
 follows the parallel conjunction
-until every one of the conjuncts has been exexuted.
+until every one of the conjuncts has been executed.
 It also makes several scheduling decisions which are described in Chapter
 \ref{chap:rts},
 
