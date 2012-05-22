@@ -313,31 +313,31 @@ parallelism in Mercury.
 In his approach, the parallelisation feedback data was gathered by an analysis
 tool.
 This feedback was a list of the procedures with the highest cost in the program,
-chosen by a configurable measurement and threshold.
+chosen by a configurable measurement (mean or median of time in CSCs) and threshold.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.
 Nor did it use any advanced features of the profiler.
 Parallelisation decisions were made in the compiler:
 each procedure was searched for calls that appeared in the list of top procedures
 and calls to these where parallelised against similar calls if they
-where independent or had fewer than some $N$ shared variables.
+where independent or had fewer shared variables than another configurable limit.
 
 \paul{XXX:  'my' or 'our' in this work.  I know we usually use plural
 first person in papers,
 Is this true for dissertations as well?}
 For my honours project I attempted automatic parallelism of Mercury
 \citep{bone:2008:hons}.
-There where a number of differences between my work and Tannier's.
+There are a number of differences between my work and Tannier's.
 The first differences is that at the time of my work the deep profiler
 was able to export a representation of the program
 (my work was the motivation for this feature).
 This allowed my analysis to access profiling data and a representation
-of the program at the same time.
-This allows the analysis to measure when variables are produced and
-consumed within parallel conjuncts,
-and therefore calculate,
-for conjunctions with a single shared variable,
-how much parallelism is available.
+of the program at the same time;
+making it possible to measure to the times at which variables are produced
+and consumed within parallel conjuncts.
+The analysis uses this to calculate how much parallelism is available,
+for conjunctions with a single shared variable.
+\paul{Draw an overlap diagram.}
 The formula used was:
 
 \begin{eqnarray*}
@@ -358,13 +358,25 @@ the calculation of parallel execution time and speedup are the commonly
 used formulas for many parallel execution cost models.
 
 This cost model requires information about when a shared variable is
-produced by the first conjunct and consumed by the second.
+produced by the first conjunct and when it is consumed by the second.
 To provide this information we introduced coverage profiling to
-Mercury's deep profiler,
-and used the resulting coverage data in a variable use time analysis.
+Mercury's deep profiler (Section \ref{sec:coverage}),
+and used the resulting coverage data in a variable use time analysis
+(Section \ref{sec:var_use_time}).
 
 \subsection{Coverage Profiling}
 \label{sec:coverage}
+
+Code \emph{coverage} is a term often used in the context of debugging and
+testing.
+It referrs to which parts of a program get executed and which do not,
+it is used to determine the completeness of a test-suite.
+We use the same term,
+often simply ``coverage'' rather than ``code coverage'',
+to describe how \emph{often} a given peice of code is executed.
+Thus, we have extended the concept of coverage from a binary ``has been
+executed'' or ``has not been executed'' to a more informative
+``has been executed $N$ times''.
 
 \paul{I can't get a paper of the reference I want
 \cite{box-model}, so I don't know what's in the paper}
@@ -394,18 +406,19 @@ Calls + Redos = Exits + Fails + Exceptions
 \noindent
 Mercury adds additional invariants for many determinism types.
 For example, deterministic code may not redo or fail,
-therefore these port counts will be zero for deterministic code.
+therefore these port counts will be zero.
 The deep profiler tracks the number of times each port is used for a given
 call.
-Port counts provide code coverage data predicate and call-site entry and exit.
+Port counts provide code coverage information for predicate and call-site
+entry and exit.
 
 % XXX: Actually implement the case for inferring Elses' coverage.
 Code coverage of many goals can be inferred,
 in the simple case of a conjunction containing deterministic conjuncts.
-each conjunct will have the same coverage as the one before it,
+Each conjunct will have the same coverage as the one before it,
 (we make the assumption that the code does not throw an exception
 as doing so is rare).
-It follows that a deterministic conjunction containing a single call.
+It follows that a deterministic conjunction containing a single call
 can have complete coverage information inferred for all of its conjuncts.
 Similarly,
 the coverage before an \emph{if-then-else} can be inferred as the sum
@@ -423,10 +436,12 @@ based on the coverage before the if-then-else and at the end of the
 condition,
 and the condition's determinism.
 A similar inference can be made for switches,
-except that they do not have a condition,
+except that they do not have a condition:
 we simply infer the
 coverage of the final switch branch based on the coverage of the other
-branches and before the switch provided that it is a complete switch.
+branches,
+and before the switch,
+provided that it is a complete switch.
 % A good reader might realize that we've only discussed a forward pass,
 % more complicated passes are possible but the reader will have to take
 % in on faith that this will be discussed later in this section.
@@ -434,25 +449,29 @@ branches and before the switch provided that it is a complete switch.
 However, port counts alone will not provide complete coverage information.
 for example, a conjunction containing a sequence of \dsemidet
 unifications will have incomplete coverage information:
-We can not know how often each individual unification fails.
+We cannot know how often each individual unification fails.
 We introduced coverage profiling as part of Mercury's deep profiler to
 add extra instrumentation to gather coverage data where it would
 otherwise be unknown.
+At the same time, we try to reduce the amount of instrumentation used,
+since extra instrumentation can slow the program down and in some cases
+distort the profile.\footnote{While we use call sequence counts
+instead of actually measuring time the profile
+cannot be distorted.}
 
 When the compiler instruments the program for deep profiling,
-it will make a forward pass through the goal tree of each procedure.
+it makes a forward pass through the goal tree of each procedure.
 During this pass,
-a boolean value is maintained that describes whether or not coverage
-data would be available at this point on the program.
+a boolean value is maintained that indicates whether or not coverage
+data would be available at this point in the program.
 When this boolean becomes false,
 the algorithm will introduce a coverage point at that place in the code
-ans set the value to true.
+and set the value to true.
 The value will be set to false after a goal with a determinism other than
 \ddet or \dccmulti and which does not provide coverage data of its own,
-or at the beginning of a branch where the coverage can not be inferred.
+or at the beginning of a branch where the coverage cannot be inferred.
 This algorithm has the same structure as the coverage inference
-algorithm,
-this way,
+algorithm:
 a coverage point will always be placed where the coverage inference
 algorithm would expect to find one.
 
@@ -480,17 +499,16 @@ The forward pass through the procedure would not be able to infer
 coverage at the beginning of this switch arm,
 and therefore the similar pass in the deep profiler introduced a
 coverage point at that position.
-This point along with the coverage of the procedure as a whole
+This point, along with the coverage of the procedure as a whole,
 is enough to infer coverage for the whole procedure on a single pass.
-It is true that the the coverage point could be removed and the port
+It is true that the coverage point could be removed and the port
 counts of the recursive code in this example could be used,
-doing so would require multiple passes
-for both inference and instrumentation..
+but doing so would require multiple passes
+for both inference and instrumentation.
 Coverage profiling adds only a small cost to profiling;
-it was not, and has never been, a high priority to optimise this
-further.
+it is not a high priority to optimise this further.
 
-Coverage data is tracked in the \PS structure
+Coverage data is tracked in the \PS structure,
 which we introduced in Section \ref{sec:backgnd_deep}.
 Three new fields where added to the \PS structure:
 a constant integer representing the number of coverage points in this
@@ -507,7 +525,7 @@ coverage point (branch or post-goal),
 is written out with the profile.
 Because coverage points are associated with \PS structures,
 and not either \PD or \CSD structures,
-they are not associated with context in the way that other profiling
+they are not associated with contexts in the way that other profiling
 data is.
 That is to say,
 coverage data of a particular predicate covers the general use of that
@@ -516,15 +534,14 @@ The auto-parallelisation work described in my honours report
 \citep{bone:2008:hons}
 would not have benefited from context specific coverage data.
 
-The coverage point in the Figure \ref{fig:map_coverage}
+The coverage point in Figure \ref{fig:map_coverage}
 has two arguments,
-the first points the instrumetation code at the \PS containing
-this procedure's coverage points,
+the first points to the \PS containing this procedure's coverage points,
 the second is the index within this procedure's coverage point arrays
 for this coverage point.
 Although the instrumentation code appears to be a call,
-it is only a few lines in C and is therefore implemented as a C
-preprocessor macro, and therefore inlined into the compiled procedure. 
+it is implemented as a C preprocessor macro as it is very small and should
+be inlined into the compiled procedure.
 
 
 \subsection{Variable Use Time Analysis}
