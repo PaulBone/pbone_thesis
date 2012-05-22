@@ -194,8 +194,7 @@ When variables are used, their instantiation state may change;
 such a change is described by a transition between two instantiation states,
 or the same instantiation state if nothing changed.
 The symbol \code{>>} denotes a state change.
-This is also known as a mode (of an argument),
-this is not the same as the mode of a predicate.
+This is also known as a mode (of an argument).
 When a variable is used as an argument or in a unification it can only
 become \emph{more instantiated};
 that is to say `free to ground' is legal, but `ground to free' is not.
@@ -214,7 +213,7 @@ defined in the standard library:
 
 \noindent
 There may be multiple modes for any given predicate.
-Here are two mode declarations for the append predicate above;
+Here are two mode declarations for the \code{append/3} predicate above;
 these are usually written immediately after the type declaration.
 When a predicate has only a single mode,
 the mode declaration can be combined with the type signature as a single
@@ -226,8 +225,15 @@ declaration.
 \end{verbatim}
 
 \noindent
-The compiler enforces the instantiation state constraints on variables passed
-as arguments:
+The Mercury compiler generates separate code
+for each mode of a predicate or function,
+which we call a \emph{procedure}.
+In fact, individual procedures are handled as separate entities by
+the compiler after mode checking.
+Mode correct conjunctions,
+and other conjoined goals such as the then and else parts of an if-then-else,
+must produce values for variables before consuming them.
+This means that:
 Variables passed as input arguments must be ground before and after the call
 while variables passed as output arguments must be free before the call and
 ground after the call.
@@ -236,22 +242,22 @@ before the end of the call;
 it must be unique before the call and clobbered afterwords.
 It is illegal to reference a clobbered variable.
 A variable passed in a unique output argument must initially be free and
-will become unique.
-These two modes are often used together to allow the compiler to
-destructively update data structures such as arrays.
-The compiler will infer the instantiation states of all variables before and
-after every goal in a predicate or function's body.
-
-The Mercury compiler generates separate code
-for each mode of a predicate or function,
-which we call a \emph{procedure}.
-In fact, individual procedures are handled as separate entities by
-the compiler after mode checking.
-This allows the mode checking pass of the compiler to minimally
-reorder conjuncts (in both sequential and parallel conjunctions)
-so that the producer of a variable (the code that makes the variable ground)
-occurs before all consumers of that variable (any code that expects the
-variable to be ground).
+will become unique\footnote{
+    The \di and \uo modes are often used together to allow the compiler to
+    destructively update data structures such as arrays.}.
+Unfications can also modify the instantiation state of a variable,
+Unifying a free term with a ground term will make the first term ground,
+and the second one non-unique.
+Unifying a ground term with a ground term is an equality test,
+it does not affect instantation.
+Unifying two free terms is illegal\footnote{
+Aliasing free variables is illegal, Mercury doesn't support logic variables.
+This is a deliberate design decision and makes unification in Mercury much
+faster than in Prolog.}.
+The mode checking pass will minimally reorder conjuncts 
+(in both sequential and parallel conjunctions)
+so that multiple procedures created from the same predicate can be mode
+correct.
 This means that for each variable in each procedure,
 the compiler knows exactly where that variable becomes ground.
 
@@ -323,7 +329,8 @@ Mercury's determinisms are:
 \noindent
 In practice, most parts of a Mercury program are deterministic (\ddet).
 Each procedure's mode declaration
-typically declares its determinism (see the mode declarations for append above).
+typically declares its determinism (see the mode declarations for
+\code{append/3} above).
 If this is omitted, the compiler can infer the missing information.
 
 % Switch detection.
