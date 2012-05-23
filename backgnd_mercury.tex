@@ -115,6 +115,7 @@ sequential and parallel conjunctions,
 disjunctions, if-then-elses, negations and existential quantifications.
 A detailed description of parallel conjunctions can be found in Section
 \ref{sec:back_mer_par}.
+
 The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
 but are transformed into combinations of negations and existential quantification:
@@ -123,6 +124,7 @@ Similarly,
 a negation can be simplified using the constants $true$ and $false$ and an
 if-then-else:
 $not~G~\rightarrow~(if~G~then~false~else~true)$.
+
 A switch is a disjunction in which
 each disjunct unifies the same bound variable
 with a different function symbol.
@@ -134,8 +136,6 @@ That is to say,
 there are function symbols in the variable's type that are not covered
 by a case in the switch.
 The purity promise will be described on page \pageref{page:purity}.
-
-\paul{XXX: Need to describe semidet disjunctions somewhere}
 
 Mercury has a strong Hindley-Milner~\citep{hindley69:types,milner78:types} type
 system that was inspired by that of Hope~\citep{hope_types}
@@ -389,6 +389,22 @@ whereas a disjunction that is \emph{not} a switch and produces at least one
 variable
 cannot be deterministic,
 since each disjunct may generate a solution.
+
+Disjunctions that are not converted into switches can be split into two
+seperate types of disjunction.
+If a disjunction produces one or more variables
+then it may have more than one solution
+(it will be \dnondet, \dmulti, \dccnondet or \dccmulti).
+If a disjunction does not produce any variables
+then it has at most one solution
+(it will be either \dsemidet or \ddet).
+Even when there may be different execution paths that succeed
+the extra execution paths do not affect the program's semantics.
+In partice disjunctions that produce no values are \dsemidet:
+if they where \ddet they would be optimized away,
+therefore we call them \emph{semidet disjunctions}.
+The compiler will generate different code for them,
+since they never produce more than one solution.
 
 Mercury has a module system.
 Calls may be qualified by the name of the module
