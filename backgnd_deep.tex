@@ -201,7 +201,7 @@ each one is also reflected in the profiling data.
     There may be multiple \PD structures for any given procedure as the
     same procedure will usually be from a number of different contexts
     in the program.
-    
+
     \item[\CSD]
     represents a call site in the program's call tree.
     As with \PD, there may be multiple \CSD structures for any given
@@ -553,66 +553,137 @@ conjunctions with at most two conjuncts and one shared variable.
 To predict how much parallelism is available it needs to know
 when that variable is produced by the first conjunct
 and the first time it is consumed by the second.
-These times are calculated in the unit of call sequence counts.
+These times are calculated in units of call sequence counts.
 
-During compilation of dependent conjunctions a future is created to
-replace any shared variable.
+During compilation of dependent conjunctions,
+a future is created to replace any shared variable.
 The compiler will attempt to push that future into the goal that
 produces the value so that,
 if possible,
 the \signal operation will be placed immediately after the unification
 that binds the variable.
 
-Therefore,
-the algorithm for computing the expected production time
-of a shared variable looks at the form of the conjunct that produces it.
-For each goal type it determines if it is possible to push the future
-into that goal so that the future is signaled as early as possible.
+\begin{algorithm}
+\paul{XXX: I want to fix the spacing between rows, where a row is larger tha a
+single line the spacing is wrong}
+\[
+\begin{array}{l @{}l @{}l}
+\prodtime V\,& G                            &=
+    \begin{cases}
+        0                & \text{if } G \text{ is not executed or
+                            \derroneous} \\
+        \prodtimep V\,G  & \text{if } G \text{ is \ddet or \dccmulti} \\
+        undefined        & \text{otherwise} \\
+    \end{cases} \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l @{}l}
+\prodtimep V\,& X = Y                        &= 0 \\
+\prodtimep V\,& X = f(\ldots)                &= 0 \\
+\prodtimep V\,& p(X_1,\,\ldots,\,X_n)        &=
+    \callprodtime V\,p\,[X_1,\,\ldots,\,X_n] \\
+%    \prodtime V\,(\operatorname{body} p) \\
+\prodtimep V\,& X_{n+1} = \,f(X_1,\,\ldots,\,X_n)  &=
+    \callprodtime V\,f\,[X_1,\,\ldots,\,X_n,\,X_{n+1}] \\
+%    \prodtime V\,(\operatorname{body} f) \\
+\prodtimep V\,& X_0(X_1,\,\ldots,\,X_n)      &= time\_of\_call \\
+\prodtimep V\,& m(X_1,\,\ldots,\,X_n)        &= time\_of\_call \\
+\prodtimep V\,& foreign(\ldots)              &= time\_of\_call + 1 \\
+\prodtimep V\,& (G_1,\,G_2,\,\ldots,\,G_n)   &=
+   \begin{cases}
+       \prodtime V\,G_1
+            & \text{if } G_1 \text{ binds } V \\
+       \begin{split}
+           \timef G_1 + \\ \prodtime V\,(G_2,\,\ldots,\,G_n)
+       \end{split}
+            & \text{otherwise}
+   \end{cases} \\
+\prodtimep V\,& (G_1\,\&\,\ldots\,\&\,G_n)   &= \undef \\
+\prodtimep V\,& (G_1\,;\,\ldots\,;\,G_n)     &= \undef \\
+\prodtimep V\,& \hbox{switch}\,X\,(f_1:\,G_1\,;\,\ldots\,,f_n:\,G_n)\, &=
+    \Avg_{1 \leq i \leq n}\,\prodtime\,V\,G_i \\
+\prodtimep V\,& (\hbox{if}\,Cond\,\hbox{then}\,Then\,\hbox{else}\,Else) &=
+        \begin{split}
+            Pr_{Then}(\timef Cond + \prodtime V\,Then) + \\
+            Pr_{Else}(\timef FailingCond + \prodtime V\,Else)
+        \end{split} \\
+%    \Avg_{G \in \{Then,\,Else\}} \prodtime V\,G \\
+\prodtimep V\,& not\,G                       &= \undef \\
+\prodtimep V\,& some\,[X_1,\ldots,X_n]\,G    &= \prodtime V\,G \\
+\prodtimep V\,& all\,[X_1,\ldots,X_n]\,G     &= \prodtime V\,G \\
+\prodtimep V\,& promise\_pure\,G             &= \prodtime V\,G \\
+\prodtimep V\,& promise\_semipure\,G         &= \prodtime V\,G \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+\callprodtime V\,p\,Args        \,&=
+    \begin{cases}
+        \begin{split}
+            \prodtime (\operatorname{arg\_to\_param} V Args) \\
+            (\operatorname{body} p)
+        \end{split} &
+            \text{if } p \text{ is in the current module} \\
+        \timef p &
+            \text{otherwise}
+    \end{cases} \\
+\end{array}
+\]
+\caption{Variable production time analysis}
+\label{alg:var_prod_time}
+\end{algorithm}
+
+The algorithm for computing the expected production time
+of a shared variable looks at the form of the conjunct that produces it,
+this is shown in Algorithm \ref{alg:var_prod_time}.
+This algorithm is only invoked on goals that are either \ddet or \dccmulti,
+and that produce the variable $V$.
+For each goal type,
+it determines if it is possible to push the future into that goal,
+so that the future is signaled as early as possible.
 As noted above,
 a future cannot be pushed into certain goal types,
-such as higher order calls, foreign code or calls that cross module
-boundaries.
+such as higher order calls, method calls,
+foreign code or calls that cross module boundaries.
+Therefore,
+conservative answers are used for these cases.
+The case for foreign calls doesn't measure the call sequence count for the
+foreign call itself, so we add one.
+Goals such as unifications are trivial, and always have zero cost,
+therefore they must produce their variable after zero call sequence counts
+of execution.
+Parallel conjunctions cannot appear in the goal types analysed,
+since they are always converted to sequential conjunctions as parallelism and
+profiling are not supported in the same build,
+we can safely leave their production times undefined.
+Because the algorithm is only invoked on goals that are \ddet or \dccmulti,
+then it is never used on negations and disjunctions,
+which cannot meaningfully be \ddet.
+\paul{Hrm, if I handle \dccmulti then I probably need to handle
+disjunctions!
+I think I have a solution to this.}
+We allow the production time of a variable in a negation or disjunction to
+be undefined.
 
-\begin{itemize}
-\item
-If the goal is a unification,
-the expected production time is zero.
-Because call sequence counts measure the time between calls
-and the unification is not a call. 
-\item
-If the goal is a foreign code goal,
-the expected production time is the total cost of the goal.
-If the foreign code calls back into Mercury,
-then the cost of the goal is one CSC plus the cost of the goals executed
-when re-entering mercury.
-Otherwise, it is as exactly one CSC.
-\item
-If the goal is a first order call,
-we recurse on the body of the callee.
-\item
-If the goal is a higher order call,
-the expected production time is the cost of the call,
-because the compiler cannot insert
-the signalling of the future into the callee's body.
-\item
-If the goal is a conjunction $G_1,~\ldots,~G_n$,
-and the variable is generated by $G_k$,
-then we add up the total time taken by $G_1,~\ldots,~G_{k-1}$,
-and add the sum to the result of invoking the algorithm recursively on $G_k$.
-\item
-If the goal is a switch,
-we invoke the algorithm recursively on each switch arm,
-and compute a weighted average of the results,
+A conjunction 
+($G_1,G_2,~\ldots,~G_n$),
+is handled by determining if $G_1$ produces the variable,
+if it does then we invoke the algorithm recursively on $G_1$.
+If $G_1$ does not produce $V$ then the algorithm is invoked recursively on
+the remainder of the conjunction ($G_2,\ldots,G_n$),
+and the execution time of $G_1$ is added to the result.
+
+We handle switches by invoking the algorithm recursively on each switch
+arm,
+and computing a weighted average of the results,
 with the weights being the arms' entry counts as determined by coverage
 inference.
-\item
-If the goal is an if-then-else,
+We handle if-then-elses similarly.
 we need the weighted average of the two possible cases:
 the variable being generated by the then arm versus the else arm.
 (It cannot be generated by the condition:
 variables generated by the condition are visible only from the then-arm.)
-if they were visible from anywhere else,
-they would not have a value if the condition failed.)
 % TODO: implement this behaviour
 To find the first number,
 we invoke the algorithm on the then-arm,
@@ -625,26 +696,7 @@ that weights the time taken by each conjunct in any inner conjunction
 by the probability of its execution,
 which we know by comparing its execution count
 with the count of the number of times the condition was entered.
-\item
-The goal cannot be a negation, because negated goals cannot bind variables.
-\item
-The goal cannot be a disjunction,
-Disjunctions may only be {\dsemidet}, \dmulti or {\dnondet}.
-\dsemidet code cannot be embedded in \ddet code,
-which is the only type of code that we consider parallelising.
-And \dmulti and \dnondet disjunctions would have to have their solutions
-quantified away to be used in \ddet code,
-meaning that they cannot produce any variables.
-\item
-If the goal is a quantification,
-then the inner goal must be det,
-in which case we invoke the algorithm recursively on it.
-If the inner goal were not det,
-then the outer quantification goal could be det
-only if the inner goal did not bind any variables visible from the outside.
-\end{itemize}
 
-\noindent
 Using the weighted average for switches and if-then-elses is meaningful because
 the Mercury mode system dictates
 that if one arm of a switch or if-then-else generates a variable,
@@ -655,6 +707,16 @@ We use a weight of zero for erroneous arms.
 Coverage profiling was introduced to provide the weights of switch and
 if-then-else arms used by this algorithm.
 
+If the goal is a quantification,
+then the inner goal must be \ddet,
+in which case we invoke the algorithm recursively on it.
+If the inner goal were not \ddet,
+then the outer quantification goal could be \ddet
+only if the inner goal did not bind any variables visible from the outside.
+Therefore, if the analysis is invoked on a quantification,
+we already know that this is because the quantification produces the
+the variable, and therefore the inner goal must be \ddet.
+
 The algorithm we use for computing the time
 at which a shared variable is first consumed by the second conjunct
 is similar to this one,
@@ -662,21 +724,30 @@ the main differences being that
 negated goals, conditions and disjunctions are allowed to consume variables,
 and some arms of a switch or if-then-else
 may consume a variable even if other arms do not.
-In switches and if-then-elses that wait on a future in some arms but
-not in all,
-we assume that a wait operation will be inserted at the end of each
-switch arm that does not wait on a future ---
-this is a conservative assumption and could prevent introducing
-parallelism that leads to a slow-down.
-A similar assumption may be made when a variable is not used in a goal,
-such as when a procedure (followed by a call) never used one of its
-arguments.
+\paul{I'm going to set out an Algorithm for this, and show the differences.
+But I'd like feedback about the algorithm above first,
+it took a non-trivial amount of time to fight with latex to get it to look
+reasonable,
+I don't want to waste that time again on a second algorithm.}
+Not all branches of an if-then-else or switch need to consume a variable.
+The code that pushes wait operations into goals can be configured to include
+a \wait operation on every execution path so that when the goal completes,
+it is guaranteed that a \wait operation has taken place.
+Our analysis makes the conservative assumption that the system is configured
+in this way,
+this could prevent introducing parallelism that leads to a slow-down.
+To make this assumption,
+the algorithm checks if a goal consumes a variable, if it does not it
+returns the goal's execution time as the consumption time of the variable.
+\paul{I wonder if the actual code works this way}
+This also gaurntees that any call expected to wait on a future will wait on
+that future even though it might not use that parameter.
 % XXX: This is not yet implemented.
-The other important difference is that when making 
-any other conservative assumption 
+The other important difference is that when making
+any other conservative assumption
 such as when the algorithm finds a higher order call,
 the consumption time used is zero
-(it was the cost of the call when analysing for productions) 
+(it was the cost of the call when analysing for productions)
 
 \subsection{Feedback framework}
 \label{sec:feedback}
