@@ -245,11 +245,11 @@ A variable passed in a unique output argument must initially be free and
 will become unique\footnote{
     The \di and \uo modes are often used together to allow the compiler to
     destructively update data structures such as arrays.}.
-Unfications can also modify the instantiation state of a variable,
+Unifications can also modify the instantiation state of a variable,
 Unifying a free term with a ground term will make the first term ground,
 and the second one non-unique.
 Unifying a ground term with a ground term is an equality test,
-it does not affect instantation.
+it does not affect instantiation.
 Unifying two free terms is illegal\footnote{
 Aliasing free variables is illegal, Mercury does not support logic variables.
 This is a deliberate design decision and makes unification in Mercury much
@@ -391,7 +391,7 @@ cannot be deterministic,
 since each disjunct may generate a solution.
 
 Disjunctions that are not converted into switches can be split into two
-seperate types of disjunction.
+separate types of disjunction.
 If a disjunction produces one or more variables
 then it may have more than one solution
 (it will be \dnondet, \dmulti, \dccnondet or \dccmulti).
@@ -400,8 +400,8 @@ then it has at most one solution
 (it will be either \dsemidet or \ddet).
 Even when there may be different execution paths that succeed
 the extra execution paths do not affect the program's semantics.
-In partice disjunctions that produce no values are \dsemidet:
-if they where \ddet they would be optimized away,
+In practice disjunctions that produce no values are \dsemidet:
+if they where \ddet they would be optimised away,
 therefore we call them \emph{semidet disjunctions}.
 The compiler will generate different code for them,
 since they never produce more than one solution.

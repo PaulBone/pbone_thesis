@@ -24,10 +24,15 @@ TEX_PROSE = \
 TEXFILES = 	$(TEX_PROSE) macros.tex
 TABLES_TEX = 	mem_table.tex times_table.tex
 
+SPELL_FILES = $(TEX_PROSE:%.tex=%.spell)
+
 # Results from Loop control.
 TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
 MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
 BENCH_ALL=          lc_bench_all
+
+#DETEX=untex -m -uascii -e
+DETEX=detex -l -n
 
 #
 # Hopefully this means that someone without mercury installed
@@ -42,7 +47,7 @@ else
 endif
 
 .PHONY : all
-all : thesis.pdf undefined.txt talk.pdf
+all : thesis.pdf undefined.txt talk.pdf spelling
 
 .PHONY : wc
 wc :
@@ -79,6 +84,12 @@ checked : $(TEX_PROSE) check
 
 check : check.m
 	mmc --make check
+
+.PHONY : spelling
+spelling : $(SPELL_FILES)
+
+%.spell : %.tex
+	$(DETEX) < $< | spell | sort -u > $@
 
 talk.pdf: talk.orig $(TALK_PICS) $(TALK_PSS)
 	make -f $(LS) teacher_beamer/talk.pdf

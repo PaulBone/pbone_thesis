@@ -16,7 +16,7 @@ Most parts of the implementation were incomplete and did not work correctly or
 at all.
 Therefore,
 their evaluation could not be included in my honours report.
-They have since been completed and corrected during my Ph.D.\ Candidature.
+They have since been completed and corrected during my Ph.D.\ candidature.
 There are some exceptions,
 most significantly the coverage profiling transformation (Section \ref{sec:coverage})
 developed for my honours research project was complete, and is used, largely
@@ -172,7 +172,7 @@ foo(V_2, X)
 \noindent
 This new conjunction is flattened into the conjunction that contained the
 original expression.
-Code flatterned in this way is said to be in
+Code flattened in this way is said to be in
 \emph{super homogeneous form}.
 This can create many small conjuncts from just a single expression,
 for instance, the quadratic equation
@@ -184,7 +184,7 @@ Therefore the profiler
 to uniquely identify a sub goal in any goal tree such as a procedure's
 body.
 A goal path is a list of goal path steps, each step describes which
-sub-goal to recurse into when traversing a goal structure fromits root
+sub-goal to recurse into when traversing a goal structure from its root
 to either its leaves or some compound goal.
 The goal path ``c3;d2'' refers to the second disjunct ``d2'' within the
 third conjunct ``c3''.
@@ -211,7 +211,7 @@ each one is also reflected in the profiling data.
     Each \CSD structure has one pointer to the \PD stucture representing
     its callee\footnote{
         This is not exactly true,
-        thare are rare circumstances where a dynamic call site can have
+        there are rare circumstances where a dynamic call site can have
         multiple callees.
         However, the conditions that create this and how it is handled
         are not important.}.
@@ -369,11 +369,11 @@ and used the resulting coverage data in a variable use time analysis
 
 Code \emph{coverage} is a term often used in the context of debugging and
 testing.
-It referrs to which parts of a program get executed and which do not,
+It refers to which parts of a program get executed and which do not,
 it is used to determine the completeness of a test-suite.
 We use the same term,
 often simply ``coverage'' rather than ``code coverage'',
-to describe how \emph{often} a given peice of code is executed.
+to describe how \emph{often} a given piece of code is executed.
 Thus, we have extended the concept of coverage from a binary ``has been
 executed'' or ``has not been executed'' to a more informative
 ``has been executed $N$ times''.
@@ -562,8 +562,8 @@ the \signal operation will be placed immediately after the unification
 that binds the variable.
 
 \begin{algorithm}
-\paul{XXX: I want to fix the spacing between rows, where a row is larger tha a
-single line the spacing is wrong}
+\paul{XXX: I want to fix the spacing between rows, where a row is larger
+than a single line the spacing is wrong}
 \[
 \begin{array}{l @{}l @{}l}
 \prodtime V\,& G                            &=
@@ -639,7 +639,7 @@ This algorithm is only invoked on goals that are either \ddet or \dccmulti,
 and that produce the variable $V$.
 For each goal type,
 it determines if it is possible to push the future into that goal,
-so that the future is signaled as early as possible.
+so that the future is signalled as early as possible.
 As noted above,
 a future cannot be pushed into certain goal types,
 such as higher order calls, method calls,
@@ -738,7 +738,7 @@ To make this assumption,
 the algorithm checks if a goal consumes a variable, if it does not it
 returns the goal's execution time as the consumption time of the variable.
 \paul{I wonder if the actual code works this way}
-This also gaurntees that any call expected to wait on a future will wait on
+This also guarantees that any call expected to wait on a future will wait on
 that future even though it might not use that parameter.
 % XXX: This is not yet implemented.
 The other important difference is that when making
