@@ -759,7 +759,7 @@ can also benefit from profiling feedback.
 
 We have designed and implemented a generic feedback framework that allows
 tools to create feedback information for the compiler.
-These tools may include the profiler, the compiler its self,
+These tools may include the profiler, the compiler itself,
 or any other tool that is able to link to the feedback library code.
 Any Mercury type can be used as feedback information,
 making the feedback framework very flexible.
@@ -770,29 +770,29 @@ support these optimisations.
 We also expect that an optimisation may use more than one type of
 feedback information and that more than one optimisation may use the
 same feedback information.
-These where considered requirements of the feedback framework.
+These were considered requirements of the feedback framework.
 
 % Describe on-disk format,
-The on-disc format for the feedback information is very simple,
+The on-disc format for the feedback information is very simple:
 it contains a header that identifies the file format,
-including a version number.
-What follows is a list of feedback information items,
-these are stored in the format that Mercury uses for reading and writing
+including a version number,
+followed by a list of feedback information items,
+stored in the format that Mercury uses for reading and writing
 terms.
-When the file is read in the file format identifier and revision
-number are checked,
+When the file is read in;
+the file format identifier and revision number are checked,
 the list of information items is checked to ensure that no two items
-describe the same feedback information,
-for example,
+describe the same feedback information
+(for example,
 at most one item in this list can describe how to automatically parallelise
-a program.
+a program).
 
 The API allows developers to open an existing file or create a new one,
 query and set information in the in-memory copy of the file,
 and write the file back out to disk.
 It is easy to open the file,
 update a specific feedback item in it,
-and close it;
+and close it,
 essentially leaving the other feedback items in the file unchanged.
 
 
