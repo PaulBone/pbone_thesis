@@ -12,3 +12,11 @@ thesis.log
 thesis.lot
 thesis.out
 thesis.toc
+*.spell
+*.style
+check
+check.err
+check.mh
+checked
+undefined.txt
+Mercury
