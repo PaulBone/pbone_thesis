@@ -1,5 +1,5 @@
 
-\status{This section's content is complete}
+\status{This section's content is complete.}
 
 % This is a figure since there are a number of references to it.
 \begin{figure}
@@ -45,7 +45,7 @@ struct MR_Future {
 Mercury's mode system allows a conjunct in a sequential conjunction to consume
 variables that are produced by conjuncts to its left, but not to its right.
 However, Mercury supported only independent parallelism,
-where no communication was allowed between conjunctions.
+no communication was allowed between conjunctions.
 \citet{wang_dep_par_conj,wang_hons_thesis} relaxed this;
 now parallel conjunctions have the same mode constraints as sequential
 conjunctions.
@@ -59,9 +59,9 @@ Recall that in Mercury,
 the code location where a variable becomes bound is known
 at compile time;
 therefore,
-shared variables are identified at compile time.
+shared variables can be identified at compile time.
 The compiler replaces each shared variable with a \emph{future} \citep{multilisp},
-which is used to safely communicate the variable's value between conjuncts.
+which is used to safely communicate the variable's value amoung conjuncts.
 
 Figure \ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,
@@ -80,13 +80,14 @@ the context will be woken up along with the others on the list of suspended cont
 \wait contains an optimisation:
 it will check \code{MR\_fut\_signalled} before
 acquiring the lock as well as after.
-If it is true before the lock is acquired then it can safely retrieve the
+If it is true before the lock is acquired,
+then \wait can safely retrieve the
 future's value without using the lock.
 
 A producer will call \signal to place a value into a future and wake up any
 suspended contexts.
 \signal will also acquire the lock to ensure that it does not race with any \wait.
-The value of the future is written to memory,
+\signal writes the value of the future to memory,
 before 
 \code{MR\_fut\_signalled} is set to true.
 These operations are separated by a memory barrier to ensure that they are
@@ -98,16 +99,16 @@ to it.
 
 When \wait and \signal operations are introduced
 a new variable is also introduced
-that represents the value of the future
+which represents the value of the future
 either before the call to \signal or after the call to \wait.
 If another goal on the same execution path also wants to use the value of
 the future, and the variable cannot be passed to it then it would have to
 use an extra call to \wait.
-In this case it is known the the value of the future is already available.
+In this instance, it is known the the value of the future is already available.
 Therefore,
 \get is introduced as a non thread-safe operation with lower runtime costs.
 \get observes a side-effect that \wait and \signal ensures is visible.
-If \wait's output is never used it could be optimised away,
+If \wait's output is never used it might be optimised away,
 and therefore \get would be unsafe when it follows a call to \wait.
 \wait must therefore be impure and \get must be semipure.
 
@@ -115,7 +116,7 @@ To minimise waiting,
 the compiler pushes \signal operations on each future
 as far to the left into the producer conjunct as possible,
 and it pushes \wait operations
-as far to the right into each of its consumer conjuncts as possible.
+as far to the right into each of the consumer conjuncts as possible.
 This means not only pushing them
 into the body of the predicate called by the conjunct,
 but also into the bodies of the predicates they call,
