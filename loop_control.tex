@@ -284,10 +284,10 @@ In the next section, we explain all of these improvements.
 % We present one in the next section.
 
 % \peter{Not sure how to cover this:}
-% \paul{This isn't as important as other issues,
-% I'm not sure it's worth confusing the reader.}
+% \paul{This is not as important as other issues,
+% I am not sure it is worth confusing the reader.}
 % zs: compiling with and without loop control both have their own unique
-% overheads. There isn't a clear advantage either way, so the issue is not
+% overheads. There is not a clear advantage either way, so the issue is not
 % important enough to mention.
 %
 % There is at most, only one spark on the spark queue,
@@ -406,7 +406,7 @@ A count of the number of slots that are currently in use.
 % but that argument does not belong here,
 % since it depends on the behavior of operations we have not described yet.
 % Alternatively, we can completely avoid mentioning the hint field.}
-% \paul{I think it's easier to not mention it, it's optimal in some cases and
+% \paul{I think it is easier to not mention it, it is optimal in some cases and
 % neither optimal nor pessimal in other cases.}
 \item
 A boolean flag that says whether the loop has finished or not.
@@ -444,7 +444,7 @@ The multiplier is configurable
 by setting an environment variable when the program is run.
 \item[\code{LCslot = lc\_wait\_free\_slot(LC)}]
 % This operation tests \linebreak[3] whether \LC{} has any free slots.
-% This hyphenation improves this paragraph, I've swapped one evil for
+% This hyphenation improves this paragraph, I have swapped one evil for
 % another.
 This operation tests whe\-ther \LC{} has any free slots.
 If it does not, the operation suspends until a slot becomes available.
@@ -465,7 +465,7 @@ or by allocating a new context
 % fills in its context pointer and returns its index.
 % }
 
-% I've edited this so that it does not refer to sparks, since they're not used
+% I have edited this so that it does not refer to sparks, since they are not used
 % with loop control.
 \item[\code{lc\_spawn\_off(LC, LCslot, CodeLabel)}]
 This operation sets up the context in the loop control slot,
@@ -496,7 +496,7 @@ where any engine looking for work can find it.
 %
 % In practice this is not a problem, since the number of slots is bounded
 % and the number of iterations is not.
-% It's the unbounded-ness of the number of iterations that really kills
+% It is the unbounded-ness of the number of iterations that really kills
 % performance of pre-loop-control right recursive code.
 
 \item[\code{lc\_join\_and\_terminate(LC, LCslot)}]
@@ -969,7 +969,7 @@ specifically to make this correctness argument possible.
 % a branched goal with both recursive and nonrecursive branches,
 % followed by a common suffix of code.}
 % \paul{I think this is easy enough to understand without such an example,
-% but perhaps because I've seem similar patterns all through my honours and
+% but perhaps because I have seem similar patterns all through my honours and
 % phd studies.
 % In particular, It didn't even occur to me that I might need to
 % provide a correctness argument, it just seemed right from a structural
@@ -1040,7 +1040,7 @@ We chose to do this because after the code executing \code{LoopProc}
 has spawned off one or more goals one level above the base case,
 we expect that other cores will be busy executing those spawned off goals
 for rather longer than it takes this core to execute the base case.
-% \paul{The next sentence doesn't explain to me how we learnt this through
+% \paul{The next sentence does not explain to me how we learnt this through
 % automatic parallelism, do you mean that it is the kind of decision that the
 % automatic parallelism system would make?}
 % We expect this because our automatic parallelization system
@@ -1466,7 +1466,7 @@ in all the test setups except for
 the parallel, non-loop control ones,
 and loop control ones without tail recursion.
 Since the other benchmarks are not naturally tail recursive,
-they won't be tail recursive however they are compiled.
+they will not be tail recursive however they are compiled.
 There are no such rows in Table \ref{tab:mem}
 since the results in each lcN,tr row
 would be identical to the corresponding lcN row.
@@ -1494,7 +1494,7 @@ the one engine eventually picks them up itself,
 and executes them in the original context.
 By contrast, the lc versions directly spawn off new contexts, not sparks.
 This avoids the overhead of converting a spark to a context,
-but we can do it only because we know we won't create too many contexts.
+but we can do it only because we know we will not create too many contexts.
 
 When executing on two or more cores,
 mandelbrot and raytracer use one more context that one would expect.

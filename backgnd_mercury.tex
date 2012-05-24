@@ -37,9 +37,9 @@ $$
 \paul{Peter suggested using a more grammar-like description of the language.
 I think that his motivation was that terminals and non-terminals should look
 more distinct.
-I've capitalised the variable names since that's closer to mercury syntax,
-it's not the same as showing terminals and non-terminals differently but
-perhaps it's clearer.}
+I have capitalised the variable names since that's closer to mercury syntax,
+it is not the same as showing terminals and non-terminals differently but
+perhaps it is clearer.}
 
 \noindent
 Atomic goals do not refer to other goals;
@@ -251,7 +251,7 @@ and the second one non-unique.
 Unifying a ground term with a ground term is an equality test,
 it does not affect instantation.
 Unifying two free terms is illegal\footnote{
-Aliasing free variables is illegal, Mercury doesn't support logic variables.
+Aliasing free variables is illegal, Mercury does not support logic variables.
 This is a deliberate design decision and makes unification in Mercury much
 faster than in Prolog.}.
 The mode checking pass will minimally reorder conjuncts 
@@ -460,9 +460,9 @@ This threaded state sequentialises I/O operations:
 ``\code{world\n}'' cannot be printed until the value for \code{S1}
 is available.
 
-%\peter{This isn't relevant to your work, unless you're intent on
+%\peter{This is not relevant to your work, unless you are intent on
 %  including code with state variables in your discussion.  I think
-%  it's a complication better left out.}
+%  it is a complication better left out.}
 Numbering each version of the state of the world
 (or any other state that a program may pass around) is cumbersome,
 Mercury has syntactic sugar to avoid the need for this,

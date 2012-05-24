@@ -171,7 +171,7 @@ The ThreadScope tool later reads this log file,
 and shows the user graphically what each CPU was doing over time.
 The diagrams it displays reveal to the programmer
 the places where the program is getting the expected amount of parallelism,
-as well as the places where it isn't.
+as well as the places where it is not.
 
 We could adapt the ThreadScope system to Mercury for two main reasons.
 The first is that the parallel implementations of Haskell and Mercury
@@ -312,7 +312,7 @@ control of the engine has been returned to the mutator.}
 
 % Mercury also adds the concept of futures (Section \ref{sec:futures}),
 % Haskell does not need futures since any unevaluated value is a thunk
-% and can be evaluated directly by the code trying to read it's value.
+% and can be evaluated directly by the code trying to read its value.
 % If the thunk is already being evaluated, the thread will block;
 % otherwise, the thread will evaluate the thunk itself.
 
@@ -421,7 +421,7 @@ Its static id can be looked up in the matching START\_PAR\_CONJUNCTION event.
 
 \emph{CREATE\_SPARK: records the creation of a spark
 for a parallel conjunct by the current engine.}
-% \paul{XXX We call this SPARKING in the source code but shouldn't}
+% \paul{XXX We call this SPARKING in the source code but should not}
 Gives the id of the spark itself,
 and the dynamic id of the parallel conjunction the conjunct is from.
 To keep the log file small,
@@ -460,7 +460,7 @@ representing the second and later conjuncts
 The CREATE\_SPARK event records the id of the spark,
 then, either the RUN\_SPARK or STEAL\_SPARK event records which engine and context
 executes the spark,
-If the engine doesn't yet have a context a CREATE\_SPARK\_THREAD event is posted
+If the engine does not yet have a context a CREATE\_SPARK\_THREAD event is posted
 that identifies the newly created context.
 RUN\_THREAD and STOP\_THREAD events
 also tell us when that context is executing, and on which engine.
@@ -578,8 +578,8 @@ fail, and then to go to sleep.
 \end{itemize}
 \vspace{-2mm}
 
-% I've removed the idle and working events.
-% I spoke with Simon Marlow about this, I can't construct a sound
+% I have removed the idle and working events.
+% I spoke with Simon Marlow about this, I cannot construct a sound
 % argument why I need them, and in all cases the state of an engine
 % can be inferred by other events.  Although this inference feels
 % dirty/clumsy it is the correct option since it keeps the log file
@@ -673,7 +673,7 @@ and some say something about individual conjuncts inside those conjunctions.
 We discuss our proposed metrics in that order;
 we then discuss how we intend to present them to users.
 
-% Such as how much overlap we're \emph{really} getting,
+% Such as how much overlap we are \emph{really} getting,
 % and how efficient the RTS is and how this can drive settings in our
 % automatic parallelization analysis.
 % 
@@ -685,7 +685,7 @@ we then discuss how we intend to present them to users.
 % The number of contexts that are actually used
 % by a given parallel conjunction.}
 % This measurement is computed similarly to PARCONJ\_RUNNABLE\_SELF,
-% but it doesn't count the part of a conjunct's lifetime
+% but it does not count the part of a conjunct's lifetime
 % that it spends as a spark;
 % it counts only the part that it spends as a context.
 % The difference is important,
@@ -758,7 +758,7 @@ which in typical programs will happen every couple of dozen instructions or so.
 The Mercury parallel profiler needs to look up the time only at each event,
 which occur \emph{much} more rarely.)
 % RDTSC still has some overhead:
-% a) It's a sequencing operation for the CPU.
+% a) It is a sequencing operation for the CPU.
 % b) It requires some arithmetic and maybe a function call, I don't
 %    know if we can afford that.
 
@@ -772,8 +772,8 @@ taken by the program on all CPUs; say $m$ nanoseconds.
 The ratio $n/m$ gives the average number of nanoseconds
 in the parallel execution of the program
 per CSC in its sequential execution.
-% \paul{I am having trouble parsing the above sentence, I've tried to
-% read it 3 times now, I don't know what you're trying to say}
+% \paul{I am having trouble parsing the above sentence, I ave tried to
+% read it 3 times now, I do not know what you're trying to say}
 % \zoltan{is the new phrasing clear?}
 % Clearer, but not great, I get stuck at ``in its sequential execution''
 % but now I know what you mean and this phrase is somewhat implicit.
@@ -879,7 +879,7 @@ the application of some form of runtime granularity control.
 \emph{PARCONJ\_RUNNING\_SELF:
 The number of CPUs that are actually used by a given parallel conjunction.}
 This metric is computed similarly to PARCONJ\_RUNNABLE\_SELF,
-but it doesn't count a runnable conjunct until gets to use a CPU,
+but it does not count a runnable conjunct until gets to use a CPU,
 and stops counting a conjunct when it stops using the CPU
 (when it blocks on a future, and when it finishes).
 % \zoltan{Does the CPU ever get taken away from a conjunct?}
@@ -999,7 +999,7 @@ either a conjunct of this conjunction or the code before the conjunction.
 Obviously, all the conjuncts execute after the code before the conjunction,
 so if the conjunction takes long enough for most of the data accessed
 before the conjunction to 
-% \paul{Cached data doesn't become cold, a cache becomes cold after
+% \paul{Cached data does not become cold, a cache becomes cold after
 % useful data has been removed}.
 % become cold and therefore
 be evicted from the cache,
@@ -1395,7 +1395,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % In some processors there is no linear relationship between the time stamp
 % counter and real time,
 % id est, they do not have a \emph{constant TSC}.
-% For example, the processor may increment it's time stamp counter less when
+% For example, the processor may increment its time stamp counter less when
 % it a lower power state.
 % This means that a different meaning of time is used,
 % one in which time corresponds to the amount of work a processor can do
@@ -1409,7 +1409,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % if unavailable our implementation falls back to \code{gettimeofday}
 %
 % % XXX: Describe the alrogithm and cite it.
-% When there are multiple cores each core may have it's own time stamp counter.
+% When there are multiple cores each core may have its own time stamp counter.
 % Assuming that time passes at the same rate for each core we can
 % calculate the amount that the time on each core is different to the first core.
 % This offset is subtracted from the times recorded by each of these cores.
@@ -1437,7 +1437,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % 
 % GranSim~\cite{loidl98:gransim} is a simulator that determines how much
 % parallelism is in a Haskell program.
-% Ben Lippmeier wrote a similar tool/paper, it's on his website.
+% Ben Lippmeier wrote a similar tool/paper, its on his website.
 % 
 % \cite{runciman93:profilingparfp} introduces another visualization tool.
 % This also shows the amount of parallelism in a Haskell program, but it does it

@@ -140,8 +140,8 @@ we would get much more parallelism.
 The top part of each scenario
 shows the execution of the sequential form of the conjunction.
 
-% \paul{It'd be nice to have some data to backup this argument,
-% although the argument is easy to believe so it won't be necessary.}
+% \paul{It would be nice to have some data to backup this argument,
+% although the argument is easy to believe so it will not be necessary.}
 % \peter{Data would be good.  Or you could drop the claim.}
 % \zoltan{Everyone who has written real programs knows the claim to be true.}
 Unfortunately, in real Mercury programs,
@@ -248,7 +248,7 @@ whose execution cost exceeds the spawning-off cost by the highest margin,
 and whose interdependencies, if any,
 allow their executions to overlap the most.
 % \paul{Is the next sentence needed?}
-% \peter{No, but doesn't hurt, either.}
+% \peter{No, but does not hurt, either.}
 % It is better to spawn off a medium-sized computation
 % whose execution can overlap almost completely
 % with the execution of another medium-sized computation,
@@ -331,7 +331,7 @@ As we will see in section~\ref{sec:overlap},
 we need this information
 to calculate the likely speedup from parallelizing a conjunction.
 
-% \paul{This is not yet implemented and won't be for this version of the paper.}
+% \paul{This is not yet implemented and will not be for this version of the paper.}
 % \peter{Then you need to say that.}
 
 % GREEDY_SEARCH The top level algorithm of the feedback tool
@@ -960,7 +960,7 @@ ${Cons}_{{F} {Acc1}} = 1,625,000 + 2 = 1,625,002$, and
 ${Cons}_{{map\_foldl} {Acc1}} = 1,625,000 + 2 + 1,620,000 = 3,245,002$.
 \zoltan{Show the rest of the algorithm's execution when this question is answered.}
 \paul{I would have fixed this but I don't know what these formulas mean,
-Maybe I'm confused by notation}
+Maybe I am confused by notation}
 
 % \begin{figure}[tb]
 % \begin{verbatim}
@@ -970,7 +970,7 @@ Maybe I'm confused by notation}
 %     quicksort(Lows, Acc0, Acc1),
 %     quicksort(Highs, [Pivot | Acc1], Acc).
 % \end{verbatim}
-% \caption{Accumulator quicksort \peter{This isn't referenced anywhere; drop it?}}
+% \caption{Accumulator quicksort \peter{This is not referenced anywhere; drop it?}}
 % % the two recursive calls are highly dependent.
 % \label{fig:quicksort_acc}
 % \end{figure}
@@ -1006,7 +1006,7 @@ if the recursive call calls the original sequential version of the procedure,
 then making the recursive call call the parallelized version of the procedure
 would yield a time saving of ${ParSaving} = {SeqSaving} * R_1/E$
 if we have enough CPUs to execute all the $R_1/E$ iterations in parallel.
-\peter{I think this needs more explanation.  It doesn't look right to me.
+\peter{I think this needs more explanation.  It does not look right to me.
 I would expect it to be ${ParSaving} = {SeqTime} - {ParTime} * R_1/E$.}
 This assumes that we get the same savings at each iteration,
 \peter{I find this sentence weakens the claim, rather than strengthing it.
@@ -1032,8 +1032,8 @@ For doubly recursive predicates like \code{quicksort}, $R_1 = R_2$,
 and just under half of their calls invoke the recursive clause,
 so for them, ${ParSaving} = {SeqSaving} * R_1/(2 * E)$.
 \zoltan{check the math}
-\peter{I think it's a bit confusing to use $R_1$ and $R_2$ to name the
-recursive calls to quicksort, when above they've named the sole recursive
+\peter{I think it is a bit confusing to use $R_1$ and $R_2$ to name the
+recursive calls to quicksort, when above they ave named the sole recursive
 call from different clauses.  Maybe use $R^i_j$ to indicate the $i^{th}$
 recursive call from the $j^{th}$ clause.  Then you can use $R^1_i$ in the
 previous paragraph, and $R_1^1$ and $R_1^2$ in this one.}
@@ -1708,7 +1708,7 @@ the performance of the sequential programs as well.
 % GC
 % GC For Mercury code,
 % GC the limits on speedups from parallelism fall into two categories:
-% GC those that our analysis takes into account, and those it doesn't.
+% GC those that our analysis takes into account, and those it does not.
 % GC The former include the cost of spawning new contexts,
 % GC the cost of the barrier synchronization at the end of the conjunction,
 % GC the cost of creating the synchronization terms,
@@ -2099,9 +2099,9 @@ is so small that it is not noticeable.
 % % 
 % %     taura:/home/taura/pbone/mcdemo/swrl.txt
 % % 
-% % These files are owned by a new group, mcdemo, since they're MC's
+% % These files are owned by a new group, mcdemo, since they are MC's
 % % closed source project.  Peter Ross is easy going and has let us use
-% % them without any formal non-disclosure agreement.  That said, I'm
+% % them without any formal non-disclosure agreement.  That said, I am
 % % respecting this IP as much as I would anything where I had signed a
 % % formal NDA.
 % \end{itemize}
@@ -2281,7 +2281,7 @@ However, our system seems to be a sound basis for such further refinements.
 % and our system seems to be a sound basis for further refinements.
 % \begin{itemize}
 % \item
-% It's hard to define what a typical workload is,
+% It is hard to define what a typical workload is,
 % and we don't yet implement profile merging.
 % \item
 % The feedback framework is general purpose

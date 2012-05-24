@@ -2,13 +2,13 @@
 \status{
     This section and 2.5 have been merged, as they provide motivation for one
     another.
-    This will likely be a large section, so I've broken it into sub-sections
+    This will likely be a large section, so I have broken it into sub-sections
 }
 
 % Declaration of work done that contributed to a previous award,
 Some of the work described in this section contributed towards my honours research project,
-% Note that my degree is not '... with Honours', it's just 'Honours', despite
-% what my degree actually says.  Basically, I've been erroneously awarded an
+% Note that my degree is not '... with Honours', it is just 'Honours', despite
+% what my degree actually says.  Basically, I have been erroneously awarded an
 % extra bachelor's degree.
 which was in partial fulfilment of the Degree of Bachelor of Computer Science
 Honours.
@@ -156,7 +156,7 @@ $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \c
 \paul{Draw a figure}
 
 % XXX: I considered moving this to the Mercury section, but if I
-% introduce it here then it's right next to its use, which is better.
+% introduce it here then it is right next to its use, which is better.
 % I also considered a larger example such as the quadratic equation, but
 % it is not necessary.
 During compilation, the arguments of functors and predicate calls are
@@ -378,10 +378,8 @@ Thus, we have extended the concept of coverage from a binary ``has been
 executed'' or ``has not been executed'' to a more informative
 ``has been executed $N$ times''.
 
-\paul{I can't get a paper of the reference I want
-\cite{box-model}, so I don't know what's in the paper}
 The traditional Prolog box
-model~\citep{adventures_in_prolog} describes each predicate
+model~\citep{box-model} describes each predicate
 as having four ports through which control may flow.
 Control can flow into a predicate through either the \emph{call} or
 \emph{redo} ports,
@@ -442,7 +440,7 @@ coverage of the final switch branch based on the coverage of the other
 branches,
 and before the switch,
 provided that it is a complete switch.
-% A good reader might realize that we've only discussed a forward pass,
+% A good reader might realize that we have only discussed a forward pass,
 % more complicated passes are possible but the reader will have to take
 % in on faith that this will be discussed later in this section.
 
@@ -648,7 +646,7 @@ such as higher order calls, method calls,
 foreign code or calls that cross module boundaries.
 Therefore,
 conservative answers are used for these cases.
-The case for foreign calls doesn't measure the call sequence count for the
+The case for foreign calls does not measure the call sequence count for the
 foreign call itself, so we add one.
 Goals such as unifications are trivial, and always have zero cost,
 therefore they must produce their variable after zero call sequence counts
@@ -724,8 +722,8 @@ the main differences being that
 negated goals, conditions and disjunctions are allowed to consume variables,
 and some arms of a switch or if-then-else
 may consume a variable even if other arms do not.
-\paul{I'm going to set out an Algorithm for this, and show the differences.
-But I'd like feedback about the algorithm above first,
+\paul{I am going to set out an Algorithm for this, and show the differences.
+But I would like feedback about the algorithm above first,
 it took a non-trivial amount of time to fight with latex to get it to look
 reasonable,
 I don't want to waste that time again on a second algorithm.}

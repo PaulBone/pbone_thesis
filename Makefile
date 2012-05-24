@@ -29,6 +29,18 @@ TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
 MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
 BENCH_ALL=          lc_bench_all
 
+#
+# Hopefully this means that someone without mercury installed
+# can't build the thesis.
+#
+MMC = `which mmc`
+
+ifneq ($(MMC),)
+	should_check = checked
+else
+	should_check =
+endif
+
 .PHONY : all
 all : thesis.pdf undefined.txt talk.pdf
 
@@ -36,7 +48,8 @@ all : thesis.pdf undefined.txt talk.pdf
 wc :
 	wc -w $(TEX_PROSE)
 
-thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib
+thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib \
+		$(should_check)
 	latex thesis
 	bibtex thesis
 	latex thesis
@@ -59,6 +72,13 @@ mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
 
 undefined.txt: thesis.log
 	cat $< | grep undefined | sort -u > undefined.txt
+
+checked : $(TEX_PROSE) check
+	./check $(TEX_PROSE)
+	touch checked
+
+check : check.m
+	mmc --make check
 
 talk.pdf: talk.orig $(TALK_PICS) $(TALK_PSS)
 	make -f $(LS) teacher_beamer/talk.pdf
@@ -83,6 +103,10 @@ clean :
 		talk.pdf \
 		.teacher_beamer \
 		teacher_beamer \
-		undefined.txt
-
+		undefined.txt \
+		checked \
+		Mercury \
+		check \
+		check.err \
+		check.mh
 

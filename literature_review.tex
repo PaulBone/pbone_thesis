@@ -102,7 +102,7 @@ In MPI and PVM the programmer is responsible for encoding and decoding messages,
 which can be tedious.
 Languages such as Erlang~\citep{erlang} support message passing natively and
 encoding and decoding is done for the programmer.
-The major benefit of message passing is that it doesn't make assumptions about where processes
+The major benefit of message passing is that it does not make assumptions about where processes
 are executing:
 they can be running all on one machine or spread-out across a network.
 Therefore, message passing is very popular for high performance computing,
@@ -186,7 +186,7 @@ parallelism.
 A parallelised computation will be evaluated to weak-head-normal-form,
 that is to say that if it is a data term with parameters,
 the parameters will not be evaluated.
-This means that any parallelised work usually doesn't do enough work to
+This means that any parallelised work usually does not do enough work to
 make parallelisation worthwhile.
 The GpH implementors have tried to solve this problem by allowing
 the programmer to express how deep evaluation should
@@ -224,7 +224,7 @@ Especially since in all but the STM cases of concurrency programmers
 must also describe how parallel computations communicate and
 synchronise.
 
-\paul{I'd like a citation here, I think I found something a while ago
+\paul{I would like a citation here, I think I found something a while ago
 about profiling}
 However, explicit parallelism is a drawback because it requires the
 programmer to know where their program spends most of its execution
@@ -286,9 +286,9 @@ runtime cost in order to determine if there is already ample parallel
 work available while other static methods do not.
 All methods help improve the performance of parallel programs and are
 quite valuable, especially in recursive procedures.
-\paul{I need to point out cases where GC doesn't help or isn't good
+\paul{I need to point out cases where GC does not help or is not good
 enough,
-I'm going to have to find this in the literature and come back to this
+I am going to have to find this in the literature and come back to this
 paragraph and possibly the previous one.}
 
 Some languages allow for the parallelisation of data parallel
@@ -299,7 +299,7 @@ sequences and parallel arrays in NESL and DpH respectively.
 Only operations on elements of these collections are parallelised.
 We have none-the-less classified these systems as implicitly parallel,
 since every action on these data types is executed in parallel.
-Because operations are data-parallel they're independent and suitable
+Because operations are data-parallel they are independent and suitable
 \paul{Define SMP in the introduction}
 for execution on vector machines as well as SMP machines.
 By transforming code and arranging for one thread to work on more than
@@ -397,7 +397,7 @@ No equivalent profiler exists for Haskell or Clean, making Mercury an
 important choice for our implementation.
 
 There is another challenge with automatic parallelism: a lot of
-information about the execution of a program won't be recorded by the
+information about the execution of a program will not be recorded by the
 profiler, often recording information in infeasible.
 In these cases we must be careful to make safe, conservative
 assumptions when calculating estimates of this information.
@@ -411,7 +411,7 @@ We expect that automatic parallelisation will more easily and
 effectively parallelise declarative programs.
 Furthermore, it will be easier to maintain such programs, as
 characteristics of the program that are used to explicitly parallelise
-a program won't necessarily be true in future versions or uses of that
+a program will not necessarily be true in future versions or uses of that
 program.
 Automatic parallelisation allows the programmer to re-parallelise
 their program quickly, based on a current execution profile of the

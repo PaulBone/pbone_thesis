@@ -162,7 +162,7 @@ These two alternatives perform very differently.
 Parallel conjunctions are evaluated as described in Section
 \ref{sec:backgnd_merpar}.
 Sparks are added to the global spark queue if the global queue has room,
-otherwise they're pushed onto a context-local spark stack.
+otherwise they are pushed onto a context-local spark stack.
 Creating a lot of parallel work and using a single global work queue can be
 pesimistic,
 the queue itself can become a bottleneck:
@@ -229,7 +229,7 @@ Local free lists
     
 Should I describe our proposal for OS kernel's to help
 applications with how many threads to use.
-GCD is related but doesn't fit into a language runtime system so
+GCD is related but does not fit into a language runtime system so
 easily~\cite{apple_gcd}.
 See also N:M threading.
 
@@ -250,7 +250,7 @@ once those sections are ready}
 %and finds that spark is still at the head of its queue,
 %it will pick it up and run it itself.
 %This is a useful optimisation,
-%% it's also really well-known.
+%% it is also really well-known.
 %since it avoids using a separate context in the relatively common case
 %that all the other CPUs are busy with their own work.
 %This optimisation is also useful since it can avoid the creation of superfluous
