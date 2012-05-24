@@ -41,7 +41,7 @@ check_file(Name, !Errors, !IO) :-
     io.open_input(Name, Result, !IO),
     (
         Result = ok(Stream),
-        check_lines(Name, Stream, 2, cord.empty, FileErrors, !IO),
+        check_lines(Name, Stream, 1, cord.empty, FileErrors, !IO),
         !:Errors = !.Errors ++ FileErrors,
         io.close_input(Stream, !IO)
     ;
@@ -110,14 +110,15 @@ contractions = [
     "won't",
     "isn't",
     "it's",
+    "don't",
     "shouldn't",
     "doesn't",
     "I'm",
     "I've",
     "I'd",
-    "We're",
-    "We've",
-    "We'd",
+    "we're",
+    "we've",
+    "we'd",
     "it've",
     "it'd",
     "they're",

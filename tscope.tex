@@ -297,7 +297,7 @@ control of the engine has been taken away from the mutator.}
 \emph{GC\_END:
 Garbage collection has finished on the current engine;
 control of the engine has been returned to the mutator.}
-% \paul{I don't know the intended semantics of the GC events that Haskell uses}
+% \paul{I do not know the intended semantics of the GC events that Haskell uses}
 % More information about how Mercury uses these events is in Section
 % \ref{sec:gc_stats} below.
 
@@ -759,7 +759,7 @@ The Mercury parallel profiler needs to look up the time only at each event,
 which occur \emph{much} more rarely.)
 % RDTSC still has some overhead:
 % a) It is a sequencing operation for the CPU.
-% b) It requires some arithmetic and maybe a function call, I don't
+% b) It requires some arithmetic and maybe a function call, I do not
 %    know if we can afford that.
 
 The final value of the call sequence counter
@@ -1489,7 +1489,7 @@ that does nevertheless support dependent AND-parallelism: VACE \cite{vace}.
 However, the ACE system supports
 OR-parallelism and independent AND-parallelism
 as well as dependent AND-parallelism,
-and its features don't seem designed
+and its features do not seem designed
 to help programmers exploit dependent AND-parallelism better.
 As far as we know, noone has built a profiler
 for a dependent AND-parallel logic programming language

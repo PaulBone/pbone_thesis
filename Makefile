@@ -25,6 +25,7 @@ TEXFILES = 	$(TEX_PROSE) macros.tex
 TABLES_TEX = 	mem_table.tex times_table.tex
 
 SPELL_FILES = $(TEX_PROSE:%.tex=%.spell)
+STYLE_FILES = $(TEX_PROSE:%.tex=%.style)
 
 # Results from Loop control.
 TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
@@ -91,6 +92,18 @@ spelling : $(SPELL_FILES)
 %.spell : %.tex
 	$(DETEX) < $< | spell | sort -u > $@
 
+.PHONY : style
+style : $(STYLE_FILES)
+
+%.style : %.tex
+	echo "diction output" > $@
+	echo "==============" >> $@
+	$(DETEX) < $< | diction >> $@
+	echo "" >> $@
+	echo "style output" >> $@
+	echo "============" >> $@
+	$(DETEX) < $< | style -n >> $@
+
 talk.pdf: talk.orig $(TALK_PICS) $(TALK_PSS)
 	make -f $(LS) teacher_beamer/talk.pdf
 	cp teacher_beamer/talk.pdf talk.pdf
@@ -119,5 +132,7 @@ clean :
 		Mercury \
 		check \
 		check.err \
-		check.mh
+		check.mh \
+		*.style \
+		*.spell
 

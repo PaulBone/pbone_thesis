@@ -1,11 +1,12 @@
-\status{This section is complete}
+\status{This section is complete.}
 
-Mercury has a number of backends
-the low-level C backend uses an abstract machine implemented using the C
+Mercury has several backends,
+we are only concerned with the low-level C backend.
+The low-level C backend uses an abstract machine implemented using the C
 preprocessor.
 The compiler writes out procedures as sequences of macro uses.
-The C compiler is used to expand the macros and generate native code.
-The abstract machine has 1024 general purpose registers and a number of
+The C compiler expands these macros and generate native code.
+The abstract machine has 1024 general purpose registers and some
 special registers, such as the program counter.
 These registers are virtual:
 they are C macros which expand to global variables.
@@ -14,29 +15,27 @@ using GCC's \citep{gcc} global register extension.
 The number of mapped registers depends upon the architecture of the physical
 machine.
 
-The compiler has access to determinism information of a procedure.
-This means that if a procedure is known to be deterministic more efficient
-code can be generated for it.
+The compiler knows the determinism of every procedure.
+It will generate more efficient code for deterministic procedures.
 In particular,
 code with at most one solution uses the \emph{det stack} (deterministic
 stack),
 which operates in much the same way as a stack in an imperative or
 functional language.
-The det stack has one pointer to the top of the stack,
-called the stack pointer.
-Code with more than one solution uses the \emph{nondet stack}:
+The det stack has a single pointer called the stack pointer,
+it points to the top of the stack.
+Code with one or more solutions uses the \emph{nondet stack}:
 When a nondeterministic procedure produces a solution it returns control to
-its caller,
-however, its stack frame is kept on the nondet stack in case backtracking
-requires it to check for other solutions.
+its caller;
+it leaves its stack frame is on the nondet stack so that backtracking can
+use it to check for other solutions.
 Therefore,
 two stack pointers are used with the nondet stack,
-one points to the top of the stack where new frames are allocated,
-the other points to the current stack frame.
-Parallel conjunctions are only supported in deterministic code,
+the first points to the top of the stack where new frames are allocated
+and the second points to the current stack frame.
+Mercury only supports parallel conjunctions in deterministic code,
 therefore the nondet stack and its two stack pointers are largely irrelevant.
-More information about Mercury's execution algorithm can be found in
-\citet{mercury_jlp}.
+\citet{mercury_jlp} explains Mercury's execution algorithm in more detail.
 
 To support parallel execution \citet{conway_par} grouped the variables
 used to implement the abstract machine's registers into a structure
@@ -46,8 +45,9 @@ Each engine corresponds to a POSIX Thread (pthread)
 Multiple engines can reside in memory at the same time,
 allowing each pthread to maintain its own execution state.
 The number of engines that a parallel Mercury program will allocate on startup
-is configurable by the user,
-but it defaults to the actual number of CPUs.
+is configurable by the user.
+Once the runtime system has been stared the number of engines in use is
+fixed.
 
 In non-parallel grades a single engine is allocated statically and is known
 to reside at a particular address.
@@ -66,15 +66,15 @@ virtual registers.
 \citet{conway:2002:par} also introduced a new structure called a
 \emph{context}, known elsewhere as a green thread.
 Contexts represent computations in progress.
-An engine may be idle, or it may be executing a context;
-a context can be running on an engine, or it may be suspended.
-Separate computations are required to have separate stacks,
-therefore the storage for stacks is associated with a context.
+An engine can either be idle, or executing a context;
+a context can either be running on an engine, or be suspended.
+Separate computations must have separate stacks,
+therefore the stacks are associated with a context.
 When a computation is suspended,
 the registers from the engine are copied into the context,
 making the engine free to load a new context.
 
-Stacks account for the majority of a context's memory usage.
+Stacks account for most of a context's memory usage.
 When a context finishes execution
 it can either be retained by the engine or
 have its storage released to the free context pool.
@@ -91,8 +91,8 @@ we economise on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
 Sparks are very light weight,
-being only three words long.
-Therefore, compared to contexts,
+being three words long.
+Therefore, compared with contexts,
 they represent outstanding parallel work very efficiently.
 When an engine executes a spark it will convert the spark into a context.
 If the engine was already holding a context,
@@ -117,13 +117,14 @@ to execute $(G_2~\&~\ldots~\&~G_n)$ multiple times,
 just because $G_1$ has succeeded multiple times.
 (Any local backtracking inside $G_1$ will not be visible to the other conjuncts;
 bindings made by \ddet code are never retracted.)
-The current Mercury implementation supports parallelism only for \ddet and \dccmulti,
-since supporting it for code that may have no solution
-would represent speculative execution,
-while supporting for code that may have more than one solution
-would require significant new infrastructure for managing bindings.
-However, this is not a significant limitation.
-Since the design of Mercury strongly encourages deterministic code,
+The current Mercury implementation supports parallelism for \ddet and
+\dccmulti only,
+since supporting it for code that might have no solutions
+entails speculative execution,
+while supporting for code that might have more than one solution
+requires significant new infrastructure for managing bindings.
+However, this is not a significant limitation;
+since the design of Mercury strongly encourages deterministic code,
 in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
 and most programs spend an even greater fraction of their time in \ddet code.
 \peter{Do we have any statistics regarding what proportion of execution time
@@ -178,16 +179,16 @@ as well as a pointer to the code it must execute
 and another pointer to a set of thread local mutables.\footnote{
     Mercury has a module-local mutable feature that supports
     per thread mutables.
-    However, this is not relevant to this dissertation.}
+    This is not relevant to the dissertation.}
 Figure \ref{fig:spark_and_syncterm} shows these two data structures.
 Chapter \ref{chap:rts} describes how sparks are managed.
 
 When the engine finishes the execution of the first conjunct ($G_1$)
 it executes the barrier code \joinandcontinue and the end of the conjunct.
-The barrier ensures that the original context cannot execute the code that
+The barrier prevents the original context from executing the code that
 follows the parallel conjunction
-until every one of the conjuncts has been executed.
-It also makes several scheduling decisions which are described in Chapter
+until each of the conjuncts has been executed.
+The barrier also makes several scheduling decisions, see Chapter
 \ref{chap:rts},
 
 \begin{figure}
