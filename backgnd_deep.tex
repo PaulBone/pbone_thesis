@@ -116,8 +116,8 @@ infeasibly hard.
 This problem has been solved for Mercury by introducing deep profiling
 \citep{conway:2001:mercury-deep}.
 Mercury's deep profiler gathers much more information about the context of
-each measurement than traditional profilers like \code{gprof} \citep{gprof}.
-When it records the occurrence of a call,
+each measurement than traditional profilers such as \code{gprof} \citep{gprof} do.
+When it records the event of a call,
 a memory allocation or a profiling clock interrupt,
 it records with it the chain of ancestor calls,
 all the way from the current call to the entry point of the program,
@@ -126,7 +126,7 @@ To make this tractable,
 recursive and mutually recursive calls,
 known as \emph{strongly connected components} (SCCs),
 must be folded into a single memory structure.
-Therefore, the call graph of the program is a tree (there are no cycles)
+Therefore, the call graph of the program is a tree (it has no cycles)
 and SCCs are represented as single nodes in this tree.
 
 Deep profiling allows the profiler to find and present to the user
@@ -147,7 +147,7 @@ the calls from $h$ to $i$ took on average twice as long
 from the $main \calls g \calls h$ context as from $main \calls f \calls h$,
 so that despite making fewer calls to $i$,
 $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
-\paul{Draw a figure}
+\paul{Draw a figure.}
 
 % XXX: I considered moving this to the Mercury section, but if I
 % introduce it here then it is right next to its use, which is better.
@@ -168,7 +168,7 @@ This new conjunction is flattened into the conjunction that contained the
 original expression.
 Code flattened in this way is said to be in
 \emph{super homogeneous form}.
-This can create many small conjuncts from just a single expression,
+This often creates many small conjuncts from just a single expression,
 for instance, the quadratic equation
 ($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$), which can be written on one line,
 is flattened into 12 individual conjuncts (excluding the plus-or-minus).
@@ -185,16 +185,16 @@ third conjunct ``c3''.
 Goal paths where first introduced to support debugging in Mercury \citep{mdb}.
 The deep profiler was written after the debugger and was able to re-use them.
 
-There are four structures used during profiling;
+Four structures are used during profiling,
 each one is also reflected in the profiling data.
 
 \begin{description}
 
     \item[\PD]
     represents a procedure within the program's call tree.
-    There may be multiple \PD structures for any given procedure as the
-    same procedure will usually be from a number of different contexts
-    in the program.
+    There can be multiple \PD structures for any given procedure:
+    the same procedure will usually be called from a number of different
+    contexts in the program.
 
     \item[\CSD]
     represents a call site in the program's call tree.
@@ -222,8 +222,7 @@ each one is also reflected in the profiling data.
     Because multiple \PD structures may exist for the same procedure,
     this stucture is used to factor out common information.
     Each \PD structure has a pointer to its \PS structure.
-    There is exactly one \PS structure for each procedure in the
-    program.
+    Each procedure in the program has a single \PS structure.
 
     \item[\CSS]
     represents static data for a call site.
@@ -235,22 +234,21 @@ each one is also reflected in the profiling data.
     \CSS structures reduce the memory usage of \CSD structures by
     factoring out common information.
     Each \CSD structure has a pointer to its \CSS structure.
-    There is exactly one \CSS structure for each call site in the
-    program.
+    Each call site in the program has a single \CSS structure.
 
 \end{description}
 
 \noindent
 When the profiling data file is read,
-the profiling tool will build the call graph and perform a topological
+the profiling tool will build the call graph and do a topological
 sort.
 The result of the sort is a list of SCCs
 (which \citet{conway:2001:mercury-deep} call \emph{cliques})
 each SCC is used to create a \Clique data structure.
-A number of indexes are also constructed.
+Several indexes are also constructed.
 The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
 efficiently traverse the program's profile in both
-the easy-to-browse user interface,
+the interactive user interface,
 and automated tools, such as the automatic parallelism analysis.
 
 % Callseqs
@@ -266,7 +264,7 @@ the Mercury deep profiler wants to make.
 For typical program runs of few seconds,
 it results in almost all calls having a recorded time of zero,
 with the calls recording a nonzero time
-(signifying the occurrence of an interrupt during their execution)
+(signifying an interrupt during their execution)
 being selected almost at random.
 
 We have therefore implemented a finer-grained measure of time
@@ -277,7 +275,7 @@ the profiled program basically behaves
 as if the occurrence of a call signified
 the occurrence of a new kind of profiling interrupt.
 In imperative programs, this would be a horrible measure,
-since calls to different functions can have hugely different runtimes.
+since calls to different functions often have hugely different runtimes.
 However, in declarative languages like Mercury there are no explicit loops;
 what a programmer would do with a loop in an imperative language
 must be done by a recursive call.
@@ -289,7 +287,7 @@ and the distribution of the length of such sequences
 is very strongly biased towards very short sequences
 of half-a-dozen to a dozen operations.
 In practice, we have found that
-the fluctuations between the lengths of different such sequences
+the fluctuations in the lengths of different sequences
 can be ignored for any measurement
 that covers any significant number of call sequence counts,
 say more than a hundred.
@@ -297,8 +295,8 @@ The only drawback of this scheme that we have found
 is that on 32 bit platforms,
 its usability is limited to short program runs (a few seconds)
 by the wraparound of the global CSC counter;
-on 64 bit platforms, the problem would occur
-only on a profiling run that lasted for years.
+on 64 bit platforms, the problem would only occur
+on a profiling run that lasted for years.
 
 \subsection{Prior Auto-parallelism Work}
 
