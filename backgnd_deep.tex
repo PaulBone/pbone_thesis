@@ -12,39 +12,34 @@ Some of the work described in this section contributed towards my honours resear
 % extra bachelor's degree.
 which was in partial fulfilment of the Degree of Bachelor of Computer Science
 Honours.
-Most parts of the implementation were incomplete and did not work correctly or
-at all.
-Therefore,
-their evaluation could not be included in my honours report.
-They have since been completed and corrected during my Ph.D.\ candidature.
-There are some exceptions,
-most significantly the coverage profiling transformation (Section \ref{sec:coverage})
-developed for my honours research project was complete, and is used, largely
-unchanged, in my Ph.D.\ research.
-The related analysis described in Section \ref{sec:var_use_analysis}
-and the feedback framework in Section \ref{sec:feedback}
-were also written as part of my honours research project.
-Some other parts of this section are not my own work,
-namely the work described in
-\citet{conway:2001:mercury-deep} and
-\citet{tannier:2007:parallel_mercury}.
+These contributions have been improved and in some places corrected during
+my Ph.D.\ candidature.
+The following where part of my honours project:
+the coverage profiling transformation (Section \ref{sec:coverage}),
+the related variable use analysis (Section \ref{sec:var_use_analysis})
+and the feedback framework (Section \ref{sec:feedback}).
+Some other parts of this section are not my own work:
+the Mercury deep profiler \citep{conway:2001:mercury-deep} (Section
+\ref{sec:deep}) and
+\citet{tannier:2007:parallel_mercury}'s work on automatic parallelism
+(Section \ref{sec:tannier}).
 
-Most compiler optimisations operate only on the representation of the program
-in the compiler's memory.
-For most optimisations this is sufficient.
+Most compiler optimisations work on the representation of the program in
+the compiler's memory alone.
+For most optimisations this is enough.
 However,
 automatic parallelisation is sensitive to variations in the runtime cost of
 parallelised tasks.
 This sensitivity increases when dependent parallelisation is used.
 For example,
-a search operation on a small list is cheap, compared to the same operation on
+a search operation on a small list is cheap, compared with the same operation on
 a large list.
 It may not be useful to parallelise the search on the small list against some
 other computation,
 but it will usually be useful to parallelise the search on the large list
 against another computation.
 It is important not to create too much parallelism:
-The hardware can only handle so much parallelism,
+The hardware is limited in how many parallel tasks it can execute,
 any more and the overheads of parallel execution will slow the program down.
 Therefore, it is not just sub-optimal to parallelise the search of the small list,
 but detrimental.
@@ -52,7 +47,7 @@ The only way we can know the actual cost of most pieces of code
 is by understanding their typical inputs,
 or measuring their runtime cost while operating on typical inputs.
 Therefore,
-profiling data can be used in auto-parallelisation;
+profiling data should be used in auto-parallelisation;
 it allows us to predict the runtime cost of computations whose
 code is the same but whose inputs are different.
 These predictions are used to drive parallelisation speedup analysis,
@@ -69,8 +64,8 @@ it writes its profiling data to disk.
 The profiling data includes a bytecode representation of the program
 similar to the compiler's representation.
 The analysis tool reads this file,
-and writes out a description of how to parallelise the program in the form of a
-feedback file.
+and writes out a description of how to parallelise the program as a feedback
+file.
 The program is compiled for a second time,
 this time with auto-parallelism enabled.
 The compiler reads the feedback file and introduces parallelism into the
@@ -80,9 +75,9 @@ Figure \ref{fig:prof_fb} shows this workflow.
 A common criticism of profile directed optimisation is that the programmer will
 have to compile the program twice,
 and run it at least once to generate profiling data.
-``If I have to run the program in order to optimise it, then the program has
-already
-done its job and there is no point continuing with the optimisation?''
+``If I have to run the program to optimise it, then the program has
+already done its job,
+therefore there is no point continuing with the optimisation?''
 The answer to this is that a program's lifetime is often far more than a
 single execution.
 A program will usually be used many times, and by many people.
@@ -91,14 +86,13 @@ this benefit will pay off the cost of the feedback directed optimisation.
 We expect that feedback-directed optimisations would normally be used
 when the programmer is building a release candidate version of their
 program,
-after they have performed testing and fixed any bugs.
+after they tested the software and fixed any bugs.
 
 Another criticism is that if the program is profiled with one set of input and
 used with another that the profile will not necessarily represent the actual use
 of the program,
-and that the optimisation may not be as good as it could be.
-There are many different types of programs, and therefore many different
-program inputs;
+and that the optimisation may not be as good as it should be.
+Many different types of programs exist, each with many different inputs;
 we cannot hope to address this particular problem directly.
 Selecting a typical input for a given program must be done by the programmer.
 Other strategies exist to avoid this problem,
@@ -107,8 +101,8 @@ such as dynamic recompilation.
 \subsection{The deep profiler}
 \label{sec:backgnd_deep}
 
-Typical Mercury programs make heavy use of code reuse in the form of
-parametric polymorphism and higher order calls.
+Typical Mercury programs make heavy use of code reuse,
+especially through parametric polymorphism and higher order calls.
 This is also true for other declarative languages.
 For example, while a C program may have
 separate tables for different kinds of entities,
