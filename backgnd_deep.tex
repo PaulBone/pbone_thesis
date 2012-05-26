@@ -12,8 +12,8 @@ Some of the work described in this section contributed towards my honours resear
 % extra bachelor's degree.
 which was in partial fulfilment of the Degree of Bachelor of Computer Science
 Honours.
-These contributions have been improved and in some places corrected during
-my Ph.D.\ candidature.
+I have improved and corrected these contributions during my Ph.D.\
+candidature.
 The following where part of my honours project:
 the coverage profiling transformation (Section \ref{sec:coverage}),
 the related variable use analysis (Section \ref{sec:var_use_analysis})
@@ -50,15 +50,15 @@ Therefore,
 profiling data should be used in auto-parallelisation;
 it allows us to predict the runtime cost of computations whose
 code is the same but whose inputs are different.
-These predictions are used to drive parallelisation speedup analysis,
-which is, in turn, used to select where and how parallelism is introduced.
+Parallelisation speedup analysis uses these predictions,
+which selects where and how parallelism is introduced.
 
 \picfigure{prof_fb}{Profiler feedback loop}
 
 To use profiling data for optimisations the usual workflow for compiling
 software must change.
-The source code is compiled with profiling enabled, and the resulting program is
-executed on a representative input.
+The programmer compiles the source code with profiling enabled and runs the
+resulting program on representative input.
 As the program terminates,
 it writes its profiling data to disk.
 The profiling data includes a bytecode representation of the program
@@ -83,9 +83,8 @@ single execution.
 A program will usually be used many times, and by many people.
 Each time the optimisation will have a benefit,
 this benefit will pay off the cost of the feedback directed optimisation.
-We expect that feedback-directed optimisations would normally be used
-when the programmer is building a release candidate version of their
-program,
+We expect that programmers will use feedback-directed optimisations when the
+they are building a release candidate of their program,
 after they tested the software and fixed any bugs.
 
 Another criticism is that if the program is profiled with one set of input and
@@ -94,7 +93,8 @@ of the program,
 and that the optimisation may not be as good as it should be.
 Many different types of programs exist, each with many different inputs;
 we cannot hope to address this particular problem directly.
-Selecting a typical input for a given program must be done by the programmer.
+Only the programmer understands their program and can select a typical
+input.
 Other strategies exist to avoid this problem,
 such as dynamic recompilation.
 
@@ -113,8 +113,8 @@ the same polymorphic code to handle all those tables,
 making the task of disentangling the characteristics of the different tables
 infeasibly hard.
 
-This problem has been solved for Mercury by introducing deep profiling
-\citep{conway:2001:mercury-deep}.
+\citep{conway:2001:mercury-deep}
+solved this problem for Mercury by introducing deep profiling.
 Mercury's deep profiler gathers much more information about the context of
 each measurement than traditional profilers such as \code{gprof} \citep{gprof} do.
 When it records the event of a call,
@@ -133,8 +133,9 @@ Deep profiling allows the profiler to find and present to the user
 not just information such as the total number of calls to a procedure
 and the average cost of a call,
 or even information such as the total number of calls to a procedure
-from a particular call site and the average cost of a call from that call site,
-but also information such as the total number of calls to a procedure
+from a particular call site and the average cost of a call from that call
+site.
+It will provide information such as the total number of calls to a procedure
 \emph{from a particular call site
 when invoked from a particular chain of ancestor SCCs}
 and the average cost of a call \emph{in that context}.
@@ -153,9 +154,9 @@ $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \c
 % introduce it here then it is right next to its use, which is better.
 % I also considered a larger example such as the quadratic equation, but
 % it is not necessary.
-During compilation, the arguments of functors and predicate calls are
-simplified so that they are single variables.
-For instance \code{foo(a(3), X)} is simplified to:
+During compilation, the compiler will simplify the arguments of functors and
+calls so that they are single variables.
+For instance it will simplify \code{foo(a(3), X)} to:
 
 \begin{verbatim}
 V_1 = 3,
@@ -168,8 +169,8 @@ This new conjunction is flattened into the conjunction that contained the
 original expression.
 Code flattened in this way is said to be in
 \emph{super homogeneous form}.
-This often creates many small conjuncts from just a single expression,
-for instance, the quadratic equation
+This often creates many small conjuncts from just a single expression.
+For instance, the quadratic equation
 ($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$), which can be written on one line,
 is flattened into 12 individual conjuncts (excluding the plus-or-minus).
 
@@ -186,7 +187,7 @@ Goal paths where first introduced to support debugging in Mercury \citep{mdb}.
 The deep profiler was written after the debugger and was able to re-use them.
 
 Four structures are used during profiling,
-each one is also reflected in the profiling data.
+they are all reflected in the profiling data.
 
 \begin{description}
 
@@ -200,9 +201,9 @@ each one is also reflected in the profiling data.
     represents a call site in the program's call tree.
     As with \PD, there may be multiple \CSD structures for any given
     call site.
-    Profiling for the call site \& context is stored within its \CSD
+    Profiling data for the call site \& context is stored within its \CSD
     structure.
-    Each \CSD structure has one pointer to the \PD stucture representing
+    Each \CSD structure has one pointer to the \PD structure representing
     its callee\footnote{
         This is not exactly true,
         there are rare circumstances where a dynamic call site can have
@@ -220,7 +221,7 @@ each one is also reflected in the profiling data.
     number.
     \paul{Does a \PS point to its {\CSS}s?}
     Because multiple \PD structures may exist for the same procedure,
-    this stucture is used to factor out common information.
+    this structure is used to factor out common information.
     Each \PD structure has a pointer to its \PS structure.
     Each procedure in the program has a single \PS structure.
 
@@ -239,13 +240,12 @@ each one is also reflected in the profiling data.
 \end{description}
 
 \noindent
-When the profiling data file is read,
-the profiling tool will build the call graph and do a topological
-sort.
+When the profiling tool reads in the data,
+it will build the call graph and do a topological sort.
 The result of the sort is a list of SCCs
 (which \citet{conway:2001:mercury-deep} call \emph{cliques})
 each SCC is used to create a \Clique data structure.
-Several indexes are also constructed.
+It also constructs several indexes.
 The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
 efficiently traverse the program's profile in both
 the interactive user interface,
@@ -291,8 +291,7 @@ the fluctuations in the lengths of different sequences
 can be ignored for any measurement
 that covers any significant number of call sequence counts,
 say more than a hundred.
-The only drawback of this scheme that we have found
-is that on 32 bit platforms,
+The only drawback that we have found is that on 32 bit platforms,
 its usability is limited to short program runs (a few seconds)
 by the wraparound of the global CSC counter;
 on 64 bit platforms, the problem would only occur
@@ -302,13 +301,12 @@ on a profiling run that lasted for years.
 
 \citet{tannier:2007:parallel_mercury} describes a prior attempted at automatic
 parallelism in Mercury.
-In his approach, the parallelisation feedback data was gathered by an analysis
-tool.
+In his approach, 
+an analysis tool gathered the parallelisation feedback data.
 This feedback was a list of the procedures with the highest cost in the program,
 chosen by a configurable measurement (mean or median of time in CSCs) and threshold.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.
-Nor did it use any advanced features of the profiler.
 Parallelisation decisions were made in the compiler:
 each procedure was searched for calls that appeared in the list of top procedures
 and calls to these where parallelised against similar calls if they
@@ -319,7 +317,7 @@ first person in papers,
 Is this true for dissertations as well?}
 For my honours project I attempted automatic parallelism of Mercury
 \citep{bone:2008:hons}.
-There are a number of differences between my work and Tannier's.
+My work differed from Tannier's in a number of ways:
 The first differences is that at the time of my work the deep profiler
 was able to export a representation of the program
 (my work was the motivation for this feature).
@@ -341,7 +339,8 @@ Speedup & = & \frac{T_{Sequential}}{T_{Parallel}}
 %\label{eqn:time_deppar}
 \end{eqnarray*}
 
-This describes the speedup due to parallelism of two conjuncts, $A$ and $B$.
+This describes the speedup owing to parallelisation of two conjuncts, $A$
+and $B$.
 whose execution times are $T_A$ and $T_B$.
 In the parallel case $B$'s execution time is $T_{DependentB}$ since it
 accounts for the $B$'s dependency on $A$.
@@ -351,8 +350,9 @@ used formulas for many parallel execution cost models.
 
 This cost model requires information about when a shared variable is
 produced by the first conjunct and when it is consumed by the second.
-To provide this information we introduced coverage profiling to
-Mercury's deep profiler (Section \ref{sec:coverage}),
+To provide this information,
+we introduced coverage profiling to Mercury's deep profiler (Section
+\ref{sec:coverage}),
 and used the resulting coverage data in a variable use time analysis
 (Section \ref{sec:var_use_time}).
 
@@ -372,8 +372,8 @@ executed'' or ``has not been executed'' to a more informative
 
 The traditional Prolog box
 model~\citep{box-model} describes each predicate
-as having four ports through which control may flow.
-Control can flow into a predicate through either the \emph{call} or
+as having four ports through which control flows.
+Control flows into a predicate through either the \emph{call} or
 \emph{redo} ports,
 control flows out of a predicate through either the \emph{exit} or
 \emph{fail} ports.
@@ -385,8 +385,8 @@ These describe:
     or the predicate failing because there are no more solutions.
 Mercury adds an extra port to these semantics known as the
 \emph{exception} port,
-which a predicate uses to return control to its caller when it throws an
-exception.
+when a predicate throws an exception it returns control via the exception
+port.
 Control must leave a predicate the same number of times that it enters:
 
 \begin{equation*}
@@ -399,7 +399,7 @@ For example, deterministic code may not redo or fail,
 therefore these port counts will be zero.
 The deep profiler tracks the number of times each port is used for a given
 call.
-Port counts provide code coverage information for predicate and call-site
+Port counts provide code coverage information for predicate and call site
 entry and exit.
 
 % XXX: Actually implement the case for inferring Elses' coverage.
@@ -421,11 +421,11 @@ The coverage at the beginning of the then part is also equal to the
 number of times the \emph{condition} of the if-then-else succeeds.
 Therefore,
 in a single forward pass,
-we will attempt to infer the coverage at the beginning of the branches
+we will try to infer the coverage at the beginning of the branches
 based on the coverage before the if-then-else and at the end of the
 condition,
 and the condition's determinism.
-A similar inference can be made for switches,
+We make a similar inference for switches,
 except that they do not have a condition:
 we simply infer the
 coverage of the final switch branch based on the coverage of the other
@@ -436,7 +436,8 @@ provided that it is a complete switch.
 % more complicated passes are possible but the reader will have to take
 % in on faith that this will be discussed later in this section.
 
-However, port counts alone will not provide complete coverage information.
+Unfortunatly, port counts alone will not provide complete coverage
+information.
 for example, a conjunction containing a sequence of \dsemidet
 unifications will have incomplete coverage information:
 We cannot know how often each individual unification fails.
@@ -444,10 +445,14 @@ We introduced coverage profiling as part of Mercury's deep profiler to
 add extra instrumentation to gather coverage data where it would
 otherwise be unknown.
 At the same time, we try to reduce the amount of instrumentation used,
-since extra instrumentation can slow the program down and in some cases
-distort the profile.\footnote{While we use call sequence counts
-instead of actually measuring time the profile
-cannot be distorted.}
+since extra instrumentation can slow the program down and sometimes distort
+the profile.\footnote{
+    Automatic parallelism analysis is not affected by profile distortion
+    since it uses call sequence counts to measure time.
+    Nevertheless,
+    avoiding profile distortion is good as
+    programmers may continue to use the profiler's other
+    time measurements.}
 
 When the compiler instruments the program for deep profiling,
 it makes a forward pass through the goal tree of each procedure.
@@ -485,7 +490,7 @@ algorithm would expect to find one.
 
 Figure \ref{fig:map_coverage} shows \code{map/3} annotated with a
 coverage point.
-The forward pass through the procedure would not be able to infer
+The forward pass through the procedure cannot infer
 coverage at the beginning of this switch arm,
 and therefore the similar pass in the deep profiler introduced a
 coverage point at that position.
@@ -495,7 +500,7 @@ It is true that the coverage point could be removed and the port
 counts of the recursive code in this example could be used,
 but doing so would require multiple passes
 for both inference and instrumentation.
-Coverage profiling adds only a small cost to profiling;
+Coverage profiling adds a small cost to profiling;
 it is not a high priority to optimise this further.
 
 Coverage data is tracked in the \PS structure,
@@ -539,7 +544,7 @@ be inlined into the compiled procedure.
 
 As described above,
 the automatic parallelism analysis used in \citet{bone:2008:hons} considers
-conjunctions with at most two conjuncts and one shared variable.
+conjunctions with at most two conjuncts and at most one shared variable.
 To predict how much parallelism is available it needs to know
 when that variable is produced by the first conjunct
 and the first time it is consumed by the second.
@@ -646,7 +651,7 @@ of execution.
 Parallel conjunctions cannot appear in the goal types analysed,
 since they are always converted to sequential conjunctions as parallelism and
 profiling are not supported in the same build,
-we can safely leave their production times undefined.
+we can safely ignore parallel conjunctions.
 Because the algorithm is only invoked on goals that are \ddet or \dccmulti,
 then it is never used on negations and disjunctions,
 which cannot meaningfully be \ddet.
@@ -684,8 +689,8 @@ and add the result to the expected time taken by the condition when it fails.
 To compute this, we use a version of this algorithm
 that weights the time taken by each conjunct in any inner conjunction
 by the probability of its execution,
-which we know by comparing its execution count
-with the count of the number of times the condition was entered.
+which we know by subtracting its execution count
+from the count of the number of times the condition was entered.
 
 Using the weighted average for switches and if-then-elses is meaningful because
 the Mercury mode system dictates
@@ -705,7 +710,7 @@ then the outer quantification goal could be \ddet
 only if the inner goal did not bind any variables visible from the outside.
 Therefore, if the analysis is invoked on a quantification,
 we already know that this is because the quantification produces the
-the variable, and therefore the inner goal must be \ddet.
+variable, and therefore the inner goal must be \ddet.
 
 The algorithm we use for computing the time
 at which a shared variable is first consumed by the second conjunct
@@ -723,8 +728,8 @@ Not all branches of an if-then-else or switch need to consume a variable.
 The code that pushes wait operations into goals can be configured to include
 a \wait operation on every execution path so that when the goal completes,
 it is guaranteed that a \wait operation has taken place.
-Our analysis makes the conservative assumption that the system is configured
-in this way,
+Our analysis makes the conservative assumption that \wait operations are
+placed at the end of branches in this way,
 this could prevent introducing parallelism that leads to a slow-down.
 To make this assumption,
 the algorithm checks if a goal consumes a variable, if it does not it
@@ -747,22 +752,24 @@ Other optimisations
 such as inlining,
 branch hints
 and type specialisation
-can also benefit from profiling feedback.
+might also benefit from profiling feedback.
+\paul{I had a quick search of the literature and could not find any such
+papers.}
 
 We have designed and implemented a generic feedback framework that allows
 tools to create feedback information for the compiler.
 These tools may include the profiler, the compiler itself,
 or any other tool that is able to link to the feedback library code.
 Any Mercury type can be used as feedback information,
-making the feedback framework very flexible.
+making the feedback framework flexible.
 New feedback-directed optimisations may require feedback information
 from new analyses.
-We expect that many new feedback information types will be added to
+We anticipate that many new feedback information types will be added to
 support these optimisations.
 We also expect that an optimisation may use more than one type of
 feedback information and that more than one optimisation may use the
 same feedback information.
-These were considered requirements of the feedback framework.
+These were the requirements of the feedback framework.
 
 % Describe on-disk format,
 The on-disc format for the feedback information is very simple:
@@ -774,15 +781,14 @@ terms.
 When the file is read in;
 the file format identifier and revision number are checked,
 the list of information items is checked to ensure that no two items
-describe the same feedback information
-(for example,
-at most one item in this list can describe how to automatically parallelise
-a program).
+describe the same feedback information.
+For example,
+they may be no more than one item in the list of the same feedback type.
 
 The API allows developers to open an existing file or create a new one,
 query and set information in the in-memory copy of the file,
 and write the file back out to disk.
-It is easy to open the file,
+It is straight-forward to open the file,
 update a specific feedback item in it,
 and close it,
 essentially leaving the other feedback items in the file unchanged.

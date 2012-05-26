@@ -71,22 +71,42 @@ check_lines(Name, Stream, LineNo, !Errors, !IO) :-
 
 check_line(Name, Line, LineNo, !Errors) :-
     Words = words_separator(separator, Line),
-    foldl(check_contractions(Words, Name, LineNo), contractions, !Errors).
+    foldl(check_contractions(Words, Name, LineNo), contractions, !Errors),
+    foldl(check_hypenations(Words, Name, LineNo), invalid_hypenations,
+        !Errors).
 
 :- pred check_contractions(list(string)::in, string::in, int::in, 
     string::in, cord(prose_error)::in, cord(prose_error)::out) is det.
 
 check_contractions(Words, Name, LineNo, Contraction, !Errors) :-
-    ContractionLower = to_lower(Contraction) `with_type` string,
+    check_bad_words(Words, Name, LineNo, Contraction, 
+        format("Contraction \"%s\" found.",
+            [s(Contraction)]),
+        !Errors).
+
+:- pred check_hypenations(list(string)::in, string::in, int::in,
+    string::in, cord(prose_error)::in, cord(prose_error)::out) is det.
+
+check_hypenations(Words, Name, LineNo, Hypenation, !Errors) :-
+    check_bad_words(Words, Name, LineNo, Hypenation,
+        format("Hypenation is inconsistent \"%s\".",
+            [s(Hypenation)]),
+        !Errors).
+
+:- pred check_bad_words(list(string)::in, string::in, int::in,
+    string::in, string::in, cord(prose_error)::in, cord(prose_error)::out)
+    is det.
+
+check_bad_words(Words, Name, LineNo, BadWord, Message, !Errors) :-
+    BadWordLower = to_lower(BadWord) `with_type` string,
     (
         some [WordLower, Word] (
             member(Word, Words),
             WordLower = to_lower(Word),
-            WordLower = ContractionLower
+            WordLower = BadWordLower
         )
     ->
-        record_error(Name, LineNo, format("Contraction \"%s\" found.",
-            [s(Contraction)]), !Errors)
+        record_error(Name, LineNo, Message, !Errors)
     ;
         true
     ).
@@ -113,6 +133,9 @@ contractions = [
     "don't",
     "shouldn't",
     "doesn't",
+    "couldn't",
+    "masn't",
+    "won't",
     "I'm",
     "I've",
     "I'd",
@@ -124,6 +147,13 @@ contractions = [
     "they're",
     "they've",
     "they'd" ].
+
+:- func invalid_hypenations = list(string).
+
+invalid_hypenations = [
+    "call-site",
+    "type-class"
+    ].
 
 :- pred separator(char::in) is semidet.
 
