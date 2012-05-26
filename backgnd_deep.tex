@@ -1,8 +1,6 @@
 
 \status{
-    This section and 2.5 have been merged, as they provide motivation for one
-    another.
-    This will likely be a large section, so I have broken it into sub-sections
+    This section is complete.
 }
 
 % Declaration of work done that contributed to a previous award,
@@ -53,8 +51,6 @@ code is the same but whose inputs are different.
 Parallelisation speedup analysis uses these predictions,
 which selects where and how parallelism is introduced.
 
-\picfigure{prof_fb}{Profiler feedback loop}
-
 To use profiling data for optimisations the usual workflow for compiling
 software must change.
 The programmer compiles the source code with profiling enabled and runs the
@@ -71,6 +67,13 @@ this time with auto-parallelism enabled.
 The compiler reads the feedback file and introduces parallelism into the
 resulting program.
 Figure \ref{fig:prof_fb} shows this workflow.
+
+\paul{
+I want to understand which pages of the final book will be fancing one another
+so that I can try to put the Figures \ref{fig:prof_fb} and Figure
+\ref{fig:call_tree5} on facing pages, if not the same page.}
+
+\picfigure{prof_fb}{Profiler feedback loop}
 
 A common criticism of profile directed optimisation is that the programmer will
 have to compile the program twice,
@@ -148,7 +151,9 @@ the calls from $h$ to $i$ took on average twice as long
 from the $main \calls g \calls h$ context as from $main \calls f \calls h$,
 so that despite making fewer calls to $i$,
 $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
-\paul{Draw a figure.}
+This is shown in Figure \ref{fig:call_tree5}.
+
+\picfigure{call_tree5}{Example call graph}
 
 % XXX: I considered moving this to the Mercury section, but if I
 % introduce it here then it is right next to its use, which is better.
@@ -219,22 +224,21 @@ they are all reflected in the profiling data.
     represents the static data about a procedure
     This data includes the procedure's name, arity, source file and line
     number.
-    \paul{Does a \PS point to its {\CSS}s?}
     Because multiple \PD structures may exist for the same procedure,
     this structure is used to factor out common information.
-    Each \PD structure has a pointer to its \PS structure.
+    Each \PD structure has an indirect pointer to its \PS structure.
     Each procedure in the program has a single \PS structure.
+    Each \PS structure has an array of pointers to the \CSS structures
+    of the calls its procedure makes.
 
     \item[\CSS]
     represents static data for a call site.
     This includes the procedure the call site is found in, the line number,
     the goal path and a pointer to the \PS of the callee (if known
     statically).
-    \paul{Does a \CSS really point to its \PS?}
     As with \PS structures,
     \CSS structures reduce the memory usage of \CSD structures by
     factoring out common information.
-    Each \CSD structure has a pointer to its \CSS structure.
     Each call site in the program has a single \CSS structure.
 
 \end{description}
@@ -327,14 +331,24 @@ making it possible to measure to the times at which variables are produced
 and consumed within parallel conjuncts.
 The analysis uses this to calculate how much parallelism is available,
 for conjunctions with a single shared variable.
-\paul{Draw an overlap diagram.}
-The formula used was:
+Consider the timeline shown in Figure \ref{fig:overlap4},
+In the sequential case the computations \code{p} and \code{q} are shown
+side-by-side.
+Below this, \code{q} is parallelised against \code{p}.
+The future \code{A} is communicated from \code{p} to \code{q},
+\code{q} reaches a point where it needs the value of \code{A} before it has
+been produced and is suspended.
+\code{p} produces \code{A} and \code{q} is resumed.
+The formula used to compute the execution times in the sequential and parallel
+cases, and the speedup due to parallelism is:
+
+\picfigure{overlap4}{Overlap of \code{p} and \code{q}}
 
 \begin{eqnarray*}
-T_{Sequential} & = & T_A + T_B \\
-T_{DependentB} & = & max(T_{BeforeProduceA}, T_{BeforeConsumeB}) +
-T_{AfterConsumeB} \\
-T_{Parallel} & = & max(T_A, T_{DependentB}) + T_{Overheads} \\
+T_{Sequential} & = & T_p + T_q \\
+T_{DependentQ} & = & max(T_{BeforeProduceP}, T_{BeforeConsumeQ}) +
+T_{AfterConsumeQ} \\
+T_{Parallel} & = & max(T_p, T_{DependentQ}) + T_{Overheads} \\
 Speedup & = & \frac{T_{Sequential}}{T_{Parallel}}
 %\label{eqn:time_deppar}
 \end{eqnarray*}
@@ -559,8 +573,6 @@ the \signal operation will be placed immediately after the unification
 that binds the variable.
 
 \begin{algorithm}
-\paul{XXX: I want to fix the spacing between rows, where a row is larger
-than a single line the spacing is wrong}
 \[
 \begin{array}{l @{}l @{}l}
 \prodtime V\,& G                            &=
@@ -574,51 +586,69 @@ than a single line the spacing is wrong}
 \]
 \[
 \begin{array}{l @{}l @{}l}
-\prodtimep V\,& X = Y                        &= 0 \\
-\prodtimep V\,& X = f(\ldots)                &= 0 \\
-\prodtimep V\,& p(X_1,\,\ldots,\,X_n)        &=
+\prodtimep V\,& \pat{X = Y}                  &= 0 \\
+\prodtimep V\,& \pat{X = f(\ldots)}          &= 0 \\
+\prodtimep V\,& \pat{p(X_1,\,\ldots,\,X_n)}        &=
     \callprodtime V\,p\,[X_1,\,\ldots,\,X_n] \\
 %    \prodtime V\,(\operatorname{body} p) \\
-\prodtimep V\,& X_{n+1} = \,f(X_1,\,\ldots,\,X_n)  &=
+\prodtimep V\,& \pat{X_{n+1} = \,f(X_1,\,\ldots,\,X_n)}  &=
     \callprodtime V\,f\,[X_1,\,\ldots,\,X_n,\,X_{n+1}] \\
 %    \prodtime V\,(\operatorname{body} f) \\
-\prodtimep V\,& X_0(X_1,\,\ldots,\,X_n)      &= time\_of\_call \\
-\prodtimep V\,& m(X_1,\,\ldots,\,X_n)        &= time\_of\_call \\
-\prodtimep V\,& foreign(\ldots)              &= time\_of\_call + 1 \\
-\prodtimep V\,& (G_1,\,G_2,\,\ldots,\,G_n)   &=
+\prodtimep V\,& \pat{X_0(X_1,\,\ldots,\,X_n)}      &= time\_of\_call \\
+\prodtimep V\,& \pat{m(X_1,\,\ldots,\,X_n)}        &= time\_of\_call \\
+\prodtimep V\,& \pat{foreign(\ldots)}              &= time\_of\_call + 1 \\
+\prodtimep V\,& \pat{G_1,\,G_2,\,\ldots,\,G_n}     &=
    \begin{cases}
        \prodtime V\,G_1
             & \text{if } G_1 \text{ binds } V \\
-       \begin{split}
+       \left(
+       \begin{array}{l}
            \timef G_1 + \\ \prodtime V\,(G_2,\,\ldots,\,G_n)
-       \end{split}
+       \end{array}
+       \right.
             & \text{otherwise}
    \end{cases} \\
-\prodtimep V\,& (G_1\,\&\,\ldots\,\&\,G_n)   &= \undef \\
-\prodtimep V\,& (G_1\,;\,\ldots\,;\,G_n)     &= \undef \\
-\prodtimep V\,& \hbox{switch}\,X\,(f_1:\,G_1\,;\,\ldots\,,f_n:\,G_n)\, &=
+\prodtimep V\,& \pat{(G_1\,\&\,\ldots\,\&\,G_n)}   &= \undef \\
+\prodtimep V\,& \pat{(G_1\,;\,\ldots\,;\,G_n)}     &= \undef \\
+\prodtimep V\,& 
+    \left\llbracket
+    \begin{array}{l}
+        \hbox{switch}\,X\,(f_1:\,G_1\,; \\
+        \quad\ldots\,,f_n:\,G_n)
+    \end{array}
+    \right\rrbracket &=
     \Avg_{1 \leq i \leq n}\,\prodtime\,V\,G_i \\
-\prodtimep V\,& (\hbox{if}\,Cond\,\hbox{then}\,Then\,\hbox{else}\,Else) &=
-        \begin{split}
+\prodtimep V\,& 
+    \left\llbracket
+    \begin{array}{ll}
+        \hbox{if}\,Cond\,&\hbox{then}\,Then \\
+                         &\hbox{else}\,Else)
+    \end{array}
+    \right\rrbracket &=
+    \left(
+        \begin{array}{l}
             Pr_{Then}(\timef Cond + \prodtime V\,Then) + \\
             Pr_{Else}(\timef FailingCond + \prodtime V\,Else)
-        \end{split} \\
+        \end{array}
+    \right. \\
 %    \Avg_{G \in \{Then,\,Else\}} \prodtime V\,G \\
-\prodtimep V\,& not\,G                       &= \undef \\
-\prodtimep V\,& some\,[X_1,\ldots,X_n]\,G    &= \prodtime V\,G \\
-\prodtimep V\,& all\,[X_1,\ldots,X_n]\,G     &= \prodtime V\,G \\
-\prodtimep V\,& promise\_pure\,G             &= \prodtime V\,G \\
-\prodtimep V\,& promise\_semipure\,G         &= \prodtime V\,G \\
+\prodtimep V\,& \pat{not\,G}                       &= \undef \\
+\prodtimep V\,& \pat{some\,[X_1,\ldots,X_n]\,G}    &= \prodtime V\,G \\
+\prodtimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \prodtime V\,G \\
+\prodtimep V\,& \pat{promise\_pure\,G}             &= \prodtime V\,G \\
+\prodtimep V\,& \pat{promise\_semipure\,G}         &= \prodtime V\,G \\
 \end{array}
 \]
 \[
 \begin{array}{l @{}l}
 \callprodtime V\,p\,Args        \,&=
     \begin{cases}
-        \begin{split}
+        \left(
+        \begin{array}{l}
             \prodtime (\operatorname{arg\_to\_param} V Args) \\
             (\operatorname{body} p)
-        \end{split} &
+        \end{array}
+        \right. &
             \text{if } p \text{ is in the current module} \\
         \timef p &
             \text{otherwise}
@@ -628,6 +658,8 @@ than a single line the spacing is wrong}
 \caption{Variable production time analysis}
 \label{alg:var_prod_time}
 \end{algorithm}
+
+\paul{This needs to be floated to the page oppisite its explaination.}
 
 The algorithm for computing the expected production time
 of a shared variable looks at the form of the conjunct that produces it,

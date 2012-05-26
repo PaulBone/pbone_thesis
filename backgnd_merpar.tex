@@ -84,12 +84,12 @@ if the engine will execute a different context or go to sleep
 then the current context is released.
 Contexts cannot be preempted.
 
-\paul{Not really following Simon, It is Peter W who proposed this and I am not
-sure where he got the idea from. (but it is pretty common)}
-Following \citet{simonmar_2009_multicore_rts},
+Following
+\citet{blumofe:1994:work-stealing,halstead:1985:multilisp,kranz:1989:mul-t_article},
 we economise on memory by using \emph{sparks}
 to represent goals that have been spawned off
 but whose execution has not yet been started.
+This is also similar to \citet{simonmar_2009_multicore_rts}.
 Sparks are very light weight,
 being three words long.
 Therefore, compared with contexts,
