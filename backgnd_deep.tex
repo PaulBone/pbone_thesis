@@ -577,17 +577,17 @@ that binds the variable.
 \begin{array}{l @{}l @{}l}
 \prodtime V\,& G                            &=
     \begin{cases}
-        0                & \text{if } G \text{ is not executed or
+        \timef G         & \text{if } G \text{ is not executed or
                             \derroneous} \\
         \prodtimep V\,G  & \text{if } G \text{ is \ddet or \dccmulti} \\
-        undefined        & \text{otherwise} \\
+        \undef           & \text{otherwise}
     \end{cases} \\
 \end{array}
 \]
 \[
 \begin{array}{l @{}l @{}l}
-\prodtimep V\,& \pat{X = Y}                  &= 0 \\
-\prodtimep V\,& \pat{X = f(\ldots)}          &= 0 \\
+\prodtimep V\,& \pat{X = Y}                        &= 0 \\
+\prodtimep V\,& \pat{X = f(\ldots)}                &= 0 \\
 \prodtimep V\,& \pat{p(X_1,\,\ldots,\,X_n)}        &=
     \callprodtime V\,p\,[X_1,\,\ldots,\,X_n] \\
 %    \prodtime V\,(\operatorname{body} p) \\
@@ -603,7 +603,7 @@ that binds the variable.
             & \text{if } G_1 \text{ binds } V \\
        \left(
        \begin{array}{l}
-           \timef G_1 + \\ \prodtime V\,(G_2,\,\ldots,\,G_n)
+           \timef G_1 + \\ \prodtime V\,\pat{G_2,\,\ldots,\,G_n}
        \end{array}
        \right.
             & \text{otherwise}
@@ -624,13 +624,13 @@ that binds the variable.
         \hbox{if}\,Cond\,&\hbox{then}\,Then \\
                          &\hbox{else}\,Else)
     \end{array}
-    \right\rrbracket &=
+    \right\rrbracket &= \timef Cond +
     \left(
         \begin{array}{l}
-            Pr_{Then}(\timef Cond + \prodtime V\,Then) + \\
-            Pr_{Else}(\timef FailingCond + \prodtime V\,Else)
+            Pr_{Then} \times \prodtime V\,Then+ \\
+            Pr_{Else} \times \prodtime V\,Else
         \end{array}
-    \right. \\
+    \right) \\
 %    \Avg_{G \in \{Then,\,Else\}} \prodtime V\,G \\
 \prodtimep V\,& \pat{not\,G}                       &= \undef \\
 \prodtimep V\,& \pat{some\,[X_1,\ldots,X_n]\,G}    &= \prodtime V\,G \\
@@ -643,12 +643,12 @@ that binds the variable.
 \begin{array}{l @{}l}
 \callprodtime V\,p\,Args        \,&=
     \begin{cases}
-        \left(
+        \prodtime \left(
         \begin{array}{l}
-            \prodtime (\operatorname{arg\_to\_param} V Args) \\
+            (\operatorname{arg\_to\_param} V Args) \\
             (\operatorname{body} p)
         \end{array}
-        \right. &
+        \right) &
             \text{if } p \text{ is in the current module} \\
         \timef p &
             \text{otherwise}
@@ -687,9 +687,6 @@ we can safely ignore parallel conjunctions.
 Because the algorithm is only invoked on goals that are \ddet or \dccmulti,
 then it is never used on negations and disjunctions,
 which cannot meaningfully be \ddet.
-\paul{Hrm, if I handle \dccmulti then I probably need to handle
-disjunctions!
-I think I have a solution to this.}
 We allow the production time of a variable in a negation or disjunction to
 be undefined.
 
@@ -744,31 +741,132 @@ Therefore, if the analysis is invoked on a quantification,
 we already know that this is because the quantification produces the
 variable, and therefore the inner goal must be \ddet.
 
+\begin{algorithm}
+\[
+\begin{array}{l @{}l @{}l}
+\constime V\,& G                            &=
+    \begin{cases}
+        0                & \text{if } G \text{ is not executed or
+                            \derroneous} \\
+        \constimep V\,G  & \text{if } G \text{ is \ddet, \dsemidet, \dccmulti
+                           or \dccnondet} \\
+        \undef           & \text{otherwise}
+    \end{cases} \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l @{}l}
+\constimep V\,& \pat{X = Y}                        &= 0 \\
+\constimep V\,& \pat{X = f(\ldots)}                &= 0 \\
+\constimep V\,& \pat{p(X_1,\,\ldots,\,X_n)}        &=
+    \callconstime V\,p\,[X_1,\,\ldots,\,X_n] \\
+\constimep V\,& \pat{X_{n+1} = \,f(X_1,\,\ldots,\,X_n)}  &=
+    \callconstime V\,f\,[X_1,\,\ldots,\,X_n,\,X_{n+1}] \\
+\constimep V\,& \pat{X_0(X_1,\,\ldots,\,X_n)}      &= 0 \\
+\constimep V\,& \pat{m(X_1,\,\ldots,\,X_n)}        &= 0 \\
+\constimep V\,& \pat{foreign(\ldots)}              &= 0 \\
+\constimep V\,& \pat{G_1,\,G_2,\,\ldots,\,G_n}     &=
+   \begin{cases}
+       \constime V\,G_1
+            & \text{if } G_1 \text{ consumes } V \\
+       \left(
+       \begin{array}{l}
+           \timef G_1 + \\ \constime V\,\pat{G_2,\,\ldots,\,G_n}
+       \end{array}
+       \right.
+            & \text{otherwise}
+   \end{cases} \\
+\constimep V\,& \pat{(G_1\,\&\,\ldots\,\&\,G_n)}   &= \undef \\
+\constimep V\,& \pat{(G_1\,;\,\ldots\,;\,G_n)}     &= 
+    \begin{cases}
+        \constime V\,G_1
+            & \text{if } G_1 \text{ consumes } V \\
+        \left(
+        \begin{array}{l}
+            \timef G_1 + \\ \constime V\,\pat{G_2,\,\ldots,\,G_n}
+        \end{array}
+        \right.
+            & \text{otherwise}
+    \end{cases} \\
+\constimep V\,& 
+    \left\llbracket
+    \begin{array}{l}
+        \hbox{switch}\,X\,(f_1:\,G_1\,; \\
+        \quad\ldots\,,f_n:\,G_n)
+    \end{array}
+    \right\rrbracket &=
+    \Avg_{1 \leq i \leq n}\,\constime\,V\,G_i \\
+\constimep V\,& 
+    \left\llbracket
+    \begin{array}{ll}
+        \hbox{if}\,Cond\,&\hbox{then}\,Then \\
+                         &\hbox{else}\,Else)
+    \end{array}
+    \right\rrbracket &= \iteconstime V\,Cond\,Then\,Else \\
+\constimep V\,& \pat{not\,G}                       &= \constime V\,G \\
+\constimep V\,& \pat{some\,[X_1,\ldots,X_n]\,G}    &= \constime V\,G \\
+\constimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \constime V\,G \\
+\constimep V\,& \pat{promise\_pure\,G}             &= \constime V\,G \\
+\constimep V\,& \pat{promise\_semipure\,G}         &= \constime V\,G \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+    \begin{array}{l}
+        \iteconstime V\,Cond\,\\
+        \quad Then\,Else
+    \end{array} &=
+\begin{cases}
+    \constime V\,Cond   & \text{\parbox{1in}{if $Cond$ \\ consumes $V$}} \\
+    \timef Cond +
+    \left(
+        \begin{array}{l}
+            Pr_{Then} \times \constime V\,Then + \\
+            Pr_{Else} \times \constime V\,Else
+        \end{array}
+    \right) & otherwise \\
+\end{cases} \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+\callconstime V\,p\,Args        \,&=
+    \begin{cases}
+        \constime \left(
+        \begin{array}{l}
+            (\operatorname{arg\_to\_param} V Args) \\
+            (\operatorname{body} p)
+        \end{array}
+        \right) &
+            \text{if } p \text{ is in the current module} \\
+        \timef p &
+            \text{otherwise}
+    \end{cases} \\
+\end{array}
+\]
+\caption{Variable consumption time analysis}
+\label{alg:var_cons_time}
+\end{algorithm}
+
 The algorithm we use for computing the time
 at which a shared variable is first consumed by the second conjunct
-is similar to this one,
-the main differences being that
+is similar,
+it is shown in Algorithm \ref{alg:var_cons_time}.
+The main differences are that
 negated goals, conditions and disjunctions are allowed to consume variables,
 and some arms of a switch or if-then-else
 may consume a variable even if other arms do not.
-\paul{I am going to set out an Algorithm for this, and show the differences.
-But I would like feedback about the algorithm above first,
-it took a non-trivial amount of time to fight with latex to get it to look
-reasonable,
-I do not want to waste that time again on a second algorithm.}
-Not all branches of an if-then-else or switch need to consume a variable.
 The code that pushes wait operations into goals can be configured to include
 a \wait operation on every execution path so that when the goal completes,
 it is guaranteed that a \wait operation has taken place.
+It also guarantees that any call expected to wait on a future will wait on
+that future even though it might not use that parameter.
 Our analysis makes the conservative assumption that \wait operations are
 placed at the end of branches in this way,
 this could prevent introducing parallelism that leads to a slow-down.
 To make this assumption,
 the algorithm checks if a goal consumes a variable, if it does not it
 returns the goal's execution time as the consumption time of the variable.
-\paul{I wonder if the actual code works this way}
-This also guarantees that any call expected to wait on a future will wait on
-that future even though it might not use that parameter.
 % XXX: This is not yet implemented.
 The other important difference is that when making
 any other conservative assumption
