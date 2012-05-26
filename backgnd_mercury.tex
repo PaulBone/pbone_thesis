@@ -34,17 +34,17 @@ $$
 \end{array}
 $$
 
-\paul{Peter suggested using a more grammar-like description of the language.
-I think that his motivation was that terminals and non-terminals should look
-more distinct.
-I have capitalised the variable names since that's closer to mercury syntax,
-it is not the same as showing terminals and non-terminals differently but
-perhaps it is clearer.}
+% \paul{Peter suggested using a more grammar-like description of the language.
+% I think that his motivation was that terminals and non-terminals should look
+% more distinct.
+% I have capitalised the variable names since that's closer to mercury syntax,
+% it is not the same as showing terminals and non-terminals differently but
+% perhaps it is clearer.}
 
-\noindent
-Mercury's goal types are:
-
-$$
+% This has to float otherwise there's too much vertical whitespace on the
+% first page.
+\begin{figure}
+\[
 \begin{array}{lll}
 G
     & :~ X = Y ~|~ X = f(Y_1,~\ldots,~Y_n)
@@ -82,13 +82,13 @@ G
     & |~ promise\_semipure~G
         & \hbox{purity promise}\\
 \end{array}
-$$
-% \caption{The abstract syntax of Mercury}
-% \label{fig:abstractsyntax}
-% \end{figure}
-%\vspace{-1mm}
+\]
+\caption{The abstract syntax of Mercury}
+\label{fig:abstractsyntax}
+\end{figure}
 
 \noindent
+Mercury's goal types are shown in Figure \ref{fig:abstractsyntax}.
 The atomic goals are unifications
 (which the compiler breaks down until each one contains
 at most one function symbol),
@@ -96,11 +96,11 @@ plain first-order calls,
 higher-order calls,
 method calls,
 and calls to predicates defined by code in a foreign language (usually C).
-\peter{You only need to cover enough about Mercury for the purposes of
-  your thesis.  I do not think how inlining of foreign code works is important.}
-\paul{We use it to implement primitives on which our transformations are
-built,
-I may remove it later if the detail of how this is done is unimportant.}
+% \peter{You only need to cover enough about Mercury for the purposes of
+%   your thesis.  I do not think how inlining of foreign code works is important.}
+% \paul{We use it to implement primitives on which our transformations are
+% built,
+% I may remove it later if the detail of how this is done is unimportant.}
 The compiler may inline foreign code definitions when generating code
 for a Mercury predicate.
 To allow this, the representation of a foreign code construct includes
@@ -111,17 +111,24 @@ to the names of the variables that stand for them in the foreign code.
 The composite goals include
 sequential and parallel conjunctions,
 disjunctions, if-then-elses, negations and existential quantifications.
-Section \ref{sec:back_mer_par} contains a detailed description of parallel
+Section \ref{sec:backgnd_merpar} contains a detailed description of parallel
 conjunctions.
 
 The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
-but are transformed into combinations of negations and existential quantification:
-$all~[X_1,~\ldots,~X_n]~G~\rightarrow~not~(~some~[X_1,~\ldots,~X_n]~(~not~G~))$.
+but are transformed into combinations of negations and existential quantification
+(Equation \ref{eqn:expand_univ_quant}).
 Similarly,
 a negation can be simplified using the constants $true$ and $false$ and an
-if-then-else:
-$not~G~\rightarrow~(if~G~then~false~else~true)$.
+if-then-else (Equation \ref{eqn:expand_neg}).
+
+\begin{align}
+all~[X_1,~\ldots,~X_n]~G~&\rightarrow~not~(~some~[X_1,~\ldots,~X_n]~(~not~G~))
+\label{eqn:expand_univ_quant}
+\\
+not~G~&\rightarrow~(if~G~then~false~else~true)
+\label{eqn:expand_neg}
+\end{align}
 
 A switch is a disjunction in which
 each disjunct unifies the same bound variable
@@ -162,9 +169,8 @@ more information can be found in \citet{mercury_refman}.
 
 \end{description}
 
-\noindent
-\code{append/3}'s definition and type signature is:
-
+% Float this so that it does not straddle a page boundary.
+\begin{figure}
 \begin{verbatim}
 :- pred append(list(T), list(T), list(T)).
 
@@ -172,8 +178,13 @@ append([], Ys, Ys).
 append([X | Xs], Ys, [X | Zs]) :-
     append(Xs, Ys, Zs).
 \end{verbatim}
+\caption{\code{append/3}'s definition and type signature}
+\label{fig:append_type_and_defn}
+\end{figure}
 
 \noindent
+\code{append/3}'s definition and type signature is shown in Figure
+\ref{fig:append_type_and_defn}.
 Mercury also has a strong mode system.
 The mode of a predicate describes the \emph{instantiation state} changes,
 if any, of the predicate's arguments.
@@ -435,8 +446,8 @@ and the state of the world when the program terminates.
 These conditions guarantee that at each point in the execution
 there is exactly one current state of the world.
 
-As an example, here is a version of ``Hello world'':
-
+% Float this so that it does not straddle a page boundary
+\begin{figure}
 \begin{verbatim}
 :- pred main(io::di, io::uo) is det.
 
@@ -444,9 +455,12 @@ main(S0, S) :-
     io.write_string("Hello ", S0, S1),
     io.write_string("world\n", S1, S).
 \end{verbatim}
+\caption{Hello world and I/O example}
+\label{fig:hello}
+\end{figure}
 
-\noindent
-% In this version,
+As an example, a version of ``Hello world'' is shown in Figure
+\ref{fig:hello}.
 \code{S0} is the initial state of the world,
 \code{S1} is the state of the world after printing ``\code{Hello }'',
 and \code{S} is the state of the world
