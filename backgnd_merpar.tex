@@ -37,7 +37,7 @@ Mercury only supports parallel conjunctions in deterministic code,
 therefore the nondet stack and its two stack pointers are largely irrelevant.
 \citet{mercury_jlp} explains Mercury's execution algorithm in more detail.
 
-To support parallel execution \citet{conway_par} grouped the variables
+To support parallel execution \citet{conway:2002:par} grouped the variables
 used to implement the abstract machine's registers into a structure
 called an \emph{engine}.
 Each engine corresponds to a POSIX Thread (pthread)

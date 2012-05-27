@@ -214,7 +214,7 @@ lazyness problems,
 programmers simply annotate where parallel execution
 should be used.
 A more detailed description of parallelism in Mercury can be found in
-section \ref{sec:backgnd_mer_par}
+section \ref{sec:backgnd_merpar}
 
 When a problem is not naturally a concurrent problem 
 explicit parallelism such as in Mercury and Haskell
@@ -351,10 +351,10 @@ We hope that in some cases the compiler can transform such a program
 into an equivalent program with more available parallelism.
 
 % Jerome's work.
-\citet{tannier:2007:parallel} previously attempted to automatically
+\citet{tannier:2007:parallel_mercury} previously attempted to automatically
 parallelise Mercury programs using profiler feedback
 information to automatically parallelise a program.
-\citet{tannier:2007:parallel} approach selects the most expensive predicates
+\citet{tannier:2007:parallel_mercury} approach selects the most expensive predicates
 of a program and attempts to parallelise conjunctions within them.
 Tannier also makes use of compile-time granularity
 control to reduce the over-parallelisation that can occur in recursive

@@ -13,14 +13,14 @@ Honours.
 I have improved and corrected these contributions during my Ph.D.\
 candidature.
 The following where part of my honours project:
-the coverage profiling transformation (Section \ref{sec:coverage}),
-the related variable use analysis (Section \ref{sec:var_use_analysis})
+the coverage profiling transformation (Section \ref{sec:backgnd_coverage}),
+the related variable use analysis (Section \ref{sec:backgnd_var_use_analysis})
 and the feedback framework (Section \ref{sec:feedback}).
 Some other parts of this section are not my own work:
 the Mercury deep profiler \citep{conway:2001:mercury-deep} (Section
-\ref{sec:deep}) and
+\ref{sec:backgnd_deep}) and
 \citet{tannier:2007:parallel_mercury}'s work on automatic parallelism
-(Section \ref{sec:tannier}).
+(Section \ref{sec:backgnd_priorautopar}).
 
 Most compiler optimisations work on the representation of the program in
 the compiler's memory alone.
@@ -302,6 +302,7 @@ on 64 bit platforms, the problem would only occur
 on a profiling run that lasted for years.
 
 \subsection{Prior Auto-parallelism Work}
+\label{sec:backgnd_priorautopar}
 
 \citet{tannier:2007:parallel_mercury} describes a prior attempted at automatic
 parallelism in Mercury.
@@ -366,12 +367,12 @@ This cost model requires information about when a shared variable is
 produced by the first conjunct and when it is consumed by the second.
 To provide this information,
 we introduced coverage profiling to Mercury's deep profiler (Section
-\ref{sec:coverage}),
+\ref{sec:backgnd_coverage}),
 and used the resulting coverage data in a variable use time analysis
-(Section \ref{sec:var_use_time}).
+(Section \ref{sec:backgnd_var_use_analysis}).
 
 \subsection{Coverage Profiling}
-\label{sec:coverage}
+\label{sec:backgnd_coverage}
 
 Code \emph{coverage} is a term often used in the context of debugging and
 testing.
@@ -554,7 +555,7 @@ be inlined into the compiled procedure.
 
 
 \subsection{Variable Use Time Analysis}
-\label{sec:var_use_time}
+\label{sec:backgnd_var_use_analysis}
 
 As described above,
 the automatic parallelism analysis used in \citet{bone:2008:hons} considers
