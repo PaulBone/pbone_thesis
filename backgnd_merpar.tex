@@ -84,16 +84,19 @@ if the engine will execute a different context or go to sleep
 then the current context is released.
 Contexts cannot be preempted.
 
-Following
-\citet{blumofe:1994:work-stealing,halstead:1985:multilisp,kranz:1989:mul-t_article},
-we economise on memory by using \emph{sparks}
-to represent goals that have been spawned off
+\citet{wang_hons_thesis} introduced \emph{sparks} with the intention of
+enabling work stealing as described by
+\citet{blumofe:1994:work-stealing,halstead:1985:multilisp}
+and \citet{kranz:1989:mul-t_article}.
+Work stealing was not implemented until later, see Section
+\ref{sec:work_stealing}.
+Sparks represent goals that have been spawned off
 but whose execution has not yet been started.
-This is also similar to \citet{simonmar_2009_multicore_rts}.
 Sparks are very light weight,
 being three words long.
 Therefore, compared with contexts,
-they represent outstanding parallel work very efficiently.
+they represent outstanding parallel work very efficiently;
+this is beneficial, even without work stealing.
 When an engine executes a spark it will convert the spark into a context.
 If the engine was already holding a context,
 that context will be used
@@ -103,8 +106,14 @@ or if it does not have a context,
 a new one is allocated
 (from the pool of free contexts if the pool is not empty,
 otherwise a new context is created).
-Unlike \citet{simonmar_2009_multicore_rts},
-Mercury's sparks cannot be garbage collected and must be executed.
+We will often compare our use of sparks to that of
+\citet{simonmar_2009_multicore_rts} since Haskell's runtime system has a
+similar structure.
+One of the more significant differences
+is that since Haskell is non-strict and Mercury is eager,
+sparks in Mercury cannot be garbage collected and must be executed.
+In comparison,
+Haskell's sparks represent thunks, therefore they can be safely discarded.
 
 The only parallel construct in Mercury is parallel conjunction,
 which is denoted $(G_1~\&~\ldots~\&~G_n)$.
