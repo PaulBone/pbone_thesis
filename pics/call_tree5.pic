@@ -1,0 +1,24 @@
+.PS 3
+
+sep = 0.25;
+
+MAIN: circle "main";
+F: circle "f" with .sw at MAIN.ne + (sep, sep);
+H: circle "h" with .w at F.e + (sep, 0);
+I: circle "i" with .w at H.e + (sep*4, 0);
+
+G: circle "g" with .nw at MAIN.se + (sep, -sep);
+H2: circle "h" with .w at G.e + (sep, 0);
+I2: circle "i" with .w at H2.e + (sep*4, 0);
+
+arrow from MAIN.ne to F.sw;
+arrow from F.e to H.w;
+# 10
+arrow "10 calls" "" from H.e to I.w;
+
+arrow from MAIN.se to G.nw;
+arrow from G.e to H2.w;
+# 7
+arrow "7 calls" "" from H2.e to I2.w;
+
+.PE
