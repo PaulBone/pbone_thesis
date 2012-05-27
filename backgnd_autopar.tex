@@ -68,11 +68,6 @@ The compiler reads the feedback file and introduces parallelism into the
 resulting program.
 Figure \ref{fig:prof_fb} shows this workflow.
 
-\paul{
-I want to understand which pages of the final book will be fancing one another
-so that I can try to put the Figures \ref{fig:prof_fb} and Figure
-\ref{fig:call_tree5} on facing pages, if not the same page.}
-
 \picfigure{prof_fb}{Profiler feedback loop}
 
 A common criticism of profile directed optimisation is that the programmer will
@@ -660,8 +655,6 @@ that binds the variable.
 \label{alg:var_prod_time}
 \end{algorithm}
 
-\paul{This needs to be floated to the page oppisite its explaination.}
-
 The algorithm for computing the expected production time
 of a shared variable looks at the form of the conjunct that produces it,
 this is shown in Algorithm \ref{alg:var_prod_time}.
@@ -847,6 +840,7 @@ variable, and therefore the inner goal must be \ddet.
 \]
 \caption{Variable consumption time analysis}
 \label{alg:var_cons_time}
+\paul{XXX: Try to place this on the facing page from its reference}
 \end{algorithm}
 
 The algorithm we use for computing the time
