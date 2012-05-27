@@ -15,7 +15,7 @@ TEX_PROSE = \
 		backgnd_mercury.tex \
 		backgnd_merpar.tex \
 		backgnd_deppar.tex \
-		backgnd_deep.tex \
+		backgnd_autopar.tex \
 		rts.tex \
 		overlap.tex \
 		loop_control.tex \
