@@ -3,12 +3,13 @@
 coppied here as I may use it or a modification of it}
 
 Before beginning sagnificant amounts of work on automatic parallelism we
-choose to ensure that manual parallelisation worked correctly.
+choose to improve the performance of manual parallelisation.
+Any improvment to the runtime system for manual parallelisation would have
+benifits for automatic parallelism.
 In Mercury, parallelisation can be introduced with the parallel conjunction
 operator (\code{\&}).
-A programmer can replacing a sequential conjunction with a parallel one,
-this declares that the conjuncts should be executed in parallel with
-one-another.
+A programmer can replace a sequential conjunction with a parallel one,
+declaring to the compiler that the conjuncts should be executed in parallel.
 However doing so did not speed up Mercury programs as expected.
 In this chapter we will discuss
 some of the problems affectiong performance and
@@ -16,8 +17,26 @@ many of the improvments that have made parallel execution faster.
 
 \section{Spark queueing}
 
+Sparks are managed in two different data structures.
+The first data structure is a global queue,
+since it is global it must be protected with a mutex.
+It is used in a first-in-first-out manner.
+The second is a context-local stack,
+The stack datastructure used is described by \citet{workstealing_queue},
+this was choosen as it could support work stealing.
+The top of the stack is sometimes referred to as the \emph{hot end},
+since it is used frequently.
+Likewise, the bottom of the stack is sometimes called the
+\emph{cold end}, since it is only used to implement work stealing.
+The top of the stack, or hot end, can be used without locking or atomic
+operations.
+This is desirable, since it makes common operations inexpensive.
+The local context uses the top of the stack only,
+therefore sparks placed on this stack are scheduled in a
+last-in-first-out manner.
+
 When a spark is spawned off by a parallel conjunction
-it is added to a global spark queue provided that there is not to much
+it is added to a global spark queue provided that there is not too much
 globaly-available parallel work.
 This is true if:
 an engine is idle and,
@@ -26,11 +45,17 @@ does not exceed the maximum number of contexts permitted.
 If these tests fail then the spark will be placed on the local context's
 spark stack,
 which is done safely without locking.
-This is an optimisation in the common case that there is already enough
-parallel work a spark can be scheduled without contending for a lock which
-could slow the system down.
-Additionally, even if engines are idle, the context limit prevents a large
-number of contexts from being allocated and consuming a lot of memory,
+This is an optimisation,
+in the common case that there is already enough parallel work,
+a spark can be scheduled without contending for a lock which could slow the
+system down.
+The limit of contexts in use plus the number of sparks in the global queue
+represents how many contexts would be in use of all the sparks in the global
+queue where converted to contexts.
+This limit places an upper bound on the number of contexts that may be
+allocated,
+which limits the amount of memory that can be allocated as stack space for
+contexts
 (recall that each context contains space for stacks).
 
 \begin{algorithm}
@@ -67,18 +92,16 @@ number of contexts from being allocated and consuming a lot of memory,
 \label{alg:join_and_continue_peterw}
 \end{algorithm}
 
-An engine can become idle either when it is created,
-in which case it looks for global work.
-Or by executing the barrier at the end of a parallel conjunct.
-The barrier at the end of a parallel conjunct 
-is named {\joinandcontinue}
-and shown in Algorithm \ref{alg:join_and_continue_peterw}.
-This code has a fast path to be used when it is known that the parallel
-conjunction has only been executed by one context,
-making it sequential and therefore allowing \joinandcontinue to execute
-without locking.
-This optimization is not shown in the figure and is not important for our
-discussion;
+As an engine finishes executing a parallel conjunct,
+it will execute the the barrier at the end of the conjunct,
+named \joinandcontinue and shown in 
+Algorithm \ref{alg:join_and_continue_peterw}.
+If it is known that the parallel conjunction has only been executed by
+one context,
+then it is safe to use a version of the barrier code that does not use
+locking,
+this optimisation is not shown as it is equivilent and not relevent to
+our discussion,
 it is described only for completeness.
 
 The algorithm begins by checking if there are any outstanding conjuncts in
@@ -102,7 +125,7 @@ Otherwise,
 if this context is the parent context it must be suspended
 before the engine looks for global work.
 
-An engine looks for global work first by check the global context run queue.
+An engine looks for global work first by checking the global context run queue.
 If it finds a runnable context and is still holding a context from a
 previous execution, it saves the old context onto the free context list.
 If there are no runnable contexts,
@@ -156,6 +179,9 @@ the recursive call is executed directly, and the loops \emph{body} is
 spawned off.
 These two alternatives perform very differently.
 
+\paul{Include figures of current performance and then discuss the
+problem.}
+
 
 \section{Premature scheduling decisions}
 
@@ -168,7 +194,7 @@ pesimistic,
 the queue itself can become a bottleneck:
 when many processors try to access it the same location in memory there will
 be many cache misses and delays.
-This is why \citet{wang-hons} choose to introduce local queues,
+This is why \citet{wang_hons_thesis} choose to introduce local queues,
 and place work on them when there is a surplus of work on the global queue.
 
 When a engine finishes executing a context and reaches the barrier at the
@@ -192,6 +218,8 @@ This subsection was joint work with Peter Wang.
 \subsection{Engine local spark stacks}
 
 \section{Thread pinning}
+
+Detecting the number of processors.
 
 Thread pinning
 
