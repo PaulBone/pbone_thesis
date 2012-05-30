@@ -23,7 +23,7 @@
 
 main(!IO) :-
     command_line_arguments(Args, !IO),
-    OptionOps = option_ops(short_options, long_options, default_options),
+    OptionOps = option_ops_multi(short_options, long_options, default_options),
     getopt.process_options(OptionOps, Args, NonOptionsArgs, GetoptResult),
     (
         GetoptResult = ok(OptionTable),
@@ -71,7 +71,8 @@ main(!IO) :-
     --->    help
     ;       dim_x
     ;       dim_y
-    ;       dependent_conjunctions.
+    ;       dependent_conjunctions
+    ;       left_recursion.
 
 :- pred short_options(char::in, option::out) is semidet.
 
@@ -80,18 +81,21 @@ short_options('?', help).
 short_options('x', dim_x).
 short_options('y', dim_y).
 short_options('d', dependent_conjunctions).
+short_options('l', left_recursion).
 
 :- pred long_options(string::in, option::out) is semidet.
 
 long_options("help", help).
-long_options("dependent_conjunctions", dependent_conjunctions).
+long_options("dependent-conjunctions", dependent_conjunctions).
+long_options("left-recursion", left_recursion).
 
-:- pred default_options(option::out, option_data::out) is nondet.
+:- pred default_options(option::out, option_data::out) is multi.
 
 default_options(help,                   bool(no)).
 default_options(dim_x,                  maybe_int(no)).
 default_options(dim_y,                  maybe_int(no)).
 default_options(dependent_conjunctions, bool(no)).
+default_options(left_recursion,         bool(no)).
 
 :- type options
     --->    options(
@@ -102,19 +106,33 @@ default_options(dependent_conjunctions, bool(no)).
 
 :- type use_dependent_conjunctions
     --->    use_dependent_conjunctions
-    ;       use_independent_conjunctions.
+    ;       use_independent_conjunctions
+    ;       use_left_independent_conjunctions.
 
 :- pred process_options(option_table(option)::in, maybe_error(options)::out)
     is det.
 
 process_options(Table, MaybeOptions) :-
     getopt.lookup_bool_option(Table, dependent_conjunctions, DepConjsBool),
+    getopt.lookup_bool_option(Table, left_recursion, LeftRecursion),
     (
         DepConjsBool = yes,
-        DepConjs = use_dependent_conjunctions
+        (
+            LeftRecursion = yes,
+            error("Left recursion and dependent conjunctions not supported")
+        ;
+            LeftRecursion = no,
+            DepConjs = use_dependent_conjunctions
+        )
     ;
         DepConjsBool = no,
-        DepConjs = use_independent_conjunctions
+        (
+            LeftRecursion = yes,
+            DepConjs = use_left_independent_conjunctions
+        ;
+            LeftRecursion = no,
+            DepConjs = use_independent_conjunctions
+        )
     ),
     
     getopt.lookup_maybe_int_option(Table, dim_x, MaybeX),
@@ -181,6 +199,9 @@ draw_rows(Options, StartY, StepY, DimY, StartX, StepX, DimX, Rows) :-
     ;
         DepConjs = use_independent_conjunctions,
         draw_rows_indep(Xs, Ys, Rows)
+    ;
+        DepConjs = use_left_independent_conjunctions,
+        draw_rows_indep_left(Xs, Ys, Rows)
     ).
 
 :- pred draw_rows_dep(list(float)::in, list(float)::in, cord(colour)::out)
@@ -194,6 +215,13 @@ draw_rows_dep(Xs, Ys, Rows) :-
 
 draw_rows_indep(Xs, Ys, Rows) :-
     my_map(draw_row(Xs), Ys, RowList),
+    foldl(append_row, RowList, empty, Rows).
+
+:- pred draw_rows_indep_left(list(float)::in, list(float)::in,
+    cord(colour)::out) is det.
+
+draw_rows_indep_left(Xs, Ys, Rows) :-
+    my_mapr(draw_row(Xs), Ys, RowList),
     foldl(append_row, RowList, empty, Rows).
 
 :- pred append_row(cord(X)::in, cord(X)::in, cord(X)::out) is det.
@@ -295,6 +323,14 @@ my_map(_, [], []).
 my_map(M, [X | Xs], [Y | Ys]) :-
     M(X, Y) &
     my_map(M, Xs, Ys).
+
+:- pred my_mapr(pred(X, Y), list(X), list(Y)).
+:- mode my_mapr(pred(in, out) is det, in, out) is det.
+
+my_mapr(_, [], []).
+my_mapr(M, [X | Xs], [Y | Ys]) :-
+    my_mapr(M, Xs, Ys) &
+    M(X, Y).
 
 %----------------------------------------------------------------------------%
 

@@ -545,8 +545,10 @@ test_group_rtopts =
 :- func programs = list(program).
 
 programs = [
-    program("mandelbrot_indep", "mandelbrot", "mandelbrot",
-        "-x 600 -y 600")
+    %program("mandelbrot_indep", "mandelbrot", "mandelbrot",
+    %    "-x 600 -y 600"),
+    program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
+        "-l -x 600 -y 600")
     ].
 
 %------------------------------------------------------------------------%
