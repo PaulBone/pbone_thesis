@@ -52,22 +52,22 @@ to reside at a particular address.
 However,
 in parallel grades the multiple engine's addresses are unknown at compile
 time.
-An extra real CPU register\footnote{
+For each pthread,
+the runtime system tracks the thread's engine's address in a real CPU
+register\footnote{
     If GCC global registers are unavailable,
     POSIX thread-local storage is used.
-}
-is used if available to maintain the address of
-the pthread's engine,
-therefore there is one less real CPU register that can be used for mapping
-virtual registers.
+},
+therefore there one less virtual register can be mapped to a real register.
 
 \citet{conway:2002:par} also introduced a new structure called a
 \emph{context}, known elsewhere as a green thread.
 Contexts represent computations in progress.
+Unlike green threads contexts cannot be preempted.
 An engine can either be idle, or executing a context;
 a context can either be running on an engine, or be suspended.
 Separate computations must have separate stacks,
-therefore the stacks are associated with a context.
+therefore each stack is associated with a context.
 When a computation is suspended,
 the registers from the engine are copied into the context,
 making the engine free to load a new context.
@@ -80,57 +80,68 @@ This decision depends on what the engine will do next:
 if the engine will execute a different context or go to sleep
 (because there is no work to do),
 then the current context is released.
-Contexts cannot be preempted.
+Otherwise the engine holds into a context expecting it to be used to execute
+a \emph{spark}.
 
-\citet{wang_hons_thesis} introduced \emph{sparks} with the intention of
+Sparks represent goals that have been spawned off
+but whose execution has not yet been started.
+\citet{wang_hons_thesis} introduced sparks with the intention of
 enabling work stealing as described by
 \citet{blumofe:1994:work-stealing,halstead:1985:multilisp}
 and \citet{kranz:1989:mul-t_article}.
-Work stealing was not implemented until later, see Section
-\ref{sec:work_stealing}.
-Sparks represent goals that have been spawned off
-but whose execution has not yet been started.
+We did not implement work stealing until during my Ph.D.\ candidature
+and therefore it is not discussed here, in the background chapter.
+We discuss work stealing in Section \ref{sec:work_stealing}.
 Sparks are very light weight,
-being three words long.
+being three words in size.
 Therefore, compared with contexts,
 they represent outstanding parallel work very efficiently;
 this is beneficial, even without work stealing.
-When an engine executes a spark it will convert the spark into a context.
-If the engine was already holding a context,
-that context will be used
+When an engine executes a spark, it will convert the spark into a context.
+it will use its current context if it has one
 (the engine's current context is always free when the engine attempts to run
 a spark),
 or if it does not have a context,
-a new one is allocated
+it allocates a new one
 (from the pool of free contexts if the pool is not empty,
-otherwise a new context is created).
+otherwise the engine creates a new one).
 We will often compare our use of sparks to that of
-\citet{simonmar_2009_multicore_rts} since Haskell's runtime system has a
+\citet{simonmar_2009_multicore_rts} since GHC's runtime system has a
 similar structure.
 One of the more significant differences
 is that since Haskell is non-strict and Mercury is eager,
 sparks in Mercury cannot be garbage collected and must be executed.
 In comparison,
-Haskell's sparks represent thunks, therefore they can be safely discarded.
+Haskell's sparks represent speculative execution of values which may not be
+needed and can be safely discarded.
 
 The only parallel construct in Mercury is parallel conjunction,
 which is denoted $(G_1~\&~\ldots~\&~G_n)$.
 All the conjuncts must be \ddet or \dccmulti,
 that is, they must all have exactly one solution,
 or commit to exactly one solution.
-This restriction greatly simplifies the implementation,
-since it guarantees that there can never be any need
+This restriction greatly simplifies the implementation in two ways:
+Firstly,
+it guarantees that there can never be any need
 to execute $(G_2~\&~\ldots~\&~G_n)$ multiple times,
 just because $G_1$ has succeeded multiple times.
-(Any local backtracking inside $G_1$ will not be visible to the other conjuncts;
+(Any local backtracking inside $G_1$ will not be visible to the other
+conjuncts;
 bindings made by \ddet code are never retracted.)
-The current Mercury implementation supports parallelism for \ddet and
-\dccmulti only,
-since supporting it for code that might have no solutions
-entails speculative execution,
-while supporting for code that might have more than one solution
-requires significant new infrastructure for managing bindings.
-However, this is not a significant limitation;
+\paul{Hi Zoltan,
+do you think this statement about speculative execution is too strong for my
+    potential examiners?
+    I think a Haskell programmer might not like hearing this.}
+Secondly,
+code that might have no solutions entails speculative execution,
+which is often not worth parallelising.
+Supporting parallelisation of 
+code that might have more than one solution
+requires new infrastructure for managing bindings.
+Any new infrastructure for managing bindings has a significant runtime cost,
+reducing the benifits of parallel execution.
+Restricting parallelism to \ddet and \dccmulti code is not a significant
+limitation;
 since the design of Mercury strongly encourages deterministic code,
 in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
 and most programs spend an even greater fraction of their time in \ddet code.
@@ -168,13 +179,13 @@ struct MR_Spark {
 \label{fig:spark_and_syncterm}
 \end{figure}
 
-The Mercury compiler implements $(G_1~\&~G_2~\&~\ldots~\&~G_n)$
+The Mercury compiler starts executing $(G_1~\&~G_2~\&~\ldots~\&~G_n)$
 by creating a \emph{syncterm} (synchronisation term), a data structure
 representing a barrier for the whole conjunction.
 The syncterm contains:
 a pointer to the context that began executing the parallel conjunction
 (the parent context),
-a pointer to the stack frame for the procedure containing this parallel
+a pointer to the stack frame of the procedure containing this parallel
 conjunction,
 and a thread safe counter that tracks the number of conjuncts that have not
 yet executed their barrier.
@@ -182,16 +193,20 @@ After initialising this syncterm, the engine then
 spawns off $(G_2~\&~\ldots~\&~G_n)$ as a spark and continues by executing
 $G_1$ itself.
 The spark contains a pointer to the syncterm,
-as well as a pointer to the code it must execute
+as well as a pointer to the code it must execute,
 and another pointer to a set of thread local mutables.\footnote{
     Mercury has a module-local mutable feature that supports
     per thread mutables.
     This is not relevant to the dissertation.}
-Figure \ref{fig:spark_and_syncterm} shows these two data structures.
+Figure \ref{fig:spark_and_syncterm} shows these two data structures,
+the \code{MR\_} prefixes on symbol names are used for Mercury runtime
+symbols,
+preventing their names from clashing with any symbols in C code linked with
+a Mercury program.
 Chapter \ref{chap:rts} describes how sparks are managed.
 
 When the engine finishes the execution of the first conjunct ($G_1$)
-it executes the barrier code \joinandcontinue and the end of the conjunct.
+it executes the barrier code \joinandcontinue at the end of the conjunct.
 The barrier prevents the original context from executing the code that
 follows the parallel conjunction
 until each of the conjuncts has been executed.
