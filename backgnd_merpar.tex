@@ -1,45 +1,43 @@
 \status{This section is complete.}
 
-Mercury has several backends,
-we are only concerned with the low-level C backend.
-The low-level C backend uses an abstract machine implemented using the C
+The Mercury compiler has several backends,
+in this disseratation we are only concerned with the low level C backend.
+The low level C backend uses an abstract machine implemented using the C
 preprocessor.
-The compiler writes out procedures as sequences of macro uses.
-The C compiler expands these macros and generate native code.
 The abstract machine has 1024 general purpose registers and some
 special registers, such as the program counter.
 These registers are virtual:
-they are C macros which expand to global variables.
-Commonly used virtual registers are mapped to real machine registers
-using GCC's \citep{gcc} global register extension.
-The number of mapped registers depends upon the architecture of the physical
-machine.
+they are mapped onto global variables.
+Commonly used virtual registers are mapped to real machine registers.
+The number of virtual registers mapped onto real machine registers depends upon
+the architecture of the physical machine.
 
 The compiler knows the determinism of every procedure.
 It will generate more efficient code for deterministic procedures.
 In particular,
 code with at most one solution uses the \emph{det stack} (deterministic
 stack),
-which operates in much the same way as a stack in an imperative or
-functional language.
+which operates in much the same way as a stack in an imperative
+language.
 The det stack has a single pointer called the stack pointer,
 it points to the top of the stack.
 Code with one or more solutions uses the \emph{nondet stack}:
 When a nondeterministic procedure produces a solution it returns control to
-its caller;
-it leaves its stack frame is on the nondet stack so that backtracking can
-use it to check for other solutions.
+its caller but
+it leaves its stack frame on the nondet stack so that
+the procedure's variables are available on backtracking.
 Therefore,
 two stack pointers are used with the nondet stack,
 the first points to the top of the stack where new frames are allocated
 and the second points to the current stack frame.
 Mercury only supports parallel conjunctions in deterministic code,
-therefore the nondet stack and its two stack pointers are largely irrelevant.
+therefore the nondet stack and its two stack pointers are largely irrelevant
+for this dissertation.
 \citet{mercury_jlp} explains Mercury's execution algorithm in more detail.
 
-To support parallel execution \citet{conway:2002:par} grouped the variables
-used to implement the abstract machine's registers into a structure
-called an \emph{engine}.
+To support parallel execution,
+\citet{conway:2002:par} grouped the variables used to implement the abstract
+machine's registers into a structure called an \emph{engine}.
 Each engine corresponds to a POSIX Thread (pthread)
 \citep{butenhof1997:pthreads}.
 Multiple engines can reside in memory at the same time,
@@ -54,13 +52,13 @@ to reside at a particular address.
 However,
 in parallel grades the multiple engine's addresses are unknown at compile
 time.
-An extra real cpu register\footnote{
+An extra real CPU register\footnote{
     If GCC global registers are unavailable,
     POSIX thread-local storage is used.
 }
 is used if available to maintain the address of
 the pthread's engine,
-therefore there is one less real cpu register that can be used for mapping
+therefore there is one less real CPU register that can be used for mapping
 virtual registers.
 
 \citet{conway:2002:par} also introduced a new structure called a
