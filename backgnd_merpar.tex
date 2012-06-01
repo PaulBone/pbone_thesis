@@ -1,7 +1,7 @@
 \status{This section is complete.}
 
 The Mercury compiler has several backends,
-in this disseratation we are only concerned with the low level C backend.
+in this dissertation we are only concerned with the low level C backend.
 The low level C backend uses an abstract machine implemented using the C
 preprocessor.
 The abstract machine has 1024 general purpose registers and some
@@ -211,7 +211,7 @@ The barrier prevents the original context from executing the code that
 follows the parallel conjunction
 until each of the conjuncts has been executed.
 The barrier also makes several scheduling decisions, see Chapter
-\ref{chap:rts},
+\ref{chap:rts}.
 
 \begin{figure}
 \begin{center}
@@ -220,11 +220,16 @@ The barrier also makes several scheduling decisions, see Chapter
 \multicolumn{1}{c}{\textbf{Transformed pseudo-code}} \\
 \hline
                     & \code{~~MR\_SyncTerm ST;} \\
-\code{~~}$($        & \code{~~spawn\_off(\&ST, Spawn\_Label);} \\
+                    & \code{~~MR\_init\_syncterm(\&ST, 3);} \\
+\code{~~}$($        & \code{~~spawn\_off(\&ST, Spawn\_Label\_1);} \\
 \code{~~~~}$G_1$    & \code{~~}$G_1$ \\
 \code{~~}$\&$       & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
-                    & \code{Spawn\_Label:} \\
+                    & \code{Spawn\_Label\_1:} \\
+                    & \code{~~spawn\_off(\&ST, Spawn\_Label\_2);} \\
 \code{~~~~}$G_2$    & \code{~~}$G_2$ \\
+\code{~~}$\&$       & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
+                    & \code{Spawn\_Label\_2:} \\
+\code{~~~~}$G_3$    & \code{~~}$G_3$ \\
 \code{~~}$)$        & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
                     & \code{Cont\_Label:} \\
 \end{tabular}
@@ -244,6 +249,8 @@ consists only of the final conjunct, $G_n$,
 and the context just executes it.
 Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
-An example of the instrumentation necessary to implement parallel
-conjunctions is shown in Figure \ref{fig:par_conj}.
+Figure \ref{fig:par_conj} shows an example of the code generated to execute
+a parallel conjunction,
+this example shows how an arbitrary number of parallel conjuncts are
+handled.
 
