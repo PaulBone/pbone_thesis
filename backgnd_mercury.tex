@@ -115,15 +115,15 @@ The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
 but are transformed into combinations of negations and existential quantification
 (Equation \ref{eqn:expand_univ_quant}).
-Univeral quantifications do not appear in the compiler's internal goal
+Universal quantifications do not appear in the compiler's internal goal
 representation.
 Similarly,
 a negation can be simplified using the constants $true$ and $false$ and an
 if-then-else (Equation \ref{eqn:expand_neg}).
 However the compiler does not make this transformation and
 negations may appear in the compiler's goal representation.
-Nevertheless, We will not discuss negations in this diseration,
-since our algorithms' handling of negations is equivilent
+Nevertheless, We will not discuss negations in this dissertation,
+since our algorithms' handling of negations is equivalent
 to their handling of the below if-then-else.
 
 \begin{align}
@@ -162,7 +162,7 @@ As an example, the maybe type is defined as:
 \end{verbatim}
 
 \noindent
-A value of this type is a discrimininated union;
+A value of this type is a discriminated union;
 which is either \code{yes(T)}, indicating the presence of some other value
 whose type is \code{T};
 or simply \code{no}.
@@ -206,8 +206,8 @@ Variables that are ground may also be described as unique,
 meaning they are not aliased with any other value.
 When variables are used, their instantiation state may change;
 such a change is described by the initial and final instantiation states
-seperated by the \code{>>} symbol.
-The instanation states are the same if nothing changes.
+separated by the \code{>>} symbol.
+The instantiation states are the same if nothing changes.
 Variables can only become \emph{more instantiated}:
 the change `free to ground' is legal, but `ground to free' is not.
 Similarly, uniqueness cannot be added to a value that is already
@@ -278,7 +278,7 @@ This is a deliberate design decision;
 it makes unification in Mercury much
 faster than unification in Prolog.}.
 \paul{Consider rephrasing this, it is better but not great.}
-The instanation state of each variable is known at every point
+The instantiation state of each variable is known at every point
 within a procedure,
 therefore
 the compiler knows exactly where each variable becomes ground.
@@ -354,7 +354,7 @@ Mercury's determinisms are:
 \end{description}
 
 \noindent
-Examples of determinism declrations can be seen above in the declarations for
+Examples of determinism declarations can be seen above in the declarations for
 \code{append/3} and \code{length/2}.
 In practice, most parts of most Mercury programs are deterministic (\ddet).
 Each procedure's mode declaration
