@@ -250,7 +250,9 @@ and the context just executes it.
 Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
 Figure \ref{fig:par_conj} shows an example of the code generated to execute
-a parallel conjunction,
-this example shows how an arbitrary number of parallel conjuncts are
-handled.
+a parallel conjunction.
+In this example the first conjunct creates a spark that represents the
+execution of the second and third conjuncts,
+the second conjunct then creates a spark representing just the third conjunct,
+which does not create any sparks.
 

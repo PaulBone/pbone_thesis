@@ -26,16 +26,20 @@ map_foldl(M, F, L, Acc0, Acc) :-
 
 \begin{figure}
 \begin{verbatim}
-XXX: Maybe make the int an enum?
+enum MR_produced {
+    MR_NOT_YET_PRODUCED, 
+    MR_PRODUCED
+};
+
 struct MR_Future {
     /* lock preventing concurrent accesses */
-    MercuryLock     MR_fut_lock;
+    MercuryLock             MR_fut_lock;
     /* whether this future has been signalled yet */
-    int             MR_fut_signalled;
+    enum MR_produced        MR_fut_produced;
 
     /* linked list of all the contexts blocked on this future */
-    MR_Context      *MR_fut_suspended;
-    MR_Word         MR_fut_value;
+    MR_Context              *MR_fut_suspended;
+    MR_Word                 MR_fut_value;
 };
 \end{verbatim}
 \caption{Future data structure}
@@ -44,8 +48,11 @@ struct MR_Future {
 
 Mercury's mode system allows a conjunct in a sequential conjunction to consume
 variables that are produced by conjuncts to its left, but not to its right.
-However, Mercury supported only independent parallelism,
-no communication was allowed between conjunctions.
+However,
+The first parallel execution support for Mercury
+initially only supported independent AND-parallelism
+\citep{conway:2002:paralle},
+Communication was not allowed between conjunctions.
 \citet{wang_dep_par_conj,wang_hons_thesis} relaxed this;
 now parallel conjunctions have the same mode constraints as sequential
 conjunctions.
@@ -53,7 +60,7 @@ Parallel conjunctions,
 such as the one in Figure \ref{fig:mapfoldl},
 may now
 communicate through \emph{shared variables} such as \code{Acc1}.
-A shared variable is a variable that is bound sometime within the parallel
+A shared variable is a variable that is bound within the parallel
 conjunction and occurs in more than one conjunct.
 Recall that in Mercury,
 the code location where a variable becomes bound is known
@@ -68,20 +75,24 @@ Figure \ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,
 a flag indicating whether the variable has been produced yet,
 a queue of consumer contexts waiting for the value, and a mutex.
-The initial value of the future has the flag set to `not yet produced'.
+The initial value of the future has the flag set to
+\code{MR\_NOT\_YET\_PRODUCED}.
 
 Consumers call \wait when they want to retrieve a value from the future.
-This acquires the lock, and if \code{MR\_fut\_signalled} is true, retrieves
+This acquires the lock, and if \code{MR\_fut\_produced} is 
+\code{MR\_PRODUCED}, retrieves
 \code{MR\_fut\_value} before releasing the lock.
-If \code{MR\_fut\_signalled} was false, then the current context is added to
+If \code{MR\_fut\_produced} was \code{MR\_NOT\_YET\_PRODUCED},
+then \wait will add the current context to
 the list of suspended contexts before unlocking the future.
 The engine will then suspend the context and look for other work.
 Once the value of the future is provided,
-the context will be woken up along with the others on the list of suspended contexts.
+the context will be woken up along with the others on the list of suspended
+contexts.
 \wait contains an optimisation:
-it will check \code{MR\_fut\_signalled} before
+it will check \code{MR\_fut\_produced} before
 acquiring the lock as well as after.
-If it is true before the lock is acquired,
+If it is \code{MR\_PRODUCED} before the lock is acquired,
 then \wait can safely retrieve the
 future's value without using the lock.
 
@@ -89,8 +100,8 @@ A producer will call \signal to place a value into a future and wake up any
 suspended contexts.
 \signal will also acquire the lock to ensure that it does not race with any \wait.
 \signal writes the value of the future to memory,
-before 
-\code{MR\_fut\_signalled} is set to true.
+before it sets 
+\code{MR\_fut\_produced} to \code{MR\_PRODUCED}.
 These operations are separated by a memory barrier to ensure that they are
 visible to other threads in this order.
 After releasing the lock, \signal will schedule the suspended contexts.
@@ -98,11 +109,22 @@ Because \signal has no outputs and is deterministic,
 it must be declared as impure so that the compiler will not optimise away calls
 to it.
 
-When \wait and \signal operations are introduced
-a new variable is also introduced
-which represents the value of the future
+\paul{
+    Discuss the alternatives of always using a wait, or waiting in other execution paths and that this is a sliding scale.
+    Then describe our design decision.
+    smarter algorithms require more analysis and more compilation time.
+    The analysis tool should follow what the compiler does,
+    and at worst it might make conservative desicions.
+    Not following what the compiler does can make an error in either direction,
+    the only way not to make an error is to reflect exactly what the compiler
+    does.
+    }
+
+When the compiler introduces \wait and \signal operations,
+it also introduces a new variable for each \wait or \signal call.
+The variable represents the value of the future
 either before the call to \signal or after the call to \wait.
-If another goal on the same execution path also wants to use the value of
+If another goal later on the same execution path also wants to use the value of
 the future, and the variable cannot be passed to it then it would have to
 use an extra call to \wait.
 In this instance, it is known the the value of the future is already available.
@@ -119,7 +141,7 @@ as far to the left into the producer conjunct as possible,
 and it pushes \wait operations
 as far to the right into each of the consumer conjuncts as possible.
 This means not only pushing them
-into the body of the predicate called by the conjunct,
+into the bodys of predicates called by the conjunct,
 but also into the bodies of the predicates they call,
 with the intention that
 each \signal is put immediately after
