@@ -143,7 +143,7 @@ as far to the right into each of the consumer conjuncts as possible.
 This means not only pushing them
 into the bodys of predicates called by the conjunct,
 but also into the bodies of the predicates they call,
-with the intention that
+with the intention that on each execution path
 each \signal is put immediately after
 the primitive goal that produces the value of the variable,
 and each \wait is put immediately before
@@ -151,7 +151,8 @@ the leftmost primitive goal that consumes the value of the variable.
 Since the compiler has complete information
 about which goals produce and consume which variables,
 the only things that can stop the pushing process
-are higher order calls and module boundaries:
+are module boundaries and  higher order calls.
+This is because
 the compiler cannot push a \wait or \signal operation
 into the body of a predicate that it does not have access to
 or into a predicate that it can not identify.
