@@ -4,20 +4,21 @@
 }
 
 % Declaration of work done that contributed to a previous award,
-Some of the work described in this section contributed towards my honours research project,
+Some of the work described in this section contributed towards my honours
+research project,
+which contributed towards 
 % Note that my degree is not '... with Honours', it is just 'Honours', despite
 % what my degree actually says.  Basically, I have been erroneously awarded an
 % extra bachelor's degree.
-which was in partial fulfilment of the Degree of Bachelor of Computer Science
-Honours.
-I have improved and corrected these contributions during my Ph.D.\
+the Degree of Bachelor of Computer Science Honours.
+I have improved these contributions during my Ph.D.\
 candidature.
-The following where part of my honours project:
+The following were part of my honours project:
 the coverage profiling transformation (Section \ref{sec:backgnd_coverage}),
 the related variable use analysis (Section \ref{sec:backgnd_var_use_analysis})
 and the feedback framework (Section \ref{sec:feedback}).
-Some other parts of this section are not my own work:
-the Mercury deep profiler \citep{conway:2001:mercury-deep} (Section
+Other parts of this section include:
+The Mercury deep profiler \citep{conway:2001:mercury-deep} (Section
 \ref{sec:backgnd_deep}) and
 \citet{tannier:2007:parallel_mercury}'s work on automatic parallelism
 (Section \ref{sec:backgnd_priorautopar}).
@@ -46,18 +47,16 @@ is by understanding their typical inputs,
 or measuring their runtime cost while operating on typical inputs.
 Therefore,
 profiling data should be used in auto-parallelisation;
-it allows us to predict the runtime cost of computations whose
-code is the same but whose inputs are different.
-Parallelisation speedup analysis uses these predictions,
-which selects where and how parallelism is introduced.
+it allows us to predict runtime costs for computations whose
+runtime is dependent on their inputs.
 
-To use profiling data for optimisations the usual workflow for compiling
-software must change.
+To use profiling data for optimisations,
+the usual workflow for compiling software must change.
 The programmer compiles the source code with profiling enabled and runs the
 resulting program on representative input.
 As the program terminates,
 it writes its profiling data to disk.
-The profiling data includes a bytecode representation of the program
+The profiling data includes a bytecode representation of the program,
 similar to the compiler's representation.
 The analysis tool reads this file,
 and writes out a description of how to parallelise the program as a feedback
@@ -65,18 +64,19 @@ file.
 The program is compiled for a second time,
 this time with auto-parallelism enabled.
 The compiler reads the feedback file and introduces parallelism into the
-resulting program.
+resulting program at the places indicated by the feedback file.
 Figure \ref{fig:prof_fb} shows this workflow.
 
 \picfigure{prof_fb}{Profiler feedback loop}
 
+\paul{Consider discussing these criticisms in the introduction.}
 A common criticism of profile directed optimisation is that the programmer will
 have to compile the program twice,
 and run it at least once to generate profiling data.
 ``If I have to run the program to optimise it, then the program has
 already done its job,
 therefore there is no point continuing with the optimisation?''
-The answer to this is that a program's lifetime is often far more than a
+The answer to this is that a program's lifetime is far more than a
 single execution.
 A program will usually be used many times, and by many people.
 Each time the optimisation will have a benefit,
@@ -86,15 +86,20 @@ they are building a release candidate of their program,
 after they tested the software and fixed any bugs.
 
 Another criticism is that if the program is profiled with one set of input and
-used with another that the profile will not necessarily represent the actual use
+used with another,
+then the profile will not necessarily represent the actual use
 of the program,
 and that the optimisation may not be as good as it should be.
-Many different types of programs exist, each with many different inputs;
-we cannot hope to address this particular problem directly.
-Only the programmer understands their program and can select a typical
-input.
-Other strategies exist to avoid this problem,
-such as dynamic recompilation.
+Parallelisation decisions are binary,
+either `do not parallelise' to `parallelise'.
+Therefore,
+they will only change as the costs of computations cross some threshold.
+Unless alternative input data causes a computation's runtime to cross such a
+threshold,
+then the parallelisation based on the original input data is 
+as equally valid as the parallelisation based on the alternative input data.
+Most variations in input data will not  
+effect parallelisation enough to cause a sangnificant difference in performance.
 
 \subsection{The deep profiler}
 \label{sec:backgnd_deep}
