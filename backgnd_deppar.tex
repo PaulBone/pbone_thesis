@@ -51,7 +51,7 @@ variables that are produced by conjuncts to its left, but not to its right.
 However,
 The first parallel execution support for Mercury
 initially only supported independent AND-parallelism
-\citep{conway:2002:paralle},
+\citep{conway:2002:parallel},
 Communication was not allowed between conjunctions.
 \citet{wang_dep_par_conj,wang_hons_thesis} relaxed this;
 now parallel conjunctions have the same mode constraints as sequential
@@ -69,7 +69,7 @@ therefore,
 shared variables can be identified at compile time.
 The compiler replaces each shared variable with a \emph{future}
 \citep{halstead:1984:multilisp},
-which is used to safely communicate the variable's value amoung conjuncts.
+which is used to safely communicate the variable's value among conjuncts.
 
 Figure \ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,
@@ -109,32 +109,6 @@ Because \signal has no outputs and is deterministic,
 it must be declared as impure so that the compiler will not optimise away calls
 to it.
 
-\paul{
-    Discuss the alternatives of always using a wait, or waiting in other execution paths and that this is a sliding scale.
-    Then describe our design decision.
-    smarter algorithms require more analysis and more compilation time.
-    The analysis tool should follow what the compiler does,
-    and at worst it might make conservative desicions.
-    Not following what the compiler does can make an error in either direction,
-    the only way not to make an error is to reflect exactly what the compiler
-    does.
-    }
-
-When the compiler introduces \wait and \signal operations,
-it also introduces a new variable for each \wait or \signal call.
-The variable represents the value of the future
-either before the call to \signal or after the call to \wait.
-If another goal later on the same execution path also wants to use the value of
-the future, and the variable cannot be passed to it then it would have to
-use an extra call to \wait.
-In this instance, it is known the the value of the future is already available.
-Therefore,
-\get is introduced as a non thread-safe operation with lower runtime costs.
-\get observes a side-effect that \wait and \signal ensures is visible.
-If \wait's output is never used it might be optimised away,
-and therefore \get would be unsafe when it follows a call to \wait.
-\wait must therefore be impure and \get must be semipure.
-
 To minimise waiting,
 the compiler pushes \signal operations on each future
 as far to the left into the producer conjunct as possible,
@@ -156,6 +130,56 @@ This is because
 the compiler cannot push a \wait or \signal operation
 into the body of a predicate that it does not have access to
 or into a predicate that it can not identify.
+
+Any variable is produced exactly once along any execution parth,
+and therefore there is exactly one \signal operation along any path.
+However, a variable may be used any number of times along an execution path,
+therefore there can be any number of \wait operations along a path.
+The maximum number of \wait operations along a path is equal to the number
+of times the future's value is used.
+Reading a future using \wait is more expensive than reading a conventional
+variable.
+Therefore, we want to minimise the number of \wait operations that can be
+executed along a path.
+The minimum number of \wait operations along a path is either zero or one,
+depending on whether a variable is used on that path.
+This can be done either by adding an extra variable to track the value of
+the future, setting this variable's value from the first \wait operation;
+or by introducing a new operation, \get whose runtime cost is lower
+and that can safely be used for the second and subsequent \wait operations.
+\get is useful in cases where it is difficult or impossible to track the
+value of an extra variable.
+
+\paul{The auto-parallelism analysis assumes that a wait is used
+on all success paths, which is not the default.}
+An implementor can choose among always using a \wait operation or
+trying to optimise the second and subsequent calls to \wait or
+some point on a scale between these two extremes.
+There is a trade-off to be made here.
+The first option has very little analysis at compile time but has worse
+runtime performance,
+the second option can require a lot of compile time analysis and has ideal
+runtime performance.
+We have chosen to use a simple method to reduce the number of \wait
+operations:
+When variables are replaced by futures and \wait operations are inserted,
+the transformation tracks whether there is a \wait operation on every success
+path leading to the current goal.
+If this is true and the current goal wants to access the value of the future
+then a \get operation is used instead of a wait operation.
+
+While \signal actually makes the value of a future available,
+we have to consider that \wait has the same effect
+since after a call to \wait the value of a future is available and it
+may not have been available earlier.
+In other words,
+\wait has the side effect of guaranteeing that the value of the future is
+available.
+\get can only be called when the value of the future is true,
+therefore it is affected by \wait's side effect.
+Therefore, \get must be semipure and \wait must be impure.
+This prevents the compiler from optimising away or moving a call to \wait
+that is necessary to make a call to \get safe.
 
 \begin{figure}
 \begin{verbatim}
