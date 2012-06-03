@@ -120,7 +120,7 @@ which is denoted $(G_1~\&~\ldots~\&~G_n)$.
 All the conjuncts must be \ddet or \dccmulti,
 that is, they must all have exactly one solution,
 or commit to exactly one solution.
-This restriction greatly simplifies the implementation in two ways:
+This restriction greatly simplifies parallel execution in two ways:
 Firstly,
 it guarantees that there can never be any need
 to execute $(G_2~\&~\ldots~\&~G_n)$ multiple times,
@@ -128,18 +128,17 @@ just because $G_1$ has succeeded multiple times.
 (Any local backtracking inside $G_1$ will not be visible to the other
 conjuncts;
 bindings made by \ddet code are never retracted.)
-\paul{Hi Zoltan,
-do you think this statement about speculative execution is too strong for my
-    potential examiners?
-    I think a Haskell programmer might not like hearing this.}
-Secondly,
-code that might have no solutions entails speculative execution,
-which is often not worth parallelising.
-Supporting parallelisation of 
+Supporting parallelisation of
 code that might have more than one solution
 requires new infrastructure for managing bindings.
 Any new infrastructure for managing bindings has a significant runtime cost,
 reducing the benifits of parallel execution.
+Secondly,
+code that might have no solutions also requires extra infrastructure.
+Additionally,
+if $G_1$ may fail then
+$G_2~\&~\ldots~\&~G_n$'s execution is speculative and may waste resources
+since its result may never be needed.
 Restricting parallelism to \ddet and \dccmulti code is not a significant
 limitation;
 since the design of Mercury strongly encourages deterministic code,
