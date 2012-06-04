@@ -101,6 +101,16 @@ as equally valid as the parallelisation based on the alternative input data.
 Most variations in input data will not  
 effect parallelisation enough to cause a sangnificant difference in performance.
 
+Even in a case where automatic parallelisation does not produce optimal
+results,
+near optimal results are good enough.
+Automatic parallelisation will always be cheaper than manual
+parallelisation,
+it requires much less time and does not require a company hire a
+parallelisation expert.
+Therefore, automatic parallelisation will be preferred in all but the most
+extreme situations.
+
 \subsection{The deep profiler}
 \label{sec:backgnd_deep}
 
@@ -123,8 +133,8 @@ each measurement than traditional profilers such as \code{gprof} \citep{gprof} d
 When it records the event of a call,
 a memory allocation or a profiling clock interrupt,
 it records with it the chain of ancestor calls,
-all the way from the current call to the entry point of the program,
-a procedure named \code{main}.
+all the way from the current call to the entry point of the program
+(\code{main/2}).
 To make this tractable,
 recursive and mutually recursive calls,
 known as \emph{strongly connected components} (SCCs),
@@ -142,6 +152,7 @@ It will provide information such as the total number of calls to a procedure
 \emph{from a particular call site
 when invoked from a particular chain of ancestor SCCs}
 and the average cost of a call \emph{in that context}.
+We call such a context for profiling data an \emph{ancestor context}.
 For example, it could tell that
 procedure $h$ called procedure $i$ ten times
 when $h$'s chain of ancestors was $main \calls f \calls h$,
@@ -155,44 +166,24 @@ This is shown in Figure \ref{fig:call_tree5}.
 
 \picfigure{call_tree5}{Example call graph}
 
-% XXX: I considered moving this to the Mercury section, but if I
-% introduce it here then it is right next to its use, which is better.
-% I also considered a larger example such as the quadratic equation, but
-% it is not necessary.
-During compilation, the compiler will simplify the arguments of functors and
-calls so that they are single variables.
-For instance it will simplify \code{foo(a(3), X)} to:
-
-\begin{verbatim}
-V_1 = 3,
-V_2 = a(X1),
-foo(V_2, X)
-\end{verbatim}
-
-\noindent
-This new conjunction is flattened into the conjunction that contained the
-original expression.
-Code flattened in this way is said to be in
-\emph{super homogeneous form}.
-This often creates many small conjuncts from just a single expression.
-For instance, the quadratic equation
-($x=\frac{-b \pm \sqrt {b^2-4ac}}{2a}$), which can be written on one line,
-is flattened into 12 individual conjuncts (excluding the plus-or-minus).
-
-Therefore the profiler
-(and other tools such as the debugger) introduced \emph{goal paths}
-to uniquely identify a sub goal in any goal tree such as a procedure's
-body.
+It can be difficult to locate a single goal within the body of a procedure.
+This is made more difficult as nested unifications are flattened into super
+homogeneous form
+(Section \ref{superhomogeneous} page \pageref{superhomogeneous}),
+meaning that what might be a single line of code in a source file
+can be a conjunction of dozens of goals.
+Therefore the profiler uses \emph{goal paths} to uniquely identify a sub
+goal within a procedure's body.
 A goal path is a list of goal path steps, each step describes which
-sub-goal to recurse into when traversing a goal structure from its root
-to either its leaves or some compound goal.
+sub-goal to recurse into when traversing a goal structure from its
+root (the procedure as a whole)
+to either its leaves (atomic goals) or some compound goal.
 The goal path ``c3;d2'' refers to the second disjunct ``d2'' within the
 third conjunct ``c3''.
 Goal paths where first introduced to support debugging in Mercury \citep{mdb}.
 The deep profiler was written after the debugger and was able to re-use them.
 
-Four structures are used during profiling,
-they are all reflected in the profiling data.
+We use four structures during profiling.
 
 \begin{description}
 
@@ -208,17 +199,23 @@ they are all reflected in the profiling data.
     call site.
     Profiling data for the call site \& context is stored within its \CSD
     structure.
-    Each \CSD structure has one pointer to the \PD structure representing
-    its callee\footnote{
-        This is not exactly true,
-        there are rare circumstances where a dynamic call site can have
-        multiple callees.
-        However, the conditions that create this and how it is handled
-        are not important.}.
-    Likewise, each \PD structure has an array of pointers to the \CSD
-    structures representing the calls used during the execution of the
-    procedure.
+    A \PD structure has an array of pointers to \CSD structures representing
+    the calls used during the execution of the procedure.
+    A \CSD structure has a pointer to the \PD structure of its callee.
     These links represent the call graph of the program.
+
+    Higher order and method calls are tracked by the \PD structure of the
+    caller,
+    the array of pointers is actually an array of arrays of pointers,
+    multiple items in the second array represent different higher order
+    values at the same call site.
+    This means that a number of \CSD structures can represent a single
+    higher-order call site.
+    This is actually rare:
+    A call site and ancestor context are usually used with a single higher
+    order value.
+    Other higher order values are associated with other ancestor contexts
+    and are therefore represented by other parts of the call graph.
 
     \item[\PS]
     represents the static data about a procedure
@@ -226,7 +223,7 @@ they are all reflected in the profiling data.
     number.
     Because multiple \PD structures may exist for the same procedure,
     this structure is used to factor out common information.
-    Each \PD structure has an indirect pointer to its \PS structure.
+    Each \PD structure has an pointer to its \PS structure.
     Each procedure in the program has a single \PS structure.
     Each \PS structure has an array of pointers to the \CSS structures
     of the calls its procedure makes.
@@ -234,7 +231,7 @@ they are all reflected in the profiling data.
     \item[\CSS]
     represents static data for a call site.
     This includes the procedure the call site is found in, the line number,
-    the goal path and a pointer to the \PS of the callee (if known
+    the goal path and a pointer to the \PS structure of the callee (if known
     statically).
     As with \PS structures,
     \CSS structures reduce the memory usage of \CSD structures by
@@ -244,16 +241,18 @@ they are all reflected in the profiling data.
 \end{description}
 
 \noindent
-When the profiling tool reads in the data,
-it will build the call graph and do a topological sort.
-The result of the sort is a list of SCCs
+The profiling data is stored on disk using the same four structures that
+where used while capturing the data.
+When the profiling tool reads in this data,
+it will build the call graph and generate the list of SCCs
 (which \citet{conway:2001:mercury-deep} call \emph{cliques})
 each SCC is used to create a \Clique data structure.
-It also constructs several indexes.
-The indexes, {\Clique}s, {\PS}s, {\PD}s, {\CSS}s and {\CSD}s are used to
-efficiently traverse the program's profile in both
+It also constructs several indexes,
+these indexes together with the {\Clique}s make traversing the program's
+profile (the other structures) more efficient.
+This data is used both by
 the interactive user interface,
-and automated tools, such as the automatic parallelism analysis.
+and automated tools.
 
 % Callseqs
 Profilers have traditionally measured time
@@ -268,7 +267,7 @@ the Mercury deep profiler wants to make.
 For typical program runs of few seconds,
 it results in almost all calls having a recorded time of zero,
 with the calls recording a nonzero time
-(signifying an interrupt during their execution)
+(signifying a profiling interrupt during their execution)
 being selected almost at random.
 
 We have therefore implemented a finer-grained measure of time
@@ -298,17 +297,18 @@ say more than a hundred.
 The only drawback that we have found is that on 32 bit platforms,
 its usability is limited to short program runs (a few seconds)
 by the wraparound of the global CSC counter;
-on 64 bit platforms, the problem would only occur
+This has not been a concern for a number of years.
+On 64 bit platforms, the problem would only occur
 on a profiling run that lasted for years.
 
 \subsection{Prior Auto-parallelism Work}
 \label{sec:backgnd_priorautopar}
 
-\citet{tannier:2007:parallel_mercury} describes a prior attempted at automatic
+\citet{tannier:2007:parallel_mercury} describes a prior attempt at automatic
 parallelism in Mercury.
 In his approach, 
-an analysis tool gathered the parallelisation feedback data.
-This feedback was a list of the procedures with the highest cost in the program,
+an analysis tool gathered parallelisation feedback data consisting of
+a list of the procedures with the highest costs in the program,
 chosen by a configurable measurement (mean or median of time in CSCs) and threshold.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.

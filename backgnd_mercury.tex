@@ -143,6 +143,34 @@ switched-on value's type, then the switch is said to be \emph{complete}.
 Otherwise the switch is \emph{incomplete}.
 See page \pageref{page:purity} for a description of the purity promises.
 
+\label{superhomogeneous}
+Note that because a unification goal contains at most one function symbol
+then any unifications that would normally have more than one function symbol
+are expanded into a conjunction of smaller unifications.
+This also happens to any unfications that appear as arguments in calls.
+A goal for a single expression such as the quadratic equation:
+
+\begin{verbatim}
+X = (-B + sqrt(B^2 - 4*A*C)) / (2*A)
+\end{verbatim}
+
+\noindent
+Will be expanded into 12 conjoined goals:
+
+\begin{verbatim}
+V_1  = 2,               V_2  = B ^ V_1,         V_3 = 4,
+V_4  = V_3 * A,         V_5  = V_4 * C,         V_6 = V_2 - V_5,
+V_7  = sqrt(V_6),       V_8  = -1,              V_9 = V_8 * B,
+V_10 = V_9 + V_7,       V_11 = V_1 * A,         X   = V_10 / V_11
+\end{verbatim}
+
+\noindent
+As shown here,
+constants such as integers must be introduced as unifications between a
+variable and a function symbol representing the constant.
+Goals flatterned in this way are said to be in
+\emph{super homogeneous form}.
+
 Mercury has a strong Hindley-Milner~\citep{hindley69:types,milner78:types} type
 system.
 It was inspired by the type system of Hope~\citep{hope}
