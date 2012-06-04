@@ -68,8 +68,8 @@ G
         & \hbox{switches}\\
     & |~ (if~G_{cond}~then~G_{then}~else~G_{else})
         & \hbox{if-then-elses}\\
-%    & |~ not~G
-%        & \hbox{negations}\\
+    & |~ not~G
+        & \hbox{negations}\\
     & |~ some~[X_1,\ldots,X_n]~G
         & \hbox{existential quantification}\\
 %    & |~ all~[X_1,\ldots,X_n]~G
@@ -125,6 +125,7 @@ negations may appear in the compiler's goal representation.
 Nevertheless, We will not discuss negations in this dissertation,
 since our algorithms' handling of negations is equivalent
 to their handling of the below if-then-else.
+\paul{Bring back negation.}
 
 \begin{align}
 all~[X_1,~\ldots,~X_n]~G~&\rightarrow~not~(~some~[X_1,~\ldots,~X_n]~(~not~G~))

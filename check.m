@@ -155,7 +155,8 @@ contractions = [
 
 invalid_hypenations = [
     "call-site",
-    "type-class"
+    "type-class",
+    "straight-forward"
     ].
 
 :- pred separator(char::in) is semidet.

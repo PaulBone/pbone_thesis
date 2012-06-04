@@ -99,7 +99,7 @@ threshold,
 then the parallelisation based on the original input data is 
 as equally valid as the parallelisation based on the alternative input data.
 Most variations in input data will not  
-effect parallelisation enough to cause a sangnificant difference in performance.
+effect parallelisation enough to cause a significant difference in performance.
 
 Even in a case where automatic parallelisation does not produce optimal
 results,
@@ -307,27 +307,32 @@ on a profiling run that lasted for years.
 \citet{tannier:2007:parallel_mercury} describes a prior attempt at automatic
 parallelism in Mercury.
 In his approach, 
-an analysis tool gathered parallelisation feedback data consisting of
-a list of the procedures with the highest costs in the program,
-chosen by a configurable measurement (mean or median of time in CSCs) and threshold.
+an analysis tool gathered parallelisation feedback data in the form of
+a list of the procedures with the highest costs in the program.
+Ancestor context independent data was used,
+meaning that all uses of a procedure were considered when ranking that
+procedure within the list.
+The user was able to choose between using the mean or median
+execution time of a procedure, measured in CSCs.
+Only procedures whose cost was greater than a configurable threshold were
+included in the feedback data.
 The analysis did not use a representation of the program,
 as at that time the profiler did not support that capability.
-Parallelisation decisions were made in the compiler:
-each procedure was searched for calls that appeared in the list of top procedures
-and calls to these where parallelised against similar calls if they
-where independent or had fewer shared variables than another configurable limit.
 
-\paul{XXX:  'my' or 'our' in this work.  I know we usually use plural
-first person in papers,
-Is this true for dissertations as well?}
-For my honours project I attempted automatic parallelism of Mercury
+The compiler used the feedback data to make parallelisation decisions.
+Each procedure being compiled by the compiler was searched for calls that
+appeared in the list of top procedures and calls to these were parallelised
+against similar calls if they where independent or had fewer shared
+variables than another configurable limit.
+
+For my honours project I attempted automatic parallelisation of Mercury
 \citep{bone:2008:hons}.
 My work differed from Tannier's in a number of ways:
-The first differences is that at the time of my work the deep profiler
-was able to export a representation of the program
+The first differences is that at the time of my work,
+the deep profiler was able to access a representation of the program
 (my work was the motivation for this feature).
-This allowed my analysis to access profiling data and a representation
-of the program at the same time;
+This allowed my analysis to use both profiling data and the representation
+of the program at the same time,
 making it possible to measure to the times at which variables are produced
 and consumed within parallel conjuncts.
 The analysis uses this to calculate how much parallelism is available,
@@ -337,9 +342,10 @@ In the sequential case the computations \code{p} and \code{q} are shown
 side-by-side.
 Below this, \code{q} is parallelised against \code{p}.
 The future \code{A} is communicated from \code{p} to \code{q},
-\code{q} reaches a point where it needs the value of \code{A} before it has
-been produced and is suspended.
-\code{p} produces \code{A} and \code{q} is resumed.
+\code{q} will execute the \wait operation for \code{A}
+before \code{p} executed \signal, therefore \wait will suspend \code{q}.
+Later, \code{p} executes \signal, producing \code{A}
+and scheduling \code{q} for execution.
 The formula used to compute the execution times in the sequential and parallel
 cases, and the speedup due to parallelism is:
 
@@ -354,32 +360,39 @@ Speedup & = & \frac{T_{Sequential}}{T_{Parallel}}
 %\label{eqn:time_deppar}
 \end{eqnarray*}
 
-This describes the speedup owing to parallelisation of two conjuncts, $A$
-and $B$.
-whose execution times are $T_A$ and $T_B$.
-In the parallel case $B$'s execution time is $T_{DependentB}$ since it
-accounts for the $B$'s dependency on $A$.
+This describes the speedup owing to parallelisation of two conjuncts,
+\code{p}
+and \code{q}.
+whose execution times are $T_p$ and $T_q$.
+In the parallel case \code{q}'s execution time is $T_{DependentQ}$ since it
+accounts for the \code{q}'s dependency on \code{A}.
 Except for this small difference,
 the calculation of parallel execution time and speedup are the commonly
 used formulas for many parallel execution cost models.
+We will greatly expand and generalise this calculation in Chapter
+\ref{chap:overlap}.
 
 This cost model requires information about when a shared variable is
 produced by the first conjunct and when it is consumed by the second.
 To provide this information,
-we introduced coverage profiling to Mercury's deep profiler (Section
-\ref{sec:backgnd_coverage}),
-and used the resulting coverage data in a variable use time analysis
-(Section \ref{sec:backgnd_var_use_analysis}).
+we introduced a variable use time analysis
+(Section \ref{sec:backgnd_var_use_analysis}),
+that depends upon information about how often different goals are executed,
+called \emph{coverage}.
+The deep profiler provides coverage information for most goals,
+however we need coverage information for all goals
+and therefore we introduced coverage profiling.
+% Removed reference since this is the very next section.
 
 \subsection{Coverage Profiling}
 \label{sec:backgnd_coverage}
 
 Code \emph{coverage} is a term often used in the context of debugging and
-testing.
-It refers to which parts of a program get executed and which do not,
-it is used to determine the completeness of a test-suite.
-We use the same term,
-often simply ``coverage'' rather than ``code coverage'',
+testing:
+it refers to which parts of a program get executed and which do not.
+It is used to determine the completeness of a test-suite.
+We use the term code coverage,
+which we often abbreviate to ``coverage'',
 to describe how \emph{often} a given piece of code is executed.
 Thus, we have extended the concept of coverage from a binary ``has been
 executed'' or ``has not been executed'' to a more informative
@@ -394,15 +407,17 @@ control flows out of a predicate through either the \emph{exit} or
 \emph{fail} ports.
 These describe:
     a call being made to the predicate,
-    a call to the predicate being re-entered because there may be more
-    solutions,
+    re-entry to the predicate after it has exited to check for more
+        solutions,
     the predicate exiting with a solution,
     or the predicate failing because there are no more solutions.
-Mercury adds an extra port to these semantics known as the
-\emph{exception} port,
+Mercury adds an extra port,
+known as the \emph{exception} port:
 when a predicate throws an exception it returns control via the exception
 port.
-Control must leave a predicate the same number of times that it enters:
+Provided that execution has finished,
+control must have left a predicate the same number of times that it entered
+it.
 
 \begin{equation*}
 Calls + Redos = Exits + Fails + Exceptions
@@ -412,19 +427,25 @@ Calls + Redos = Exits + Fails + Exceptions
 Mercury adds additional invariants for many determinism types.
 For example, deterministic code may not redo or fail,
 therefore these port counts will be zero.
-The deep profiler tracks the number of times each port is used for a given
-call.
+For each call and its ancestor context the
+deep profiler will track the number of times each port is used,
 Port counts provide code coverage information for predicate and call site
 entry and exit.
 
-% XXX: Actually implement the case for inferring Elses' coverage.
-Code coverage of many goals can be inferred,
-in the simple case of a conjunction containing deterministic conjuncts.
-Each conjunct will have the same coverage as the one before it,
-(we make the assumption that the code does not throw an exception
-as doing so is rare).
-It follows that a deterministic conjunction containing a single call
-can have complete coverage information inferred for all of its conjuncts.
+Code coverage of many goals can be inferred.
+In the simple case of a conjunction containing deterministic conjuncts,
+each conjunct will have the same coverage as the one before it provided
+that the earlier goal does not throw an exception.
+There are two types of exception,
+those that are caught and those that terminate the program.
+When an exception terminates the program, we are not interested in that
+execution's profile,
+when an exception is caught and the program recovers we are interested in
+coverage, however this is rare.
+A deterministic conjunction containing a single call
+can have complete coverage information inferred for all of its conjuncts,
+provided that we are willing to loose a little accuracy if an exception is
+thrown.
 Similarly,
 the coverage before an \emph{if-then-else} can be inferred as the sum
 of the coverage at the beginning of the \emph{then} and \emph{else}
@@ -434,56 +455,75 @@ The same is true for the ends of these branches and the end of the
 if-then-else.
 The coverage at the beginning of the then part is also equal to the
 number of times the \emph{condition} of the if-then-else succeeds.
-Therefore,
-in a single forward pass,
-we will try to infer the coverage at the beginning of the branches
-based on the coverage before the if-then-else and at the end of the
-condition,
-and the condition's determinism.
-We make a similar inference for switches,
-except that they do not have a condition:
-we simply infer the
-coverage of the final switch branch based on the coverage of the other
-branches,
-and before the switch,
-provided that it is a complete switch.
+The coverage of a switch is the sum of the branch's coverage plus the number
+of times the switch may fail.
+Many switches are known to be complete, and therefore they cannot fail.
+This can allow us to infer the missing coverage of a single branch provided
+that we know the coverage of all the other branches plus the coverage of the
+switch.
+Or to infer the coverage of the switch provided that we know the coverage of
+all the branches.
+
+Based on these observations,
+we have implemented a coverage inference algorithm in the deep profiler.
+The coverage inference algorithm makes a single forward pass
+tracking the coverage before the current goal if known,
+when it reaches a call,
+it can read the port counts of the call site to set the coverage 
+before and after the current goal.
+When it encounters a deterministic goal,
+it can set that goal's coverage to the coverage before the current goal.
+The inference algorithm will also infer the coverage of the then and else
+parts of an if-then-else, as described above;
+as well as the coverage of the last branch of a complete switch,
+as described above.
 % A good reader might realize that we have only discussed a forward pass,
 % more complicated passes are possible but the reader will have to take
 % in on faith that this will be discussed later in this section.
 
-Unfortunatly, port counts alone will not provide complete coverage
+Unfortunately, port counts alone will not provide complete coverage
 information.
-for example, a conjunction containing a sequence of \dsemidet
+For example, a conjunction containing a sequence of \dsemidet
 unifications will have incomplete coverage information:
-We cannot know how often each individual unification fails.
+we cannot know how often each individual unification fails.
 We introduced coverage profiling as part of Mercury's deep profiler to
 add extra instrumentation to gather coverage data where it would
 otherwise be unknown.
-At the same time, we try to reduce the amount of instrumentation used,
-since extra instrumentation can slow the program down and sometimes distort
-the profile.\footnote{
+The coverage inference algorithm will look for a coverage point whenever
+it cannot infer the coverage from earlier goals.
+
+We want to reduce the number of coverage points added to a procedure while
+still allowing inference of complete coverage information.
+This is because instrumentation,
+such as a coverage point,
+can slow the program down and sometimes distort the profile,
+\footnote{
     Automatic parallelism analysis is not affected by profile distortion
     since it uses call sequence counts to measure time.
     Nevertheless,
     avoiding profile distortion is good as
     programmers may continue to use the profiler's other
     time measurements.}
-
-When the compiler instruments the program for deep profiling,
-it makes a forward pass through the goal tree of each procedure.
-During this pass,
-a boolean value is maintained that indicates whether or not coverage
-data would be available at this point in the program.
+therefore preventing superfluous instrumentation from being added is
+desirable.
+We do this in the coverage profiling transformation.
+The coverage profiling transformation makes the exact same traversal through
+the program as the coverage inference algorithm.
+Instead of tracking the coverage before the current goal
+the coverage profiling transformation tracks a boolean that indicates
+whether or not coverage would be known before the current goal based on the
+goals before it.
 When this boolean becomes false,
-the algorithm will introduce a coverage point at that place in the code
+the transformation will introduce a coverage point at that place in the code
 and set the value to true.
-The value will be set to false after a goal with a determinism other than
-\ddet or \dccmulti and which does not provide coverage data of its own,
-or at the beginning of a branch where the coverage cannot be inferred.
-This algorithm has the same structure as the coverage inference
-algorithm:
-a coverage point will always be placed where the coverage inference
-algorithm would expect to find one.
+This has the effect of placing a coverage point at exactly the location at
+which the coverage inference algorithm would attempt to look up coverage
+from a coverage point.
+The coverage profiling transformation will set the value of its boolean
+to false after a goal with a determinism other than
+\ddet or \dccmulti and which does not provide coverage data of its own.
+It also sets the boolean to false at the beginning of a branch whose
+coverage cannot be inferred.
 
 \begin{figure}
 \begin{tabular}{l}
@@ -505,22 +545,22 @@ algorithm would expect to find one.
 
 Figure \ref{fig:map_coverage} shows \code{map/3} annotated with a
 coverage point.
-The forward pass through the procedure cannot infer
+The forward pass of the coverage inference algorithm cannot infer
 coverage at the beginning of this switch arm,
-and therefore the similar pass in the deep profiler introduced a
-coverage point at that position.
-This point, along with the coverage of the procedure as a whole,
-is enough to infer coverage for the whole procedure on a single pass.
+and therefore the coverage profiling transformation in the deep profiler
+introduced a coverage point at that position.
 It is true that the coverage point could be removed and the port
 counts of the recursive code in this example could be used,
 but doing so would require multiple passes
-for both inference and instrumentation.
-Coverage profiling adds a small cost to profiling;
+for both algorithms,
+making them slower.
+Coverage profiling adds a small cost to profiling
+(6\% slower than normal deep profiling);
 it is not a high priority to optimise this further.
 
-Coverage data is tracked in the \PS structure,
+During my honours project I added three new fields to the \PS structure,
 which we introduced in Section \ref{sec:backgnd_deep}.
-Three new fields where added to the \PS structure:
+These fields are:
 a constant integer representing the number of coverage points in this
 procedure;
 an array of constant structures,
@@ -533,16 +573,15 @@ The static coverage data,
 which includes the goal path of the coverage point and the type of the
 coverage point (branch or post-goal),
 is written out with the profile.
-Because coverage points are associated with \PS structures,
-and not either \PD or \CSD structures,
-they are not associated with contexts in the way that other profiling
-data is.
-That is to say,
-coverage data of a particular predicate covers the general use of that
-predicate,
+We were concerned that a procedure might require dozens of coverage points,
+each one consuming memory,
+therefore to avoid the risk of consuming large amounts of memory we choose
+to associate coverage points with \PS structures rather than the more
+numerous \PD structures.
+Therefore coverage data is not associated with ancestor contexts in the way
+that other profiling data is.
 The auto-parallelisation work described in my honours report
-\citep{bone:2008:hons}
-would not have benefited from context specific coverage data.
+did not expect to use ancestor context specific coverage information.
 
 The coverage point in Figure \ref{fig:map_coverage}
 has two arguments,
@@ -557,31 +596,30 @@ be inlined into the compiled procedure.
 \subsection{Variable Use Time Analysis}
 \label{sec:backgnd_var_use_analysis}
 
-As described above,
-the automatic parallelism analysis used in \citet{bone:2008:hons} considers
+The automatic parallelism analysis used in my honours report considers
 conjunctions with at most two conjuncts and at most one shared variable.
-To predict how much parallelism is available it needs to know
-when that variable is produced by the first conjunct
-and the first time it is consumed by the second.
+To predict how much parallelism is available,
+it needs to know when that variable is produced by the first conjunct,
+and when it is first consumed by the second.
 These times are calculated in units of call sequence counts.
 
 During compilation of dependent conjunctions,
-a future is created to replace any shared variable.
+the compiler creates a future to replace any shared variable.
 The compiler will attempt to push that future into the goal that
-produces the value so that,
-if possible,
-the \signal operation will be placed immediately after the unification
-that binds the variable.
+produces its value,
+so that,
+the \signal operation is after, and as close as possible
+to, the unification that binds the variable.
 
 \begin{algorithm}
 \[
-\begin{array}{l @{}l @{}l}
-\prodtime V\,& G                            &=
+\begin{array}{l @{}l}
+\prodtime V\,G                            &=
     \begin{cases}
         \timef G         & \text{if } G \text{ is not executed or
                             \derroneous} \\
         \prodtimep V\,G  & \text{if } G \text{ is \ddet or \dccmulti} \\
-        \undef           & \text{otherwise}
+        \canthappen      & \text{otherwise}
     \end{cases} \\
 \end{array}
 \]
@@ -595,9 +633,9 @@ that binds the variable.
 \prodtimep V\,& \pat{X_{n+1} = \,f(X_1,\,\ldots,\,X_n)}  &=
     \callprodtime V\,f\,[X_1,\,\ldots,\,X_n,\,X_{n+1}] \\
 %    \prodtime V\,(\operatorname{body} f) \\
-\prodtimep V\,& \pat{X_0(X_1,\,\ldots,\,X_n)}      &= time\_of\_call \\
-\prodtimep V\,& \pat{m(X_1,\,\ldots,\,X_n)}        &= time\_of\_call \\
-\prodtimep V\,& \pat{foreign(\ldots)}              &= time\_of\_call + 1 \\
+\prodtimep V\,& \pat{X_0(X_1,\,\ldots,\,X_n)}      &= \timeofcall \\
+\prodtimep V\,& \pat{m(X_1,\,\ldots,\,X_n)}        &= \timeofcall \\
+\prodtimep V\,& \pat{foreign(\ldots)}              &= \timeofcall + 1 \\
 \prodtimep V\,& \pat{G_1,\,G_2,\,\ldots,\,G_n}     &=
    \begin{cases}
        \prodtime V\,G_1
@@ -609,8 +647,8 @@ that binds the variable.
        \right.
             & \text{otherwise}
    \end{cases} \\
-\prodtimep V\,& \pat{(G_1\,\&\,\ldots\,\&\,G_n)}   &= \undef \\
-\prodtimep V\,& \pat{(G_1\,;\,\ldots\,;\,G_n)}     &= \undef \\
+\prodtimep V\,& \pat{G_1\,\&\,\ldots\,\&\,G_n}      &= \canthappen \\
+\prodtimep V\,& \pat{G_1\,;\,\ldots\,;\,G_n}        &= \canthappen \\
 \prodtimep V\,& 
     \left\llbracket
     \begin{array}{l}
@@ -618,7 +656,7 @@ that binds the variable.
         \quad\ldots\,,f_n:\,G_n)
     \end{array}
     \right\rrbracket &=
-    \Avg_{1 \leq i \leq n}\,\prodtime\,V\,G_i \\
+    \sum\limits_{1 \leq i \leq n}\,Pr_{G_i} \times \prodtime\,V\,G_i \\
 \prodtimep V\,& 
     \left\llbracket
     \begin{array}{ll}
@@ -633,27 +671,31 @@ that binds the variable.
         \end{array}
     \right) \\
 %    \Avg_{G \in \{Then,\,Else\}} \prodtime V\,G \\
-\prodtimep V\,& \pat{not\,G}                       &= \undef \\
+\prodtimep V\,& \pat{not\,G}                       &= \canthappen \\
 \prodtimep V\,& \pat{some\,[X_1,\ldots,X_n]\,G}    &= \prodtime V\,G \\
-\prodtimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \prodtime V\,G \\
+%\prodtimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \prodtime V\,G \\
 \prodtimep V\,& \pat{promise\_pure\,G}             &= \prodtime V\,G \\
 \prodtimep V\,& \pat{promise\_semipure\,G}         &= \prodtime V\,G \\
 \end{array}
 \]
 \[
 \begin{array}{l @{}l}
-\callprodtime V\,p\,Args        \,&=
+\callprodtime V\,P\,Args        \,&=
     \begin{cases}
-        \prodtime \left(
-        \begin{array}{l}
-            (\operatorname{arg\_to\_param} V Args) \\
-            (\operatorname{body} p)
-        \end{array}
-        \right) &
-            \text{if } p \text{ is in the current module} \\
-        \timef p &
+        \prodtime Params\,B &
+            \text{if } P \text{ is in the current module} \\
+        \timef B &
             \text{otherwise}
     \end{cases} \\
+    & \begin{array}{l l @{}l}
+    \text{where} & Params  &= \operatorname{arg\_to\_param}\, V\, Args \\
+                 & B       &= \operatorname{body}\, P \\
+    \end{array}
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+\timef G    \,&= \text{The duration of } G\text{'s execution.} \\
 \end{array}
 \]
 \caption{Variable production time analysis}
@@ -666,36 +708,38 @@ this is shown in Algorithm \ref{alg:var_prod_time}.
 This algorithm is only invoked on goals that are either \ddet or \dccmulti,
 and that produce the variable $V$.
 For each goal type,
-it determines if it is possible to push the future into that goal,
-so that the future is signalled as early as possible.
+it calculates at what point within the goal's execution
+the future for $V$ will signalled.
 As noted above,
 a future cannot be pushed into certain goal types,
 such as higher order calls, method calls,
 foreign code or calls that cross module boundaries.
-Therefore,
-conservative answers are used for these cases.
-The case for foreign calls does not measure the call sequence count for the
+Therefore, a conservative answer is used in these cases,
+the conservative answer is `at the end of $G$'s execution'.
+This is conservative not just because it is typical,
+but because it will avoid creating parallelisations that are not likely
+to speed up the program.
+The case for foreign calls does not measure a call sequence count for the
 foreign call itself, so we add one.
 Goals such as unifications are trivial, and always have zero cost,
 therefore they must produce their variable after zero call sequence counts
 of execution.
-Parallel conjunctions cannot appear in the goal types analysed,
-since they are always converted to sequential conjunctions as parallelism and
-profiling are not supported in the same build,
-we can safely ignore parallel conjunctions.
-Because the algorithm is only invoked on goals that are \ddet or \dccmulti,
-then it is never used on negations and disjunctions,
-which cannot meaningfully be \ddet.
-We allow the production time of a variable in a negation or disjunction to
-be undefined.
+Parallel conjunctions are converted into sequential conjunctions before
+profiling,
+they will not appear in the algorithm's input.
+A negation cannot produce a variable and therefore it cannot produce $V$,
+the algorithm does not need to handle negations.
+The algorithm is only invoked on goals that are \ddet or \dccmulti,
+and the only disjunction that can be \ddet or \dccmulti is one that does not
+produce outputs,
+and therefore cannot produce $V$,
+the algorithm does not need to handle disjunctions either.
 
-A conjunction 
-($G_1,G_2,~\ldots,~G_n$),
-is handled by determining if $G_1$ produces the variable,
-if it does then we invoke the algorithm recursively on $G_1$.
-If $G_1$ does not produce $V$ then the algorithm is invoked recursively on
-the remainder of the conjunction ($G_2,\ldots,G_n$),
-and the execution time of $G_1$ is added to the result.
+The algorithm handles conjunctions by determining which conjunct
+$G_k$ in the conjunction $G_1,~\ldots,~G_k,~\ldots,G_n$ produces the
+variable.
+The production time of the variable in the conjunction is its production
+time in $G_k$ plus the sum of the durations of $G_1,~\ldots,~G_{k-1}$.
 
 We handle switches by invoking the algorithm recursively on each switch
 arm,
@@ -704,29 +748,29 @@ with the weights being the arms' entry counts as determined by coverage
 inference.
 We handle if-then-elses similarly.
 we need the weighted average of the two possible cases:
-the variable being generated by the then arm versus the else arm.
+the variable being generated by the then arm versus the else branch.
 (It cannot be generated by the condition:
-variables generated by the condition are visible only from the then-arm.)
+variables generated by the condition are visible only from the then branch.)
 % TODO: implement this behaviour
-To find the first number,
-we invoke the algorithm on the then-arm,
-and add the result to the time taken by the condition.
-To find the second,
-we invoke the algorithm on the else-arm,
-and add the result to the expected time taken by the condition when it fails.
-To compute this, we use a version of this algorithm
-that weights the time taken by each conjunct in any inner conjunction
-by the probability of its execution,
-which we know by subtracting its execution count
-from the count of the number of times the condition was entered.
+To find either number,
+we invoke the algorithm on either the then or else branch,
+depending on which is applicable,
+and add this to the time taken by the condition.
+Note that this is the time taken by the condition on average
+(whether or not it fails),
+we do not have access to timing information dependent on a goal's success or
+failure.
+This is not a concern, most condition goals are inexpensive,
+therefore their runtimes do not vary significantly.
 
 Using the weighted average for switches and if-then-elses is meaningful because
 the Mercury mode system dictates
-that if one arm of a switch or if-then-else generates a variable,
+that if one branch of a switch or if-then-else generates a variable,
 then they \emph{all} must do so.
-The sole exception is arms that are guaranteed to abort the program,
+The sole exception is branches that are guaranteed to abort the program,
 whose determinism is erroneous.
-We use a weight of zero for erroneous arms.
+We use a weight of zero for erroneous branches 
+because optimising them does not make sense.
 Coverage profiling was introduced to provide the weights of switch and
 if-then-else arms used by this algorithm.
 
@@ -747,9 +791,9 @@ variable, and therefore the inner goal must be \ddet.
     \begin{cases}
         0                & \text{if } G \text{ is not executed or
                             \derroneous} \\
-        \constimep V\,G  & \text{if } G \text{ is \ddet, \dsemidet, \dccmulti
-                           or \dccnondet} \\
-        \undef           & \text{otherwise}
+        \constimep V\,G  & \text{if } G \text{ is \ddet, \dsemidet,
+            \dfailure, \dccmulti or \dccnondet} \\
+        \canthappen           & \text{otherwise}
     \end{cases} \\
 \end{array}
 \]
@@ -775,8 +819,8 @@ variable, and therefore the inner goal must be \ddet.
        \right.
             & \text{otherwise}
    \end{cases} \\
-\constimep V\,& \pat{(G_1\,\&\,\ldots\,\&\,G_n)}   &= \undef \\
-\constimep V\,& \pat{(G_1\,;\,\ldots\,;\,G_n)}     &= 
+\constimep V\,& \pat{G_1\,\&\,\ldots\,\&\,G_n}     &= \canthappen \\
+\constimep V\,& \pat{G_1\,;\,\ldots\,;\,G_n}       &= 
     \begin{cases}
         \constime V\,G_1
             & \text{if } G_1 \text{ consumes } V \\
@@ -794,7 +838,7 @@ variable, and therefore the inner goal must be \ddet.
         \quad\ldots\,,f_n:\,G_n)
     \end{array}
     \right\rrbracket &=
-    \Avg_{1 \leq i \leq n}\,\constime\,V\,G_i \\
+    \sum\limits_{1 \leq i \leq n}\,Pr_{G_i} \times \constime\,V\,G_i \\
 \constimep V\,& 
     \left\llbracket
     \begin{array}{ll}
@@ -804,43 +848,46 @@ variable, and therefore the inner goal must be \ddet.
     \right\rrbracket &= \iteconstime V\,Cond\,Then\,Else \\
 \constimep V\,& \pat{not\,G}                       &= \constime V\,G \\
 \constimep V\,& \pat{some\,[X_1,\ldots,X_n]\,G}    &= \constime V\,G \\
-\constimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \constime V\,G \\
+%\constimep V\,& \pat{all\,[X_1,\ldots,X_n]\,G}     &= \constime V\,G \\
 \constimep V\,& \pat{promise\_pure\,G}             &= \constime V\,G \\
 \constimep V\,& \pat{promise\_semipure\,G}         &= \constime V\,G \\
 \end{array}
 \]
 \[
 \begin{array}{l @{}l}
-    \begin{array}{l}
+    \begin{split}
         \iteconstime V\,Cond\,\\
-        \quad Then\,Else
-    \end{array} &=
+        Then\,Else
+    \end{split} &=
 \begin{cases}
     \constime V\,Cond   & \text{\parbox{1in}{if $Cond$ \\ consumes $V$}} \\
-    \timef Cond +
-    \left(
-        \begin{array}{l}
+    \begin{split}
+        \timef Cond +
             Pr_{Then} \times \constime V\,Then + \\
             Pr_{Else} \times \constime V\,Else
-        \end{array}
-    \right) & otherwise \\
+    \end{split}
+        & otherwise \\
 \end{cases} \\
 \end{array}
 \]
 \[
 \begin{array}{l @{}l}
-\callconstime V\,p\,Args        \,&=
+\callconstime V\,P\,Args        \,&=
     \begin{cases}
-        \constime \left(
-        \begin{array}{l}
-            (\operatorname{arg\_to\_param} V Args) \\
-            (\operatorname{body} p)
-        \end{array}
-        \right) &
-            \text{if } p \text{ is in the current module} \\
-        \timef p &
+        \constime Params\,B &
+            \text{if } P \text{ is in the current module} \\
+        0 &
             \text{otherwise}
     \end{cases} \\
+    & \begin{array}{l l @{}l}
+    \text{where} & Params   &= \operatorname{arg\_to\_param}\, V\, Args \\
+                 & B        &= \operatorname{body}\,P \\
+    \end{array}
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+\timef G    \,&= \text{The duration of } G\text{'s execution.} \\
 \end{array}
 \]
 \caption{Variable consumption time analysis}
@@ -859,14 +906,15 @@ may consume a variable even if other arms do not.
 The code that pushes wait operations into goals can be configured to include
 a \wait operation on every execution path so that when the goal completes,
 it is guaranteed that a \wait operation has taken place.
-It also guarantees that any call expected to wait on a future will wait on
-that future even though it might not use that parameter.
-Our analysis makes the conservative assumption that \wait operations are
-placed at the end of branches in this way,
-this could prevent introducing parallelism that leads to a slow-down.
+The variable use analysis should reflect the compiler's configuration with
+respect to how \wait operations are placed but it does not.
+It makes the conservative assumption that waits are always placed in switch
+arms of switches and if-then-elses that do not consume the variable.
+This assumption is a conservative approximation.
+This can prevent introducing parallelism that leads to a slow-down.
 To make this assumption,
-the algorithm checks if a goal consumes a variable, if it does not it
-returns the goal's execution time as the consumption time of the variable.
+the algorithm checks if a goal consumes a variable, if it does not,
+it returns the goal's execution time as the consumption time of the variable.
 % XXX: This is not yet implemented.
 The other important difference is that when making
 any other conservative assumption
@@ -883,14 +931,17 @@ such as inlining,
 branch hints
 and type specialisation
 might also benefit from profiling feedback.
-\paul{I had a quick search of the literature and could not find any such
-papers.}
+\paul{I have found some papers but I am yet to read them.}
+%  Feedback linking: optimizing object code layout for updates
+%  Link-time optimization of ARM binaries
+%  Feedback directed optimization in Compaq's compilation tools for Alpha
+%  Workshop on Feedback-Directed Optimization
 
-We have designed and implemented a generic feedback framework that allows
-tools to create feedback information for the compiler.
+During my honours project I designed and implemented a generic feedback
+framework that allows tools to create feedback information for the compiler.
 These tools may include the profiler, the compiler itself,
-or any other tool that is able to link to the feedback library code.
-Any Mercury type can be used as feedback information,
+or any tool that links to the feedback library code.
+Any Mercury value can be used as feedback information,
 making the feedback framework flexible.
 New feedback-directed optimisations may require feedback information
 from new analyses.
@@ -899,7 +950,6 @@ support these optimisations.
 We also expect that an optimisation may use more than one type of
 feedback information and that more than one optimisation may use the
 same feedback information.
-These were the requirements of the feedback framework.
 
 % Describe on-disk format,
 The on-disc format for the feedback information is very simple:
@@ -908,20 +958,18 @@ including a version number,
 followed by a list of feedback information items,
 stored in the format that Mercury uses for reading and writing
 terms.
-When the file is read in;
-the file format identifier and revision number are checked,
-the list of information items is checked to ensure that no two items
-describe the same feedback information.
-For example,
-they may be no more than one item in the list of the same feedback type.
+When the feedback library reads the file in
+it will check the file format identifier and version number,
+thet it will read the list of information items and check that no two
+items describe the same type of feedback information.
 
 The API allows developers to open an existing file or create a new one,
 query and set information in the in-memory copy of the file,
 and write the file back out to disk.
-It is straight-forward to open the file,
+It is straight forward to open the file,
 update a specific feedback item in it,
 and close it,
-essentially leaving the other feedback items in the file unchanged.
+leaving the other feedback items in the file unchanged.
 
 
 
