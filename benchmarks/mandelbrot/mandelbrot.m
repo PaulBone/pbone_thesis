@@ -250,10 +250,10 @@ draw_rows_indep(Seq, Xs, Ys, Rows) :-
 draw_rows_indep_left(Seq, Xs, Ys, Rows) :-
     (
         Seq = sequential_execution,
-        my_mapr_seq(draw_row(Xs), Ys, RowList)
+        my_mapl_seq(draw_row(Xs), Ys, RowList)
     ;
         Seq = parallel_execution,
-        my_mapr(draw_row(Xs), Ys, RowList)
+        my_mapl(draw_row(Xs), Ys, RowList)
     ),
     foldl(append_row, RowList, empty, Rows).
 
@@ -379,20 +379,20 @@ my_map_seq(M, [X | Xs], [Y | Ys]) :-
     M(X, Y) ,
     my_map_seq(M, Xs, Ys).
 
-:- pred my_mapr(pred(X, Y), list(X), list(Y)).
-:- mode my_mapr(pred(in, out) is det, in, out) is det.
+:- pred my_mapl(pred(X, Y), list(X), list(Y)).
+:- mode my_mapl(pred(in, out) is det, in, out) is det.
 
-my_mapr(_, [], []).
-my_mapr(M, [X | Xs], [Y | Ys]) :-
-    my_mapr(M, Xs, Ys) &
+my_mapl(_, [], []).
+my_mapl(M, [X | Xs], [Y | Ys]) :-
+    my_mapl(M, Xs, Ys) &
     M(X, Y).
 
-:- pred my_mapr_seq(pred(X, Y), list(X), list(Y)).
-:- mode my_mapr_seq(pred(in, out) is det, in, out) is det.
+:- pred my_mapl_seq(pred(X, Y), list(X), list(Y)).
+:- mode my_mapl_seq(pred(in, out) is det, in, out) is det.
 
-my_mapr_seq(_, [], []).
-my_mapr_seq(M, [X | Xs], [Y | Ys]) :-
-    my_mapr_seq(M, Xs, Ys) ,
+my_mapl_seq(_, [], []).
+my_mapl_seq(M, [X | Xs], [Y | Ys]) :-
+    my_mapl_seq(M, Xs, Ys) ,
     M(X, Y).
 
 %----------------------------------------------------------------------------%
