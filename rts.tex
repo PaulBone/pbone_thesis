@@ -15,6 +15,51 @@ In this chapter we will discuss
 some of the problems affectiong performance and
 many of the improvments that have made parallel execution faster.
 
+\section{Garbage collection}
+
+While using parallel benchmarks we found that Mercury's garbage collector,
+the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
+\citep{boehm_gc},
+could easily interfere with parallel performance.
+Like many declarative languages,
+Mercury programs tend to have a high rate of allocation,
+placing a lot of stress on the garbage collector.
+In particular,
+Boehm GC uses a stop-the-world marking phase,
+all threads must stop, sequentialising the program.
+
+XXX: Discussion of Amdahl's law WRT stop-the-world.
+Use icfp2000's example.
+
+XXX: Introduce parallel marking,
+
+XXX: Criticise cache behaviour wrt parallel marking,
+Thanks Simon Marlow.
+
+XXX: Benchmark icfp2000 with different initial heap sizes.
+
+XXX: Discuss local heaps for threads, and their reliability problems.
+
+XXX: Add table.
+
+To illistrate the difference that garbage collection can make we wrote a new
+benchmark, mandelbrot.
+This program is a micro-benchmark, and tests the performance of 
+Mercury's parallel conjunction operator independent of the garbage
+collector's effects.
+The mandelbrot set calculation is done on complex numbers,
+most programmers will use a tuple-like data type to represent each number,
+each number would be allocated as a heap object.
+\paul{Ohh, I could do a test between mandelbrot with complex data type vs
+without.}
+To avoid stress on the garbage collector stored the real and imaginary parts
+of each number on the stack.
+This reduces the program's reliance on the garbage collector,
+as a result the program does very little allocation or collection.
+We can see this in Table \ref{tab:mandelbrot_vs_icfp2000}.
+We will use this benchmark in the remainder of this chapter since we want to
+measure the runtime system's performance independent of the garbage collector.
+
 \section{Spark queueing}
 
 Sparks are managed in two different data structures.
@@ -137,9 +182,9 @@ it will go to sleep using a pthread condition variable and the global run
 queue's lock.
 This condition is used to wake engines when either contexts are added to the
 run queue,
-or soarks are added to the spark run queue.
+or sparks are added to the spark run queue.
 
-\section{Right vs.\ left recursion}
+\section{Premature scheduling decisions}
 
 \begin{figure}
 \begin{center}
@@ -174,17 +219,132 @@ head directly.
 This means that in the right recursive case (Figure
 \ref{fig:map_right_recursive}), the recursive call is spawned off as a
 spark,
-and that in the left recursive case (Figure \ref{fig:map_left_recursion},
+and that in the left recursive case (Figure \ref{fig:map_left_recursive}),
 the recursive call is executed directly, and the loops \emph{body} is
 spawned off.
-These two alternatives perform very differently.
 
-\paul{Include figures of current performance and then discuss the
-problem.}
+\begin{table}
+\paul{Make this easier to analyse by making the second column the actual
+number of contexts, not contexts per engine.}
+\begin{center}
+\begin{tabular}{lr|rrrrrr}
+\multicolumn{1}{c|}{Recursion type} &
+\multicolumn{1}{c|}{Max no.\ of contexts} &
+\multicolumn{2}{|c|}{Sequmential} &
+\multicolumn{4}{|c}{Parallel w/ $N$ Engines} \\
+\Cbr{} & & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
+\hline
+\multirow{5}{*}{Right} &
+ 2      & 23.8       & 20.0     & 22.0 & 22.0 & 22.1 & 22.1 \\
+&32     & -          & -        & 22.0 & 22.1 & 22.1 & 21.7 \\
+&64     & -          & -        & 22.0 & 20.3 & 19.0 & 17.0 \\
+&128    & -          & -        & 22.0 & 13.7 &  8.7 &  6.7 \\
+&256    & -          & -        & 20.0 & 12.5 &  8.7 &  6.8 \\
+\hline
+\multirow{5}{*}{Left} &
+ 2      & 23.7       & 21.9     & 22.0 & 22.0 & 22.0 & 22.0 \\
+&32     & -          & -        & 22.3 & 22.0 & 22.0 & 21.9 \\
+&64     & -          & -        & 22.0 & 21.9 & 20.9 & 18.8 \\
+&128    & -          & -        & 22.0 & 18.8 & 15.0 &  9.0 \\
+&256    & -          & -        & 22.0 & 18.5 & 12.4 & 10.0 \\
+\end{tabular}
+\end{center}
+\caption{Right vs.\ left recursion.}
+\label{tab:right_v_left}
+\end{table}
+
+Table \ref{tab:right_v_left} shows average elapsed time in seconds for the
+mandelbrot image generating program over 20 samples.
+The program iterates over the rows in the mandelbrot image using
+a left or right recursive parallel
+\code{map/3} predicate such as those in Figure
+\ref{fig:map_right_and_left_recursive},
+the leftmost column in the table indicates which predicate was used.
+The next column describes how many contexts may exist at once per Mercury
+engine.
+Values are omitted in the range 3--31 as they are not interesting:
+they are the same as the case for 2 contexts per engine.
+The next two columns give the runtime for a sequential version of the
+program without and with thread safty.
+\paul{Write what this means.}
+\paul{The TS column is broken, fix it}
+The following four columns give the runtimes for the parallel mandelbrot
+program with 1--4 Mercury engines.
+All our benchmarking is performed on `cabsav',
+an ASRock Z68-Pro3 based Intel i7-2600K system.
+
+We can see that the right recursive program performs better than the left
+recursive one.
+It is also quite noticeable that there is a larger than expected amount of
+variance in the results.
+For example in the left recursive cases 256 contexts per engine
+performance better than 128 contexts per engine,
+except for the case with four engines.
+In the 128 context-per-engine case the standard deviation is 4.3 seconds,
+and in the 256 context-per-engine case the standard deviation is 5.6
+seconds,
+this means that these results cannot be compared meaningfully as the
+reported mean may not represent the true mean.
+Most of the other standard deviations are low, less than half a second.
+The results vary more widly for the left recursive tests with 3--4 engines
+and 128--256 contexts per engine.
+This is not seen for the right recursive programs,
+this leads us to beleive that it is due to how the left recursive programs
+are scheduled.
+
+Parallel conjunctions are executed by spawning off the second and later
+conjuncts and executing the first conjunct directly.
+This means that in the right recursive example the recursive call is spawned
+off,
+the spark for the recursive call will be placed on the global spark queue.
+Another engine will wake up and take the spark from the global queue and
+convert it to a context.
+When it makes the recursive call it will execute the parallel conjunction
+inside and perform the same process.
+
+After creating the spark for the recursive call,
+each of these contexts will execute \code{P(X, Y)}
+(Figure \ref{fig:map_right_recursive})
+followed by \joinandcontinue which blocks this context on the completion of
+the recursive call.
+As this process continues the number of contexts in memory builds up,
+creating more stacks that consume more and more memory.
+This continues until the number of contexts in memory plus
+the number of sparks is equal to the maximum number of contexts.
+Without this limit a simple loop can easily consume all the physical memory
+in a system.
+Once this limit is exceeded sparks are always placed on the local context's
+queue, and will therefore only be executed by the context's current engine.
+This limits the amount of parallelism in the program,
+it is why performance improves as we allow more contexts per engine in
+Table \ref{tab:right_vs_left}.
+We will address the memory usage problem and context limit in
+Chapter \ref{chap:loop_control}.
+
+In the left recursive program,
+scheduling is quite different.
+The parallel conjunction creates a spark for \code{P(X, Y)} and executes the
+recursive call directly.
+The recursive call will very quickly begin execution of the next parallel
+conjunction and spark off another call to \code{P}.
+By the time another engine wakes up and begins taking work from the global
+queue a number of sparks will have been placed on the queue.
+Because a spark can be convered into a context (even though an existing
+cotext may be used),
+the number of sparks on the global queue contributes towards the maximum
+number of contexts aloud.
+If the context limit is low, many sparks will be placed on the current
+context's spark queue and will be executed sequentially rather than in
+parallel.
+The left recursive mandelbrot program runs more slowly than the right
+recursive program,
+this is because all the sparks for the whole program are created at the
+beginning of the programs execution.
 
 
-\section{Premature scheduling decisions}
+% XXX: Here's where I'm working.
 
+%XXX
 Parallel conjunctions are evaluated as described in Section
 \ref{sec:backgnd_merpar}.
 Sparks are added to the global spark queue if the global queue has room,
@@ -216,6 +376,8 @@ Deciding too early, results.
 This subsection was joint work with Peter Wang.
 
 \subsection{Engine local spark stacks}
+
+\section{Right vs.\ left recursion}
 
 \section{Thread pinning}
 
