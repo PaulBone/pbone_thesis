@@ -246,7 +246,8 @@ make_test(Program, Config) =
     Target = get_target(CorT, Grade, Program),
     Name = format("%s_%s", [s(Target), s(RTSOptsName)]), 
     ProgArgs = Program ^ p_args,
-    Cmd = format("./%s %s", [s(Target), s(ProgArgs)]).
+    TestProgArgs = prog_get_extra_args(Program, CorT),
+    Cmd = format("./%s %s %s", [s(Target), s(TestProgArgs), s(ProgArgs)]).
 
     % Run all the tests,
     %
@@ -314,7 +315,7 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
 :- type config
     --->    config(
                 c_samples       :: int,
-                c_buildsi       :: list(build_config),
+                c_builds        :: list(build_config),
                 c_tests         :: list(test_config)
             ).
 
@@ -442,11 +443,23 @@ compose(F, G, X) = F(G(X)).
 
 :- type program
     --->    program(
-                p_name      :: string,
-                p_dir       :: string,
-                p_binary    :: string,
-                p_args      :: string
+                p_name          :: string,
+                p_dir           :: string,
+                p_binary        :: string,
+                p_args          :: string,
+                p_extra_args    :: prog_extra_args
             ).
+
+:- type prog_extra_args
+    --->    prog_extra_args(
+                pea_control     :: string,
+                pea_test        :: string
+            ).
+
+:- func prog_get_extra_args(program, control_or_test) = string.
+
+prog_get_extra_args(Prog, control) = Prog ^ p_extra_args ^ pea_control.
+prog_get_extra_args(Prog, test)    = Prog ^ p_extra_args ^ pea_test.
 
     % The path to use.
 :- func mercury_path = string.
@@ -524,10 +537,12 @@ test_group_rtopts =
 :- func programs = list(program).
 
 programs = [
-    %program("mandelbrot_indep", "mandelbrot", "mandelbrot",
-    %    "-x 600 -y 600"),
+    program("mandelbrot_indep", "mandelbrot", "mandelbrot",
+        "-x 600 -y 600",
+        prog_extra_args("-s", "")),
     program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
-        "-l -x 600 -y 600")
+        "-l -x 600 -y 600",
+        prog_extra_args("-s", ""))
     ].
 
 %------------------------------------------------------------------------%
