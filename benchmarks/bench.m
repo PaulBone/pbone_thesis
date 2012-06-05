@@ -20,6 +20,8 @@
 :- import_module require.
 :- import_module string.
 
+:- import_module result.
+
 :- type option
     --->    samples
     ;       help
@@ -251,7 +253,7 @@ make_test(Program, Config) =
     % A log is written to the stream given in the second argument,
     % Results are also returned.
     %
-:- pred run_tests(config::in, output_stream::in, cord(bench.result)::out,
+:- pred run_tests(config::in, output_stream::in, cord(result.result)::out,
     io::di, io::uo) is det.
 
 run_tests(Config, Stream, Results, !IO) :-
@@ -270,7 +272,7 @@ run_tests(Config, Stream, Results, !IO) :-
     % test, a item is Results is generated for each sample.
     %
 :- pred run_test(int::in, output_stream::in, test::in,
-    cord(bench.result)::out, io::di, io::uo) is det.
+    cord(result.result)::out, io::di, io::uo) is det.
 
 run_test(Samples, Stream, Test, Results, !IO) :-
     Test = test(Name, Cmd, RTSOpts),
@@ -303,29 +305,6 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
     ;
         Times = []
     ).
-
-% Results 
-%------------------------------------------------------------------------%
-
-    % A result is the name of the test (same as t_name above),
-    % and how long that test took.
-    %
-:- type result
-    --->    result(
-                r_name          :: string,
-                r_time          :: float 
-            ).
-
-:- pred print_results(cord(bench.result)::in, cord(string)::out) is det.
-
-print_results(Results, Cord) :-
-    Items = map(print_result, Results),
-    Cord = foldl((++), Items, init).
-
-:- func print_result(bench.result) = cord(string).
-
-print_result(result(Name, Time)) =
-    singleton(format("%s %.2f\n", [s(Name), f(Time)])).
 
 % Configuration
 %------------------------------------------------------------------------%
