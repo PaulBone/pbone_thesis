@@ -16,19 +16,62 @@ many of the improvements that have made parallel execution faster.
 
 \section{Garbage collection}
 
+\status{Planned, finish prose and may need a benchmark}
+
 While using parallel benchmarks we found that Mercury's garbage collector,
 the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
 \citep{boehm_gc},
 could easily interfere with parallel performance.
+Boehm GC is a mark and sweep garbage collector and must
+stop-the-world during marking.
+
 Like many declarative languages,
 Mercury programs tend to have a high rate of allocation,
 placing a lot of stress on the garbage collector.
-In particular,
-Boehm GC uses a stop-the-world marking phase,
-all threads must stop, sequentialising the program.
+% XXX: Discussion of Amdahl's law WRT stop-the-world.
+One of our benchmarks is parallel version of a raytracer developed for the
+ICFP programming context in 2000,
+hence it is named icfp2000.
+The raytracer uses many small structures to represent vectors and a pixel's
+colour,
+As is common in declrative programming these structures are immutable,
+calculations return a newly allocated structure rather than updating an
+existing structure.
+Therefore,
+icfp2000 is very memory allocation intensive.
+A memory allocation intensive program will have to perform a sagnificant
+amount of marking.
+Boehm GC allows for parallel marking,
+but first we describe sequential marking:
+We have to account for Amdahl's law~\citep{amdahl}.
+Amdahl's law says that if some of the program is parallelisable and some
+is not,
+then as the number of processors increases the sequential part of the
+program will dominate the program's runtime.
+Therefore,
+a sequential marking phase in a garbage collector will affect the speedup
+the program can gain due to parallelism.
+If a sequential program runs for 20 seconds and sepends one second of this
+(5\%) marking sequentially,
+and we parallelise the program's 19 seconds across four processors we get
+a speed up of
+$(1 + 19) \div (1 + 19\div4) = 3.48$,
+in this case the program spends 17\% of its time doing garbage collection.
+Even with one hundred processors we can not acheive a speedup greater than
+$(1 + 19) \div (1 + 19\div100) = 16.8$
+The theoretical maximum speedup of such a program is 20.
+Boehm GC uses helper threads in an attempt to parallelise the marking phase.
+We would expect that as we parallelise a program,
+such as icfp2000,
+that when using sequential marking our observations should match the
+predictions of Amdahl's law,
+and that when using parallel marking we should see speed-up,
+although we do not expect it to parallelise well
+as this is a continuing field of research.
 
-XXX: Discussion of Amdahl's law WRT stop-the-world.
-Use icfp2000's example.
+XXX: Benchmark.
+
+
 
 XXX: Introduce parallel marking,
 
@@ -60,6 +103,8 @@ We will use this benchmark in the remainder of this chapter since we want to
 measure the runtime system's performance independent of the garbage collector.
 
 \section{Spark queueing}
+
+\status{Complete}
 
 Sparks are managed in two different data structures.
 The first data structure is a global queue,
@@ -185,6 +230,8 @@ or sparks are added to the spark run queue.
 
 \section{Premature scheduling decisions}
 
+\status{Run another test then finish the prose}
+
 \begin{figure}
 \begin{center}
 \subfigure[Right recursive]{%
@@ -208,7 +255,7 @@ or sparks are added to the spark run queue.
 \label{fig:map_right_and_left_recursive}
 \end{figure}
 
-Figure \ref{fig:map_right_and_left_recursion} shows two alternative, parallel
+Figure \ref{fig:map_right_and_left_recursive} shows two alternative, parallel
 implementations of \code{map/3}.
 While their declarative semantics are identical,
 their operational semantics are very different.  In Section
@@ -421,6 +468,8 @@ XXX: Lead in to next section.
 
 \section{Work stealing}
 
+\status{Not written}
+
 \subsection{Initial work stealing implementation}
 
 This subsection was joint work with Peter Wang.
@@ -428,8 +477,10 @@ This subsection was joint work with Peter Wang.
 \subsection{Engine local spark stacks}
 
 \section{Right vs.\ left recursion}
+\status{Not written}
 
 \section{Thread pinning}
+\status{Not written}
 
 Detecting the number of processors.
 
@@ -442,6 +493,7 @@ Busy waiting?
 Hardware locality
 
 \section{Idle loop}
+\status{Not written}
 
 Idle loop structure
 
@@ -450,18 +502,11 @@ Independent engine wakeup
 Engine work notification
 
 \section{Scheduling tweeks}
+\status{Not written, May move to TS chapter}
 
 Not implemented,
 
 Feedback from ThreadScope?
-
-\section{Garbage collector tweeks}
-
-Large initial heap
-
-Marking \& cache thrashing
-
-Local free lists
 
 \section{Proposed kernel support to manage processor resources}
 
