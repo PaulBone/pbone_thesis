@@ -376,7 +376,8 @@ invalid_hypenations = [
     "call-site",
     "type-class",
     "low-level",
-    "straight-forward"
+    "straight-forward",
+    "most-likely"
     ].
 
 :- func acronyms = list(string).
@@ -386,7 +387,8 @@ acronyms = [
     "POSIX",
     "CPU",
     "GHC",
-    "GCC"
+    "GCC",
+    "GC"
     ].
 
 :- pred punctuation(char::in) is semidet.

@@ -203,12 +203,12 @@ print_report_group(Group, Report) :-
     Group = report_group(Name, Samples, Mean, MaybeStdev, _Entries),
     (
         MaybeStdev = yes(Stdev),
-        StdevStr = string(Stdev)
+        StdevStr = format("%4.2f", [f(Stdev)])
     ;
         MaybeStdev = no,
         StdevStr = "-"
     ),
-    Report = singleton(format("%s:\t%d samples,\tmean: %f\tStdev: %s",
+    Report = singleton(format("%s:\t%d samples,\tmean: %4.1f\tStdev: %s",
         [s(Name), i(Samples), f(Mean), s(StdevStr)])).
 
 %------------------------------------------------------------------------%

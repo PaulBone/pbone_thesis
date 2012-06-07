@@ -1,19 +1,18 @@
 
-\status{This section is currently an outline,  the text below has been
-coppied here as I may use it or a modification of it}
-
-Before beginning sagnificant amounts of work on automatic parallelism we
+\status{This chapter is currently WIP}
+    
+Before beginning significant amounts of work on automatic parallelism we
 choose to improve the performance of manual parallelisation.
-Any improvment to the runtime system for manual parallelisation would have
-benifits for automatic parallelism.
+Any improvement to the runtime system for manual parallelisation would have
+benefits for automatic parallelism.
 In Mercury, parallelisation can be introduced with the parallel conjunction
 operator (\code{\&}).
 A programmer can replace a sequential conjunction with a parallel one,
 declaring to the compiler that the conjuncts should be executed in parallel.
 However doing so did not speed up Mercury programs as expected.
 In this chapter we will discuss
-some of the problems affectiong performance and
-many of the improvments that have made parallel execution faster.
+some of the problems effecting performance and
+many of the improvements that have made parallel execution faster.
 
 \section{Garbage collection}
 
@@ -33,7 +32,7 @@ Use icfp2000's example.
 
 XXX: Introduce parallel marking,
 
-XXX: Criticise cache behaviour wrt parallel marking,
+XXX: Criticise cache behaviour WRT parallel marking,
 Thanks Simon Marlow.
 
 XXX: Benchmark icfp2000 with different initial heap sizes.
@@ -42,7 +41,7 @@ XXX: Discuss local heaps for threads, and their reliability problems.
 
 XXX: Add table.
 
-To illistrate the difference that garbage collection can make we wrote a new
+To illustrate the difference that garbage collection can make we wrote a new
 benchmark, mandelbrot.
 This program is a micro-benchmark, and tests the performance of 
 Mercury's parallel conjunction operator independent of the garbage
@@ -50,7 +49,7 @@ collector's effects.
 The mandelbrot set calculation is done on complex numbers,
 most programmers will use a tuple-like data type to represent each number,
 each number would be allocated as a heap object.
-\paul{Ohh, I could do a test between mandelbrot with complex data type vs
+\paul{I could do a test between mandelbrot with complex data type vs
 without.}
 To avoid stress on the garbage collector stored the real and imaginary parts
 of each number on the stack.
@@ -67,8 +66,8 @@ The first data structure is a global queue,
 since it is global it must be protected with a mutex.
 It is used in a first-in-first-out manner.
 The second is a context-local stack,
-The stack datastructure used is described by \citet{workstealing_queue},
-this was choosen as it could support work stealing.
+The stack data structure used is described by \citet{workstealing_queue},
+this was chosen as it could support work stealing.
 The top of the stack is sometimes referred to as the \emph{hot end},
 since it is used frequently.
 Likewise, the bottom of the stack is sometimes called the
@@ -82,7 +81,7 @@ last-in-first-out manner.
 
 When a spark is spawned off by a parallel conjunction
 it is added to a global spark queue provided that there is not too much
-globaly-available parallel work.
+globally available parallel work.
 This is true if:
 an engine is idle and,
 the number of contexts in use plus the number of sparks in the global queue
@@ -145,7 +144,7 @@ If it is known that the parallel conjunction has only been executed by
 one context,
 then it is safe to use a version of the barrier code that does not use
 locking,
-this optimisation is not shown as it is equivilent and not relevent to
+this optimisation is not shown as it is equivalent and not relevant to
 our discussion,
 it is described only for completeness.
 
@@ -158,9 +157,9 @@ If the current context is not the parent context then
 we can infer that the parent context is suspended,
 therefore, 
 the engine will schedule the parent context, before looking for global work.
-It looks for global work because its local work queue is gaurenteed to be
+It looks for global work because its local work queue is guaranteed to be
 empty since this conjunction and any nested conjunctions are complete.
-Alternativly, if there are outstanding conjuncts then
+Alternatively, if there are outstanding conjuncts then
 the local spark stack is checked for compatible work ---
 a spark whose parent context is the same as the current syncterm's parent
 context.
@@ -235,18 +234,18 @@ number of contexts, not contexts per engine.}
 \Cbr{} & & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
 \hline
 \multirow{5}{*}{Right} &
- 2      & 23.8       & 20.0     & 22.0 & 22.0 & 22.1 & 22.1 \\
-&32     & -          & -        & 22.0 & 22.1 & 22.1 & 21.7 \\
-&64     & -          & -        & 22.0 & 20.3 & 19.0 & 17.0 \\
-&128    & -          & -        & 22.0 & 13.7 &  8.7 &  6.7 \\
-&256    & -          & -        & 20.0 & 12.5 &  8.7 &  6.8 \\
+ 2      & 23.2       & 21.5     & 21.5 & 21.6 & 21.6 & 21.6 \\
+&32     & -          & -        & 21.5 & 21.6 & 21.5 & 21.2 \\
+&64     & -          & -        & 21.5 & 19.8 & 18.5 & 16.5 \\
+&128    & -          & -        & 21.5 & 13.2 &  8.2 &  6.1 \\
+&256    & -          & -        & 21.5 & 12.2 &  8.1 &  6.1 \\
 \hline
 \multirow{5}{*}{Left} &
- 2      & 23.7       & 21.9     & 22.0 & 22.0 & 22.0 & 22.0 \\
-&32     & -          & -        & 22.3 & 22.0 & 22.0 & 21.9 \\
-&64     & -          & -        & 22.0 & 21.9 & 20.9 & 18.8 \\
-&128    & -          & -        & 22.0 & 18.8 & 15.0 &  9.0 \\
-&256    & -          & -        & 22.0 & 18.5 & 12.4 & 10.0 \\
+ 2      & 23.2       & 21.5     & 21.5 & 21.5 & 21.5 & 21.5 \\
+&32     & -          & -        & 21.5 & 21.5 & 21.5 & 21.5 \\
+&64     & -          & -        & 21.5 & 21.5 & 20.5 & 19.0 \\
+&128    & -          & -        & 21.5 & 18.5 & 15.8 & 12.9 \\
+&256    & -          & -        & 21.5 & 17.8 & 15.6 & 14.1 \\
 \end{tabular}
 \end{center}
 \caption{Right vs.\ left recursion.}
@@ -265,9 +264,15 @@ engine.
 Values are omitted in the range 3--31 as they are not interesting:
 they are the same as the case for 2 contexts per engine.
 The next two columns give the runtime for a sequential version of the
-program without and with thread safty.
-\paul{Write what this means.}
-\paul{The TS column is broken, fix it}
+program,
+in this version of the program no parallel conjunctions where used.
+The first of these, labelled ``not TS'',
+is compiled without thread safety;
+the second, labelled ``TS'',
+is compiled with thread safety, meaning that it allows multiple engines to be
+used: requiring a register to point to a pthread's engine structure
+(Section \ref{sec:backgnd_merpar}),
+and compiling the garbage collector for thread safety.
 The following four columns give the runtimes for the parallel mandelbrot
 program with 1--4 Mercury engines.
 All our benchmarking is performed on `cabsav',
@@ -275,98 +280,143 @@ an ASRock Z68-Pro3 based Intel i7-2600K system.
 
 We can see that the right recursive program performs better than the left
 recursive one.
-It is also quite noticeable that there is a larger than expected amount of
-variance in the results.
-For example in the left recursive cases 256 contexts per engine
-performance better than 128 contexts per engine,
-except for the case with four engines.
-In the 128 context-per-engine case the standard deviation is 4.3 seconds,
-and in the 256 context-per-engine case the standard deviation is 5.6
-seconds,
-this means that these results cannot be compared meaningfully as the
-reported mean may not represent the true mean.
-Most of the other standard deviations are low, less than half a second.
-The results vary more widly for the left recursive tests with 3--4 engines
-and 128--256 contexts per engine.
-This is not seen for the right recursive programs,
-this leads us to beleive that it is due to how the left recursive programs
-are scheduled.
+The right recursive program, when using 4 cores and at least 128 contexts,
+achieves a speedup of 3.52 compared to the right recursive sequential thread
+safe program.
+At best the left recursive program is sped up by a factor of 1.67.
+The next observation is that as we allow more contexts to reside in memory
+at once,
+we achieve greater speedups.
+The exception to this is the case for left recursion with four engines and
+256 contexts, it is slower than the case for 256 contexts.
+These two results have standard deviations of 6.40 and 6.15 seconds
+respectively meaning that any apparent difference is most likely 
+noise in the data.
+All the other results have a standard deviation of less than two seconds,
+most of these are less than half a second.
+We saw the same high variance in these two results when repeating the test.
+We will explain the probable cause for this later in this section.
 
-Parallel conjunctions are executed by spawning off the second and later
-conjuncts and executing the first conjunct directly.
-This means that in the right recursive example the recursive call is spawned
-off,
+Parallel conjunctions are evaluated as described in Section
+\ref{sec:backgnd_merpar},
+the second and later conjuncts are spawned off while the first conjunct is
+executed by the current context.
+The barrier at the end of the first conjunct will block the context if
+the other conjuncts have not yet completed.
+It must be blocked because it would normally continue by executing the code
+after the parallel conjunction
+which may depend on values produced by the other conjuncts ---
+it is not safe for it to continue executing until all the conjuncts have
+been completely executed.
+
+\paul{consider diagram with stack}
+In the right recursive example,
+the recursive call is spawned off,
 the spark for the recursive call will be placed on the global spark queue.
 Another engine will wake up and take the spark from the global queue and
 convert it to a context.
 When it makes the recursive call it will execute the parallel conjunction
 inside and perform the same process.
+There is at most one spark on the global spark queue at any time.
+Each of these contexts,
+after creating the spark for their recursive call,
+will execute \code{P(X, Y)} and
+\joinandcontinue which blocks the context on the completion of
+its recursive call.
+This process continues:
+the runtime system will convert each spark into a context,
+and block each one at the barrier for the conjunction within its
+recursive call.
+This will quickly consume a lot of memory,
+most of which is used for the stacks within each context.
 
-After creating the spark for the recursive call,
-each of these contexts will execute \code{P(X, Y)}
-(Figure \ref{fig:map_right_recursive})
-followed by \joinandcontinue which blocks this context on the completion of
-the recursive call.
-As this process continues the number of contexts in memory builds up,
-creating more stacks that consume more and more memory.
-This continues until the number of contexts in memory plus
-the number of sparks is equal to the maximum number of contexts.
-Without this limit a simple loop can easily consume all the physical memory
-in a system.
-Once this limit is exceeded sparks are always placed on the local context's
-queue, and will therefore only be executed by the context's current engine.
-This limits the amount of parallelism in the program,
-it is why performance improves as we allow more contexts per engine in
-Table \ref{tab:right_vs_left}.
-We will address the memory usage problem and context limit in
+Eventually the number of contexts in memory plus
+the number of sparks on the global queue is equal to the maximum number of
+contexts.
+At this point sparks are not added to the global queue but to their parent
+context's local stack.
+Contexts will not be created to execute these sparks.
+Therefore,
+this restricts the amount of memory allocated in contexts.
+Without this limit,
+a simple loop, such as in Figure \ref{fig:map_right_recursive}, 
+can easily consume all the physical memory in a system.
+This limit has the adverse effect of restricting how much parallelism
+in the program is exploited.
+This is why performance improves as we allow more contexts per engine.
+We will solve the memory usage problem and context limit in
 Chapter \ref{chap:loop_control}.
 
-In the left recursive program,
-scheduling is quite different.
+In the left recursive program scheduling is quite different.
 The parallel conjunction creates a spark for \code{P(X, Y)} and executes the
 recursive call directly.
-The recursive call will very quickly begin execution of the next parallel
-conjunction and spark off another call to \code{P}.
-By the time another engine wakes up and begins taking work from the global
-queue a number of sparks will have been placed on the queue.
-Because a spark can be convered into a context (even though an existing
-cotext may be used),
-the number of sparks on the global queue contributes towards the maximum
-number of contexts aloud.
-If the context limit is low, many sparks will be placed on the current
-context's spark queue and will be executed sequentially rather than in
-parallel.
-The left recursive mandelbrot program runs more slowly than the right
-recursive program,
-this is because all the sparks for the whole program are created at the
-beginning of the programs execution.
+The spark is converted into a context,
+that context does not execute another parallel conjunction since it does not
+execute the recursive call.
+Therefore, it will not become blocked on the \joinandcontinue barrier in any
+nested parallel conjunction.
+It will execute the barrier after \code{P(X, Y)},
+this however does not block this context.
+The context is not the conjunction's original context and therefore once it
+reaches this barrier it is free,
+if it has any sparks on its local queue it may execute them,
+otherwise the engine executing it will look for global work,
+either another context or a spark from the global queue.
+If there is a spark on the global queue the engine will use this context to
+execute it since the context is otherwise unused.
 
+This led us to believe that the left recursion would be more efficient than
+right recursion,
+namely that since contexts are reused, the number of contexts wouldn't climb
+and prevent parallelism from being exploited.
+As Table \ref{tab:right_v_left} shows, we were wrong:
+the context limit is affecting performance.
+As discussed, a left-recursive loop spawns of calls to \code{P} as sparks
+and executes its recursive call directly.
+It will, very quickly,
+make many recursive calls, spawn off many sparks.
+The context limit includes sparks on the global queue since
+executing them can require the creation of new contexts,
+furthermore, if they were not included and the runtime system refused to
+convert a spark on the global queue into a context the system could become
+deadlocked.
+In the left recursive case,
+the context limit will be reached very quickly,
+often before engines have begun taking sparks from the queue and executing
+them.
+Once the limit is reached sparks are placed on the contexts local queues
+where they cannot be executed in parallel.
+The smaller the context limit,
+the more quickly the limit is reached and the fewer contexts are placed on
+the global queue.
+Additionally,
+the loop placing sparks on its context's local stack will execute very
+quickly.
 
-% XXX: Here's where I'm working.
+We concluded that
+in the left recursive case
+the scheduling decision for each spark is made much earlier than the spark's
+execution.
+Specifically,
+when the decision to place the spark on the global queue or local stack is
+made,
+often the context limit has already been reached:
+\paul{Need to decide how I communicate who the actor is for scheduling
+decisions.}
+the context will place the spark on its local stack.
+Later, when a different engine becomes idle,
+it cannot access the spark since it is on another engine's context's spark
+stack.
+At this point it is apparent that the scheduling decision made when the
+spark was placed on the local stack was incorrect,
+as there is an idle engine ready to execute the spark,
+and because contexts are re-used (in left recursion) there is either a free
+context or we can easily create one.
 
-%XXX
-Parallel conjunctions are evaluated as described in Section
-\ref{sec:backgnd_merpar}.
-Sparks are added to the global spark queue if the global queue has room,
-otherwise they are pushed onto a context-local spark stack.
-Creating a lot of parallel work and using a single global work queue can be
-pesimistic,
-the queue itself can become a bottleneck:
-when many processors try to access it the same location in memory there will
-be many cache misses and delays.
-This is why \citet{wang_hons_thesis} choose to introduce local queues,
-and place work on them when there is a surplus of work on the global queue.
+XXX: Try removing sparks from the global limit,
+it does not fix the problem (properly).
 
-When a engine finishes executing a context and reaches the barrier at the
-end of a parallel conjunct,
-it will check the context's local spark stack for any other work and attempt
-to execute it.
-Otherwise, it will either save the context to resume later or release the
-context before checking the global spark queue and global context queue.
-
-XXX Algorithm.
-
-Deciding too early, results.
+XXX: Lead in to next section.
 
 
 \section{Work stealing}
@@ -403,7 +453,7 @@ Engine work notification
 
 Not implemented,
 
-Feedback from threadscope?
+Feedback from ThreadScope?
 
 \section{Garbage collector tweeks}
 
@@ -461,6 +511,31 @@ this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
 This code starts by atomically decrementing the number of outstanding
 conjuncts in the conjunction's syncterm and checking the result for zero
 (the whole operation is thread-safe, not just the decrement).
-Algorithm \ref{alg:join_and_continue} shows the pesudo code for
+Algorithm \ref{alg:join_and_continue} shows the pseudo code for
 join\_and\_continue.
 
+
+%XXX
+%Parallel conjunctions are evaluated as described in Section
+%\ref{sec:backgnd_merpar}.
+%Sparks are added to the global spark queue if the global queue has room,
+%otherwise they are pushed onto a context-local spark stack.
+%Creating a lot of parallel work and using a single global work queue can be
+%pesimistic,
+%the queue itself can become a bottleneck:
+%when many processors try to access it the same location in memory there will
+%be many cache misses and delays.
+%This is why \citet{wang_hons_thesis} choose to introduce local queues,
+%and place work on them when there is a surplus of work on the global queue.
+%
+%When a engine finishes executing a context and reaches the barrier at the
+%end of a parallel conjunct,
+%it will check the context's local spark stack for any other work and attempt
+%to execute it.
+%Otherwise, it will either save the context to resume later or release the
+%context before checking the global spark queue and global context queue.
+%
+%XXX Algorithm.
+%
+%Deciding too early, results.
+%
