@@ -4,9 +4,54 @@
 
 :- interface.
 
+:- import_module int.
 :- import_module io.
+:- import_module list.
+:- import_module string.
 
-:- pred main(io::di, io::uo) is det.
+:- type config_data
+    --->    config_data(
+                cd_mercury_path                 :: string,
+                cd_gc_initial_heap_size         :: int,
+                cd_gc_markers                   :: int,
+                cd_mem_limit                    :: int,
+                cd_num_max_contexts_per_thread  :: list(int),
+                cd_base_mcflags                 :: string,
+                cd_control_group_grades         :: list(grade_spec),
+                cd_test_group_grades            :: list(grade_spec),
+                cd_control_group_rtsopts        :: list(rtopts_spec),
+                cd_test_group_rtsopts           :: list(rtopts_spec),
+                cd_programs                     :: list(program)
+    ).
+
+:- type grade_spec
+    --->    grade(
+                g_name      :: string,
+                g_str       :: string
+            ).
+
+:- type rtopts_spec
+    --->    rtopts(
+                rto_name    :: string,
+                rto_str     :: string
+            ).
+
+:- type program
+    --->    program(
+                p_name          :: string,
+                p_dir           :: string,
+                p_binary        :: string,
+                p_args          :: string,
+                p_extra_args    :: prog_extra_args
+            ).
+
+:- type prog_extra_args
+    --->    prog_extra_args(
+                pea_control     :: string,
+                pea_test        :: string
+            ).
+
+:- pred bench(config_data::in, io::di, io::uo) is det.
 
 :- implementation.
 
@@ -15,10 +60,7 @@
 :- import_module cord.
 :- import_module float.
 :- import_module getopt.
-:- import_module int.
-:- import_module list.
 :- import_module require.
-:- import_module string.
 
 :- import_module result.
 
@@ -29,7 +71,7 @@
     ;       print_config
     ;       output.
 
-main(!IO) :-
+bench(ConfigData, !IO) :-
     io.command_line_arguments(Args0, !IO),
     OptionOps = option_ops_multi(short, long, defaults),
     getopt.process_options(OptionOps, Args0, Args, Result),
@@ -43,7 +85,7 @@ main(!IO) :-
                 usage(!IO)
             ;
                 Help = no,
-                run(Options, !IO)
+                run(Options, ConfigData, !IO)
             )
         ;
             Result = error(Error),
@@ -84,19 +126,19 @@ defaults(output,        string("results.txt")).
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    write_string("./batch <-h | --help>\n", !IO),
-    write_string("./batch <-c | --print-config>\n", !IO),
-    write_string("./batch [-r -n N -o results.txt] \n", !IO).
+    write_string("./bench <-h | --help>\n", !IO),
+    write_string("./bench <-c | --print-config>\n", !IO),
+    write_string("./bench [-r -n N -o results.txt] \n", !IO).
 
-:- pred run(option_table(option)::in, io::di, io::uo) is det.
+:- pred run(option_table(option)::in, config_data::in, io::di, io::uo) is det.
 
-run(Options, !IO) :-
+run(Options, ConfigData, !IO) :-
     lookup_bool_option(Options, print_config, PrintConfig),
     lookup_bool_option(Options, rebuild, Rebuild),
     lookup_int_option(Options, samples, Samples),
     lookup_string_option(Options, output, Output),
 
-    configure(Samples, Config),
+    configure(Samples, ConfigData, Config),
 
     (
         PrintConfig = yes,
@@ -153,15 +195,17 @@ run(Options, !IO) :-
     %
 :- pred rebuild(config::in, io::di, io::uo) is det.
 
-rebuild(config(_, BuildConfigs, _), !IO) :-
+rebuild(config(_, ConfigData, BuildConfigs, _), !IO) :-
     getenv("PATH", PATH0, !IO),
-    PATH = mercury_path ++ ":" ++ PATH0,
+    MercuryPath = ConfigData ^ cd_mercury_path,
+    PATH = MercuryPath ++ ":" ++ PATH0,
     setenv("PATH", PATH, !IO),
     write_string("Rebuilding\n", !IO),
     flush_output(!IO),
+    Programs = ConfigData ^ cd_programs,
     Builds = condense(map((func(P) =
             map(make_build(P), BuildConfigs)),
-        programs)),
+        Programs)),
     foldl(rebuild_prog, Builds, !IO),
     write_string("Done rebuilding\n", !IO),
     flush_output(!IO).
@@ -229,11 +273,12 @@ rebuild_prog(Build, !IO) :-
     %
 :- pred make_tests(config::in, list(test)::out) is det.
 
-make_tests(config(_, _, Configs), Tests) :-
+make_tests(config(_, ConfigData, _, Configs), Tests) :-
+    Programs = ConfigData ^ cd_programs,
     Tests = condense(map((func(P) =
             map(make_test(P), Configs)
         ),
-        programs)).
+        Programs)).
 
     % Generate a single test.
     %
@@ -261,8 +306,7 @@ run_tests(Config, Stream, Results, !IO) :-
     write_string("Running tests...\n", !IO),
     flush_output(!IO),
     make_tests(Config, Tests),
-    Samples = Config ^ c_samples,
-    list.map_foldl(run_test(Samples, Stream), Tests, Results0, !IO),
+    list.map_foldl(run_test(Config, Stream), Tests, Results0, !IO),
     Results = cord_list_to_cord(Results0),
     write_string("Finished running tests\n", !IO),
     flush_output(!IO).
@@ -272,14 +316,17 @@ run_tests(Config, Stream, Results, !IO) :-
     % Run a single test. Samples gives the number of times to repeat the
     % test, a item is Results is generated for each sample.
     %
-:- pred run_test(int::in, output_stream::in, test::in,
+:- pred run_test(config::in, output_stream::in, test::in,
     cord(result.result)::out, io::di, io::uo) is det.
 
-run_test(Samples, Stream, Test, Results, !IO) :-
+run_test(Config, Stream, Test, Results, !IO) :-
+    Samples = Config ^ c_samples,
+    GcInitialHeapSize = Config ^ c_data ^ cd_gc_initial_heap_size,
+    GcMarkers = Config ^ c_data ^ cd_gc_markers,
     Test = test(Name, Cmd, RTSOpts),
     setenv("MERCURY_OPTIONS", RTSOpts, !IO),
-    setenv("GC_MARKERS", string(gc_markers), !IO),
-    setenv("GC_INITIAL_HEAP_SIZE", string(gc_initial_heap_size), !IO),
+    setenv("GC_MARKERS", string(GcMarkers), !IO),
+    setenv("GC_INITIAL_HEAP_SIZE", string(GcInitialHeapSize), !IO),
     format("Running %s\n", [s(Name)], !IO),
     run_test_samples(Samples, Cmd, Times, !IO),
     print_results(Results, Cord),
@@ -315,6 +362,7 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
 :- type config
     --->    config(
                 c_samples       :: int,
+                c_data          :: config_data,
                 c_builds        :: list(build_config),
                 c_tests         :: list(test_config)
             ).
@@ -343,14 +391,19 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
     %
     % This generates the build and test data structures.
     %
-:- pred configure(int::in, config::out) is det.
+:- pred configure(int::in, config_data::in, config::out) is det.
 
-configure(Samples, config(Samples, Builds, Tests)) :-
-    config_builds(control, control_group_grades, BuildsC),
-    config_builds(test, test_group_grades, BuildsT),
+configure(Samples, ConfigData, config(Samples, ConfigData, Builds, Tests)) :-
+    ControlGroupGrades = ConfigData ^ cd_control_group_grades,
+    TestGroupGrades = ConfigData ^ cd_test_group_grades,
+    ControlGroupRtopts = ConfigData ^ cd_control_group_rtsopts,
+    TestGroupRtopts = ConfigData ^ cd_test_group_rtsopts,
+    config_builds(control, ControlGroupGrades, BuildsC),
+    config_builds(test, TestGroupGrades, BuildsT),
     Builds = BuildsC ++ BuildsT,
-    config_tests(control, control_group_grades, control_group_rtopts, TestsC),
-    config_tests(test, test_group_grades, test_group_rtopts, TestsT),
+
+    config_tests(control, ControlGroupGrades, ControlGroupRtopts, TestsC),
+    config_tests(test, TestGroupGrades, TestGroupRtopts, TestsT),
     Tests = TestsC ++ TestsT.
 
 :- pred config_builds(control_or_test::in, list(grade_spec)::in,
@@ -376,20 +429,27 @@ config_tests(CorT, Grades, RTOpts, Configs) :-
 
 :- pred print_config(config::in, cord(string)::out) is det.
 
-print_config(config(Samples, Builds, Tests), Result) :-
+print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
     map(print_build, Builds, BuildsRes),
     map(print_test, Tests, TestsRes),
+    MercuryPath = ConfigData ^ cd_mercury_path,
+    Programs = ConfigData ^ cd_programs,
+    map(print_program, Programs, ProgsRes),
     LN = singleton("\n"),
     Result =
         singleton("Configuration:\n") ++
         LN ++
         singleton(format("\tSamples: %d\n", [i(Samples)])) ++
+        singleton(format("\tPath: %s\n", [s(MercuryPath)])) ++
         LN ++
         singleton("\tBuilds:\n") ++
         cord_list_to_cord(map(compose(indent(2), line), BuildsRes)) ++
         LN ++
         singleton("\tTests:\n") ++
-        cord_list_to_cord(map(compose(indent(2), line), TestsRes)).
+        cord_list_to_cord(map(compose(indent(2), line), TestsRes)) ++
+        LN ++
+        singleton("\tPrograms:\n") ++
+        cord_list_to_cord(map(compose(indent(2), line), ProgsRes)).
 
 :- pred print_build(build_config::in, cord(string)::out) is det.
 
@@ -426,124 +486,18 @@ line(S) = S ++ singleton("\n").
 
 compose(F, G, X) = F(G(X)).
 
-% Data.
+% Programs.
 %------------------------------------------------------------------------%
-
-:- type grade_spec
-    --->    grade(
-                g_name      :: string,
-                g_str       :: string
-            ).
-
-:- type rtopts_spec
-    --->    rtopts(
-                rto_name    :: string,
-                rto_str     :: string
-            ).
-
-:- type program
-    --->    program(
-                p_name          :: string,
-                p_dir           :: string,
-                p_binary        :: string,
-                p_args          :: string,
-                p_extra_args    :: prog_extra_args
-            ).
-
-:- type prog_extra_args
-    --->    prog_extra_args(
-                pea_control     :: string,
-                pea_test        :: string
-            ).
 
 :- func prog_get_extra_args(program, control_or_test) = string.
 
 prog_get_extra_args(Prog, control) = Prog ^ p_extra_args ^ pea_control.
 prog_get_extra_args(Prog, test)    = Prog ^ p_extra_args ^ pea_test.
 
-    % The path to use.
-:- func mercury_path = string.
+:- pred print_program(program::in, cord(string)::out) is det.
 
-mercury_path =
-    "/srv/scratch/dev/old_2009.install/bin".
-
-    % The GC's initial heap size, in bytes.  (512MB)
-    %
-:- func gc_initial_heap_size = int.
-
-gc_initial_heap_size = 512*1024*1024.
-
-    % Use only one marker thread for GC regardless of grade/test.
-    %
-:- func gc_markers = int.
-
-gc_markers=1.
-
-    % A limit to the amount of memory available for a process, in kilobytes.
-    % XXX This doesn't work, I don't know how to setrlimit in python.
-:- func mem_limit = int.
-
-mem_limit = 1024*1024.
-
-:- func mercury_engines = list(int).
-
-mercury_engines = 1..4.
-
-    % Values for --max-contexts-per-thread
-    %
-:- func num_max_contexts_per_thread = list(int).
-
-num_max_contexts_per_thread =
-    map((func(X) = pow(2,X)), 1..8).
-
-:- func base_mcflags = string.
-
-base_mcflags="-O2 --intermodule-optimization".
-
-:- func control_group_grades = list(grade_spec).
-
-control_group_grades=[asmfast,
-                      asmfastpar].
-
-:- func control_group_rtopts = list(rtopts_spec).
-
-control_group_rtopts=[rtopts("P1-lc2", "-P 1")].
-
-:- func test_group_grades = list(grade_spec).
-
-test_group_grades = [asmfastpar].
-
-:- func asmfastpar = grade_spec.
-
-asmfastpar = grade("asmfast.par", "asm_fast.gc.par.stseg").
-
-:- func asmfast = grade_spec.
-asmfast = grade("asmfast", "asm_fast.gc.stseg").
-
-    % Test group options.
-    %
-:- func test_group_rtopts = list(rtopts_spec).
-
-test_group_rtopts =
-    condense(map(
-        (func(P) =
-            map(
-                (func(C) = rtopts(format("P%d-c%d", [i(P), i(C)]),
-                    format("-P %d --max-contexts-per-thread %d", [i(P), i(C)]))),
-                num_max_contexts_per_thread)),
-        mercury_engines)).
-
-    % The programs to test.
-:- func programs = list(program).
-
-programs = [
-    program("mandelbrot_indep", "mandelbrot", "mandelbrot",
-        "-x 600 -y 600",
-        prog_extra_args("-s", "")),
-    program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
-        "-l -x 600 -y 600",
-        prog_extra_args("-s", ""))
-    ].
+print_program(Program, singleton(Name)) :-
+    Name = Program ^ p_name.
 
 %------------------------------------------------------------------------%
 
