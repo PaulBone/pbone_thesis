@@ -26,8 +26,6 @@ config = config_data(
         gc_initial_heap_size,
         gc_markers,
         mem_limit,
-        num_max_contexts_per_thread,
-        base_mcflags,
         control_group_grades,
         test_group_grades,
         control_group_rtopts,
@@ -64,6 +62,7 @@ mercury_engines = 1..4.
 num_max_contexts_per_thread =
     map((func(X) = pow(2,X)), 1..8).
 
+% XXX This was unsed in testing so far.
 :- func base_mcflags = string.
 
 base_mcflags="-O2 --intermodule-optimization".

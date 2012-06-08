@@ -15,8 +15,6 @@
                 cd_gc_initial_heap_size         :: int,
                 cd_gc_markers                   :: int,
                 cd_mem_limit                    :: int,
-                cd_num_max_contexts_per_thread  :: list(int),
-                cd_base_mcflags                 :: string,
                 cd_control_group_grades         :: list(grade_spec),
                 cd_test_group_grades            :: list(grade_spec),
                 cd_control_group_rtsopts        :: list(rtopts_spec),
