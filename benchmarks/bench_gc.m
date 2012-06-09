@@ -1,5 +1,5 @@
 
-:- module bench_nolimit.
+:- module bench_gc.
 
 :- interface.
 
@@ -24,7 +24,7 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        "/srv/scratch/dev/old_2009_nolimit.install/bin",
+        "/usr/local/mercury/bin",
         mem_limit,
         base_mcflags,
         Groups,
@@ -34,26 +34,28 @@ config = Data :-
         test_group("control",
             control_group_grades,
             control_group_rtopts,
-            [gc_initial_heap_size],
+            gc_initial_heap_size,
             [1]),
         test_group("test",
             test_group_grades,
             test_group_rtopts,
-            [gc_initial_heap_size],
-            [1])
+            gc_initial_heap_size,
+            gc_markers)
         ].
 
-    % The GC's initial heap size, in bytes.  (512MB)
+    % The GC's initial heap size, in bytes. 
     %
-:- func gc_initial_heap_size = int.
+:- func gc_initial_heap_size = list(int).
 
-gc_initial_heap_size = 512*1024*1024.
+gc_initial_heap_size = map((func(X) = X*1024*1024), L) :-
+    L = [1, 4, 16, 32, 48,
+         64, 128, 192, 256, 320, 384, 448, 512].
 
     % Use only one marker thread for GC regardless of grade/test.
     %
-:- func gc_markers = int.
+:- func gc_markers = list(int).
 
-gc_markers=1.
+gc_markers=1..4.
 
     % A limit to the amount of memory available for a process, in kilobytes.
     % XXX This doesn't work, I don't know how to setrlimit in python.
@@ -65,17 +67,9 @@ mem_limit = 1024*1024.
 
 mercury_engines = 1..4.
 
-    % Values for --max-contexts-per-thread
-    %
-:- func num_max_contexts_per_thread = list(int).
-
-num_max_contexts_per_thread =
-    map((func(X) = pow(2,X)), 1..8).
-
-% XXX This was unsed in testing so far.
 :- func base_mcflags = string.
 
-base_mcflags="-O2 --intermodule-optimization".
+base_mcflags="-O2 --intermodule-optimization --par-loop-control".
 
 :- func control_group_grades = list(grade_spec).
 
@@ -102,21 +96,23 @@ asmfast = grade("asmfast", "asm_fast.gc.stseg").
 :- func test_group_rtopts = list(rtopts_spec).
 
 test_group_rtopts =
-    condense(map(
-        (func(P) =
-            map(
-                (func(C) = rtopts(format("P%d-c%d", [i(P), i(C)]),
-                    format("-P %d --max-contexts-per-thread %d", [i(P), i(C)]))),
-                num_max_contexts_per_thread)),
-        mercury_engines)).
+    map((func(P) = rtopts(format("P%d", [i(P)]),
+            format("-P %d", [i(P)]))),
+        mercury_engines).
 
     % The programs to test.
 :- func programs = list(program).
 
 programs = [
-    program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
+    program("mandelbrot", "mandelbrot", "mandelbrot",
         "-l -x 600 -y 600",
-        mandelbrot_args)
+        mandelbrot_args),
+    program("mandelbrot_heap", "mandelbrot_heap", "mandelbrot",
+        "-l -x 600 -y 600",
+        mandelbrot_args),
+    program("raytracer", "raytracer", "main",
+        " < raytracer/snowgoon_1200.gml",
+        no_args)
     ].
 
 :- func mandelbrot_args(string) = string.

@@ -12,14 +12,19 @@
 :- type config_data
     --->    config_data(
                 cd_mercury_path                 :: string,
-                cd_gc_initial_heap_size         :: int,
-                cd_gc_markers                   :: int,
                 cd_mem_limit                    :: int,
-                cd_control_group_grades         :: list(grade_spec),
-                cd_test_group_grades            :: list(grade_spec),
-                cd_control_group_rtsopts        :: list(rtopts_spec),
-                cd_test_group_rtsopts           :: list(rtopts_spec),
+                cd_base_mcflags                 :: string,
+                cd_test_groups                  :: list(test_group),
                 cd_programs                     :: list(program)
+    ).
+
+:- type test_group
+    --->    test_group(
+                tg_group                        :: string,
+                tg_grades                       :: list(grade_spec),
+                tg_rtsopts                      :: list(rtopts_spec),
+                tg_gc_initial_heap_size         :: list(int),
+                tg_gc_markers                   :: list(int)
     ).
 
 :- type grade_spec
@@ -40,16 +45,14 @@
                 p_dir           :: string,
                 p_binary        :: string,
                 p_args          :: string,
-                p_extra_args    :: prog_extra_args
-            ).
-
-:- type prog_extra_args
-    --->    prog_extra_args(
-                pea_control     :: string,
-                pea_test        :: string
+                p_extra_args    :: func(string) = string
             ).
 
 :- pred bench(config_data::in, io::di, io::uo) is det.
+
+    % Do not provide any extra args and accept all grades.
+    %
+:- func no_args(string) = string.
 
 :- implementation.
 
@@ -213,21 +216,21 @@ rebuild(config(_, ConfigData, BuildConfigs, _), !IO) :-
     %
 :- func make_build(program, build_config) = build.
 
-make_build(Program, build_config(CorT, Grade)) =
+make_build(Program, build_config(Group, Grade, MCFlags)) =
         build(Target, Dir, Params, Binary) :-
-    Target = get_target(CorT, Grade, Program),
+    Target = get_target(Group, Grade, Program),
     Dir = Program ^ p_dir,
-    Params = format("GRADE = %s\n", [s(GradeStr)]),
+    Params = format("GRADE = %s\nMCFLAGS = %s\n",
+        [s(GradeStr), s(MCFlags)]),
     GradeStr = Grade ^ g_str,
     Binary = Program ^ p_binary.
 
     % Generate a target name.
     %
-:- func get_target(control_or_test, grade_spec, program) = string.
+:- func get_target(string, grade_spec, program) = string.
 
-get_target(CorT, Grade, Program) =
-        format("%s_%s_%s", [s(CorTStr), s(ProgName), s(GradeName)]) :-
-    c_or_t_string(CorT, CorTStr),
+get_target(Group, Grade, Program) =
+        format("%s_%s_%s", [s(Group), s(ProgName), s(GradeName)]) :-
     ProgName = Program ^ p_name,
     GradeName = Grade ^ g_name.
 
@@ -261,8 +264,22 @@ rebuild_prog(Build, !IO) :-
                     % The command to run the test.
                 t_cmd       :: string,
 
-                    % The options for the runtime system.
-                t_rtsopts   :: string
+                    % Environments to set.
+                t_envs      :: envs_spec
+            ).
+
+    % A set of environment variable settings.
+    %
+:- type envs_spec
+    --->    envs_spec(
+                evs_name    :: string,
+                evs_pairs   :: list(env_spec)
+            ).
+
+:- type env_spec
+    --->    env_spec(
+                es_name     :: string,
+                es_value    :: string
             ).
 
     % Generate all the tests.
@@ -283,13 +300,14 @@ make_tests(config(_, ConfigData, _, Configs), Tests) :-
 :- func make_test(program, test_config) = test.
 
 make_test(Program, Config) =
-        test(Name, Cmd, RTSOptsStr) :-
-    Config = test_config(CorT, Grade, RTSOpts),
-    RTSOpts = rtopts(RTSOptsName, RTSOptsStr),
-    Target = get_target(CorT, Grade, Program),
-    Name = format("%s_%s", [s(Target), s(RTSOptsName)]), 
+        test(Name, Cmd, Envs) :-
+    Config = test_config(Group, Grade, Envs),
+    Target = get_target(Group, Grade, Program),
+    EnvOptsName = Envs ^ evs_name,
+    Name = format("%s_%s", [s(Target), s(EnvOptsName)]), 
     ProgArgs = Program ^ p_args,
-    TestProgArgs = prog_get_extra_args(Program, CorT),
+    GetArgs = Program ^ p_extra_args,
+    TestProgArgs = GetArgs(Group),
     Cmd = format("./%s %s %s", [s(Target), s(TestProgArgs), s(ProgArgs)]).
 
     % Run all the tests,
@@ -319,12 +337,9 @@ run_tests(Config, Stream, Results, !IO) :-
 
 run_test(Config, Stream, Test, Results, !IO) :-
     Samples = Config ^ c_samples,
-    GcInitialHeapSize = Config ^ c_data ^ cd_gc_initial_heap_size,
-    GcMarkers = Config ^ c_data ^ cd_gc_markers,
-    Test = test(Name, Cmd, RTSOpts),
-    setenv("MERCURY_OPTIONS", RTSOpts, !IO),
-    setenv("GC_MARKERS", string(GcMarkers), !IO),
-    setenv("GC_INITIAL_HEAP_SIZE", string(GcInitialHeapSize), !IO),
+    Test = test(Name, Cmd, Environment),
+    EvPairs = Environment ^ evs_pairs,
+    foldl(setenv, EvPairs, !IO),
     format("Running %s\n", [s(Name)], !IO),
     run_test_samples(Samples, Cmd, Times, !IO),
     print_results(Results, Cord),
@@ -333,6 +348,11 @@ run_test(Config, Stream, Test, Results, !IO) :-
     write_string(Stream, ResultsStr, !IO),
     flush_output(Stream, !IO),
     Results = cord.from_list(map((func(Time) = result(Name, Time)), Times)).
+
+:- pred setenv(env_spec::in, io::di, io::uo) is det.
+
+setenv(env_spec(Name, Value), !IO) :-
+    setenv(Name, Value, !IO).
 
     % This is the loop that run_tests uses.
     %
@@ -370,19 +390,20 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
     %
 :- type build_config
     --->    build_config(
-                bc_c_or_t       :: control_or_test,
-                bc_grade        :: grade_spec
+                bc_group        :: string,
+                bc_grade        :: grade_spec,
+                bc_mcflags      :: string
             ).
 
     % A test_config descirbes one way of running a test.
     %
 :- type test_config
     --->    test_config(
-                tc_c_or_t       :: control_or_test,
+                tc_group        :: string,
                 tc_grade        :: grade_spec,
 
-                    % Runtime options.
-                tc_rtopts       :: rtopts_spec
+                    % Runtime/environment options.
+                tc_envs         :: envs_spec
             ).
 
     % Do configuration,
@@ -392,36 +413,60 @@ run_test_samples(Samples, Cmd, Times, !IO) :-
 :- pred configure(int::in, config_data::in, config::out) is det.
 
 configure(Samples, ConfigData, config(Samples, ConfigData, Builds, Tests)) :-
-    ControlGroupGrades = ConfigData ^ cd_control_group_grades,
-    TestGroupGrades = ConfigData ^ cd_test_group_grades,
-    ControlGroupRtopts = ConfigData ^ cd_control_group_rtsopts,
-    TestGroupRtopts = ConfigData ^ cd_test_group_rtsopts,
-    config_builds(control, ControlGroupGrades, BuildsC),
-    config_builds(test, TestGroupGrades, BuildsT),
-    Builds = BuildsC ++ BuildsT,
+    Groups = ConfigData ^ cd_test_groups,
+    MCFlags = ConfigData ^ cd_base_mcflags,
+    map2(configure_group(MCFlags), Groups, GroupBuilds, GroupTests),
+    Builds = condense(GroupBuilds),
+    Tests = condense(GroupTests).
 
-    config_tests(control, ControlGroupGrades, ControlGroupRtopts, TestsC),
-    config_tests(test, TestGroupGrades, TestGroupRtopts, TestsT),
-    Tests = TestsC ++ TestsT.
+:- pred configure_group(string::in, test_group::in,
+    list(build_config)::out, list(test_config)::out) is det.
 
-:- pred config_builds(control_or_test::in, list(grade_spec)::in,
+configure_group(MCFlags, Group, Builds, Tests) :-
+    Group = test_group(Name, Grades, Rtsopts, GCInitialHeapSizes, GCMarkerss),
+    config_builds(Name, Grades, MCFlags, Builds),
+    config_tests(Name, Grades, GCMarkerss, GCInitialHeapSizes,
+        Rtsopts, Tests).
+
+:- pred config_builds(string::in, list(grade_spec)::in, string::in,
     list(build_config)::out) is det.
 
-config_builds(CorT, Grades, Configs) :-
+config_builds(Group, Grades, MCFlags, Configs) :-
     Configs = map((func(G) =
-            build_config(CorT, G)
+            build_config(Group, G, MCFlags)
         ),
         Grades).
 
-:- pred config_tests(control_or_test::in, list(grade_spec)::in,
-    list(rtopts_spec)::in, list(test_config)::out) is det.
+:- pred config_tests(string::in, list(grade_spec)::in,
+    list(int)::in, list(int)::in, list(rtopts_spec)::in, 
+    list(test_config)::out) is det.
 
-config_tests(CorT, Grades, RTOpts, Configs) :-
-    Configs = condense(map((func(G) =
-        map((func(RTO) =
-                test_config(CorT, G, RTO)
+config_tests(Group, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
+        Configs) :-
+    Environments = condense(map((func(RTO) =
+        condense(map((func(GCMarkers) =
+            map((func(GCInitialHeapSize) = Environment :-
+                Name = format("%s_gc-m%d_gc-sz%d",
+                    [s(RTO ^ rto_name), i(GCMarkers), 
+                        i(GCInitialHeapSize / (1024*1024))]),
+                Environment = envs_spec(Name,
+                    [
+                     env_spec("MERCURY_OPTIONS", RTO ^ rto_str),
+                     env_spec("GC_MARKERS",      from_int(GCMarkers)),
+                     env_spec("GC_INITIAL_HEAP_SIZE",
+                                                 from_int(GCInitialHeapSize))
+                    ])
+                ),
+                GCInitialHeapSizes)
             ),
-            RTOpts)
+            GCMarkerss))
+        ),
+        RTOpts)),
+    Configs = condense(map((func(G) =
+        map((func(Ev) =
+                test_config(Group, G, Ev)
+            ),
+            Environments)
         ),
         Grades)).
 
@@ -451,19 +496,17 @@ print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
 
 :- pred print_build(build_config::in, cord(string)::out) is det.
 
-print_build(build_config(CorT, Grade), Result) :-
-    c_or_t_string(CorT, CorTStr),
+print_build(build_config(Group, Grade, _), Result) :-
     Result = singleton(
         format("%s, Grade: %s",
-            [s(CorTStr), s(Grade ^ g_name)])).
+            [s(Group), s(Grade ^ g_name)])).
 
 :- pred print_test(test_config::in, cord(string)::out) is det.
 
-print_test(test_config(CorT, Grade, RTOpts), Result) :-
-    c_or_t_string(CorT, CorTStr),
+print_test(test_config(Group, Grade, Env), Result) :-
     Result = singleton(
-        format("%s, Grade: %s RTOpts: %s",
-            [s(CorTStr), s(Grade ^ g_name), s(RTOpts ^ rto_name)])).
+        format("%s, Grade: %s Env: %s",
+            [s(Group), s(Grade ^ g_name), s(Env ^ evs_name)])).
 
 :- func indent(int, cord(string)) = cord(string).
 
@@ -487,27 +530,12 @@ compose(F, G, X) = F(G(X)).
 % Programs.
 %------------------------------------------------------------------------%
 
-:- func prog_get_extra_args(program, control_or_test) = string.
-
-prog_get_extra_args(Prog, control) = Prog ^ p_extra_args ^ pea_control.
-prog_get_extra_args(Prog, test)    = Prog ^ p_extra_args ^ pea_test.
-
 :- pred print_program(program::in, cord(string)::out) is det.
 
 print_program(Program, singleton(Name)) :-
     Name = Program ^ p_name.
 
-%------------------------------------------------------------------------%
-
-:- type control_or_test
-    --->    control
-    ;       test.
-
-:- pred c_or_t_string(control_or_test, string).
-:- mode c_or_t_string(in, out) is det.
-
-c_or_t_string(control,  "control").
-c_or_t_string(test,     "test").
+no_args(_) = "".
 
 % Foreign code.
 %------------------------------------------------------------------------%

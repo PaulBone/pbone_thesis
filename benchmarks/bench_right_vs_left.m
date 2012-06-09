@@ -12,6 +12,7 @@
 :- import_module int.
 :- import_module list.
 :- import_module string.
+:- import_module require.
 
 :- import_module bench.
 
@@ -20,29 +21,32 @@ main(!IO) :-
 
 :- func config = config_data.
 
-config = config_data(
+config = Data :-
+    Data = config_data(
         "/srv/scratch/dev/old_2009.install/bin",
-        gc_initial_heap_size,
-        gc_markers,
         mem_limit,
-        control_group_grades,
-        test_group_grades,
-        control_group_rtopts,
-        test_group_rtopts,
+        base_mcflags,
+        Groups,
         programs
-    ).
+    ),
+    Groups = [
+        test_group("control",
+            control_group_grades,
+            control_group_rtopts,
+            [gc_initial_heap_size],
+            [1]),
+        test_group("test",
+            test_group_grades,
+            test_group_rtopts,
+            [gc_initial_heap_size],
+            [1])
+        ].
 
     % The GC's initial heap size, in bytes.  (512MB)
     %
 :- func gc_initial_heap_size = int.
 
 gc_initial_heap_size = 512*1024*1024.
-
-    % Use only one marker thread for GC regardless of grade/test.
-    %
-:- func gc_markers = int.
-
-gc_markers=1.
 
     % A limit to the amount of memory available for a process, in kilobytes.
     % XXX This doesn't work, I don't know how to setrlimit in python.
@@ -105,9 +109,20 @@ test_group_rtopts =
 programs = [
     program("mandelbrot_indep", "mandelbrot", "mandelbrot",
         "-x 600 -y 600",
-        prog_extra_args("-s", "")),
+        mandelbrot_args),
     program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
         "-l -x 600 -y 600",
-        prog_extra_args("-s", ""))
+        mandelbrot_args)
     ].
+
+:- func mandelbrot_args(string) = string.
+
+mandelbrot_args(Group) = Args :-
+    ( Group = "test" ->
+        Args = ""
+    ; Group = "control" ->
+        Args = "-s"
+    ;
+        unexpected($module, $pred, "Unknown group")
+    ).
 
