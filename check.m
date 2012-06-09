@@ -447,7 +447,9 @@ macro_char_short('-').
 
 special_macros = [
         "citep",
-        "citet"
+        "citet",
+        "ref",
+        "label"
     ].
 
 % Errors.
