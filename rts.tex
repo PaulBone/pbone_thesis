@@ -1,22 +1,54 @@
 
 \status{This chapter is currently WIP}
-    
-Before beginning significant amounts of work on automatic parallelism we
-choose to improve the performance of manual parallelisation.
-Any improvement to the runtime system for manual parallelisation would have
-benefits for automatic parallelism.
-In Mercury, parallelisation can be introduced with the parallel conjunction
-operator (\code{\&}).
-A programmer can replace a sequential conjunction with a parallel one,
-declaring to the compiler that the conjuncts should be executed in parallel.
-However doing so did not speed up Mercury programs as expected.
-In this chapter we will discuss
-some of the problems effecting performance and
-many of the improvements that have made parallel execution faster.
+
+When manually parallelising Mercury programs we
+did not get the speedups that we expected;
+this would also reduce the performance of automatically parallelised
+programs.
+Therefore,
+we chose to address the parallel performance problems
+in the runtime system before we worked on automatic parallelism.
+
+This chapter describes the changes that we made to the runtime system to
+improve parallel execution performance.
+The chapter is structured as follows:
+Section \ref{sec:gc} describes the garbage collector's effect on parallel
+execution performance and how tuning some parameters of the garbage
+collector can improve performance.
+Section \ref{sec:old_scheduling} describes how the existing runtime
+system's schedules sparks,
+it provides background material for Section
+\ref{sec:old_scheduling_performance}
+which benchmarks the runtime system and describes the problem with spark
+scheduling.
+We address those problems by introducing work stealing in Section
+\ref{sec:work_stealing},
+this section is broken into two sub-sections,
+these describe the initial and final versions of the work stealing
+implementation.
+Section \ref{sec:work_stealing} also includes benchmarks that show
+how work stealing fixes the spark scheduling problem.
+\paul{I may keep or remove the right recursion section (Section
+\ref{sec:right_recursion}.}
+We made a number of improvments to the way that Mercury engines are created,
+this includes thread pinning and support for SMT systems.
+We describe these improvments in Section \ref{sec:thread_pinning}
+Section \ref{sec:idle_loop} describes our changes to how engines idle
+and when they wake up to execute parallel work.
+\paul{Proposed scheduling tweeks may move to the ThreadScope chapter.}
+Finally, in Section \ref{sec:kernel_scheduling_help}
+we describe an area of research that would improve resource usage when
+multiple instances of a parallel Mercury program are executing in parallel.
 
 \section{Garbage collection}
+\label{sec:gc}
 
 \status{Planned, finish prose and may need a benchmark}
+
+XXX: One of the sources of unexpected poor performance is the behaviour of
+the garbage collector.
+
+XXX: Introduce Boehm, \& details.
 
 While using parallel benchmarks we found that Mercury's garbage collector,
 the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
@@ -24,6 +56,11 @@ the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
 could easily interfere with parallel performance.
 Boehm GC is a mark and sweep garbage collector and must
 stop-the-world during marking.
+
+XXX: Describe (Parallel) GC performance in general.
+XXX: Describe icfp2000 \& mandelbrot
+XXX: Benchmark data.
+XXX: Describe performance in practice.
 
 Like many declarative languages,
 Mercury programs tend to have a high rate of allocation,
@@ -103,6 +140,7 @@ We will use this benchmark in the remainder of this chapter since we want to
 measure the runtime system's performance independent of the garbage collector.
 
 \section{Spark queueing}
+\label{sec:old_scheduling}
 
 \status{Complete}
 
@@ -229,6 +267,7 @@ run queue,
 or sparks are added to the spark run queue.
 
 \section{Premature scheduling decisions}
+\label{sec:old_scheduling_performance}
 
 \status{Run another test then finish the prose}
 
@@ -489,6 +528,7 @@ XXX: Lead in to next section.
 
 
 \section{Work stealing}
+\label{sec:work_stealing}
 
 \status{Not written}
 
@@ -498,10 +538,17 @@ This subsection was joint work with Peter Wang.
 
 \subsection{Engine local spark stacks}
 
-\section{Right vs.\ left recursion}
+\section{Avoiding the right recursion problem}
+\label{sec:right_recursion}
 \status{Not written}
 
+\paul{I am not sure if I need a section for this at all.}
+
+There's ony one point to make, and that is where a parallelisation is
+idependent we re-arange the conjuncts to avoid the right recursion problem.
+
 \section{Thread pinning}
+\label{sec:thread_pinning}
 \status{Not written}
 
 Detecting the number of processors.
@@ -515,6 +562,7 @@ Busy waiting?
 Hardware locality
 
 \section{Idle loop}
+\label{sec:idle_loop}
 \status{Not written}
 
 Idle loop structure
@@ -523,7 +571,8 @@ Independent engine wakeup
 
 Engine work notification
 
-\section{Scheduling tweeks}
+\section{Proposed scheduling tweeks}
+\label{sec:proposed_tweeks}
 \status{Not written, May move to TS chapter}
 
 Not implemented,
@@ -531,6 +580,7 @@ Not implemented,
 Feedback from ThreadScope?
 
 \section{Proposed kernel support to manage processor resources}
+\label{sec:kernel_scheduling_help}
 
 \status{This may not be worth discussing until someone actually does it}
     
