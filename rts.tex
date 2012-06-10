@@ -40,44 +40,156 @@ Finally, in Section \ref{sec:kernel_scheduling_help}
 we describe an area of research that would improve resource usage when
 multiple instances of a parallel Mercury program are executing in parallel.
 
-\section{Garbage collection}
+\section{Garbage collection tweeks}
 \label{sec:gc}
 
 \status{Planned, finish prose and may need a benchmark}
-
-XXX: One of the sources of unexpected poor performance is the behaviour of
-the garbage collector.
-
-XXX: Introduce Boehm, \& details.
-
-While using parallel benchmarks we found that Mercury's garbage collector,
-the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
-\citep{boehm_gc},
-could easily interfere with parallel performance.
-Boehm GC is a mark and sweep garbage collector and must
-stop-the-world during marking.
-
-XXX: Describe (Parallel) GC performance in general.
-XXX: Describe icfp2000 \& mandelbrot
-XXX: Benchmark data.
-XXX: Describe performance in practice.
-
+\plan{Describe Mercury's behviour WRT GC}
+One of the sources of poor parallel performance is the behaviour of the
+garbage collector.
 Like many declarative languages,
-Mercury programs tend to have a high rate of allocation,
-placing a lot of stress on the garbage collector.
-% XXX: Discussion of Amdahl's law WRT stop-the-world.
+Mercury discourages distructive update also known as mutation of data
+structures.\footnote{
+    We have not covered mutables in Mercury as they are not relelvent to the
+    disertation.
+    Their use does not interfer with parallelism as they are used in
+    conjunction with impurity,
+    the compiler will not parallelise impure goals.}
+Therefore a calculation usually returns its value in newly allocated memory
+rather than modifying the memory of one of its parameters.
+This means that Mercury programs often have a high rate of allocation,
+which places a lot of stress on the garbage collector.
+Therefore,
+allocation and garbage collection have a strong impact on a program's
+performance,
+this usually becomes more sagnificant when parallelism is introduced into a
+program.
+
+\plan{Introduce Boehm, \& details: conservative, mark and sweep, stop the
+world, parallel marking.}
+Mercury uses Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
+\citep{boehm_gc},
+which is a conservative mark and sweep collector.
+Boehm GC supports parallel programming,
+it will stop all the threads (\emph{stop the world}) during its marking
+phase.
+It also supports parallel marking,
+it will use its own set of pthreads to perform parallel marking.
+
+\plan{Introduce colletor time, mutator time.}
+When discussing garbage collection,
+a program's execution time is divided into two alternating phases:
+collection time, which is when Boehm GC performs marking
+and mutator time, which is when the Mercury program may run.
+The name mutator time refers to time that mutations (changes) to memeory
+structures are permitted.
+The collector may perform some actions concurently with the mutator,
+such as sweeping.
+
+\plan{Describe theory of GC performance.}
+Amdahl's law~\citep{amdahl} describes the maximum theoretical speedup that
+can be acheived by parallelising a program where some part of that program
+cannot be parallelised.
+When sequential marking is used then can use Amdahl's
+law to predict the speedup of our programs.
+For example, consider a program with a runtime of 20 seconds,
+if one second of that (5\%) is collection time
+then using four processors the theoretical best speedup we can acheive is:
+$(1 + 19) \div (1 + 19\div4) = 3.48$,
+in this case the program spends 17\% of its time doing garbage collection.
+If we use a machine with 100 processors then this becomes:
+$(1 + 19) \div (1 + 19\div100) = 16.8$,
+in this case 84\% of the program's time is collection time.
+As the number of processors increases the benifit of adding each additional
+processor drops,
+and at the same time collection time dominates the execution time of the
+program.
+
+\plan{Discuss predictions regarding parallel marking, locking and thread
+local heaps.}
+In practice however,
+Boehm GC supports parallel marking;
+we can resonably expect better speedups when using parallel marking.
+However,
+efficient parallel marking is not perfect,
+it is a continuing area of research.
+Therefore,
+we cannot expect to get strong speedups due to parallel marking.
+Additionally, 
+the garbage collector must be thread safe to support multiple mutator
+threads.
+The allocation routines must therefore use locking to protect shared data
+structures,
+this will slow down allocation.
+We can resonably expect that a program may slow down when thread safty is
+enabled from the cost of locking alone.
+Boehm GC's authors recognize problem,
+to address it each thread is given some thread-local resources such as free
+lists.
+Therefore,
+during memory allocation a thread can use its own free lists to allocate
+memory rather than locking any global structure.
+From time-to-time, a thread will have to retrive new free lists or other
+data from a global structure and will need to perform locking then,
+however this cost is amortized across a number of memory allocations.
+
+\paul{Check that this is all independent parallelism}
+\plan{Describe icfp2000, mandelbrot and mandelbrot\_heap programs.}
 One of our benchmarks is parallel version of a raytracer developed for the
 ICFP programming context in 2000,
-hence it is named icfp2000.
+it is named icfp2000.
+The raytracer is parallelised by modifying its loop over rows in the image
+so that each row may be computed in parallel with the other rows.
 The raytracer uses many small structures to represent vectors and a pixel's
-colour,
-As is common in declrative programming these structures are immutable,
-calculations return a newly allocated structure rather than updating an
-existing structure.
+colour.
 Therefore,
-icfp2000 is very memory allocation intensive.
-A memory allocation intensive program will have to perform a sagnificant
-amount of marking.
+it is very memory allocation intensive.
+Since we suspected that garbage collection was having a negative impact on
+performance we developed a mandelbrot image generator.
+For a given viewport into the image the mandelbrot program 
+tries to determine if that pixel's coordinates are inside of the mandelbrot
+set or outside.
+This involves many iterations for each pixel,
+after a maximum number of iterations the program `gives up' on that pixel
+The colour of each pixel represents how many iterations before the program
+determined that the pixel's coordinates are outside the mandelbrot set.
+and assumes that it is inside the mandelbrot set.
+This program is parallelised in a similar way to the raytracer,
+the loop that iterates over rows of the image was parallelised.
+The main feature of the mandelbrot program,
+is that it is not memory allocation intensive.
+Coordiates and complex numbers are not represented as structures,
+their componenets are stored on the stack.
+We created a second version of the mandelbrot program called
+mahdelbrot\_heap.
+This program does represent coordinates and complex numbers in structures,
+and therefore Mercury uses pass-by-reference and places these values on the
+heap.
+mandelbrot\_heap is more allocation intensive than mandelbrot.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l|r|rrrr}
+\Cbr{Program} & \Cbr{GC Markers} &
+\multicolumn{4}{|c}{Mercury Engines} \\
+\Cbr{} & \Cbr{} & \C{1} & \C{2} & \C{3} & \C{4} \\
+\hline
+\multirow{6}{*}{mandelbrot} &
+ Sequential & 15.3 (1.0) & -          & -         & - \\
+&TS, no Par & 15.3 (1.0) & -          & -         & - \\
+&1          & 15.3 (1.0) & 7.7 (2.0)  & 5.1 (3.0) & 3.9 (3.9) \\
+&2          & 15.3 (1.0) & 7.7 (2.0)  & 5.1 (3.0) & 3.9 (3.9) \\
+&3          & 15.3 (1.0) & 7.7 (2.0)  & 5.1 (3.0) & 3.9 (3.9) \\
+&4          & 15.3 (1.0) & 7.7 (2.0)  & 5.1 (3.0) & 3.9 (3.9) \\
+\end{tabular}
+\end{center}
+\caption{Garbage collection effects.}
+\end{table}
+
+\plan{Benchmark data.}
+
+\plan{Describe performance in practice.}
+
 Boehm GC allows for parallel marking,
 but first we describe sequential marking:
 We have to account for Amdahl's law~\citep{amdahl}.
@@ -106,20 +218,18 @@ and that when using parallel marking we should see speed-up,
 although we do not expect it to parallelise well
 as this is a continuing field of research.
 
-XXX: Benchmark.
+\plan{Compare performance vs Amdahl's predictions. for sequential marking.}
 
+\plan{Parallel marking performance observations.}
+not that parallelisation is not easy.
 
+\plan{New data, vary the heap size,}
 
-XXX: Introduce parallel marking,
+\plan{Criticise cache behaviour WRT parallel marking,
+Thanks Simon Marlow.}
 
-XXX: Criticise cache behaviour WRT parallel marking,
-Thanks Simon Marlow.
+\plan{Discuss local heaps for threads, and their reliability problems.}
 
-XXX: Benchmark icfp2000 with different initial heap sizes.
-
-XXX: Discuss local heaps for threads, and their reliability problems.
-
-XXX: Add table.
 
 To illustrate the difference that garbage collection can make we wrote a new
 benchmark, mandelbrot.
@@ -139,7 +249,7 @@ We can see this in Table \ref{tab:mandelbrot_vs_icfp2000}.
 We will use this benchmark in the remainder of this chapter since we want to
 measure the runtime system's performance independent of the garbage collector.
 
-\section{Spark queueing}
+\section{Prior spark scheduling algorithm}
 \label{sec:old_scheduling}
 
 \status{Complete}
@@ -266,7 +376,7 @@ This condition is used to wake engines when either contexts are added to the
 run queue,
 or sparks are added to the spark run queue.
 
-\section{Premature scheduling decisions}
+\section{Prior spark scheduling performance}
 \label{sec:old_scheduling_performance}
 
 \status{Run another test then finish the prose}
@@ -527,7 +637,7 @@ limit}
 XXX: Lead in to next section.
 
 
-\section{Work stealing}
+\section{Work stealing implementation}
 \label{sec:work_stealing}
 
 \status{Not written}
@@ -536,7 +646,7 @@ XXX: Lead in to next section.
 
 This subsection was joint work with Peter Wang.
 
-\subsection{Engine local spark stacks}
+\subsection{Final work stealing implementation}
 
 \section{Avoiding the right recursion problem}
 \label{sec:right_recursion}
