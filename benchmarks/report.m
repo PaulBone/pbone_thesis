@@ -25,6 +25,7 @@
 :- import_module getopt.
 :- import_module int.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module string.
@@ -34,7 +35,8 @@
 %------------------------------------------------------------------------%
 
 :- type option
-    --->    drop.
+    --->    drop
+    ;       relative.
 
 main(!IO) :-
     io.command_line_arguments(Args0, !IO),
@@ -57,16 +59,17 @@ main(!IO) :-
 :- pred short(char::in, option::out) is semidet.
 
 short('d', drop).
+short('r', relative).
 
 :- pred long(string::in, option::out) is semidet.
 
 long("drop",            drop).
+long("relative",        relative).
 
 :- pred defaults(option::out, option_data::out) is multi.
 
 defaults(drop,          bool(no)).
-% Trick the compiler into thinking that this is multi.
-defaults(drop,          bool(no)) :- semidet_false.
+defaults(relative,      string("")).
 
 %------------------------------------------------------------------------%
 
@@ -112,7 +115,8 @@ read_results(Filename, Stream, !Results, !IO) :-
 
 :- type report
     --->    report(
-                r_groups        :: list(report_group)
+                r_groups            :: map(string, report_group),
+                r_relative_scores   :: maybe(map(string, float))
             ).
 
 :- type report_group
@@ -127,7 +131,7 @@ read_results(Filename, Stream, !Results, !IO) :-
 :- pred generate_report(option_table(option)::in,
     cord(result.result)::in, report::out) is det.
 
-generate_report(Options, ResultsCord, report(Groups)) :-
+generate_report(Options, ResultsCord, report(GroupsMap, MaybeRelScores)) :-
     lookup_bool_option(Options, drop, DropBool),
     (
         DropBool = yes,
@@ -138,7 +142,28 @@ generate_report(Options, ResultsCord, report(Groups)) :-
     ),
     Results = list(ResultsCord),
     GroupNames = remove_adjacent_dups(sort(map(get_name, Results))),
-    map(generate_report_group(Drop, Results), GroupNames, Groups).
+    map(generate_report_group(Drop, Results), GroupNames, Groups),
+    foldl(add_group_to_map, Groups, map.init, GroupsMap),
+    lookup_string_option(Options, relative, Relative),
+    ( Relative = "" ->
+        MaybeRelScores = no
+    ;
+        ( map.search(GroupsMap, Relative, RelGroup) ->
+            RelScore = RelGroup ^ rg_mean,
+            RelScoresMap = foldl((func(G, M) =
+                    map.det_insert(M, G ^ rg_name, RelScore / (G ^ rg_mean))
+                ), Groups, map.init),
+            MaybeRelScores = yes(RelScoresMap)
+        ;
+            error("Group not found for computing relative scores")
+        ) 
+    ).
+
+:- pred add_group_to_map(report_group::in,
+    map(string, report_group)::in, map(string, report_group)::out) is det.
+
+add_group_to_map(G, !M) :-
+    map.det_insert(G ^ rg_name, G, !M).
 
 :- type drop
     --->    drop_first_and_last
@@ -192,15 +217,18 @@ sum(Xs) = foldl((+), Xs, 0.0).
 
 :- pred print_report(report::in, cord(string)::out) is det.
 
-print_report(report(Groups), Report) :-
-    map(print_report_group, Groups, GroupReports),
+print_report(report(GroupsMap, RelScores), Report) :-
+    map(print_report_group(GroupsMap, RelScores), keys(GroupsMap),
+        GroupReports),
     Report0 = join(singleton("\n"), GroupReports),
     Report = snoc(Report0, "\n").
 
-:- pred print_report_group(report_group::in, cord(string)::out) is det.
+:- pred print_report_group(map(string, report_group)::in,
+    maybe(map(string, float))::in, string::in, cord(string)::out) is det.
 
-print_report_group(Group, Report) :-
-    Group = report_group(Name, Samples, Mean, MaybeStdev, _Entries),
+print_report_group(Groups, MaybeRelScores, Name, Report) :-
+    map.lookup(Groups, Name, Group),
+    Group = report_group(_, Samples, Mean, MaybeStdev, _Entries),
     (
         MaybeStdev = yes(Stdev),
         StdevStr = format("%4.2f", [f(Stdev)])
@@ -208,8 +236,18 @@ print_report_group(Group, Report) :-
         MaybeStdev = no,
         StdevStr = "-"
     ),
-    Report = singleton(format("%s:\t%d samples,\tmean: %4.1f\tStdev: %s",
-        [s(Name), i(Samples), f(Mean), s(StdevStr)])).
+    (
+        MaybeRelScores = yes(RelScores),
+        map.lookup(RelScores, Name, RelScore),
+        Report = singleton(format(
+            "%s:\t%d samples,\tmean: %4.1f (%2.2f) \tStdev: %s",
+            [s(Name), i(Samples), f(Mean), f(RelScore), s(StdevStr)]))
+    ;
+        MaybeRelScores = no,
+        Report = singleton(format(
+            "%s:\t%d samples,\tmean: %4.1f\tStdev: %s",
+            [s(Name), i(Samples), f(Mean), s(StdevStr)]))
+    ).
 
 %------------------------------------------------------------------------%
 
