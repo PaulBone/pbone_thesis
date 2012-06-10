@@ -48,8 +48,8 @@ config = Data :-
 :- func gc_initial_heap_size = list(int).
 
 gc_initial_heap_size = map((func(X) = X*1024*1024), L) :-
-    L = [1, 4, 16, 32, 48,
-         64, 128, 192, 256, 320, 384, 448, 512].
+    L = [1, 16, 32,
+         64, 128, 256, 384, 512].
 
     % Use only one marker thread for GC regardless of grade/test.
     %
@@ -78,7 +78,7 @@ control_group_grades=[asmfast,
 
 :- func control_group_rtopts = list(rtopts_spec).
 
-control_group_rtopts=[rtopts("P1-lc2", "-P 1")].
+control_group_rtopts=[rtopts("P1", "-P 1")].
 
 :- func test_group_grades = list(grade_spec).
 
