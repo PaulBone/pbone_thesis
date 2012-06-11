@@ -115,7 +115,7 @@ efficient parallel marking is not perfect,
 it is a continuing area of research.
 Therefore,
 we cannot expect to get strong speedups due to parallel marking.
-Additionally, 
+Additionally,
 the garbage collector must be thread safe to support multiple mutator
 threads.
 The allocation routines must therefore use locking to protect shared data
@@ -145,7 +145,7 @@ Therefore,
 it is very memory allocation intensive.
 Since we suspected that garbage collection was having a negative impact on
 performance we developed a mandelbrot image generator.
-For a given viewport into the image the mandelbrot program 
+For a given viewport into the image the mandelbrot program
 tries to determine if that pixel's coordinates are inside of the mandelbrot
 set or outside.
 This involves many iterations for each pixel,
@@ -190,7 +190,7 @@ mandelbrot\_heap is more allocation intensive than mandelbrot.
 &4          & 15.3 (1.00) & 7.7 (1.99) & 5.1 (2.98) & 3.9 (3.94) \\
 \hline
 \multirow{6}{*}{mandelbrot\_heap} &
- Sequential & 36.9 (1.25) & -          & -          & - \\ 
+ Sequential & 36.9 (1.25) & -          & -          & - \\
 &TS, no par & 46.3 (1.00) & -          & -          & - \\
 &1          & 47.4 (0.98) & 33.2 (1.39)& 26.7 (1.73)& 23.6 (1.96) \\
 &2          & 44.7 (1.03) & 29.0 (1.59)& 22.3 (2.08)& 19.0 (2.44) \\
@@ -198,71 +198,127 @@ mandelbrot\_heap is more allocation intensive than mandelbrot.
 &4          & 42.7 (1.08) & 26.7 (1.73)& 20.1 (2.30)& 16.9 (2.73) \\
 \end{tabular}
 \end{center}
+\paul{Consider drawing charts for raytracer and mandelbrot so that releative
+performance between different scores can be seen easily.}
 \caption{Parallelism and garbage collection}
+\label{tab:gc}
 \end{table}
 
 \plan{Benchmark data.}
+Table \ref{tab:gc} shows benchmarks for these programs
+with different numbers of Mercury engines and garbage collector threads.
+All benchmarks have an initial heap size of 16MB.
+Each result is measured in seconds and represents the mean of eight samples.
+The first two rows of each group of rows show the time for a sequential
+non thread safe version of the program,
+and a sequential thread safe version
+(the program does not use a parallel conjunction).
+Each of the other four rows represent the program's runtime with
+1--4 marker threads (vertical) and
+1--4 Mercury engines (horizontal).
+The numbers in paranthases show the relative speedup when compared to the
+``TS, no par'' option for the same progream.
+All our benchmarking is performed on `cabsav',
+an ASRock Z68-Pro3 based Intel i7-2600K system.
+This table of results was collected with a recent version of Mercury
+(rotd-2012-04-29);
+the other improvments discussed in this chapter and the loop control
+transformation (Chapter \ref{chap:loop_control})
+are enabled for these tests.
+This allows us to observe the effects of garbage collection without
+other performance problems affecting the results.
 
 \plan{Describe performance in practice.}
-
-Boehm GC allows for parallel marking,
-but first we describe sequential marking:
-We have to account for Amdahl's law~\citep{amdahl}.
-Amdahl's law says that if some of the program is parallelisable and some
-is not,
-then as the number of processors increases the sequential part of the
-program will dominate the program's runtime.
+The raytracer program benefits from parallelism in both Mercury and the
+garbage collector.
+Using four engines speeds the program up by a factor of 1.58,
+compared to 1.29 for four marker threads.
+When using four engines and four marker threads the raytracer
+acheives a speedup of 2.73,
+this likly indicates that the program's high allocation rate causes
+contention on the garbage collector's locks,
+although we investigate another likly cause below.
+The first mandelbrot program, the one that stores values on the stack,
+does not see any benifit from parallel marking.
+It acheives very good speedups from multiple Mercury engines.
+We know that this program has a low allocation rate
+but is otherwise parallelised in the same way as raytracer.
 Therefore,
-a sequential marking phase in a garbage collector will affect the speedup
-the program can gain due to parallelism.
-If a sequential program runs for 20 seconds and sepends one second of this
-(5\%) marking sequentially,
-and we parallelise the program's 19 seconds across four processors we get
-a speed up of
-$(1 + 19) \div (1 + 19\div4) = 3.48$,
-in this case the program spends 17\% of its time doing garbage collection.
-Even with one hundred processors we can not acheive a speedup greater than
-$(1 + 19) \div (1 + 19\div100) = 16.8$
-The theoretical maximum speedup of such a program is 20.
-Boehm GC uses helper threads in an attempt to parallelise the marking phase.
-We would expect that as we parallelise a program,
-such as raytracer,
-that when using sequential marking our observations should match the
-predictions of Amdahl's law,
-and that when using parallel marking we should see speed-up,
-although we do not expect it to parallelise well
-as this is a continuing field of research.
+these results support the idea that garbage collection makes it more
+difficult to acheive good speedups when parallelising programs.
+mandelbrot-heap, which stores its data on the heap,
+sees similar trends in performance to that of the raytracer,
+aid is universaly slower than the first mandelbrot program.
+mandelbrot-heap acheives a speedup of 1.96 when using four Mercury engines
+compared to 1.58 for the raytracer.
+It also acheives a speedup of 1.08 when using four marker threads compared
+to 1.29 for the raytracer.
+We can see that mandelbrot-heap benefits from parallelism in Mercury
+more than raytracer does,
+simiarly mandelbrot-heap benefits less from parallelism in the garbage
+collector than raytracer does.
+This leads us to beleive that mandelbrot-heap is less allocation intensive
+than raytracer.
+\paul{I could conform this using the profiler, I might if I felt I had the
+time.}
 
 \plan{Compare performance vs Amdahl's predictions. for sequential marking.}
+\paul{XXX: Use threadscope to determine what percentage of the time programs
+spend in the garbage collector.}
 
 \plan{Parallel marking performance observations.}
 not that parallelisation is not easy.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{r|rr|rrrr}
+\Cbr{Initial} &
+\multicolumn{2}{|c|}{Sequential} &
+\multicolumn{4}{|c}{Mercury Engines} \\
+\Cbr{heap size} & \C{no TS}   & \Cbr{TS}    & \C{1}       & \C{2}       & \C{3}       & \C{4} \\
+\hline
+\hline
+\multicolumn{7}{c}{raytracer} \\
+\hline
+1MB    & 32.9 (1.14) & 37.4 (1.00) & 37.5 (1.00) & 28.2 (1.33) & 24.9 (1.50) & 23.4 (1.60) \\
+16MB   & 33.1 (1.13) & 37.4 (1.00) & 37.7 (0.99) & 28.0 (1.34) & 24.8 (1.51) & 23.7 (1.58) \\
+32MB   & 34.3 (1.09) & 38.4 (0.97) & 38.5 (0.97) & 28.8 (1.30) & 25.4 (1.47) & 23.5 (1.60) \\
+64MB   & 33.4 (1.12) & 39.8 (0.94) & 39.7 (0.94) & 30.5 (1.23) & 26.8 (1.40) & 25.5 (1.47) \\
+128MB  & 22.7 (1.65) & 27.5 (1.36) & 27.5 (1.36) & 18.9 (1.98) & 16.1 (2.32) & 15.3 (2.45) \\
+256MB  & 18.7 (2.01) & 22.5 (1.66) & 22.6 (1.65) & 14.2 (2.64) & 11.1 (3.38) &  9.8 (3.82) \\
+384MB  & 17.9 (2.09) & 21.3 (1.75) & 21.5 (1.74) & 12.7 (2.94) &  9.8 (3.80) &  8.4 (4.44) \\
+512MB  & 17.6 (2.13) & 20.9 (1.79) & 21.0 (1.79) & 12.1 (3.09) &  9.2 (4.08) &  7.8 (4.78) \\
+\hline
+\hline
+\multicolumn{7}{c}{mandelbrot\_heap} \\
+\hline
+1MB    & 38.7 (1.19) & 48.9 (0.95) & 50.9 (0.91) & 34.0 (1.36) & 27.4 (1.69) & 24.7 (1.87) \\
+16MB   & 36.9 (1.25) & 46.3 (1.00) & 47.4 (0.98) & 33.2 (1.39) & 26.7 (1.73) & 23.6 (1.96) \\
+32MB   & 35.6 (1.30) & 45.0 (1.03) & 48.3 (0.96) & 31.5 (1.47) & 25.0 (1.85) & 21.9 (2.11) \\
+64MB   & 33.8 (1.37) & 44.2 (1.05) & 43.7 (1.06) & 28.8 (1.61) & 22.7 (2.04) & 19.6 (2.36) \\
+128MB  & 32.4 (1.43) & 44.6 (1.04) & 42.7 (1.08) & 26.4 (1.75) & 20.0 (2.31) & 16.9 (2.73) \\
+256MB  & 31.5 (1.47) & 41.4 (1.12) & 42.6 (1.09) & 24.5 (1.88) & 18.3 (2.53) & 15.0 (3.08) \\
+384MB  & 31.2 (1.49) & 41.9 (1.10) & 41.2 (1.12) & 24.4 (1.90) & 17.6 (2.63) & 14.4 (3.21) \\
+512MB  & 30.8 (1.50) & 41.3 (1.12) & 42.0 (1.10) & 23.6 (1.96) & 17.4 (2.67) & 14.1 (3.27) \\
+\end{tabular}
+\end{center}
+\caption{Varying the initial heapsize in parallel Mercury programs.}
+\label{tab:heapsize}
+\end{table}
 
 \plan{New data, vary the heap size,}
 
 \plan{Criticise cache behaviour WRT parallel marking,
 Thanks Simon Marlow.}
+\paul{XXX: threadscope will also support our argument here.}
 
 \plan{Discuss local heaps for threads, and their reliability problems.}
+Boehm GC has a few tunable parameters, one of these, \texttt{HBLKSIZE},
+configures the size of a local heap amoung other things.
+In some tests this did improve performance but we also found it to cause
+reliability problems.
+Therefore it cannot be used practically and we do not report on it here.
 
-
-To illustrate the difference that garbage collection can make we wrote a new
-benchmark, mandelbrot.
-This program is a micro-benchmark, and tests the performance of 
-Mercury's parallel conjunction operator independent of the garbage
-collector's effects.
-The mandelbrot set calculation is done on complex numbers,
-most programmers will use a tuple-like data type to represent each number,
-each number would be allocated as a heap object.
-\paul{I could do a test between mandelbrot with complex data type vs
-without.}
-To avoid stress on the garbage collector stored the real and imaginary parts
-of each number on the stack.
-This reduces the program's reliance on the garbage collector,
-as a result the program does very little allocation or collection.
-We can see this in Table \ref{tab:mandelbrot_vs_icfp2000}.
-We will use this benchmark in the remainder of this chapter since we want to
-measure the runtime system's performance independent of the garbage collector.
 
 \section{Prior spark scheduling algorithm}
 \label{sec:old_scheduling}
@@ -346,7 +402,7 @@ contexts
 
 As an engine finishes executing a parallel conjunct,
 it will execute the the barrier at the end of the conjunct,
-named \joinandcontinue and shown in 
+named \joinandcontinue and shown in
 Algorithm \ref{alg:join_and_continue_peterw}.
 If it is known that the parallel conjunction has only been executed by
 one context,
@@ -363,7 +419,7 @@ context,
 then execution jumps to the label after the parallel conjunction.
 If the current context is not the parent context then
 we can infer that the parent context is suspended,
-therefore, 
+therefore,
 the engine will schedule the parent context, before looking for global work.
 It looks for global work because its local work queue is guaranteed to be
 empty since this conjunction and any nested conjunctions are complete.
@@ -486,8 +542,6 @@ used: requiring a register to point to a pthread's engine structure
 and compiling the garbage collector for thread safety.
 The following four columns give the runtimes for the parallel mandelbrot
 program with 1--4 Mercury engines.
-All our benchmarking is performed on `cabsav',
-an ASRock Z68-Pro3 based Intel i7-2600K system.
 
 We can see that the right recursive program performs better than the left
 recursive one.
@@ -501,7 +555,7 @@ we achieve greater speedups.
 The exception to this is the case for left recursion with four engines and
 256 contexts, it is slower than the case for 256 contexts.
 These two results have standard deviations of 6.40 and 6.15 seconds
-respectively meaning that any apparent difference is most likely 
+respectively meaning that any apparent difference is most likely
 noise in the data.
 All the other results have a standard deviation of less than two seconds,
 most of these are less than half a second.
@@ -550,7 +604,7 @@ Contexts will not be created to execute these sparks.
 Therefore,
 this restricts the amount of memory allocated in contexts.
 Without this limit,
-a simple loop, such as in Figure \ref{fig:map_right_recursive}, 
+a simple loop, such as in Figure \ref{fig:map_right_recursive},
 can easily consume all the physical memory in a system.
 This limit has the adverse effect of restricting how much parallelism
 in the program is exploited.
@@ -708,7 +762,7 @@ Feedback from ThreadScope?
 \label{sec:kernel_scheduling_help}
 
 \status{This may not be worth discussing until someone actually does it}
-    
+
 Should I describe our proposal for OS kernel's to help
 applications with how many threads to use.
 GCD is related but does not fit into a language runtime system so
@@ -746,7 +800,7 @@ If it successfully finds a spark, it will allocate a context,
 and start running the spark in that context.
 
 % XXX: Mention global spark queue and spark sheduling above.
-% XXX:  
+% XXX:
 
 Barrier code is placed at the end of each conjunct,
 this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
