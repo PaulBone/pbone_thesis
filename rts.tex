@@ -136,8 +136,7 @@ however this cost is amortized across a number of memory allocations.
 \paul{Check that this is all independent parallelism}
 \plan{Describe icfp2000, mandelbrot and mandelbrot\_heap programs.}
 One of our benchmarks is parallel version of a raytracer developed for the
-ICFP programming context in 2000,
-it is named icfp2000.
+ICFP programming context in 2000.
 The raytracer is parallelised by modifying its loop over rows in the image
 so that each row may be computed in parallel with the other rows.
 The raytracer uses many small structures to represent vectors and a pixel's
@@ -173,6 +172,14 @@ mandelbrot\_heap is more allocation intensive than mandelbrot.
 \Cbr{Program} & \Cbr{GC Markers} &
 \multicolumn{4}{|c}{Mercury Engines} \\
 \Cbr{} & \Cbr{} & \C{1} & \C{2} & \C{3} & \C{4} \\
+\hline
+\multirow{6}{*}{raytracer} &
+ Sequential & 33.1 (1.13) & -          & -          & - \\
+&TS, no par & 37.4 (1.00) & -          & -          & - \\
+&1          & 37.7 (0.99) & 28.0 (1.34)& 24.8 (1.51)& 23.7 (1.58) \\
+&2          & 32.0 (1.17) & 21.6 (1.73)& 18.1 (2.07)& 16.7 (2.24) \\
+&3          & 29.6 (1.26) & 19.7 (1.90)& 16.3 (2.29)& 14.5 (2.59) \\
+&4          & 29.1 (1.29) & 18.9 (1.98)& 15.3 (2.45)& 13.7 (2.73) \\
 \hline
 \multirow{6}{*}{mandelbrot} &
  Sequential & 15.3 (1.00) & -          & -          & - \\
@@ -219,7 +226,7 @@ $(1 + 19) \div (1 + 19\div100) = 16.8$
 The theoretical maximum speedup of such a program is 20.
 Boehm GC uses helper threads in an attempt to parallelise the marking phase.
 We would expect that as we parallelise a program,
-such as icfp2000,
+such as raytracer,
 that when using sequential marking our observations should match the
 predictions of Amdahl's law,
 and that when using parallel marking we should see speed-up,
