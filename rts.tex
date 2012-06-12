@@ -28,29 +28,29 @@ these describe the initial and final versions of the work stealing
 implementation.
 Section \ref{sec:work_stealing} also includes benchmarks that show
 how work stealing fixes the spark scheduling problem.
-We made a number of improvments to the way that Mercury engines are created,
+We made a number of improvements to the way that Mercury engines are created,
 this includes thread pinning and support for SMT systems.
-We describe these improvments in Section \ref{sec:thread_pinning}
+We describe these improvements in Section \ref{sec:thread_pinning}
 Section \ref{sec:idle_loop} describes our changes to how engines idle
 and when they wake up to execute parallel work.
-\paul{Proposed scheduling tweeks may move to the ThreadScope chapter.}
+\paul{Proposed scheduling tweaks may move to the ThreadScope chapter.}
 Finally, in Section \ref{sec:kernel_scheduling_help}
 we describe an area of research that would improve resource usage when
 multiple instances of a parallel Mercury program are executing in parallel.
 
-\section{Garbage collection tweeks}
+\section{Garbage collection tweaks}
 \label{sec:gc}
 
 \status{Planned, finish prose and may need a benchmark}
-\plan{Describe Mercury's behviour WRT GC}
+\plan{Describe Mercury's behaviour WRT GC}
 One of the sources of poor parallel performance is the behaviour of the
 garbage collector.
 Like many declarative languages,
-Mercury discourages distructive update also known as mutation of data
+Mercury discourages destructive update also known as mutation of data
 structures.\footnote{
-    We have not covered mutables in Mercury as they are not relelvent to the
-    disertation.
-    Their use does not interfer with parallelism as they are used in
+    We have not covered mutables in Mercury as they are not relevant to the
+    dissertation.
+    Their use does not interfere with parallelism as they are used in
     conjunction with impurity,
     the compiler will not parallelise impure goals.}
 Therefore a calculation usually returns its value in newly allocated memory
@@ -60,7 +60,7 @@ which places a lot of stress on the garbage collector.
 Therefore,
 allocation and garbage collection have a strong impact on a program's
 performance,
-this usually becomes more sagnificant when parallelism is introduced into a
+this usually becomes more significant when parallelism is introduced into a
 program.
 
 \plan{Introduce Boehm, \& details: conservative, mark and sweep, stop the
@@ -74,31 +74,31 @@ phase.
 It also supports parallel marking,
 it will use its own set of pthreads to perform parallel marking.
 
-\plan{Introduce colletor time, mutator time.}
+\plan{Introduce collector time, mutator time.}
 When discussing garbage collection,
 a program's execution time is divided into two alternating phases:
 collection time, which is when Boehm GC performs marking
 and mutator time, which is when the Mercury program may run.
-The name mutator time refers to time that mutations (changes) to memeory
+The name mutator time refers to time that mutations (changes) to memory
 structures are permitted.
-The collector may perform some actions concurently with the mutator,
+The collector may perform some actions concurrently with the mutator,
 such as sweeping.
 
 \plan{Describe theory of GC performance.}
 Amdahl's law~\citep{amdahl} describes the maximum theoretical speedup that
-can be acheived by parallelising a program where some part of that program
+can be achieved by parallelising a program where some part of that program
 cannot be parallelised.
 When sequential marking is used then can use Amdahl's
 law to predict the speedup of our programs.
 For example, consider a program with a runtime of 20 seconds,
 if one second of that (5\%) is collection time
-then using four processors the theoretical best speedup we can acheive is:
+then using four processors the theoretical best speedup we can achieve is:
 $(1 + 19) \div (1 + 19\div4) = 3.48$,
 in this case the program spends 17\% of its time doing garbage collection.
 If we use a machine with 100 processors then this becomes:
 $(1 + 19) \div (1 + 19\div100) = 16.8$,
 in this case 84\% of the program's time is collection time.
-As the number of processors increases the benifit of adding each additional
+As the number of processors increases the benefit of adding each additional
 processor drops,
 and at the same time collection time dominates the execution time of the
 program.
@@ -107,7 +107,7 @@ program.
 local heaps.}
 In practice however,
 Boehm GC supports parallel marking;
-we can resonably expect better speedups when using parallel marking.
+we can reasonably expect better speedups when using parallel marking.
 However,
 efficient parallel marking is not perfect,
 it is a continuing area of research.
@@ -119,17 +119,17 @@ threads.
 The allocation routines must therefore use locking to protect shared data
 structures,
 this will slow down allocation.
-We can resonably expect that a program may slow down when thread safty is
+We can reasonably expect that a program may slow down when thread safety is
 enabled from the cost of locking alone.
-Boehm GC's authors recognize problem,
+Boehm GC's authors recognise this problem,
 to address it each thread is given some thread-local resources such as free
 lists.
 Therefore,
 during memory allocation a thread can use its own free lists to allocate
 memory rather than locking any global structure.
-From time-to-time, a thread will have to retrive new free lists or other
+From time-to-time, a thread will have to retrieve new free lists or other
 data from a global structure and will need to perform locking then,
-however this cost is amortized across a number of memory allocations.
+however this cost is amortised across a number of memory allocations.
 
 \paul{Check that this is all independent parallelism}
 \plan{Describe icfp2000, mandelbrot and mandelbrot\_heap programs.}
@@ -155,10 +155,10 @@ This program is parallelised in a similar way to the raytracer,
 the loop that iterates over rows of the image was parallelised.
 The main feature of the mandelbrot program,
 is that it is not memory allocation intensive.
-Coordiates and complex numbers are not represented as structures,
-their componenets are stored on the stack.
+Coordinates and complex numbers are not represented as structures,
+their components are stored on the stack.
 We created a second version of the mandelbrot program called
-mahdelbrot\_heap.
+mandelbrot\_heap.
 This program does represent coordinates and complex numbers in structures,
 and therefore Mercury uses pass-by-reference and places these values on the
 heap.
@@ -214,13 +214,13 @@ and a sequential thread safe version
 Each of the other four rows represent the program's runtime with
 1--4 marker threads (vertical) and
 1--4 Mercury engines (horizontal).
-The numbers in paranthases show the relative speedup when compared to the
-``TS, no par'' option for the same progream.
+The numbers in parentheses show the relative speedup when compared to the
+``TS, no par'' option for the same program.
 All our benchmarking is performed on `cabsav',
 an ASRock Z68-Pro3 based Intel i7-2600K system.
 This table of results was collected with a recent version of Mercury
 (rotd-2012-04-29);
-the other improvments discussed in this chapter and the loop control
+the other improvements discussed in this chapter and the loop control
 transformation (Chapter \ref{chap:loop_control})
 are enabled for these tests.
 This allows us to observe the effects of garbage collection without
@@ -232,35 +232,35 @@ garbage collector.
 Using four engines speeds the program up by a factor of 1.58,
 compared to 1.29 for four marker threads.
 When using four engines and four marker threads the raytracer
-acheives a speedup of 2.73,
-this likly indicates that the program's high allocation rate causes
+achieves a speedup of 2.73,
+this likely indicates that the program's high allocation rate causes
 contention on the garbage collector's locks,
-although we investigate another likly cause below.
+although we investigate another likely cause below.
 The first mandelbrot program, the one that stores values on the stack,
-does not see any benifit from parallel marking.
-It acheives very good speedups from multiple Mercury engines.
+does not see any benefit from parallel marking.
+It achieves very good speedups from multiple Mercury engines.
 We know that this program has a low allocation rate
 but is otherwise parallelised in the same way as raytracer.
 Therefore,
 these results support the idea that garbage collection makes it more
-difficult to acheive good speedups when parallelising programs.
+difficult to achieve good speedups when parallelising programs.
 mandelbrot-heap, which stores its data on the heap,
 sees similar trends in performance to that of the raytracer,
-aid is universaly slower than the first mandelbrot program.
-mandelbrot-heap acheives a speedup of 1.96 when using four Mercury engines
+aid is universally slower than the first mandelbrot program.
+mandelbrot-heap achieves a speedup of 1.96 when using four Mercury engines
 compared to 1.58 for the raytracer.
-It also acheives a speedup of 1.08 when using four marker threads compared
+It also achieves a speedup of 1.08 when using four marker threads compared
 to 1.29 for the raytracer.
 We can see that mandelbrot-heap benefits from parallelism in Mercury
 more than raytracer does,
-simiarly mandelbrot-heap benefits less from parallelism in the garbage
+similarly mandelbrot-heap benefits less from parallelism in the garbage
 collector than raytracer does.
-This leads us to beleive that mandelbrot-heap is less allocation intensive
+This leads us to believe that mandelbrot-heap is less allocation intensive
 than raytracer.
 \paul{I could conform this using the profiler, I might if I felt I had the
 time.}
 
-\plan{Compare performance vs Amdahl's predictions. for sequential marking.}
+\plan{Compare performance vs Amdahl's predictions for sequential marking.}
 \paul{XXX: Use threadscope to determine what percentage of the time programs
 spend in the garbage collector.}
 
@@ -312,7 +312,7 @@ Thanks Simon Marlow.}
 
 \plan{Discuss local heaps for threads, and their reliability problems.}
 Boehm GC has a few tunable parameters, one of these, \texttt{HBLKSIZE},
-configures the size of a local heap amoung other things.
+configures the size of a local heap among other things.
 In some tests this did improve performance but we also found it to cause
 reliability problems.
 Therefore it cannot be used practically and we do not report on it here.
@@ -325,7 +325,7 @@ Therefore it cannot be used practically and we do not report on it here.
 
 \plan{Global spark queue and Contention wrt global queue}
 
-\plan{Local spark stack --- releaves contention on global queue}
+\plan{Local spark stack --- relieves contention on global queue}
 
 %Sparks are managed in two different data structures.
 %The first data structure is a global queue,
@@ -489,17 +489,17 @@ the amount of parallelism that can be exploited.}
 
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
-Explain why we think that left recursion will not have bhis problem.
+Explain why we think that left recursion will not have this problem.
 
 \plan{Show performance figures for left recursion.}
-The left recursive figures are underwelming, they are worse than right recursion.
+The left recursive figures are underwhelming, they are worse than right recursion.
 
 \plan{Explain the premature scheduling problem that affects left-recursive programs.}
 
 \plan{A second table of results shows that adjusting the context limit allows left-recursion to run faster.}
 \paul{I would like to try yet-another experiment on left recursion where we remove this limit completely}
 
-\plan{Re-inforce that these results support the idea that scheduling decisions are made pre-maturely}
+\plan{Reinforce that these results support the idea that scheduling decisions are made prematurely}
 
 
 
@@ -769,8 +769,8 @@ Independent engine wakeup
 
 Engine work notification
 
-\section{Proposed scheduling tweeks}
-\label{sec:proposed_tweeks}
+\section{Proposed scheduling tweaks}
+\label{sec:proposed_tweaks}
 \status{Not written, May move to TS chapter}
 
 Not implemented,
