@@ -739,11 +739,59 @@ limit}
 
 \status{Not written}
 
+\plan{Acknowledge work stealing used elsewhere in other runtime systems.}
+
 \subsection{Initial work stealing implementation}
+
+\plan{I believe that Peter discussed workstealing briefly in his thesis,
+I should check this and see what he said.}
+
+\plan{Say that stacks queues are associated with contexts.}
+
+\plan{Describe the data structure used to implement these stacks and its properties.}
+Local context can use the hot end without synchronisation.
+Other contexts can use the cold end with a CAS,
+Memory barriers are used to ensure writes appear in the correct order.
+
+\plan{Describe how work stealing policies work}
+What happens to the global queue,
+in what cases is work stolen,
+Show algorithms for work stealing attempts.
+Describe work stealing timeout.
+
+\plan{Benchmark}
 
 This subsection was joint work with Peter Wang.
 
 \subsection{Final work stealing implementation}
+
+\plan{Describe problems with associating stacks with contexts}
+The number of stacks varies,
+Stealing uses a global lock to determine which stack to steal from.
+
+\plan{Prove that even though there are N engines and M contexts and M may be
+larger than N, that there will be at most N of the M contexts with work on
+their queues}
+Therefore:
+Stealing is unnecessary complicated.
+In pathological cases many attempts can be made without success,
+a thief may give up even though there is parallelism.
+
+\plan{We associate stacks with engines}
+This removes the above problems how.
+
+\plan{Show stealing algorithm there are any,}
+Find out if I started tracking stealing per engine or not.
+
+\plan{Show how this is safe.}
+When a parallel conjunction's barrier is executed and a conjunct is
+outstanding, if its spark is on this engine's stack it must be at the top of
+the stack.
+This invariant should be kept because the context can be re-used if
+'compatible' work is found at the top of the spark stack.
+This invariant is soft.
+
+\plan{Benchmark}
 
 \section{Thread pinning}
 \label{sec:thread_pinning}
