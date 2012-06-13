@@ -377,7 +377,8 @@ invalid_hypenations = [
     "type-class",
     "low-level",
     "straight-forward",
-    "most-likely"
+    "most-likely",
+    "work-stealing"
     ].
 
 :- func acronyms = list(string).
