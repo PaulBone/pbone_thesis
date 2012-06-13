@@ -743,7 +743,7 @@ limit}
 
 \subsection{Initial work stealing implementation}
 
-\plan{I believe that Peter discussed workstealing briefly in his thesis,
+\plan{I believe that Peter discussed work stealing briefly in his thesis,
 I should check this and see what he said.}
 
 \plan{Say that stacks queues are associated with contexts.}
@@ -797,49 +797,84 @@ This invariant is soft.
 \label{sec:thread_pinning}
 \status{Not written}
 
-Detecting the number of processors.
+\plan{Explain why we want $P$ engines when there are $P$ processors}
 
-Thread pinning
+\plan{Explain briefly how we detect how many processors there are,}
+Explain that this method is good because it is (mostly) cross platform.
 
-SMT
+\plan{Explain why we want thread pinning.}
+I wonder if there's any relevant literature.
 
-Busy waiting?
+\plan{Explain how we get thread pinning.}
+This method is also (mostly) cross platform.
 
-Hardware locality
+\plan{What about SMT, not all processors are equal.}
+This does not matter when we are creating $P$ engines.
+But it does matter when we create less than $P$ engines,
+explain how bad CPU assignments are sub-optimal.
+
+\plan{How do we handle SMT}
+This uses a support library, which is cross platform, provided that it is installed.
+We fall back to setcpuafinity() when it is not.
+
+\paul{I am not going to talk about busy waiting since I have not written the
+runtime system in a way that I can test or change this easily.}
 
 \section{Idle loop}
 \label{sec:idle_loop}
 \status{Not written}
 
-Idle loop structure
+\plan{Describe the problem with the current algorithm.}
+Engines wake up and periodically check for work by attempting to
+steal work,
+firstly, this means that there can be up to a 2ms (average 1ms) delay before
+a spark is executed.
+secondly, this checks for work too often, wasting resources.
 
-Independent engine wakeup
+\plan{Solution, wake engines for different types of work}
+We modified the RTS so that waking an engine is easy, and it can be given a
+message so that it knows where to look for work.
 
-Engine work notification
+\plan{A lot of work went into preventing deadlocks due to race conditions,
+a thread that is not yet sleeping if notified must wake up immediately.}
+
+\plan{Extra benefit: when an engine is woken it can be told directly where
+to find work, or be given the work directly.}
+
+\plan{Extra benefit: we can be selective about which engine to wake,
+while not implemented fully, we can wake a `nearby' engine so that
+we can avoid communication between dies or sockets.}
+
+\plan{Show the algorithm for the new idle loop.}
+Note that we execute contexts before sparks,
+this is more-likely to produce futures and it may reduce memory consumption.
 
 \section{Proposed scheduling tweaks}
 \label{sec:proposed_tweaks}
 \status{Not written, May move to TS chapter}
 
-Not implemented,
+I really think that this section will move to the threadscope chapter,
+it will have more in common with that chapter and more data will be
+available.
+Secondly, threadscope can be used with micro-benchmarks to measure the
+average costs of certain operations in the RTS.
+I will not write it until at least the rest of this chapter is finished.
 
-Feedback from ThreadScope?
+%\section{Proposed kernel support to manage processor resources}
+%\label{sec:kernel_scheduling_help}
+%
+%\status{This may not be worth discussing until someone actually does it}
+%
+%Should I describe our proposal for OS kernel's to help
+%applications with how many threads to use.
+%GCD is related but does not fit into a language runtime system so
+%easily~\cite{apple_gcd}.
+%See also N:M threading.
 
-\section{Proposed kernel support to manage processor resources}
-\label{sec:kernel_scheduling_help}
-
-\status{This may not be worth discussing until someone actually does it}
-
-Should I describe our proposal for OS kernel's to help
-applications with how many threads to use.
-GCD is related but does not fit into a language runtime system so
-easily~\cite{apple_gcd}.
-See also N:M threading.
-
-\section{Spare text}
-
-\status{This text will be moved up into one of the work stealing sections
-once those sections are ready}
+%\section{Spare text}
+%
+%\status{This text will be moved up into one of the work stealing sections
+%once those sections are ready}
 
 %The spark is added to a global run queue of sparks, or if that queue is too
 %full, because there's already enough parallelism,
@@ -860,22 +895,22 @@ once those sections are ready}
 %contexts and their stacks.
 %
 
-When an engine becomes idle, it will first try
-to resume a suspended but runnable context if there is one.
-If not, it will attempt to run a spark from the global spark queue.
-If it successfully finds a spark, it will allocate a context,
-and start running the spark in that context.
+%When an engine becomes idle, it will first try
+%to resume a suspended but runnable context if there is one.
+%If not, it will attempt to run a spark from the global spark queue.
+%If it successfully finds a spark, it will allocate a context,
+%and start running the spark in that context.
 
 % XXX: Mention global spark queue and spark sheduling above.
 % XXX:
 
-Barrier code is placed at the end of each conjunct,
-this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
-This code starts by atomically decrementing the number of outstanding
-conjuncts in the conjunction's syncterm and checking the result for zero
-(the whole operation is thread-safe, not just the decrement).
-Algorithm \ref{alg:join_and_continue} shows the pseudo code for
-join\_and\_continue.
+%Barrier code is placed at the end of each conjunct,
+%this is named \code{join\_and\_continue} (Figure \ref{fig:par_conj}).
+%This code starts by atomically decrementing the number of outstanding
+%conjuncts in the conjunction's syncterm and checking the result for zero
+%(the whole operation is thread-safe, not just the decrement).
+%Algorithm \ref{alg:join_and_continue} shows the pseudo code for
+%join\_and\_continue.
 
 
 %XXX
