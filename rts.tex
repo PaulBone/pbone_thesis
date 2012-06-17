@@ -179,34 +179,40 @@ it has a higher rate of memory allocation.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{l|r|rrrr}
-\Cbr{Program} & \Cbr{GC Markers} &
-\multicolumn{4}{|c}{Mercury Engines} \\
-\Cbr{} & \Cbr{} & \C{1} & \C{2} & \C{3} & \C{4} \\
+\begin{tabular}{r|rr|rrrr}
+\Cbr{GC Markers} &
+\multicolumn{2}{c|}{Sequential} &
+\multicolumn{4}{c}{Parallel w/ $N$ Mercury Engines} \\
+\Cbr{} &
+\C{no TS} & \Cbr{TS} &
+\C{1} & \C{2} & \C{3} & \C{4} \\
 \hline
-\multirow{6}{*}{raytracer} &
- Sequential & 33.1 (1.13) & -          & -          & - \\
-&TS, no par & 37.4 (1.00) & -          & -          & - \\
-&1          & 37.7 (0.99) & 28.0 (1.34)& 24.8 (1.51)& 23.7 (1.58) \\
-&2          & 32.0 (1.17) & 21.6 (1.73)& 18.1 (2.07)& 16.7 (2.24) \\
-&3          & 29.6 (1.26) & 19.7 (1.90)& 16.3 (2.29)& 14.5 (2.59) \\
-&4          & 29.1 (1.29) & 18.9 (1.98)& 15.3 (2.45)& 13.7 (2.73) \\
 \hline
-\multirow{6}{*}{mandelbrot\_lowalloc} &
- Sequential & 15.3 (1.00) & -          & -          & - \\
-&TS, no par & 15.3 (1.00) & -          & -          & - \\
-&1          & 15.3 (1.00) & 7.7 (1.99) & 5.1 (2.98) & 3.9 (3.94) \\
-&2          & 15.3 (1.00) & 7.7 (1.99) & 5.1 (2.98) & 3.9 (3.94) \\
-&3          & 15.3 (1.00) & 7.7 (1.99) & 5.1 (2.98) & 3.9 (3.94) \\
-&4          & 15.3 (1.00) & 7.7 (1.99) & 5.1 (2.98) & 3.9 (3.94) \\
+\multicolumn{7}{c}{raytracer} \\
 \hline
-\multirow{6}{*}{mandelbrot\_highalloc} &
- Sequential & 36.9 (1.25) & -          & -          & - \\
-&TS, no par & 46.3 (1.00) & -          & -          & - \\
-&1          & 47.4 (0.98) & 33.2 (1.39)& 26.7 (1.73)& 23.6 (1.96) \\
-&2          & 44.7 (1.03) & 29.0 (1.59)& 22.3 (2.08)& 19.0 (2.44) \\
-&3          & 43.0 (1.08) & 27.3 (1.69)& 21.0 (2.20)& 17.7 (2.62) \\
-&4          & 42.7 (1.08) & 26.7 (1.73)& 20.1 (2.30)& 16.9 (2.73) \\
+1 & 33.1 (1.13) & 37.4 (1.00) &
+             37.7 (0.99) & 28.0 (1.34) & 24.8 (1.51) & 23.7 (1.58) \\
+2  & - & - & 32.0 (1.17) & 21.6 (1.73) & 18.1 (2.07) & 16.7 (2.24) \\
+3  & - & - & 29.6 (1.26) & 19.7 (1.90) & 16.3 (2.29) & 14.5 (2.59) \\
+4  & - & - & 29.1 (1.29) & 18.9 (1.98) & 15.3 (2.45) & 13.7 (2.73) \\
+\hline
+\hline
+\multicolumn{7}{c}{mandelbrot\_lowalloc} \\
+\hline
+1 & 15.4 (0.99) & 15.2 (1.00) &
+             15.2 (1.00) &  5.1 (2.96) &  7.7 (1.98) &  3.9 (3.92) \\
+2  & - & - & 15.3 (1.00) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.94) \\
+3  & - & - & 14.3 (1.00) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.94) \\
+4  & - & - & 15.3 (0.99) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.92) \\ 
+\hline
+\hline
+\multicolumn{7}{c}{mandelbrot\_highalloc} \\
+\hline
+1 & 41.0 (1.23) & 50.5 (1.00) &
+             50.6 (1.00) & 33.4 (1.51) & 26.6 (1.90) & 23.4 (2.16) \\
+2  & - & - & 46.7 (1.08) & 28.6 (1.77) & 22.1 (2.28) & 18.8 (2.69) \\
+3  & - & - & 46.3 (1.09) & 27.3 (1.85) & 20.9 (2.42) & 17.3 (2.93) \\
+4  & - & - & 45.6 (1.11) & 26.8 (1.89) & 20.4 (2.48) & 16.7 (3.03) \\
 \end{tabular}
 \end{center}
 \paul{Consider drawing charts for raytracer and mandelbrot so that releative
@@ -215,24 +221,22 @@ performance between different scores can be seen easily.}
 \label{tab:gc}
 \end{table}
 
-\paul{Need to fix the mandelbrot benchmarks, I setup the tests incorrectly}
 \plan{Benchmark data.}
 Table \ref{tab:gc} shows benchmark results for these programs
 with different numbers of Mercury engines and garbage collector threads.
 All benchmarks have an initial heap size of 16MB.
 Each result is measured in seconds and represents the mean of eight samples.
-The first two rows of each group of rows show the time for a sequential
-non thread safe version of the program,
-and a sequential thread safe version
-(the programs where executed in such a way so that they did not execute a
-parallel conjunction).
-Each of the other four rows represent the program's runtime with
-1--4 marker threads (vertical) and
-1--4 Mercury engines (horizontal).
+The first row is the number of garbage collector threads used.
+THe second and third rows give sequential execution times
+without and with thread safty enabled.
+In these rows the programs where executed in such a way so that they did not
+execute a parallel conjunction.
+The remaining four rows give parallel exxecution times using one to four
+Mercury engines. 
 The numbers in parentheses show the relative speedup when compared to the
-``TS, no par'' option for the same program.
+sequential thread safe result for the same program.
 \label{cabsav}
-All our benchmarking was performed on `cabsav',
+We performed our benchmarking on `cabsav',
 a hand built system using a Intel i7-2600K CPU 
 with 16GB of memory.
 Cabsav runs Debian/GNU Linux 6
@@ -263,30 +267,32 @@ Therefore,
 these results support the hypothosis that garbage collection makes it more
 difficult to achieve good speedups when parallelising programs.
 mandelbrot\_highalloc, which stores its data on the heap,
-sees similar trends in performance to that of the raytracer,
-aid is universally slower than the first mandelbrot program.
-mandelbrot\_highalloc achieves a speedup of 1.96 when using four Mercury
+sees similar trends in performance as raytracer.
+Also, it is universally slower than mandelbrot\_lowalloc.
+mandelbrot\_highalloc achieves a speedup of 2.16 when using four Mercury
 engines compared to 1.58 for the raytracer.
-It also achieves a speedup of 1.08 when using four marker threads compared
+It also achieves a speedup of 1.11 when using four marker threads compared
 to 1.29 for the raytracer.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{l|rr|r}
-Program     & Allocations   & Total alloc'd bytes & Alloc rate (M alloc/sec) \\
+\begin{tabular}{l|rr|d{3}}
+\Cbr{Program} & \C{Allocations} & \Cbr{Total alloc'd bytes} & \C{Alloc rate (M alloc/sec)} \\
 \hline
-raytracer   &   561,431,515 &       9,972,697,312 & 16.9 \\
+raytracer   &     561,431,515 &           9,972,697,312 & 16.9 \\
+mandelbrot\_lowalloc
+            &       1,620,928 &              21,598,088 &  0.105 \\
 mandelbrot\_highalloc
-            & 1,829,971,662 &      29,275,209,824 & 49.6 \\
+            &   3,829,971,662 &          29,275,209,824 & 44.6 \\
 \end{tabular}
 \end{center}
 \caption{Memory allocation rates}
 \label{tab:mem_alloc_rate}
 \end{table}
 
-We can see that mandelbrot-heap benefits from parallelism in Mercury
+We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
 more than raytracer does,
-similarly mandelbrot-heap benefits less from parallelism in the garbage
+similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
 collector than raytracer does.
 These results initially lead us to beleive that
 mandelbrot\_highalloc is less allocation intensive
@@ -295,27 +301,35 @@ but this is not true.
 Using Mercury's deep profiler we measured the number and size of memory
 allocations and how much memory was used by each program.
 This is shown in Table \ref{tab:mem_alloc_rate}.
-The rightmost column in this table gives the allocation rate,
-measured in million allocations per second;
-it is calculated by dividing the number of allocations in the second column
-by the average sequential execution time reported in Table \ref{tab:gc}.
+The rightmost column in this table gives the allocation rate
+measured in million allocations per second.
+It is calculated by dividing the number of allocations in the second column
+by the average sequential non thread safe execution time reported in Table
+\ref{tab:gc}.
+
+These trends do not match what we would expect by looking at the programs'
+allocation rates.
+This may be due to changing allocation rates throughout the programs'
+executions.
 We noticed that while benchmarking the raytracer that if we rendered the
 image upside-down (by iterating over the rows backwards)
 we would get different performance results.
 This is because the top of the image we used contains sky,
-which was a flat colour,
-and the bottom of the image will contains ground,
+which has no geometry;
+it is the flat colour of the background,
+and the bottom of the image contains ground;
 which has more detail.
 Rendering the ground will natrually be more complicated and require more
 memory allocation than rendering the sky.
 Memory allocation in one part of a program can affect the performance of
-allocation and collection in another part of the program,
-which is why performance changed when we rendered an image upside down.
+allocation and collection in another part of the program.
+This is many because the garbage collector will increase the size of the heap
+to satisfy large and/or many allocations.
+This is why rendering the image upside down had a different execution time to
+rendering it the right way up.
 Simiarly,
-the mandelbrot image has sections that are more complicated than others.
-The apparent difference between the raytracer and mandelbrot\_highalloc
-benchmarks are likly to be due to changing allocation rates throughout their
-execution.
+the mandelbrot program has sections in its image that require more iterations
+of the equation than others.
 
 
 \plan{Compare performance vs Amdahl's predictions for sequential marking.}
@@ -329,8 +343,8 @@ not that parallelisation is not easy.
 \begin{center}
 \begin{tabular}{r|rr|rrrr}
 \Cbr{Initial} &
-\multicolumn{2}{|c|}{Sequential} &
-\multicolumn{4}{|c}{Mercury Engines} \\
+\multicolumn{2}{c|}{Sequential} &
+\multicolumn{4}{c}{Parallel w/ $N$ Mercury Engines} \\
 \Cbr{heap size} & \C{no TS}   & \Cbr{TS}    & \C{1}       & \C{2}       & \C{3}       & \C{4} \\
 \hline
 \hline
@@ -348,14 +362,14 @@ not that parallelisation is not easy.
 \hline
 \multicolumn{7}{c}{mandelbrot\_heap} \\
 \hline
-1MB    & 38.7 (1.19) & 48.9 (0.95) & 50.9 (0.91) & 34.0 (1.36) & 27.4 (1.69) & 24.7 (1.87) \\
-16MB   & 36.9 (1.25) & 46.3 (1.00) & 47.4 (0.98) & 33.2 (1.39) & 26.7 (1.73) & 23.6 (1.96) \\
-32MB   & 35.6 (1.30) & 45.0 (1.03) & 48.3 (0.96) & 31.5 (1.47) & 25.0 (1.85) & 21.9 (2.11) \\
-64MB   & 33.8 (1.37) & 44.2 (1.05) & 43.7 (1.06) & 28.8 (1.61) & 22.7 (2.04) & 19.6 (2.36) \\
-128MB  & 32.4 (1.43) & 44.6 (1.04) & 42.7 (1.08) & 26.4 (1.75) & 20.0 (2.31) & 16.9 (2.73) \\
-256MB  & 31.5 (1.47) & 41.4 (1.12) & 42.6 (1.09) & 24.5 (1.88) & 18.3 (2.53) & 15.0 (3.08) \\
-384MB  & 31.2 (1.49) & 41.9 (1.10) & 41.2 (1.12) & 24.4 (1.90) & 17.6 (2.63) & 14.4 (3.21) \\
-512MB  & 30.8 (1.50) & 41.3 (1.12) & 42.0 (1.10) & 23.6 (1.96) & 17.4 (2.67) & 14.1 (3.27) \\
+1MB    & 41.7 (1.21) & 51.8 (0.98) & 51.4 (0.98) & 33.1 (1.53) & 26.9 (1.88) & 23.5 (2.15) \\
+16MB   & 41.0 (1.23) & 50.5 (1.00) & 50.6 (1.00) & 33.4 (1.51) & 26.6 (1.90) & 23.4 (2.16) \\
+32MB   & 39.1 (1.29) & 49.2 (1.03) & 49.5 (1.02) & 31.9 (1.58) & 25.9 (1.95) & 22.9 (2.21) \\
+64MB   & 36.8 (1.37) & 46.5 (1.09) & 47.2 (1.07) & 29.6 (1.70) & 23.6 (2.14) & 20.9 (2.41) \\
+128MB  & 34.7 (1.45) & 44.1 (1.14) & 44.2 (1.14) & 26.9 (1.87) & 20.7 (2.44) & 17.8 (2.83) \\
+256MB  & 32.3 (1.56) & 43.2 (1.17) & 42.2 (1.20) & 24.9 (2.03) & 18.5 (2.74) & 15.5 (3.26) \\
+384MB  & 31.7 (1.59) & 41.7 (1.21) & 42.2 (1.20) & 24.1 (2.09) & 18.0 (2.81) & 14.6 (3.46) \\
+512MB  & 31.9 (1.58) & 42.0 (1.20) & 42.7 (1.18) & 23.8 (2.12) & 17.8 (2.84) & 14.3 (3.53) \\
 \end{tabular}
 \end{center}
 \caption{Varying the initial heapsize in parallel Mercury programs.}

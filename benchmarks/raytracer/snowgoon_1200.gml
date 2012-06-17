@@ -24,6 +24,10 @@
   v1 getz v2 getz addf point
 } /addp
 
+%
+% Sky is defined here, but it is not used elsewhere in this file,
+% which is why I can say (chapter 3) that the sky has no geometry.
+%
 %%%%%%%%%%%%% The Sky
 { /u /v /face
   blue
