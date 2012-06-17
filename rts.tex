@@ -136,7 +136,8 @@ from a global structure and will need to perform locking then,
 but this cost will be amortised across a number of memory allocations.
 
 \paul{Check that this is all independent parallelism}
-\plan{Describe icfp2000, mandelbrot and mandelbrot\_heap programs.}
+\plan{Describe icfp2000, mandelbrot\_lowalloc and mandelbrot\_highalloc
+programs.}
 One of our benchmarks is a raytracer developed for the
 ICFP programming contest in 2000.
 For each pixel in the image the raytracer casts a ray into the scene to
@@ -214,6 +215,7 @@ performance between different scores can be seen easily.}
 \label{tab:gc}
 \end{table}
 
+\paul{Need to fix the mandelbrot benchmarks, I setup the tests incorrectly}
 \plan{Benchmark data.}
 Table \ref{tab:gc} shows benchmark results for these programs
 with different numbers of Mercury engines and garbage collector threads.
@@ -253,29 +255,68 @@ achieves a speedup of 2.73,
 this likely indicates that the program's high allocation rate causes
 contention on the garbage collector's locks,
 although we investigate another likely cause below.
-The first mandelbrot program, the one that stores values on the stack,
-does not see any benefit from parallel marking.
+mandelbrot\_lowalloc does not see any benefit from parallel marking.
 It achieves very good speedups from multiple Mercury engines.
 We know that this program has a low allocation rate
 but is otherwise parallelised in the same way as raytracer.
 Therefore,
-these results support the idea that garbage collection makes it more
+these results support the hypothosis that garbage collection makes it more
 difficult to achieve good speedups when parallelising programs.
-mandelbrot-heap, which stores its data on the heap,
+mandelbrot\_highalloc, which stores its data on the heap,
 sees similar trends in performance to that of the raytracer,
 aid is universally slower than the first mandelbrot program.
-mandelbrot-heap achieves a speedup of 1.96 when using four Mercury engines
-compared to 1.58 for the raytracer.
+mandelbrot\_highalloc achieves a speedup of 1.96 when using four Mercury
+engines compared to 1.58 for the raytracer.
 It also achieves a speedup of 1.08 when using four marker threads compared
 to 1.29 for the raytracer.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l|rr|r}
+Program     & Allocations   & Total alloc'd bytes & Alloc rate (M alloc/sec) \\
+\hline
+raytracer   &   561,431,515 &       9,972,697,312 & 16.9 \\
+mandelbrot\_highalloc
+            & 1,829,971,662 &      29,275,209,824 & 49.6 \\
+\end{tabular}
+\end{center}
+\caption{Memory allocation rates}
+\label{tab:mem_alloc_rate}
+\end{table}
+
 We can see that mandelbrot-heap benefits from parallelism in Mercury
 more than raytracer does,
 similarly mandelbrot-heap benefits less from parallelism in the garbage
 collector than raytracer does.
-This shows that mandelbrot\_highalloc is less allocation intensive
-than raytracer.
-\paul{I could conform this using the profiler, I might if I felt I had the
-time.}
+These results initially lead us to beleive that
+mandelbrot\_highalloc is less allocation intensive
+than raytracer,
+but this is not true.
+Using Mercury's deep profiler we measured the number and size of memory
+allocations and how much memory was used by each program.
+This is shown in Table \ref{tab:mem_alloc_rate}.
+The rightmost column in this table gives the allocation rate,
+measured in million allocations per second;
+it is calculated by dividing the number of allocations in the second column
+by the average sequential execution time reported in Table \ref{tab:gc}.
+We noticed that while benchmarking the raytracer that if we rendered the
+image upside-down (by iterating over the rows backwards)
+we would get different performance results.
+This is because the top of the image we used contains sky,
+which was a flat colour,
+and the bottom of the image will contains ground,
+which has more detail.
+Rendering the ground will natrually be more complicated and require more
+memory allocation than rendering the sky.
+Memory allocation in one part of a program can affect the performance of
+allocation and collection in another part of the program,
+which is why performance changed when we rendered an image upside down.
+Simiarly,
+the mandelbrot image has sections that are more complicated than others.
+The apparent difference between the raytracer and mandelbrot\_highalloc
+benchmarks are likly to be due to changing allocation rates throughout their
+execution.
+
 
 \plan{Compare performance vs Amdahl's predictions for sequential marking.}
 \paul{XXX: Use threadscope to determine what percentage of the time programs
@@ -344,50 +385,42 @@ Therefore it cannot be used practically and we do not report on it here.
 \status{Checking plan for this section}
 
 \plan{Global spark queue and Contention wrt global queue}
+Mercury has a global spark queue.
+The runtime can easily schedule a spark by placing it on the end of the
+global queue.
+An idle engine can take a spark from the beginning of the queue to work on
+it.
+The global spark queue must be protected by locks to prevent cuncurrent
+access from currupting the queue.
+The global spark queue and its lock can easily become a bottleneck when many
+enignes content for access to the global queue.
 
 \plan{Local spark stack --- relieves contention on global queue}
-
-%Sparks are managed in two different data structures.
-%The first data structure is a global queue,
-%since it is global it must be protected with a mutex.
-%It is used in a first-in-first-out manner.
-%The second is a context-local stack,
-%The stack data structure used is described by \citet{workstealing_queue},
-%this was chosen as it could support work stealing.
-%The top of the stack is sometimes referred to as the \emph{hot end},
-%since it is used frequently.
-%Likewise, the bottom of the stack is sometimes called the
-%\emph{cold end}, since it is only used to implement work stealing.
-%The top of the stack, or hot end, can be used without locking or atomic
-%operations.
-%This is desirable, since it makes common operations inexpensive.
-%The local context uses the top of the stack only,
-%therefore sparks placed on this stack are scheduled in a
-%last-in-first-out manner.
-
+\citet{wang-hons} expected this problem and created context local spark stacks
+to avoid contention on the global queue.
+Furthermore, the local spark stacks do not require locking.
+When a parallel conjunction spawns off a spark it can place the spark either
+at the end of the global spark queue or at the top of its local spark stack.
 \plan{Spark scheduling decision}
-%When a spark is spawned off by a parallel conjunction
-%it is added to a global spark queue provided that there is not too much
-%globally available parallel work.
-%This is true if:
-%an engine is idle and,
-%the number of contexts in use plus the number of sparks in the global queue
-%does not exceed the maximum number of contexts permitted.
-%If these tests fail then the spark will be placed on the local context's
-%spark stack,
-%which is done safely without locking.
-%This is an optimisation,
-%in the common case that there is already enough parallel work,
-%a spark can be scheduled without contending for a lock which could slow the
-%system down.
-%The limit of contexts in use plus the number of sparks in the global queue
-%represents how many contexts would be in use of all the sparks in the global
-%queue where converted to contexts.
-%This limit places an upper bound on the number of contexts that may be
-%allocated,
-%which limits the amount of memory that can be allocated as stack space for
-%contexts
-%(recall that each context contains space for stacks).
+The runtime system appends the spark to the end of the global queue if:
+an engine is idle, and
+the number of contexts in use plus the number of sparks on the global queue
+does not exceed the maximum number of contexts permitted.
+Otherwise,
+the runtime system pushes the spark onto the top of the context's local
+spark stack.
+Wang's scheduling decision has two aims:
+Firstly, to reduce the contention on the global queue,
+especially in the common case that there is enough parallel work.
+This also reduces the amount of locking.
+Secondly, the scheduling decision prevents the creation of too many contexts
+as their stacks consume memory.
+Globally scheduled sparks may be convered into contexts so they are also
+included in this limit.
+Note that sparks placed on the global queue are executed in a
+first-in-first-out manner, while
+sparks placed on a context's local stack are executed in a
+last-in-first-out manner.
 
 \begin{algorithm}
 \begin{algorithmic}
@@ -759,6 +792,20 @@ limit}
 
 \section{Work stealing implementation}
 \label{sec:work_stealing}
+
+The stack data structure used is described by \citet{workstealing_queue},
+this was chosen as it could support work stealing (Section
+\ref{sec:work_stealing}).
+%The top of the stack is sometimes referred to as the \emph{hot end},
+%since it is used frequently.
+%Likewise, the bottom of the stack is sometimes called the
+%\emph{cold end}, since it is only used to implement work stealing.
+%The top of the stack, or hot end, can be used without locking or atomic
+%operations.
+%This is desirable, since it makes common operations inexpensive.
+%The local context uses the top of the stack only,
+%therefore sparks placed on this stack are scheduled in a
+%last-in-first-out manner.
 
 \status{Not written}
 
