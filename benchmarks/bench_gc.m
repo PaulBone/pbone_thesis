@@ -105,10 +105,10 @@ test_group_rtopts =
 
 programs = [
     program("mandelbrot", "mandelbrot", "mandelbrot",
-        "-l -x 600 -y 600",
+        "-x 600 -y 600",
         mandelbrot_args),
     program("mandelbrot_heap", "mandelbrot_heap", "mandelbrot",
-        "-l -x 600 -y 600",
+        "-x 600 -y 600",
         mandelbrot_args),
     program("raytracer", "raytracer", "main",
         " < raytracer/snowgoon_1200.gml",
