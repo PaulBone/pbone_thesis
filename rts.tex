@@ -438,7 +438,7 @@ last-in-first-out manner.
 
 \begin{algorithm}
 \begin{algorithmic}
-\Procedure{join\_and\_continue}{$ST, ContLabel$}
+\Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State aquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
   \If{$ST.num\_outstanding = 0$}
@@ -448,63 +448,71 @@ last-in-first-out manner.
     \Else
       \State schedule($ST.parent$)
       \State release\_lock($ST.lock$)
-      \Goto{get\_global\_work}
+      \Goto{MR\_get\_global\_work}
     \EndIf
   \Else
-    \State $spark \gets$ pop\_compatible\_spark
+    \State $spark \gets$ pop\_spark
     \If{$spark$}
-       \State release\_lock($ST.lock$)
-       \Goto{$spark.code\_label$}
-    \Else
-      \If{$ST.parent = this\_context$}
-         \State suspend($this\_context$)
-         \State $this\_context \gets$ NULL
+      \If{$spark.parent = ST.parent$}
+        \State release\_lock($ST.lock$)
+        \Goto{$spark.code\_label$}
       \EndIf
-      \State release\_lock($ST.lock$)
-      \Goto{get\_global\_work}
+      \State push\_spark($spark$)
     \EndIf
+    \If{$ST.parent = this\_context$}
+       \State suspend($this\_context$)
+       \State $this\_context \gets$ NULL
+    \EndIf
+    \State release\_lock($ST.lock$)
+    \Goto{MR\_get\_global\_work}
   \EndIf
 \EndProcedure
 \end{algorithmic}
-\caption{join\_and\_continue}
+\caption{MR\_join\_and\_continue}
 \label{alg:join_and_continue_peterw}
 \end{algorithm}
 
 \paul{Make the pop compatible spark decision clearer.}
 
 \plan{barrier code, this is used to explain the right recursion problem.}
-%As an engine finishes executing a parallel conjunct,
-%it will execute the the barrier at the end of the conjunct,
-%named \joinandcontinue and shown in
-%Algorithm \ref{alg:join_and_continue_peterw}.
-%If it is known that the parallel conjunction has only been executed by
-%one context,
-%then it is safe to use a version of the barrier code that does not use
-%locking,
-%this optimisation is not shown as it is equivalent and not relevant to
-%our discussion,
-%it is described only for completeness.
+As an engine finishes executing a parallel conjunct,
+it will execute the the barrier at the end of the conjunct.
+The barrier is named \joinandcontinue and shown in
+Algorithm \ref{alg:join_and_continue_peterw}.
+If the parallel conjunction has only been executed by
+one context,
+then it is safe to use a version of the barrier code that does not use
+locking,
+this optimisation is not shown as it is equivalent and not relevant to
+our discussion,
+we mention it only for completeness.
 
-%The algorithm begins by checking if there are any outstanding conjuncts in
-%the parallel conjunction.
-%If there are none and the current context is the parent
-%context,
-%then execution jumps to the label after the parallel conjunction.
-%If the current context is not the parent context then
-%we can infer that the parent context is suspended,
-%therefore,
-%the engine will schedule the parent context, before looking for global work.
-%It looks for global work because its local work queue is guaranteed to be
-%empty since this conjunction and any nested conjunctions are complete.
-%Alternatively, if there are outstanding conjuncts then
-%the local spark stack is checked for compatible work ---
-%a spark whose parent context is the same as the current syncterm's parent
-%context.
-%If a compatible spark is at the top of the spark stack then it is removed
-%and executed.
-%Otherwise,
-%if this context is the parent context it must be suspended
-%before the engine looks for global work.
+The algorithm begins by checking if there are any outstanding conjuncts in
+the parallel conjunction.
+If there are no outstanding conjuncts and the current context is the parent
+context,
+then execution jumps to the label after the parallel conjunction.
+If the current context is not the parent context then
+we can infer that the parent context is suspended.
+Therefore,
+the engine will schedule the parent context.
+The context's local work queue is guarenteed to be empty,
+as this conjunction and any nested conjunctions are complete.
+Therefore,
+the engine will continue by jumping to the \getglobalwork routine
+which is described below.
+Alternatively,
+if \joinandcontinue found that there are outstanding conjuncts then
+the local spark stack is checked for a compatible spark.
+A spark is compatible if its parent context is the same as the
+syncterm's parent context.
+If such a spark is found is at the top of the spark stack then it is removed
+and executed.
+Otherwise,
+the algorithm checks if this context is the parent context,
+if it is it suspends the context.
+Then the algorithm jumps to \getglobalwork.
+
 
 \plan{Explain how work begins executing, for completeness}
 \paul{Talk about get\_global\_work().}
