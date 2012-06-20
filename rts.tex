@@ -331,10 +331,29 @@ Simiarly,
 the mandelbrot program has sections in its image that require more iterations
 of the equation than others.
 
+\begin{table}
+\begin{center}
+\begin{tabular}{l|rrrr}
+\Cbr{} &
+\multicolumn{4}{c}{Parallel w/ $N$ Mercury Engines} \\
+\Cbr{}       & \C{1} & \C{2} & \C{3} & \C{4} \\
+\hline
+\hline
+\multicolumn{5}{c}{raytracer} \\
+\hline
+Elapsed Time & 37.7  & 28.0  & 24.8  & 23.7 \\
+GC time      & \\
+Mutator time & \\
+\end{tabular}
+\end{center}
+\caption{Percentage of runtime used by GC}
+\label{tab:gc_amdehl}
+\end{table}
 
 \plan{Compare performance vs Amdahl's predictions for sequential marking.}
 \paul{XXX: Use threadscope to determine what percentage of the time programs
 spend in the garbage collector and compare to prediction}
+
 
 \plan{Parallel marking performance observations.}
 not that parallelisation is not easy.
