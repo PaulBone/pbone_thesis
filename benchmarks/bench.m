@@ -61,6 +61,7 @@
 :- import_module cord.
 :- import_module float.
 :- import_module getopt.
+:- import_module maybe.
 :- import_module require.
 
 :- import_module result.
@@ -247,7 +248,8 @@ rebuild_prog(Build, !IO) :-
     system("mmake depend", !IO),
     system("mmake all", !IO),
     cd("..", !IO),
-    rename("tempdir/" ++ Binary, Target, !IO).
+    rename("tempdir/" ++ Binary, Target, Res, !IO),
+    check_error($module, $pred, Res, !IO).
 
 % Run tests.
 %------------------------------------------------------------------------%
@@ -263,6 +265,10 @@ rebuild_prog(Build, !IO) :-
 
                     % The command to run the test.
                 t_cmd       :: string,
+
+                    % The name of the eventlog file (for threadscope) if
+                    % there is one.
+                t_eventlog  :: string,
 
                     % Environments to set.
                 t_envs      :: envs_spec
@@ -300,15 +306,16 @@ make_tests(config(_, ConfigData, _, Configs), Tests) :-
 :- func make_test(program, test_config) = test.
 
 make_test(Program, Config) =
-        test(Name, Cmd, Envs) :-
+        test(Name, Cmd, Eventlog, Envs) :-
     Config = test_config(Group, Grade, Envs),
     Target = get_target(Group, Grade, Program),
     EnvOptsName = Envs ^ evs_name,
-    Name = format("%s_%s", [s(Target), s(EnvOptsName)]), 
+    Name = format("%s_%s", [s(Target), s(EnvOptsName)]),
     ProgArgs = Program ^ p_args,
     GetArgs = Program ^ p_extra_args,
     TestProgArgs = GetArgs(Group),
-    Cmd = format("./%s %s %s", [s(Target), s(TestProgArgs), s(ProgArgs)]).
+    Cmd = format("./%s %s %s", [s(Target), s(TestProgArgs), s(ProgArgs)]),
+    Eventlog = format("%s.eventlog", [s(Target)]).
 
     % Run all the tests,
     %
@@ -328,7 +335,7 @@ run_tests(Config, Stream, Results, !IO) :-
     flush_output(!IO).
 
     % run_test(Samples, Stream, Test, Results, !IO)
-    % 
+    %
     % Run a single test. Samples gives the number of times to repeat the
     % test, a item is Results is generated for each sample.
     %
@@ -337,11 +344,11 @@ run_tests(Config, Stream, Results, !IO) :-
 
 run_test(Config, Stream, Test, Results, !IO) :-
     Samples = Config ^ c_samples,
-    Test = test(Name, Cmd, Environment),
+    Test = test(Name, Cmd, Eventlog, Environment),
     EvPairs = Environment ^ evs_pairs,
     foldl(setenv, EvPairs, !IO),
     format("Running %s\n", [s(Name)], !IO),
-    run_test_samples(Samples, Cmd, Times, !IO),
+    run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO),
     print_results(Results, Cord),
     ResultsStr = append_list(list(Cord)),
     write_string(ResultsStr, !IO),
@@ -356,18 +363,21 @@ setenv(env_spec(Name, Value), !IO) :-
 
     % This is the loop that run_tests uses.
     %
-:- pred run_test_samples(int::in, string::in, list(float)::out, io::di, io::uo)
-    is det. 
+:- pred run_test_samples(string::in, int::in, string::in, string::in,
+    list(float)::out, io::di, io::uo) is det.
 
-run_test_samples(Samples, Cmd, Times, !IO) :-
+run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
     ( Samples > 0 ->
-        run_test_samples(Samples - 1, Cmd, Times0, !IO),
+        run_test_samples(Name, Samples - 1, Cmd, Eventlog, Times0, !IO),
         promise_equivalent_solutions [Time, !:IO] (
             time((pred(IO0::di, IO::uo) is det :-
                     system(Cmd, IO0, IO)
                 ), Time, !IO)
         ),
-        Times = [Time | Times0]
+        Times = [Time | Times0],
+        rename(Eventlog, format("%s_%d.eventlog", [s(Name), i(Samples)]),
+            Res, !IO),
+        check_error($module, $pred, Res, !IO)
     ;
         Times = []
     ).
@@ -438,7 +448,7 @@ config_builds(Group, Grades, MCFlags, Configs) :-
         Grades).
 
 :- pred config_tests(string::in, list(grade_spec)::in,
-    list(int)::in, list(int)::in, list(rtopts_spec)::in, 
+    list(int)::in, list(int)::in, list(rtopts_spec)::in,
     list(test_config)::out) is det.
 
 config_tests(Group, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
@@ -447,7 +457,7 @@ config_tests(Group, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
         condense(map((func(GCMarkers) =
             map((func(GCInitialHeapSize) = Environment :-
                 Name = format("%s_gc-m%d_gc-sz%d",
-                    [s(RTO ^ rto_name), i(GCMarkers), 
+                    [s(RTO ^ rto_name), i(GCMarkers),
                         i(GCInitialHeapSize / (1024*1024))]),
                 Environment = envs_spec(Name,
                     [
@@ -601,15 +611,17 @@ cd(Dir, !IO) :-
         IO = IO0;
     ").
 
-:- pred rename(string::in, string::in, io::di, io::uo) is det.
+:- pred rename(string::in, string::in, maybe_error::out, io::di, io::uo)
+    is det.
 
-rename(Src, Dest, !IO) :-
-    rename_file(Src, Dest, Res, !IO),
+rename(Src, Dest, Res, !IO) :-
+    rename_file(Src, Dest, Res0, !IO),
     (
+        Res0 = ok,
         Res = ok
     ;
-        Res = error(Error),
-        unexpected($module, $pred, error_message(Error))
+        Res0 = error(Error),
+        Res = error(error_message(Error))
     ).
 
 :- pred getenv(string::in, string::out, io::di, io::uo) is det.
@@ -691,4 +703,11 @@ gettimeofday(Time, !IO) :-
         USecs = t.tv_usec;
         IO = IO0;
     ").
+
+:- pred check_error(string::in, string::in, maybe_error::in,
+    io::di, io::uo) is det.
+
+check_error(_, _, ok, !IO).
+check_error(Module, Pred, error(Error), !IO) :-
+    unexpected(Module, Pred, Error).
 
