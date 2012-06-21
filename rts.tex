@@ -276,6 +276,91 @@ to 1.29 for the raytracer.
 
 \begin{table}
 \begin{center}
+\begin{tabular}{l|d{1} r d{1} r d{1} r d{1} r }
+\Cbr{} &
+\multicolumn{8}{c}{Parallel w/ $N$ Mercury Engines} \\
+\Cbr{}       & \Ctwo{1}        & \Ctwo{2}        & \Ctwo{3}        & \Ctwo{4} \\
+\hline
+\hline
+\multicolumn{9}{c}{raytracer} \\
+\hline
+Elapsed time & 37.8 &          & 28.1 &          & 24.7 &          & 22.7 & \\
+GC time      & 16.9 & (44.8\%) & 16.7 & (59.4\%) & 16.5 & (66.6\%) & 15.8 & (69.5\%) \\
+Mutator time & 20.9 & (55.2\%) & 11.4 & (40.6\%) &  8.2 & (33.4\%) &  6.9 & (30.5\%) \\
+No. collections & 384 &        & 346  &          & 316  &          & 288  & \\
+\hline
+\hline
+\multicolumn{9}{c}{mandelbrot\_lowalloc} \\
+\hline
+Elapsed time & 15.2 &          &  7.7 &          &  5.1 &          &  3.9 & \\
+GC time      &  0.0 &  (0.1\%) &  0.0 &  (0.2\%) &  0.0 &  (0.7\%) &  0.0 &  (0.4\%) \\
+Mutator time & 15.2 & (99.9\%) &  7.6 & (99.8\%) &  5.1 & (99.3\%) &  3.9 & (99.6\%) \\
+No. collections & 2 &          &  2   &          &  2   &          &  2   & \\
+\hline
+\hline
+\multicolumn{9}{c}{mandelbrot\_highalloc} \\
+\hline
+Elapsed time & 51.7 &          & 34.0 &          & 27.2 &          & 24.0 & \\
+GC time      & 11.0 & (21.4\%) & 11.5 & (33.6\%) & 11.5 & (42.2\%) & 11.8 & (49.1\%) \\
+Mutator time & 40.7 & (78.6\%) & 22.6 & (55.4\%) & 15.5 & (57.8\%) & 12.2 & (50.9\&) \\
+No. collections & 742 &        & 692  &          & 634 &           & 602 & \\
+\end{tabular}
+\end{center}
+\caption{Percentage of runtime used by GC}
+\label{tab:gc_amdehl}
+\end{table}
+
+\plan{Compare performance vs Amdahl's predictions for sequential marking.}
+We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
+more than raytracer does,
+similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
+collector than raytracer does.
+Using ThreadScope (Chapter \ref{chap:tscoe}),
+analysed how much time these programs spend in collector and mutator time.
+This results are shown in Table \ref{tab:gc_amdehl}.
+The table shows the elapsed time, collector time, mutator time and the
+number of collections for each program using 1--4 engines.
+The times are averages taken from eight samples,
+using a single garbage collector thread and an initial heap size of 16MB.
+We compiled in support support for ThreadScope;
+therefore these results differ slightly from those in table \ref{tab:gc}.
+Next to both the collector time and mutator time 
+we show the percentage of elapsed time taken by either collector or mutator
+time respectivly.
+
+As expected, mandelbrot\_lowalloc spends very little time running the collector.
+Typically, it ran the collector only twice during its execution.
+The other two programs ran the collector hundreds of times.
+THey also made fewer collections if more Mercury engines were being used.
+When using one Mercury engine,
+the raytracer spends 16.9 seconds or 44.8\% of its time in the garbage
+collector.
+As we increase the number of Mercury engines, the time spent in the
+collector decreases slightly, along with the number of collections.
+However, the percentage of elapsed time spent in the collector increases,
+because the elapsed time decreases.
+The mutator time decrases almost linarly as the number of engines increases.
+This shows how parallelism reducing the amount of mutator time,
+but not having an affect on garbage collector time.
+Futhermore, as predicted by Amdahl,
+the non-parallelised part of the program, the garbage collector,
+begins to dominate the program's execution.
+mandelbrot\_highalloc spends less of its time in garbage collection than
+raytracer.
+This matches the results in \ref{tab:gc}:
+mandelbrot\_highalloc benifits less from parallelism in the garbage
+collector than raytracer because it spends less time doing garbage
+collection.
+Similarly, it benifits more from parallelism in Mercury than raytracer
+because it spends more time executing the Mercury code.
+In general,
+mandelbrot\_highalloc has similar trends when compared with raytracer,
+except that it spends more of its time in garbage collection as the number
+of engines increases rather than less.
+\paul{Why?}
+
+\begin{table}
+\begin{center}
 \begin{tabular}{l|rr|d{3}}
 \Cbr{Program} & \C{Allocations} & \Cbr{Total alloc'd bytes} & \C{Alloc rate (M alloc/sec)} \\
 \hline
@@ -290,10 +375,8 @@ mandelbrot\_highalloc
 \label{tab:mem_alloc_rate}
 \end{table}
 
-We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
-more than raytracer does,
-similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
-collector than raytracer does.
+\paul{XXX: Fix these results, they should be based on mutator time not
+elapsed time}
 These results initially lead us to beleive that
 mandelbrot\_highalloc is less allocation intensive
 than raytracer,
@@ -330,43 +413,6 @@ rendering it the right way up.
 Simiarly,
 the mandelbrot program has sections in its image that require more iterations
 of the equation than others.
-
-\begin{table}
-\begin{center}
-\begin{tabular}{l|d{1} r d{1} r d{1} r d{1} r }
-\Cbr{} &
-\multicolumn{8}{c}{Parallel w/ $N$ Mercury Engines} \\
-\Cbr{}       & \Ctwo{1}        & \Ctwo{2}        & \Ctwo{3}        & \Ctwo{4} \\
-\hline
-\hline
-\multicolumn{9}{c}{raytracer} \\
-\hline
-Elapsed time & 37.8 &          & 28.1 &          & 24.7 &          & 22.7 & \\
-GC time      & 16.9 & (44.8\%) & 16.7 & (59.4\%) & 16.5 & (66.6\%) & 15.8 & (69.5\%) \\
-Mutator time & 20.9 & (55.2\%) & 11.4 & (40.6\%) &  8.2 & (33.4\%) &  6.9 & (30.5\%) \\
-\hline
-\hline
-\multicolumn{9}{c}{mandelbrot\_lowalloc} \\
-\hline
-Elapsed time & 15.2 &          &  7.7 &          &  5.1 &          &  3.9 & \\
-GC time      &  0.0 &  (0.1\%) &  0.0 &  (0.2\%) &  0.0 &  (0.7\%) &  0.0 &  (0.4\%) \\
-Mutator time & 15.2 & (99.9\%) &  7.6 & (99.8\%) &  5.1 & (99.3\%) &  3.9 & (99.6\%) \\
-\hline
-\hline
-\multicolumn{9}{c}{mandelbrot\_highalloc} \\
-\hline
-Elapsed time & 51.7 &          & 34.0 &          & 27.2 &          & 24.0 & \\
-GC time      & 11.0 & (21.4\%) & 11.5 & (33.6\%) & 11.5 & (42.2\%) & 11.8 & (49.1\%) \\
-Mutator time & 40.7 & (78.6\%) & 22.6 & (55.4\%) & 15.5 & (57.8\%) & 12.2 & (50.9\&) \\ 
-\end{tabular}
-\end{center}
-\caption{Percentage of runtime used by GC}
-\label{tab:gc_amdehl}
-\end{table}
-
-\plan{Compare performance vs Amdahl's predictions for sequential marking.}
-\paul{XXX: Use threadscope to determine what percentage of the time programs
-spend in the garbage collector and compare to prediction}
 
 
 \plan{Parallel marking performance observations.}
