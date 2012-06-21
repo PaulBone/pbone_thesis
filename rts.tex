@@ -333,17 +333,31 @@ of the equation than others.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{l|rrrr}
+\begin{tabular}{l|d{1} r d{1} r d{1} r d{1} r }
 \Cbr{} &
-\multicolumn{4}{c}{Parallel w/ $N$ Mercury Engines} \\
-\Cbr{}       & \C{1} & \C{2} & \C{3} & \C{4} \\
+\multicolumn{8}{c}{Parallel w/ $N$ Mercury Engines} \\
+\Cbr{}       & \Ctwo{1}        & \Ctwo{2}        & \Ctwo{3}        & \Ctwo{4} \\
 \hline
 \hline
-\multicolumn{5}{c}{raytracer} \\
+\multicolumn{9}{c}{raytracer} \\
 \hline
-Elapsed Time & 37.7  & 28.0  & 24.8  & 23.7 \\
-GC time      & \\
-Mutator time & \\
+Elapsed time & 37.8 &          & 28.1 &          & 24.7 &          & 22.7 & \\
+GC time      & 16.9 & (44.8\%) & 16.7 & (59.4\%) & 16.5 & (66.6\%) & 15.8 & (69.5\%) \\
+Mutator time & 20.9 & (55.2\%) & 11.4 & (40.6\%) &  8.2 & (33.4\%) &  6.9 & (30.5\%) \\
+\hline
+\hline
+\multicolumn{9}{c}{mandelbrot\_lowalloc} \\
+\hline
+Elapsed time & 15.2 &          &  7.7 &          &  5.1 &          &  3.9 & \\
+GC time      &  0.0 &  (0.1\%) &  0.0 &  (0.2\%) &  0.0 &  (0.7\%) &  0.0 &  (0.4\%) \\
+Mutator time & 15.2 & (99.9\%) &  7.6 & (99.8\%) &  5.1 & (99.3\%) &  3.9 & (99.6\%) \\
+\hline
+\hline
+\multicolumn{9}{c}{mandelbrot\_highalloc} \\
+\hline
+Elapsed time & 51.7 &          & 34.0 &          & 27.2 &          & 24.0 & \\
+GC time      & 11.0 & (21.4\%) & 11.5 & (33.6\%) & 11.5 & (42.2\%) & 11.8 & (49.1\%) \\
+Mutator time & 40.7 & (78.6\%) & 22.6 & (55.4\%) & 15.5 & (57.8\%) & 12.2 & (50.9\&) \\ 
 \end{tabular}
 \end{center}
 \caption{Percentage of runtime used by GC}
