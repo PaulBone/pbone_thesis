@@ -1,0 +1,8 @@
+
+The threadscope data is a little bit too big to store int eh papers CVS
+repository.  It makes it slow to use the repository, especially off
+site.
+
+I've created a git repository at
+/home/mercury/mercury1/pbone_thesis_data that contains this data.
+
