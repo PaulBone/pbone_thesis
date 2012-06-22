@@ -4,13 +4,13 @@
 Early in the project
 we tested two manually parallelised programs:
 a raytracer and a mandelbrot image generator.
-Both of them have a single sagnificant loop
+Both of them have a single significant loop
 whose iterations are independent of one-another.
 We parallelised this loop in each program as it was the best place to
 introduce parallelism,
 but we did not get the speedups that we expected.
-For these programs, automatic parallelisation cannot acheive
-a greater speedup than we have acheived with manual parallelism.
+For these programs, automatic parallelisation cannot achieve
+a greater speedup than we have achieved with manual parallelism.
 Therefore,
 we chose to address the performance problems with manual parallelism
 before we worked on automatic parallelism.
@@ -23,11 +23,11 @@ Section \ref{sec:old_scheduling} describes how the existing runtime
 system schedules sparks.
 It provides background material for Section
 \ref{sec:old_scheduling_performance}
-which benchmarks the runtime system and describes a sagnificant problem with
+which benchmarks the runtime system and describes a significant problem with
 spark scheduling.
 We address those problems by introducing work stealing in Section
 \ref{sec:work_stealing}.
-This section is seperated into two sub-sections
+This section is separated into two sub-sections
 which describe the initial and revised versions of the work stealing
 implementation.
 Section \ref{sec:work_stealing} also includes benchmarks that show
@@ -89,12 +89,12 @@ concurrently with the mutator.
 
 \plan{Describe theory of GC performance.}
 Amdahl's law~\citep{amdahl} describes the maximum speedup that
-can theoroetically  be achieved by parallelising some part of a program,
+can theoretically  be achieved by parallelising some part of a program,
 and allowing the rest of the program to run sequentially.
 When sequential marking is used then can use Amdahl's
 law to predict the speedup of our programs.
 For example, consider a program with a runtime of 20 seconds
-which can be seperated into one second of collector time and 19 seconds
+which can be separated into one second of collector time and 19 seconds
 of mutator time.
 The sequential execution time of the program is $1 + 19 = 20$.
 If we parallelise mutator part of the program and do not parallelise the
@@ -144,8 +144,8 @@ For each pixel in the image the raytracer casts a ray into the scene to
 determine what colour to paint that pixel.
 Two nested loops build the pixels for the image:
 the outer loop iterates over the rows in the image and 
-the inner loop interates over the pixels in each row.
-We manaully parallelised the program by introducing an independent parallel
+the inner loop iterates over the pixels in each row.
+We manually parallelised the program by introducing an independent parallel
 conjunction into the outer loop;
 indicating that rows can be drawn in parallel.
 The raytracer uses many small structures to represent vectors and a pixel's
@@ -160,14 +160,14 @@ A complex number $C$ is in the mandelbrot set if
 $|N|$ is never larger than 2 where $N_{i+1} = N_{i}^2 + C$ and $N_0 = 0$.
 For each pixel in the image the program tests if the pixel's coordinates are
 in the set,
-The pixel's colour is choosen based on how many interations are needed
+The pixel's colour is chosen based on how many iterations are needed
 before $|N| > 2$,
-or black if the test survived 5,000 interations.
+or black if the test survived 5,000 iterations.
 We parallelised this program the same way as we did the raytracer:
 by introducing an independent parallel conjunction into the outer loop.
 We created two versions of this program,
 the first version stores coordinates and complex numbers on the stack and in
-regsiters.
+registers.
 Therefore, this version has a low rate of memory allocation.
 We call this version `mandelbrot\_lowalloc'.
 The second version of the mandelbrot program is called
@@ -228,10 +228,10 @@ All benchmarks have an initial heap size of 16MB.
 Each result is measured in seconds and represents the mean of eight samples.
 The first row is the number of garbage collector threads used.
 THe second and third rows give sequential execution times
-without and with thread safty enabled.
+without and with thread safety enabled.
 In these rows the programs where executed in such a way so that they did not
 execute a parallel conjunction.
-The remaining four rows give parallel exxecution times using one to four
+The remaining four rows give parallel execution times using one to four
 Mercury engines. 
 The numbers in parentheses show the relative speedup when compared to the
 sequential thread safe result for the same program.
@@ -264,7 +264,7 @@ It achieves very good speedups from multiple Mercury engines.
 We know that this program has a low allocation rate
 but is otherwise parallelised in the same way as raytracer.
 Therefore,
-these results support the hypothosis that garbage collection makes it more
+these results support the hypothesis that garbage collection makes it more
 difficult to achieve good speedups when parallelising programs.
 mandelbrot\_highalloc, which stores its data on the heap,
 sees similar trends in performance as raytracer.
@@ -315,18 +315,18 @@ We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
 more than raytracer does,
 similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
 collector than raytracer does.
-Using ThreadScope (Chapter \ref{chap:tscoe}),
+Using \tscope (Chapter \ref{chap:tscoe}),
 analysed how much time these programs spend in collector and mutator time.
 This results are shown in Table \ref{tab:gc_amdehl}.
 The table shows the elapsed time, collector time, mutator time and the
 number of collections for each program using 1--4 engines.
 The times are averages taken from eight samples,
 using a single garbage collector thread and an initial heap size of 16MB.
-We compiled in support support for ThreadScope;
-therefore these results differ slightly from those in table \ref{tab:gc}.
+We compiled in support support for \tscope;
+therefore these results differ slightly from those in Table \ref{tab:gc}.
 Next to both the collector time and mutator time 
 we show the percentage of elapsed time taken by either collector or mutator
-time respectivly.
+time respectively.
 
 As expected, mandelbrot\_lowalloc spends very little time running the collector.
 Typically, it ran the collector only twice during its execution.
@@ -339,19 +339,19 @@ As we increase the number of Mercury engines, the time spent in the
 collector decreases slightly, along with the number of collections.
 However, the percentage of elapsed time spent in the collector increases,
 because the elapsed time decreases.
-The mutator time decrases almost linarly as the number of engines increases.
+The mutator time decreases almost linearly as the number of engines increases.
 This shows how parallelism reducing the amount of mutator time,
 but not having an affect on garbage collector time.
-Futhermore, as predicted by Amdahl,
+Furthermore, as predicted by Amdahl,
 the non-parallelised part of the program, the garbage collector,
 begins to dominate the program's execution.
 mandelbrot\_highalloc spends less of its time in garbage collection than
 raytracer.
 This matches the results in \ref{tab:gc}:
-mandelbrot\_highalloc benifits less from parallelism in the garbage
+mandelbrot\_highalloc benefits less from parallelism in the garbage
 collector than raytracer because it spends less time doing garbage
 collection.
-Similarly, it benifits more from parallelism in Mercury than raytracer
+Similarly, it benefits more from parallelism in Mercury than raytracer
 because it spends more time executing the Mercury code.
 In general,
 mandelbrot\_highalloc has similar trends when compared with raytracer,
@@ -377,7 +377,7 @@ mandelbrot\_highalloc
 
 \paul{XXX: Fix these results, they should be based on mutator time not
 elapsed time}
-These results initially lead us to beleive that
+These results initially lead us to believe that
 mandelbrot\_highalloc is less allocation intensive
 than raytracer,
 but this is not true.
@@ -402,7 +402,7 @@ which has no geometry;
 it is the flat colour of the background,
 and the bottom of the image contains ground;
 which has more detail.
-Rendering the ground will natrually be more complicated and require more
+Rendering the ground will naturally be more complicated and require more
 memory allocation than rendering the sky.
 Memory allocation in one part of a program can affect the performance of
 allocation and collection in another part of the program.
@@ -410,7 +410,7 @@ This is many because the garbage collector will increase the size of the heap
 to satisfy large and/or many allocations.
 This is why rendering the image upside down had a different execution time to
 rendering it the right way up.
-Simiarly,
+Similarly,
 the mandelbrot program has sections in its image that require more iterations
 of the equation than others.
 
@@ -483,10 +483,10 @@ The runtime can easily schedule a spark by placing it on the end of the
 global queue.
 An idle engine can take a spark from the beginning of the queue to work on
 it.
-The global spark queue must be protected by locks to prevent cuncurrent
-access from currupting the queue.
+The global spark queue must be protected by locks to prevent concurrent
+access from corrupting the queue.
 The global spark queue and its lock can easily become a bottleneck when many
-enignes content for access to the global queue.
+engines content for access to the global queue.
 
 \plan{Local spark stack --- relieves contention on global queue}
 \citet{wang-hons} expected this problem and created context local spark stacks
@@ -508,7 +508,7 @@ especially in the common case that there is enough parallel work.
 This also reduces the amount of locking.
 Secondly, the scheduling decision prevents the creation of too many contexts
 as their stacks consume memory.
-Globally scheduled sparks may be convered into contexts so they are also
+Globally scheduled sparks may be converted into contexts so they are also
 included in this limit.
 Note that sparks placed on the global queue are executed in a
 first-in-first-out manner, while
@@ -575,7 +575,7 @@ If the current context is not the parent context then
 we can infer that the parent context is suspended.
 Therefore,
 the engine will schedule the parent context.
-The context's local work queue is guarenteed to be empty,
+The context's local work queue is guaranteed to be empty,
 as this conjunction and any nested conjunctions are complete.
 Therefore,
 the engine will continue by jumping to the \getglobalwork routine
@@ -827,7 +827,7 @@ number of contexts, not contexts per engine.}
 %make many recursive calls, spawn off many sparks.
 %The context limit includes sparks on the global queue since
 %executing them can require the creation of new contexts,
-%furthermore, if they were not included and the runtime system refused to
+%Furthermore, if they were not included and the runtime system refused to
 %convert a spark on the global queue into a context the system could become
 %deadlocked.
 %In the left recursive case,
