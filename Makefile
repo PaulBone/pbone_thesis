@@ -48,7 +48,7 @@ else
 endif
 
 .PHONY : all
-all : thesis.pdf undefined.txt talk.pdf spelling
+all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling
 
 .PHONY : wc
 wc :
