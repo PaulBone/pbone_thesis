@@ -307,7 +307,7 @@ No. collections & 742 &        & 692  &          & 634 &           & 602 & \\
 \end{tabular}
 \end{center}
 \caption{Percentage of runtime used by GC}
-\label{tab:gc_amdehl}
+\label{tab:gc_amdahl}
 \end{table}
 
 \plan{Compare performance vs Amdahl's predictions for sequential marking.}
@@ -317,7 +317,7 @@ similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
 collector than raytracer does.
 Using \tscope (Chapter \ref{chap:tscoe}),
 analysed how much time these programs spend in collector and mutator time.
-This results are shown in Table \ref{tab:gc_amdehl}.
+This results are shown in Table \ref{tab:gc_amdahl}.
 The table shows the elapsed time, collector time, mutator time and the
 number of collections for each program using 1--4 engines.
 The times are averages taken from eight samples,
@@ -364,34 +364,32 @@ of engines increases rather than less.
 \begin{tabular}{l|rr|d{3}}
 \Cbr{Program} & \C{Allocations} & \Cbr{Total alloc'd bytes} & \C{Alloc rate (M alloc/sec)} \\
 \hline
-raytracer   &     561,431,515 &           9,972,697,312 & 16.9 \\
+raytracer   &     561,431,515 &           9,972,697,312 & 26.9 \\
 mandelbrot\_lowalloc
-            &       1,620,928 &              21,598,088 &  0.105 \\
+            &       1,620,928 &              21,598,088 &  0.106 \\
 mandelbrot\_highalloc
-            &   3,829,971,662 &          29,275,209,824 & 44.6 \\
+            &   3,829,971,662 &          29,275,209,824 & 94.1 \\
 \end{tabular}
 \end{center}
 \caption{Memory allocation rates}
 \label{tab:mem_alloc_rate}
 \end{table}
 
-\paul{XXX: Fix these results, they should be based on mutator time not
-elapsed time}
-These results initially lead us to believe that
-mandelbrot\_highalloc is less allocation intensive
+Because mandelbrot\_highalloc spends less of its time collecting than
+raytracer,
+we initially thought that mandelbrot\_highalloc is less allocation intensive
 than raytracer,
 but this is not true.
-Using Mercury's deep profiler we measured the number and size of memory
-allocations and how much memory was used by each program.
+Using Mercury's deep profiler we measured the number and total size of memory
+allocations.
 This is shown in Table \ref{tab:mem_alloc_rate}.
 The rightmost column in this table gives the allocation rate
 measured in million allocations per second.
 It is calculated by dividing the number of allocations in the second column
-by the average sequential non thread safe execution time reported in Table
-\ref{tab:gc}.
+by the average mutator time reported in Table \ref{tab:gc_amdahl}.
 
-These trends do not match what we would expect by looking at the programs'
-allocation rates.
+The garbage collection times do not seem to match what we would expect by
+looking at the programs' allocation rates.
 This may be due to changing allocation rates throughout the programs'
 executions.
 We noticed that while benchmarking the raytracer that if we rendered the
