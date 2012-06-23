@@ -177,49 +177,7 @@ the heap.
 Therefore,
 it has a higher rate of memory allocation.
 
-\begin{table}
-\begin{center}
-\begin{tabular}{r|rr|rrrr}
-\Cbr{GC Markers} &
-\multicolumn{2}{c|}{Sequential} &
-\multicolumn{4}{c}{Parallel w/ $N$ Mercury Engines} \\
-\Cbr{} &
-\C{no TS} & \Cbr{TS} &
-\C{1} & \C{2} & \C{3} & \C{4} \\
-\hline
-\hline
-\multicolumn{7}{c}{raytracer} \\
-\hline
-1 & 33.1 (1.13) & 37.4 (1.00) &
-             37.7 (0.99) & 28.0 (1.34) & 24.8 (1.51) & 23.7 (1.58) \\
-2  & - & - & 32.0 (1.17) & 21.6 (1.73) & 18.1 (2.07) & 16.7 (2.24) \\
-3  & - & - & 29.6 (1.26) & 19.7 (1.90) & 16.3 (2.29) & 14.5 (2.59) \\
-4  & - & - & 29.1 (1.29) & 18.9 (1.98) & 15.3 (2.45) & 13.7 (2.73) \\
-\hline
-\hline
-\multicolumn{7}{c}{mandelbrot\_lowalloc} \\
-\hline
-1 & 15.4 (0.99) & 15.2 (1.00) &
-             15.2 (1.00) &  5.1 (2.96) &  7.7 (1.98) &  3.9 (3.92) \\
-2  & - & - & 15.3 (1.00) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.94) \\
-3  & - & - & 14.3 (1.00) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.94) \\
-4  & - & - & 15.3 (0.99) &  7.7 (1.98) &  5.1 (2.97) &  3.9 (3.92) \\ 
-\hline
-\hline
-\multicolumn{7}{c}{mandelbrot\_highalloc} \\
-\hline
-1 & 41.0 (1.23) & 50.5 (1.00) &
-             50.6 (1.00) & 33.4 (1.51) & 26.6 (1.90) & 23.4 (2.16) \\
-2  & - & - & 46.7 (1.08) & 28.6 (1.77) & 22.1 (2.28) & 18.8 (2.69) \\
-3  & - & - & 46.3 (1.09) & 27.3 (1.85) & 20.9 (2.42) & 17.3 (2.93) \\
-4  & - & - & 45.6 (1.11) & 26.8 (1.89) & 20.4 (2.48) & 16.7 (3.03) \\
-\end{tabular}
-\end{center}
-\paul{Consider drawing charts for raytracer and mandelbrot so that releative
-performance between different scores can be seen easily.}
-\caption{Parallelism and garbage collection}
-\label{tab:gc}
-\end{table}
+\input{tab_gc}
 
 \plan{Benchmark data.}
 Table \ref{tab:gc} shows benchmark results for these programs
@@ -274,48 +232,14 @@ engines compared to 1.58 for the raytracer.
 It also achieves a speedup of 1.11 when using four marker threads compared
 to 1.29 for the raytracer.
 
-\begin{table}
-\begin{center}
-\begin{tabular}{l|d{1} r d{1} r d{1} r d{1} r }
-\Cbr{} &
-\multicolumn{8}{c}{Parallel w/ $N$ Mercury Engines} \\
-\Cbr{}       & \Ctwo{1}        & \Ctwo{2}        & \Ctwo{3}        & \Ctwo{4} \\
-\hline
-\hline
-\multicolumn{9}{c}{raytracer} \\
-\hline
-Elapsed time & 37.8 &          & 28.1 &          & 24.7 &          & 22.7 & \\
-GC time      & 16.9 & (44.8\%) & 16.7 & (59.4\%) & 16.5 & (66.6\%) & 15.8 & (69.5\%) \\
-Mutator time & 20.9 & (55.2\%) & 11.4 & (40.6\%) &  8.2 & (33.4\%) &  6.9 & (30.5\%) \\
-No. collections & 384 &        & 346  &          & 316  &          & 288  & \\
-\hline
-\hline
-\multicolumn{9}{c}{mandelbrot\_lowalloc} \\
-\hline
-Elapsed time & 15.2 &          &  7.7 &          &  5.1 &          &  3.9 & \\
-GC time      &  0.0 &  (0.1\%) &  0.0 &  (0.2\%) &  0.0 &  (0.7\%) &  0.0 &  (0.4\%) \\
-Mutator time & 15.2 & (99.9\%) &  7.6 & (99.8\%) &  5.1 & (99.3\%) &  3.9 & (99.6\%) \\
-No. collections & 2 &          &  2   &          &  2   &          &  2   & \\
-\hline
-\hline
-\multicolumn{9}{c}{mandelbrot\_highalloc} \\
-\hline
-Elapsed time & 51.7 &          & 34.0 &          & 27.2 &          & 24.0 & \\
-GC time      & 11.0 & (21.4\%) & 11.5 & (33.6\%) & 11.5 & (42.2\%) & 11.8 & (49.1\%) \\
-Mutator time & 40.7 & (78.6\%) & 22.6 & (55.4\%) & 15.5 & (57.8\%) & 12.2 & (50.9\&) \\
-No. collections & 742 &        & 692  &          & 634 &           & 602 & \\
-\end{tabular}
-\end{center}
-\caption{Percentage of runtime used by GC}
-\label{tab:gc_amdahl}
-\end{table}
+\input{tab_gc_amdahl}
 
 \plan{Compare performance vs Amdahl's predictions for sequential marking.}
 We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
 more than raytracer does,
 similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
 collector than raytracer does.
-Using \tscope (Chapter \ref{chap:tscoe}),
+Using \tscope (Chapter \ref{chap:tscope}),
 analysed how much time these programs spend in collector and mutator time.
 This results are shown in Table \ref{tab:gc_amdahl}.
 The table shows the elapsed time, collector time, mutator time and the
@@ -357,7 +281,6 @@ In general,
 mandelbrot\_highalloc has similar trends when compared with raytracer,
 except that it spends more of its time in garbage collection as the number
 of engines increases rather than less.
-\paul{Why?}
 
 \begin{table}
 \begin{center}
@@ -390,27 +313,33 @@ by the average mutator time reported in Table \ref{tab:gc_amdahl}.
 
 The garbage collection times do not seem to match what we would expect by
 looking at the programs' allocation rates.
-This may be due to changing allocation rates throughout the programs'
-executions.
-We noticed that while benchmarking the raytracer that if we rendered the
-image upside-down (by iterating over the rows backwards)
-we would get different performance results.
-This is because the top of the image we used contains sky,
-which has no geometry;
-it is the flat colour of the background,
-and the bottom of the image contains ground;
-which has more detail.
-Rendering the ground will naturally be more complicated and require more
-memory allocation than rendering the sky.
-Memory allocation in one part of a program can affect the performance of
-allocation and collection in another part of the program.
-This is many because the garbage collector will increase the size of the heap
-to satisfy large and/or many allocations.
-This is why rendering the image upside down had a different execution time to
-rendering it the right way up.
-Similarly,
-the mandelbrot program has sections in its image that require more iterations
-of the equation than others.
+Garbage collectors are tuned for particular workloads.
+Even though mandelbrot\_highalloc has a high allocation rate,
+it is very likly that Boehm GC handles this workload more easily than
+raytracer's workload.
+
+% Old idea:
+%This may be due to changing allocation rates throughout the programs'
+%executions.
+%We noticed that while benchmarking the raytracer that if we rendered the
+%image upside-down (by iterating over the rows backwards)
+%we would get different performance results.
+%This is because the top of the image we used contains sky,
+%which has no geometry;
+%it is the flat colour of the background,
+%and the bottom of the image contains ground;
+%which has more detail.
+%Rendering the ground will naturally be more complicated and require more
+%memory allocation than rendering the sky.
+%Memory allocation in one part of a program can affect the performance of
+%allocation and collection in another part of the program.
+%This is many because the garbage collector will increase the size of the heap
+%to satisfy large and/or many allocations.
+%This is why rendering the image upside down had a different execution time to
+%rendering it the right way up.
+%Similarly,
+%the mandelbrot program has sections in its image that require more iterations
+%of the equation than others.
 
 
 \plan{Parallel marking performance observations.}
