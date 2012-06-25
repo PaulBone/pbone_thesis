@@ -50,13 +50,14 @@ multiple instances of a parallel Mercury program are executing in parallel.
 \section{Original spark scheduling algorithm}
 \label{sec:old_scheduling}
 
-\status{Checking plan for this section}
+\status{Prose is finished, I will proofcheck it myself before
+I send it to Zoltan or Peter}
 
 \plan{Global spark queue and Contention wrt global queue}
 Mercury has a global spark queue.
 The runtime can easily schedule a spark by placing it on the end of the
 global queue.
-An idle engine can run a spark by takeing it spark from the beginning of the queue.
+An idle engine can run a spark by taking it from the beginning of the queue.
 The global spark queue must be protected by a lock;
 this prevents concurrent access from corrupting the queue.
 The global spark queue and its lock can easily become a bottleneck when many
@@ -109,7 +110,7 @@ last-in-first-out manner.
   \Else
     \State $spark \gets$ pop\_spark
     \If{$spark$}
-      \If{$spark{\rightarrow}ST.stack\_ptr = MR\_parent\_sp$}
+      \If{$spark.ST.stack\_ptr = MR\_parent\_sp$}
 %        \Comment{This spark belongs to the same parallel conjunction.
 %        It can be executed immediatly.}
         \State release\_lock($ST.lock$)
@@ -167,19 +168,95 @@ conjunction provided.~\footnote{
     all the parallel conjuncts in a callee must be complete before context
     would be allowed to continue from the barrier at the callee's parallel
     conjunction.}
-This can only haoppen if this context is the original context for the
+This can only happen if this context is the original context for the
 current parallel conjunction.
 We cannot execute a spark for a caller's parallel conjunction because it may
-block, causing our context to block the current conjunction.
+depend on the execution of the current parallel conjunction.
 Therefore, only sparks for the current parallel conjunction are executed.
 If there was no suitable spark,
 the algorithm checks if this context is the parent context.
 If so, the algorithm suspends the context and
 jumps to \getglobalwork.
 
+\begin{algorithm}[htb]
+\begin{algorithmic}
+\Procedure{MR\_get\_global\_work}{}
+  \State aquire\_lock($MR\_runqueue\_lock$)
+  \Loop
+    \If{$MR\_exit\_now$}
+      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_destroy\_thread()
+    \EndIf
+    \State $ctxt \gets$ MR\_get\_runnable\_context()
+    \If{$ctxt$}
+      \State release\_lock($MR\_runqueue\_lock$)
+      \If{$current\_context$}
+        \State MR\_release\_context($current\_context$)
+      \EndIf
+      \State MR\_load\_context($ctxt$)
+      \Goto $ctxt.resume$
+    \EndIf
+    \State $spark \gets$ MR\_pop\_spark($MR\_global\_spark\_queue$)
+    \If{$spark$}
+      \State release\_lock($MR\_runqueue\_lock$)
+      \If{$\neg current\_context$}
+        \State $ctxt \gets$ MR\_get\_free\_context()
+        \If{$\neg ctxt$}
+          \State $ctxt \gets$ MR\_create\_context()
+        \EndIf
+        \State MR\_load\_context($ctxt$)
+      \EndIf
+      \State $MR\_parent\_sp \gets spark.parent\_sp$
+      \State $ctxt.thread\_local\_mutables \gets
+        spark.thread\_local\_mutables$
+      \Goto $spark.resume$
+    \EndIf
+    \State wait($MR\_runqueue\_cond, MR\_runqueue\_lock$)
+  \EndLoop
+\EndProcedure
+\end{algorithmic}
+\caption{\getglobalwork}
+\label{alg:MR_get_global_work}
+\end{algorithm}
 
 \plan{Explain how work begins executing, for completeness}
-\paul{Talk about get\_global\_work().}
+When an engine cannot get any local work it must search for global work.
+Newly created engines, expect for the first, also search for global work.
+This is done by calling \getglobalwork.
+\getglobalwork is shown in Algorithm \ref{alg:MR_get_global_work}.
+Only one of the idle engines may execute \getglobalwork at a time.
+This protects the context run queue and the global context queue from
+concurrent access using the run queue's lock.
+After acquiring the lock engines execute an infinite loop.
+Each iteration first checks if the runtime system is being shut down,
+if so this thread releases the lock then destroys itself.
+If the system is not being shut down,
+the engine will search for a runnable context.
+If it finds a context it releases the runqueue lock, loads the context
+and jumps to the resume point for the context.
+If the engine already has a context that context is guaranteed to be unused;
+therefore, it is released to the context free list.
+If no context was found the engine attempts to take a spark from the global
+spark queue.
+If it finds a spark then it will need a context to execute the spark.
+It will attempt to get a context from the free list, if there is none it will
+create a new context.
+Once it has a context it loads it
+this copies the context's copies of registers into the engine such as the
+stack pointer.
+It loads the spark by initialising the engine's parent stack pointer
+register and the spark's thread local mutables
+(which are set by the context that created the spar)
+into the context.
+If the engine could not find any work it will wait using the a condition
+variable and the runqueue lock.
+The pthreads wait function is able to unlock the lock and wait on the
+condition atomically, preventing race conditions. 
+The condition variable is used to wake up the engine if either a spark is
+placed on the global spark queue or a context is placed on the context run
+queue.
+When the engine wakes it will re-execute the infinite loop.
+
 %An engine looks for global work first by checking the global context run queue.
 %If it finds a runnable context and is still holding a context from a
 %previous execution, it saves the old context onto the free context list.
