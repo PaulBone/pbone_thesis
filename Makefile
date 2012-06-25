@@ -17,6 +17,7 @@ TEX_PROSE = \
 		backgnd_deppar.tex \
 		backgnd_autopar.tex \
 		rts.tex \
+        rts_gc.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex \
