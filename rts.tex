@@ -56,10 +56,9 @@ multiple instances of a parallel Mercury program are executing in parallel.
 Mercury has a global spark queue.
 The runtime can easily schedule a spark by placing it on the end of the
 global queue.
-An idle engine can take a spark from the beginning of the queue to work on
-it.
-The global spark queue must be protected by locks to prevent concurrent
-access from corrupting the queue.
+An idle engine can run a spark by takeing it spark from the beginning of the queue.
+The global spark queue must be protected by a lock;
+this prevents concurrent access from corrupting the queue.
 The global spark queue and its lock can easily become a bottleneck when many
 engines content for access to the global queue.
 
@@ -77,12 +76,15 @@ does not exceed the maximum number of contexts permitted.
 Otherwise,
 the runtime system pushes the spark onto the top of the context's local
 spark stack.
+% Note, if I ever change citations I need to fix 'Wang' here.
+% XXX The next line can be searched for to find citations.
+% \citet
 Wang's scheduling decision has two aims:
 Firstly, to reduce the contention on the global queue,
 especially in the common case that there is enough parallel work.
 This also reduces the amount of locking.
-Secondly, the scheduling decision prevents the creation of too many contexts
-as their stacks consume memory.
+Secondly, to reduce the amount of memory allocated
+in contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts so they are also
 included in this limit.
 Note that sparks placed on the global queue are executed in a
@@ -96,7 +98,7 @@ last-in-first-out manner.
   \State aquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
   \If{$ST.num\_outstanding = 0$}
-    \If{$ST.parent = this\_context$}
+    \If{$ST.orig\_context = this\_context$}
       \State release\_lock($ST.lock$)
       \Goto{$ContLabel$}
     \Else
@@ -107,13 +109,15 @@ last-in-first-out manner.
   \Else
     \State $spark \gets$ pop\_spark
     \If{$spark$}
-      \If{$spark.parent = ST.parent$}
+      \If{$spark{\rightarrow}ST.stack\_ptr = MR\_parent\_sp$}
+%        \Comment{This spark belongs to the same parallel conjunction.
+%        It can be executed immediatly.}
         \State release\_lock($ST.lock$)
         \Goto{$spark.code\_label$}
       \EndIf
       \State push\_spark($spark$)
     \EndIf
-    \If{$ST.parent = this\_context$}
+    \If{$ST.orig\_context = this\_context$}
        \State suspend($this\_context$)
        \State $this\_context \gets$ NULL
     \EndIf
@@ -125,8 +129,6 @@ last-in-first-out manner.
 \caption{MR\_join\_and\_continue}
 \label{alg:join_and_continue_peterw}
 \end{algorithm}
-
-\paul{Make the pop compatible spark decision clearer.}
 
 \plan{barrier code, this is used to explain the right recursion problem.}
 As an engine finishes executing a parallel conjunct,
@@ -150,22 +152,30 @@ If the current context is not the parent context then
 we can infer that the parent context is suspended.
 Therefore,
 the engine will schedule the parent context.
-The context's local work queue is guaranteed to be empty,
+The current context's local work queue is guaranteed to be empty,
 as this conjunction and any nested conjunctions are complete.
 Therefore,
 the engine will continue by jumping to the \getglobalwork routine
 which is described below.
 Alternatively,
 if \joinandcontinue found that there are outstanding conjuncts then
-the local spark stack is checked for a compatible spark.
-A spark is compatible if its parent context is the same as the
-syncterm's parent context.
-If such a spark is found is at the top of the spark stack then it is removed
-and executed.
-Otherwise,
-the algorithm checks if this context is the parent context,
-if it is it suspends the context.
-Then the algorithm jumps to \getglobalwork.
+the local spark stack is checked for a spark.
+A spark is used only if it was spawned off by the same parallel conjunction.
+The only other spark that might exist, is one for a caller's parallel
+conjunction provided.~\footnote{
+    It is impossible to find a callee's spark on our local spark stack as
+    all the parallel conjuncts in a callee must be complete before context
+    would be allowed to continue from the barrier at the callee's parallel
+    conjunction.}
+This can only haoppen if this context is the original context for the
+current parallel conjunction.
+We cannot execute a spark for a caller's parallel conjunction because it may
+block, causing our context to block the current conjunction.
+Therefore, only sparks for the current parallel conjunction are executed.
+If there was no suitable spark,
+the algorithm checks if this context is the parent context.
+If so, the algorithm suspends the context and
+jumps to \getglobalwork.
 
 
 \plan{Explain how work begins executing, for completeness}
