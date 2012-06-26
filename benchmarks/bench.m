@@ -376,8 +376,9 @@ run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
         ),
         Times = [Time | Times0],
         rename(Eventlog, format("%s_%d.eventlog", [s(Name), i(Samples)]),
-            Res, !IO),
-        check_error($module, $pred, Res, !IO)
+            Res, !IO)
+        % Ignore the error as there may not be an eventlog.
+        % check_error($module, $pred, Res, !IO)
     ;
         Times = []
     ).
