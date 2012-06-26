@@ -26,7 +26,7 @@ TEXFILES = 	$(TEX_PROSE) macros.tex
 TABLES_TEX = $(GEN_TABLES_TEX) \
 		tab_gc.tex \
 		tab_gc_amdahl.tex \
-		tab_gc_heapsize.tex
+		tab_gc_heapsize_gc4.tex
 GEN_TABLES_TEX = \
 		mem_table.tex \
 		times_table.tex
