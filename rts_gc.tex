@@ -343,14 +343,36 @@ we picked a number of sizes from 1MB to 512MB.
 The remaining columns show the average elapsed times in seconds.
 The first of these columns shows timing for the programs compiled for
 sequential execution without thread safety;
-the next is for sequential execution with thread safety.
+this means that the collector can not use parallel marking.
+The next column is for sequential execution with thread safety;
+the collector uses parallel marking with four threads.
 The next four columns give the results for the programs compiled for
 parallel execution, and executed with one to four Mercury engines.
-\paul{Consider using 4 GC threads so that we are comparing to the best we have
-done before}
-All the results use one garbage collector thread.
+These results also use four marker threads.
+The numbers in parenthases describe the ratio of performance compared to the
+16MB, sequential thread-safe result.
+All the results are the averages of eight samples.
+We ran these tests on raytracer and mandelbrot\_highalloc.
+mandelbrot\_lowalloc was not used as its collection time is insagnificant.
 
-\paul{Continue discussion after running gc=4 tests}
+Generally, the larger the inital heap size the better the programs
+performend.
+The exception is that the raytracer often ran more slowly with a heap size of 64MB
+than a heapsize of 32MB.
+%\paul{Does the reader know what a TLB is?  People are generally poor at
+%remembering to care about normal caches much less TLBs.}
+64MB is much larger than the processor's cache size (L3 cache is 8MB) and
+covers more page mappings than its TLBs can cache (L2 TLB covers 2MB when
+using 4KB pages).
+The collector's structures and access patterns may be slower at this size
+due to hardware limitiations,
+and the benifits of a larger heap are not enough to overcome these
+limitiations.
+As the heap size gets larger performance begins to climb,
+therefore in general larger heaps allow the collector to perform better.
+
+\paul{XXX: Working here}
+
 
 \plan{Criticise cache behaviour WRT parallel marking,
 Thanks Simon Marlow.}
