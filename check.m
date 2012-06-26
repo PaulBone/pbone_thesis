@@ -349,6 +349,7 @@ contractions = [
     "won't",
     "isn't",
     "it's",
+    "arn't",
     "don't",
     "shouldn't",
     "doesn't",
