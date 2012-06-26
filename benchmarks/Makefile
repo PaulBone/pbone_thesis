@@ -33,5 +33,5 @@ tags : *.m
 
 .PHONY : clean
 clean:
-	rm -rf Mercury $(TARGETS) 
+	rm -rf Mercury $(TARGETS) *.err *.mh
 
