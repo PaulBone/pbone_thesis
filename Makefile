@@ -1,5 +1,5 @@
 #
-# vim: noet sw=8 ts=8
+# vim: noet sw=4 ts=4
 #
 
 PIC =		$(wildcard pics/*.pic)
@@ -17,16 +17,17 @@ TEX_PROSE = \
 		backgnd_deppar.tex \
 		backgnd_autopar.tex \
 		rts.tex \
-        rts_gc.tex \
+		rts_gc.tex \
 		overlap.tex \
 		loop_control.tex \
-		tscope.tex \
+		tscope.tex
 
 TEXFILES = 	$(TEX_PROSE) macros.tex
-TABLES_TEX = \
+TABLES_TEX = $(GEN_TABLES_TEX) \
 		tab_gc.tex \
 		tab_gc_amdahl.tex \
-		tab_gc_heapsize.tex \
+		tab_gc_heapsize.tex
+GEN_TABLES_TEX = \
 		mem_table.tex \
 		times_table.tex
 
@@ -118,7 +119,7 @@ talk.pdf: talk.orig $(TALK_PICS) $(TALK_PSS)
 clean :
 	rm -rf $(PIC_TEX) \
 		$(PIC:%.pic=%.aux) \
-		$(TABLES_TEX) \
+		$(GEN_TABLES_TEX) \
 		thesis.aux \
 		thesis.bbl \
 		thesis.blg \
