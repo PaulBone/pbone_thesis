@@ -335,10 +335,10 @@ will have a limited impact on the overall speedup of the program.
 This can be reduced by using the parallel marking feature in the garbage
 collector.
 We can reduce the impact of the garbage collector by varying the initial
-heapsize of the program.
+heap size of the program.
 Table \ref{tab:gc_heapsize} shows the performance of the raytracer and
 mandelbrot\_highalloc programs with various initial heap sizes.
-The first column shows the heapsize uesd,
+The first column shows the heap size used,
 we picked a number of sizes from 1MB to 512MB.
 The remaining columns show the average elapsed times in seconds.
 The first of these columns shows timing for the programs compiled for
@@ -349,40 +349,103 @@ the collector uses parallel marking with four threads.
 The next four columns give the results for the programs compiled for
 parallel execution, and executed with one to four Mercury engines.
 These results also use four marker threads.
-The numbers in parenthases describe the ratio of performance compared to the
-16MB, sequential thread-safe result.
+The numbers in parentheses describe the ratio of performance compared to the
+sequential thread-safe result for the same initial heap size.
 All the results are the averages of eight samples.
 We ran these tests on raytracer and mandelbrot\_highalloc.
-mandelbrot\_lowalloc was not used as its collection time is insagnificant.
+mandelbrot\_lowalloc was not used as its collection time is insignificant.
 
-Generally, the larger the inital heap size the better the programs
-performend.
-The exception is that the raytracer often ran more slowly with a heap size of 64MB
-than a heapsize of 32MB.
+\plan{Observations: Programs get faster with a larger heap size}
+Generally, the larger the initial heap size the better the programs
+performed.
+The Boehm GC will begin collecting if it cannot satisfy a memory allocation
+request.
+If, after a collection, it still cannot satisfy the memory request then it
+will increase the size of the heap.
+In each collection,
+the collector must read all the stacks, global data, thread local data and
+all the in-use memory in the heap 
+(memory that is reachable from the stacks, global data and thread local
+data).
+This causes a large number of cache misses, especially when the heap is
+large.
+The larger the heap size the less frequently memory is exhausted and needs to
+be collected.
+Therefore,
+programs with larger heap sizes perform collection less often and
+have fewer cache misses due to garbage collection.
+This explains the trend of increased performance as we increase the initial
+heap size of the program.
+
+While performance improved with larger heap sizes; there is one exception.
+The raytracer often ran more slowly with a heap size of 64MB
+than a heap size of 32MB.
 %\paul{Does the reader know what a TLB is?  People are generally poor at
 %remembering to care about normal caches much less TLBs.}
 64MB is much larger than the processor's cache size (L3 cache is 8MB) and
 covers more page mappings than its TLBs can cache (L2 TLB covers 2MB when
 using 4KB pages).
 The collector's structures and access patterns may be slower at this size
-due to hardware limitiations,
-and the benifits of a larger heap are not enough to overcome these
-limitiations.
-As the heap size gets larger performance begins to climb,
-therefore in general larger heaps allow the collector to perform better.
+due to hardware limitations,
+and the benefits of a larger heap are not enough to overcome these
+limitations.
 
-\paul{XXX: Working here}
+\plan{Speedup observation with larger heap sizes}
+When the raytracer uses a 16MB initial heap its speedup using four
+cores is 2.17 times.
+However, when it uses a 512MB initial heap the same speedup is 2.99.
+Similarly,
+mandelbrot\_highalloc has a 4-engine speedup of 2.72 using a 16MB initial
+heap and a speedup of 3.08 using a 512MB initial heap.
+Generally,
+larger heap sizes allow programs to exploit more parallelism.
 
-
-\plan{Criticise cache behaviour WRT parallel marking,
-Thanks Simon Marlow.}
-\paul{XXX: threadscope will also support our argument here.}
+\plan{Reason 1}
+In a parallel program with more than one Mercury engine,
+each collection must \emph{stop the world}:
+All Mercury engines are stopped so that they do not modify the heap during
+the marking phase.
+This requires synchronisation which is reduces the performance of parallel
+programs.
+Therefore, the less often collection occurs, the less stop the world's
+synchronisation affects performance.
+This may be why larger initial heap sizes allow programs to exploit more
+parallelism.
+\plan{Reason 2}
+Another reason was suggested by Simon Marlow:
+The Boehm GC does not make any attempt to mark objects with the same thread
+that allocated the objects.
+This can cause many cache misses.
+For example, processor one (P1) might try and mark one of processor two's
+(P2) objects.
+Causing a cache miss in P1's cache and invalidating the corresponding cache
+line in P2's cache.
+Later, when collection is finished,
+P2 resumes execution and incurs a cache miss for the object that it had been
+using.
+\paul{Find the citation.}
+Simon Marlow made a similar observation when working with GHC's garbage
+collector \cite{marlow-gc}.
 
 \plan{Discuss local heaps for threads, and their reliability problems.}
-\paul{Stress this point, convince the reader that I can not test this}
-Boehm GC has a few tunable parameters, one of these, \texttt{HBLKSIZE},
-configures the size of a local heap among other things.
-In some tests this did improve performance but we also found it to cause
-reliability problems.
-Therefore it cannot be used practically and we do not report on it here.
+We also investigated another area for increased parallel performance.
+Boehm GC maintains thread local free lists that allow memory to be allocated
+without contending for locks on global free lists.
+When a local free list cannot satisfy a memory request, the global free
+lists must be used.
+The local free lists amortise the costs of locking the global free lists.
+We expect that increasing the size of the local free lists will cause even
+less contention for global locks,
+allowing allocation intensive programs to have even better parallel
+performance.
+This can be adjusted by increasing the \texttt{HBLKSIZE} tunable and another
+related tunable which must be the $log_2$ of \texttt{HBLKSIZE}.
+Unfortunately,
+this caused our programs to crash,
+we expect that Boehm GC has not been throughly tested for this
+configuration.
+Therefore, we can not reliably evaluate how \texttt{HBLKSIZE} affects our
+programs.
+However,
+this should be investigated in the future.
 
