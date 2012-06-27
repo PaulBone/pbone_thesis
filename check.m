@@ -369,7 +369,9 @@ contractions = [
     "it'd",
     "they're",
     "they've",
-    "they'd" ].
+    "they'd",
+    "heapsize"
+    ].
 
 :- func invalid_hypenations = list(string).
 
@@ -379,7 +381,8 @@ invalid_hypenations = [
     "low-level",
     "straight-forward",
     "most-likely",
-    "work-stealing"
+    "work-stealing",
+    "heap-size"
     ].
 
 :- func acronyms = list(string).
