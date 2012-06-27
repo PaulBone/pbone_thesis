@@ -10,7 +10,7 @@ We parallelised this loop in each program as it was the best place to
 introduce parallelism,
 but we did not get the speedups that we expected.
 For these programs, automatic parallelisation cannot achieve
-a greater speedup than we have achieved with manual parallelism.
+a greater speedup than we have achieved with manual parallelisation.
 Therefore,
 we chose to address the performance problems with manual parallelism
 before we worked on automatic parallelism.
@@ -35,11 +35,9 @@ how work stealing fixes the spark scheduling problem.
 We made a number of improvements to the way that Mercury engines are created,
 this includes thread pinning and support for SMT systems,
 we describe these improvements in Section \ref{sec:thread_pinning}.
-Section \ref{sec:idle_loop} describes our changes to how engines idle,
+Finally, Section \ref{sec:idle_loop} describes our changes to how engines
+idle,
 and how and when they wake up to execute parallel work.
-Finally, in Section \ref{sec:kernel_scheduling_help}
-we describe an area of research that would improve resource usage when
-multiple instances of a parallel Mercury program are executing in parallel.
 
 \section{Garbage collection tweaks}
 \label{sec:gc}
@@ -50,26 +48,25 @@ multiple instances of a parallel Mercury program are executing in parallel.
 \section{Original spark scheduling algorithm}
 \label{sec:old_scheduling}
 
-\status{Prose is finished, I will proofcheck it myself before
-I send it to Zoltan or Peter}
+\status{This section is ready for review.}
 
 \plan{Global spark queue and Contention wrt global queue}
 Mercury has a global spark queue.
-The runtime can easily schedule a spark by placing it on the end of the
+The runtime easily schedules a spark by placing it on the end of the
 global queue.
-An idle engine can run a spark by taking it from the beginning of the queue.
+An idle engine runs a spark by taking it from the beginning of the queue.
 The global spark queue must be protected by a lock;
 this prevents concurrent access from corrupting the queue.
 The global spark queue and its lock can easily become a bottleneck when many
 engines content for access to the global queue.
 
 \plan{Local spark stack --- relieves contention on global queue}
-\citet{wang-hons} expected this problem and created context local spark stacks
-to avoid contention on the global queue.
+\citet{wang-hons} anticipated this problem and created context local spark
+stacks to avoid contention on the global queue.
 Furthermore, the local spark stacks do not require locking.
-When a parallel conjunction spawns off a spark it can place the spark either
+When a parallel conjunction spawns off a spark; it places the spark either
 at the end of the global spark queue or at the top of its local spark stack.
-\plan{Spark scheduling decision}
+\plan{Spark scheduling decision.}
 The runtime system appends the spark to the end of the global queue if:
 an engine is idle, and
 the number of contexts in use plus the number of sparks on the global queue
@@ -81,22 +78,22 @@ spark stack.
 % XXX The next line can be searched for to find citations.
 % \citet
 Wang's scheduling decision has two aims:
-Firstly, to reduce the contention on the global queue,
+First, to reduce the contention on the global queue,
 especially in the common case that there is enough parallel work.
 This also reduces the amount of locking.
-Secondly, to reduce the amount of memory allocated
+Second, to reduce the amount of memory allocated
 in contexts' stacks by reducing the number of contexts allocated.
-Globally scheduled sparks may be converted into contexts so they are also
-included in this limit.
+Globally scheduled sparks may be converted into contexts,
+so they are also included in this limit.
 Note that sparks placed on the global queue are executed in a
-first-in-first-out manner, while
+first-in-first-out manner;
 sparks placed on a context's local stack are executed in a
 last-in-first-out manner.
 
 \begin{algorithm}
 \begin{algorithmic}
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
-  \State aquire\_lock($ST.lock$)
+  \State acquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
   \If{$ST.num\_outstanding = 0$}
     \If{$ST.orig\_context = this\_context$}
@@ -136,8 +133,8 @@ As an engine finishes executing a parallel conjunct,
 it will execute the the barrier at the end of the conjunct.
 The barrier is named \joinandcontinue and shown in
 Algorithm \ref{alg:join_and_continue_peterw}.
-If the parallel conjunction has only been executed by
-one context,
+If the parallel conjunction has been executed by
+only one context,
 then it is safe to use a version of the barrier code that does not use
 locking,
 this optimisation is not shown as it is equivalent and not relevant to
@@ -150,9 +147,11 @@ If there are no outstanding conjuncts and the current context is the parent
 context,
 then execution jumps to the label after the parallel conjunction.
 If the current context is not the parent context then
-we can infer that the parent context is suspended.
-Therefore,
-the engine will schedule the parent context.
+the parent context is suspended (or about to be suspended).
+We know this because there is no other parallel work to do for this
+conjunction and the parent context may only work on this conjunction,
+therefore it must be suspended.
+The engine will schedule the parent context.
 The current context's local work queue is guaranteed to be empty,
 as this conjunction and any nested conjunctions are complete.
 Therefore,
@@ -162,7 +161,7 @@ Alternatively,
 if \joinandcontinue found that there are outstanding conjuncts then
 the local spark stack is checked for a spark.
 A spark is used only if it was spawned off by the same parallel conjunction.
-The only other spark that might exist, is one for a caller's parallel
+The only other spark that may exist, is one for a caller's parallel
 conjunction provided.~\footnote{
     It is impossible to find a callee's spark on our local spark stack as
     all the parallel conjuncts in a callee must be complete before context
@@ -181,7 +180,7 @@ jumps to \getglobalwork.
 \begin{algorithm}[htb]
 \begin{algorithmic}
 \Procedure{MR\_get\_global\_work}{}
-  \State aquire\_lock($MR\_runqueue\_lock$)
+  \State acquire\_lock($MR\_runqueue\_lock$)
   \Loop
     \If{$MR\_exit\_now$}
       \State release\_lock($MR\_runqueue\_lock$)
@@ -219,37 +218,38 @@ jumps to \getglobalwork.
 \label{alg:MR_get_global_work}
 \end{algorithm}
 
-\plan{Explain how work begins executing, for completeness}
+\plan{Explain how work begins executing, for completeness.}
 When an engine cannot get any local work it must search for global work.
-Newly created engines, expect for the first, also search for global work.
+Newly created engines, except for the first, also search for global work.
 This is done by calling \getglobalwork.
 \getglobalwork is shown in Algorithm \ref{alg:MR_get_global_work}.
-Only one of the idle engines may execute \getglobalwork at a time.
+Only one of the idle engines can execute \getglobalwork at a time.
 This protects the context run queue and the global context queue from
 concurrent access using the run queue's lock.
 After acquiring the lock engines execute an infinite loop.
 Each iteration first checks if the runtime system is being shut down,
-if so this thread releases the lock then destroys itself.
+if so,
+then this thread releases the lock then destroys itself.
 If the system is not being shut down,
 the engine will search for a runnable context.
-If it finds a context it releases the runqueue lock, loads the context
+If it finds a context it releases the run queue lock, loads the context
 and jumps to the resume point for the context.
 If the engine already has a context that context is guaranteed to be unused;
 therefore, it is released to the context free list.
 If no context was found the engine attempts to take a spark from the global
 spark queue.
 If it finds a spark then it will need a context to execute the spark.
-It will attempt to get a context from the free list, if there is none it will
+It will try to get a context from the free list, if there is none it will
 create a new context.
 Once it has a context it loads it
 this copies the context's copies of registers into the engine such as the
 stack pointer.
 It loads the spark by initialising the engine's parent stack pointer
 register and the spark's thread local mutables
-(which are set by the context that created the spar)
+(which are set by the context that created the spark)
 into the context.
-If the engine could not find any work it will wait using the a condition
-variable and the runqueue lock.
+If the engine did not find any work it will wait using a condition
+variable and the run queue lock.
 The pthreads wait function is able to unlock the lock and wait on the
 condition atomically, preventing race conditions. 
 The condition variable is used to wake up the engine if either a spark is
