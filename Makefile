@@ -42,18 +42,6 @@ BENCH_ALL=          lc_bench_all
 #DETEX=untex -m -uascii -e
 DETEX=detex -l -n
 
-#
-# Hopefully this means that someone without mercury installed
-# can't build the thesis.
-#
-MMC = `which mmc`
-
-ifneq ($(MMC),)
-	should_check = checked
-else
-	should_check =
-endif
-
 .PHONY : all
 all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling
 
@@ -62,7 +50,7 @@ wc :
 	wc -w $(TEX_PROSE)
 
 thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib \
-		$(should_check)
+		checked
 	latex thesis
 	bibtex thesis
 	latex thesis
@@ -87,11 +75,17 @@ undefined.txt: thesis.log
 	cat $< | grep undefined | sort -u > undefined.txt
 
 checked : $(TEX_PROSE) check
-	./check $(TEX_PROSE)
+	if [ -e .use_mercury ]; then \
+		./check $(TEX_PROSE); \
+	fi
 	touch checked
 
 check : check.m
-	mmc --make check
+	if [ -e .use_mercury ]; then \
+		mmc --make check; \
+	else \
+		touch check; \
+	fi
 
 .PHONY : spelling
 spelling : $(SPELL_FILES)
