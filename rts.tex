@@ -583,9 +583,68 @@ on this section.}
 \section{Work stealing implementation}
 \label{sec:work_stealing}
 
-The stack data structure used is described by \citet{workstealing_queue},
-this was chosen as it could support work stealing (Section
-\ref{sec:work_stealing}).
+\plan{Introduce work stealing}
+Work stealing is a popular method for managing parallel work in a shared
+memory multiprocessor system.
+A number of language implementations use work stealing \citep{XXX}.
+A work stealing system has no global work queue.
+Each worker has a local queue, when parallel work is created a worker
+places it on its own queue.
+When a worker becomes idle it checks its own queue for any work,
+if it finds none it attempts to steal work from another worker's queue.
+Work stealing has several benefits:
+
+\begin{itemize}
+
+    \item
+    A worker can schedule parallel work quickly,
+    it is quicker to place work on a local queue rather than a global
+    one:
+    There is less contention and special data structures allow this to
+    be done without locking.
+
+    \item
+    A idle worker can take work from its own queue quickly.
+    Again, there is less contention on a local queue and often this can
+    be done without locking.
+
+    \item
+    In ideal circumstances,
+    an idle worker rarely needs to steal work from another's queue,
+    which is more costly.
+
+\end{itemize}
+
+\plan{Describe our implementation}
+The work stealing implementation in this section was joint work between
+myself and Peter Wang.
+Peter contributed roughly 80\% of the implementation.
+We removed the global spark queue.
+Each contest's local spark stack is implemented using data structure
+described by \citet{workstealing_queue}.
+Until now, we have used the word `stack' when talking about this
+structure,
+however it is a double ended queue (deque).
+It operates either as a queue
+(first-in-first-out) or as a stack (last-in-first-out).
+As described in previous sections, the context that owns the queue uses
+it as a stack;
+pushing and popping items on and off the \emph{hot end}.
+This end is named the hot end since these actions are common, this end
+of the queue is busier.
+\paul{Maybe they require write barriers, check this in the paper.}
+The data structure makes these operations thread safe without
+synchronisation,
+provided that they are always performed by the owner of the queue.
+Other contexts may steal work from the \emph{cold end} of the deque.
+This can be done with an atomic compare-and-swap.
+If the compare and swap fails it may busy-wait.
+
+\plan{Accessing the array of deques}
+
+
+\plan{New barrier code.  If any?}
+
 %The top of the stack is sometimes referred to as the \emph{hot end},
 %since it is used frequently.
 %Likewise, the bottom of the stack is sometimes called the
@@ -596,10 +655,12 @@ this was chosen as it could support work stealing (Section
 %The local context uses the top of the stack only,
 %therefore sparks placed on this stack are scheduled in a
 %last-in-first-out manner.
+\plan{Work stealing fixes the premature scheduling decision problem}
 
-\status{Not written}
+\plan{Right \& Left recursion benchmarks.}
 
-\plan{Acknowledge work stealing used elsewhere in other runtime systems.}
+
+
 
 \subsection{Initial work stealing implementation}
 
@@ -716,7 +777,7 @@ this is more-likely to produce futures and it may reduce memory consumption.
 I really think that this section will move to the \tscope chapter,
 it will have more in common with that chapter and more data will be
 available.
-Secondly, threadscope can be used with micro-benchmarks to measure the
+Secondly, \tscope can be used with micro-benchmarks to measure the
 average costs of certain operations in the RTS.
 I will not write it until at least the rest of this chapter is finished.
 
