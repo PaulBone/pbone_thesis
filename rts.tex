@@ -160,9 +160,12 @@ which is described below.
 Alternatively,
 if \joinandcontinue found that there are outstanding conjuncts then
 the local spark stack is checked for a spark.
+\paul{XXX: We compare parent\_sp, This works in all cases since the code
+generator will ensure that parent\_sp is set to sp when a conjunction is
+entered.}
 A spark is used only if it was spawned off by the same parallel conjunction.
 The only other spark that may exist, is one for a caller's parallel
-conjunction provided.~\footnote{
+conjunction.~\footnote{
     It is impossible to find a callee's spark on our local spark stack as
     all the parallel conjuncts in a callee must be complete before context
     would be allowed to continue from the barrier at the callee's parallel
@@ -299,19 +302,168 @@ When the engine wakes it will re-execute the infinite loop.
 \label{fig:map_right_and_left_recursive}
 \end{figure}
 
-\plan{Describe the problem where we noticed that the context limit could limit
-the amount of parallelism that can be exploited.}
+Section \ref{sec:gc} we ran our benchmarks with a recent version of the
+runtime system.
+In the rest of this chapter we describe many of the improvements to the
+runtime system that improved parallel performance.
 
 \plan{Introduce right recursion.}
+Figure \ref{fig:map_right_and_left_recursive} shows two alternative, parallel
+implementations of \code{map/3}.
+While their declarative semantics are identical,
+their operational semantics are very different.
+In Section \ref{sec:backgnd_merpar} we explained that parallel conjunctions
+are implemented by spawning off the second and later conjuncts and executing
+the first conjunct directly.
+In the right recursive case (Figure \ref{fig:map_right_recursive}),
+the recursive call is spawned off as a spark,
+and that in the left recursive case (Figure \ref{fig:map_left_recursive}),
+the recursive call is executed directly, and the loops \emph{body} is
+spawned off.
+Programmers are taught about tail recursion,
+and therefore they write right recursive code wherever possible.
 
-\plan{Show performance figures where limit is increased, confirming this problem.}
+\begin{table}
+\paul{Make this easier to analyse by making the second column the actual
+number of contexts, not contexts per engine.}
+\begin{center}
+\begin{tabular}{r|rr|rrrr}
+\multicolumn{1}{c|}{Max no.} &
+\multicolumn{2}{c|}{Sequmential} &
+\multicolumn{4}{c}{Parallel w/ $N$ Engines} \\
+\Cbr{of contexts} & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
+\hline
+2       & 23.2 (0.93) & 21.5 (1.00)
+        & 21.5 (1.00) & 21.6 (1.00) & 21.6 (1.00) & 21.6 (1.00) \\
+32  &-&-& 21.5 (1.00) & 21.6 (1.00) & 21.5 (1.00) & 21.2 (1.01) \\
+64  &-&-& 21.5 (1.00) & 19.8 (1.09) & 18.5 (1.16) & 16.5 (1.30) \\
+128 &-&-& 21.5 (1.00) & 13.2 (1.63) &  8.2 (2.62) &  6.1 (3.52) \\
+256 &-&-& 21.5 (1.00) & 12.2 (1.76) &  8.1 (2.65) &  6.1 (3.52) \\
+%\hline
+%\multirow{5}{*}{Left} &
+% 2      & 23.2       & 21.5     & 21.5 & 21.5 & 21.5 & 21.5 \\
+%&32     & -          & -        & 21.5 & 21.5 & 21.5 & 21.5 \\
+%&64     & -          & -        & 21.5 & 21.5 & 20.5 & 19.0 \\
+%&128    & -          & -        & 21.5 & 18.5 & 15.8 & 12.9 \\
+%&256    & -          & -        & 21.5 & 17.8 & 15.6 & 14.1 \\
+\end{tabular}
+\end{center}
+\caption{Right recursion performance.}
+\label{tab:right}
+\end{table}
+
+\plan{Show performance figures.}
+Table \ref{tab:right} shows average elapsed time in seconds for the
+mandelbrot\_lowalloc program over 20 samples.
+We use the mandelbrot\_lowalloc program from Section \ref{sec:gc}.
+Using this program we can easily observe the
+speedup due to parallelism in Mercury without the effects of the garbage
+collector.
+The loop that iterates over the rows in the image uses right recursion.
+It is similar to \code{map/3}
+in Figure \ref{fig:map_right_recursive}.
+\paul{XXX}
+The left most column describes how many contexts may exist at once per
+Mercury engine.
+Values are omitted in the range 3--31 as they are not interesting:
+their results are the same as those for 2 contexts per engine.
+The next two columns give the elapsed execution time for a sequential
+version of the program,
+in this version of the program no parallel conjunctions where used.
+The first of these, labelled ``not TS'',
+is compiled without thread safety;
+the second, labelled ``TS'',
+is compiled with thread safety, meaning that it allows multiple engines to be
+used: requiring each thread to use a register to point to its engine
+structure (Section \ref{sec:backgnd_merpar}).
+The ``TS'' version also compiles the garbage collector for thread safety.
+The context limit is not used by the sequential versions of the programs,
+hence some data items are not included.
+The following four columns give the elapsed execution times
+using one to four Mercury engines.
+The numbers in parentheses are the ratio between the result and the 
+sequential thread safe result.
+
+\plan{Observations}
+When using four engines and at least 128 contexts, the program
+achieves a speedup of 3.52.
+With fewer contexts, parallel speedups are limited.
+Using independent parallelism there should be no need to suspend a context.
+Therefore, the program should parallelise well enough when restricted to
+a small (four to eight) number of contexts.
+
+\plan{Describe the context limit problem.}
+The cause of this problem is that right recursion uses a context for
+each iteration of its loop, and then suspends that context:
+Parallel conjunctions are evaluated as described in Section
+\ref{sec:backgnd_merpar}.
+The second and later conjuncts are spawned off while the first conjunct is
+executed by the current context.
+The barrier at the end of the first conjunct will block the context if
+the other conjuncts have not yet completed.
+This is likly as the recursive call almost always requires more
+computation than a single iteration.
+The context must either execute a spark due to the same parallel
+conjunction or be blocked.
+It cannot continue execution after the parallel conjunction as the code
+after the conjunction often depends on values produced by the other
+conjuncts in the conjunction.
+Every spark placed on the global queue is converted into a new context
+as no contexts have been released into the free list.
+Each of these new contexts in turn executes the recursive call and then
+becomes blocked within the same parallel conjunction.
+The number of contexts quickly exceeds the context limit preventing
+parallel execution.
+Later in the project we developed a solution to this project which is
+covered in Chapter \ref{chap:loop_control}.
+In this chapter we investigate workarounds.
 
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
-Explain why we think that left recursion will not have this problem.
+Only right recursion behaves in this way.
+A left recursive predicate (Figure \ref{fig:left_recursion} has its
+recursive call on the left of the parallel conjunction.
+The context executing the conjunction sparks off the body of the loop,
+in the figure this is \code{P},
+and executes the recursive call directly.
+In this case by the time the recursive call finishes \code{P}'s conjunct
+should have also finished.
+The context that created the parallel conjunction is less likely to be
+blocked at the barrier,
+and the context executing the spark is never blocked since it calls
+\getglobalwork (it cannot have any local sparks).
+
+\begin{table}
+\begin{center}
+\begin{tabular}{lr|rrrrrr}
+\multicolumn{1}{c|}{} &
+\multicolumn{1}{c|}{Max no.\ of contexts} &
+\multicolumn{2}{|c|}{Sequmential} &
+\multicolumn{4}{|c}{Parallel w/ $N$ Engines} \\
+\Cbr{} & & \C{not TS} & \Cbr{TS}  & \C{1}& \C{2}& \C{3}& \C{4}\\
+\hline
+\multirow{5}{*}{Include} &
+ 2       & 23.2       & 21.5      & 21.5 & 21.5 & 21.5 & 21.5 \\
+&32      & -          & -         & 21.5 & 21.5 & 21.5 & 21.5 \\
+&64      & -          & -         & 21.5 & 21.5 & 20.5 & 19.0 \\
+&128     & -          & -         & 21.5 & 18.5 & 15.8 & 12.9 \\
+&256     & -          & -         & 21.5 & 17.8 & 15.6 & 14.1 \\
+\hline
+Exclude &
+-        & 23.3       & 21.5      & 21.7 & 17.9 & 15.6 & 14.2 \\
+\end{tabular}
+\end{center}
+\caption{Left recursion with and without global sparks included in the context
+limit}
+\label{tab:2009_left_nolimit}
+\end{table}
 
 \plan{Show performance figures for left recursion.}
+Table \ref{tab:2009_left_nolimit} shows benchmark results using left
+recursion.
 The left recursive figures are underwhelming, they are worse than right recursion.
+\paul{I want to change the benchmarks before I do too much more work
+on this section.}
 
 \plan{Explain the premature scheduling problem that affects left-recursive programs.}
 
@@ -320,107 +472,6 @@ The left recursive figures are underwhelming, they are worse than right recursio
 
 \plan{Reinforce that these results support the idea that scheduling decisions are made prematurely}
 
-
-
-%Figure \ref{fig:map_right_and_left_recursive} shows two alternative, parallel
-%implementations of \code{map/3}.
-%While their declarative semantics are identical,
-%their operational semantics are very different.  In Section
-%\ref{sec:backgnd_merpar} we explained that parallel conjunctions are
-%implemented by spawning off the tail of the conjunction and executing the
-%head directly.
-%This means that in the right recursive case (Figure
-%\ref{fig:map_right_recursive}), the recursive call is spawned off as a
-%spark,
-%and that in the left recursive case (Figure \ref{fig:map_left_recursive}),
-%the recursive call is executed directly, and the loops \emph{body} is
-%spawned off.
-
-\begin{table}
-\paul{Make this easier to analyse by making the second column the actual
-number of contexts, not contexts per engine.}
-\begin{center}
-\begin{tabular}{lr|rrrrrr}
-\multicolumn{1}{c|}{Recursion type} &
-\multicolumn{1}{c|}{Max no.\ of contexts} &
-\multicolumn{2}{|c|}{Sequmential} &
-\multicolumn{4}{|c}{Parallel w/ $N$ Engines} \\
-\Cbr{} & & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
-\hline
-\multirow{5}{*}{Right} &
- 2      & 23.2       & 21.5     & 21.5 & 21.6 & 21.6 & 21.6 \\
-&32     & -          & -        & 21.5 & 21.6 & 21.5 & 21.2 \\
-&64     & -          & -        & 21.5 & 19.8 & 18.5 & 16.5 \\
-&128    & -          & -        & 21.5 & 13.2 &  8.2 &  6.1 \\
-&256    & -          & -        & 21.5 & 12.2 &  8.1 &  6.1 \\
-\hline
-\multirow{5}{*}{Left} &
- 2      & 23.2       & 21.5     & 21.5 & 21.5 & 21.5 & 21.5 \\
-&32     & -          & -        & 21.5 & 21.5 & 21.5 & 21.5 \\
-&64     & -          & -        & 21.5 & 21.5 & 20.5 & 19.0 \\
-&128    & -          & -        & 21.5 & 18.5 & 15.8 & 12.9 \\
-&256    & -          & -        & 21.5 & 17.8 & 15.6 & 14.1 \\
-\end{tabular}
-\end{center}
-\caption{Right vs.\ left recursion.}
-\label{tab:right_v_left}
-\end{table}
-
-%Table \ref{tab:right_v_left} shows average elapsed time in seconds for the
-%mandelbrot image generating program over 20 samples.
-%The program iterates over the rows in the mandelbrot image using
-%a left or right recursive parallel
-%\code{map/3} predicate such as those in Figure
-%\ref{fig:map_right_and_left_recursive},
-%the leftmost column in the table indicates which predicate was used.
-%The next column describes how many contexts may exist at once per Mercury
-%engine.
-%Values are omitted in the range 3--31 as they are not interesting:
-%they are the same as the case for 2 contexts per engine.
-%The next two columns give the runtime for a sequential version of the
-%program,
-%in this version of the program no parallel conjunctions where used.
-%The first of these, labelled ``not TS'',
-%is compiled without thread safety;
-%the second, labelled ``TS'',
-%is compiled with thread safety, meaning that it allows multiple engines to be
-%used: requiring a register to point to a pthread's engine structure
-%(Section \ref{sec:backgnd_merpar}),
-%and compiling the garbage collector for thread safety.
-%The following four columns give the runtimes for the parallel mandelbrot
-%program with 1--4 Mercury engines.
-%
-%We can see that the right recursive program performs better than the left
-%recursive one.
-%The right recursive program, when using 4 cores and at least 128 contexts,
-%achieves a speedup of 3.52 compared to the right recursive sequential thread
-%safe program.
-%At best the left recursive program is sped up by a factor of 1.67.
-%The next observation is that as we allow more contexts to reside in memory
-%at once,
-%we achieve greater speedups.
-%The exception to this is the case for left recursion with four engines and
-%256 contexts, it is slower than the case for 256 contexts.
-%These two results have standard deviations of 6.40 and 6.15 seconds
-%respectively meaning that any apparent difference is most likely
-%noise in the data.
-%All the other results have a standard deviation of less than two seconds,
-%most of these are less than half a second.
-%We saw the same high variance in these two results when repeating the test.
-%We will explain the probable cause for this later in this section.
-%
-%Parallel conjunctions are evaluated as described in Section
-%\ref{sec:backgnd_merpar},
-%the second and later conjuncts are spawned off while the first conjunct is
-%executed by the current context.
-%The barrier at the end of the first conjunct will block the context if
-%the other conjuncts have not yet completed.
-%It must be blocked because it would normally continue by executing the code
-%after the parallel conjunction
-%which may depend on values produced by the other conjuncts ---
-%it is not safe for it to continue executing until all the conjuncts have
-%been completely executed.
-%
 %\paul{consider diagram with stack}
 %In the right recursive example,
 %the recursive call is spawned off,
@@ -525,30 +576,6 @@ number of contexts, not contexts per engine.}
 %and because contexts are re-used (in left recursion) there is either a free
 %context or we can easily create one.
 
-\begin{table}
-\begin{center}
-\begin{tabular}{lr|rrrrrr}
-\multicolumn{1}{c|}{} &
-\multicolumn{1}{c|}{Max no.\ of contexts} &
-\multicolumn{2}{|c|}{Sequmential} &
-\multicolumn{4}{|c}{Parallel w/ $N$ Engines} \\
-\Cbr{} & & \C{not TS} & \Cbr{TS}  & \C{1}& \C{2}& \C{3}& \C{4}\\
-\hline
-\multirow{5}{*}{Include} &
- 2       & 23.2       & 21.5      & 21.5 & 21.5 & 21.5 & 21.5 \\
-&32      & -          & -         & 21.5 & 21.5 & 21.5 & 21.5 \\
-&64      & -          & -         & 21.5 & 21.5 & 20.5 & 19.0 \\
-&128     & -          & -         & 21.5 & 18.5 & 15.8 & 12.9 \\
-&256     & -          & -         & 21.5 & 17.8 & 15.6 & 14.1 \\
-\hline
-Exclude &
--        & 23.3       & 21.5      & 21.7 & 17.9 & 15.6 & 14.2 \\
-\end{tabular}
-\end{center}
-\caption{Left recursion with and without global sparks included in the context
-limit}
-\label{tab:2009_nolimit}
-\end{table}
 
 \plan{Avoid the right-recursion problem by reordering independent conjunctions.}
 
@@ -686,7 +713,7 @@ this is more-likely to produce futures and it may reduce memory consumption.
 \label{sec:proposed_tweaks}
 \status{Not written, May move to TS chapter}
 
-I really think that this section will move to the threadscope chapter,
+I really think that this section will move to the \tscope chapter,
 it will have more in common with that chapter and more data will be
 available.
 Secondly, threadscope can be used with micro-benchmarks to measure the
