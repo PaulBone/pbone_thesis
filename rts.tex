@@ -5,7 +5,7 @@ Early in the project
 we tested two manually parallelised programs:
 a raytracer and a mandelbrot image generator.
 Both of them have a single significant loop
-whose iterations are independent of one-another.
+whose iterations are independent of one another.
 We parallelised this loop in each program as it was the best place to
 introduce parallelism,
 but we did not get the speedups that we expected.
@@ -15,7 +15,7 @@ Therefore,
 we chose to address the performance problems with manual parallelism
 before we worked on automatic parallelism.
 
-The chapter is structured as follows:
+This chapter is structured as follows:
 Section \ref{sec:gc} describes the garbage collector's effect on parallel
 execution performance and how tuning some parameters of the garbage
 collector can improve performance.
@@ -32,8 +32,8 @@ which describe the initial and revised versions of the work stealing
 implementation.
 Section \ref{sec:work_stealing} also includes benchmarks that show
 how work stealing fixes the spark scheduling problem.
-We made a number of improvements to the way that Mercury engines are created,
-this includes thread pinning and support for SMT systems,
+We made a number of improvements to the way that Mercury engines are created.
+This includes thread pinning and support for SMT systems;
 we describe these improvements in Section \ref{sec:thread_pinning}.
 Finally, Section \ref{sec:idle_loop} describes our changes to how engines
 idle,
