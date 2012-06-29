@@ -63,7 +63,7 @@ mercury_engines = 1..4.
 :- func num_max_contexts_per_thread = list(int).
 
 num_max_contexts_per_thread =
-    map((func(X) = pow(2,X)), 1..8).
+    map((func(X) = pow(2,X)), 2..11).
 
 % XXX: this was unused in my testing so far.
 :- func base_mcflags = string.
@@ -77,7 +77,7 @@ control_group_grades=[asmfast,
 
 :- func control_group_rtopts = list(rtopts_spec).
 
-control_group_rtopts=[rtopts("P1-lc2", "-P 1")].
+control_group_rtopts=[rtopts("P1", "-P 1")].
 
 :- func test_group_grades = list(grade_spec).
 
@@ -99,7 +99,7 @@ test_group_rtopts =
         (func(P) =
             map(
                 (func(C) = rtopts(format("P%d-c%d", [i(P), i(C)]),
-                    format("-P %d --max-contexts-per-thread %d", [i(P), i(C)]))),
+                    format("-P %d --max-contexts-per-thread %d", [i(P), i(C/P)]))),
                 num_max_contexts_per_thread)),
         mercury_engines)).
 
