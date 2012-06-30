@@ -4,7 +4,7 @@
 One of the sources of poor parallel performance is the behaviour of the
 garbage collector.
 Like some declarative languages,
-Mercury does not allow destructive update, also known as mutation.%
+Mercury does not allow destructive update, also known as mutation.
 %\footnote{
 %    Destructive update is allowed via support for mutable variables.
 %    Their use does not interfere with parallelism as they are used in
@@ -12,7 +12,7 @@ Mercury does not allow destructive update, also known as mutation.%
 %    The compiler will not parallelise impure goals.}
 Therefore a call usually returns its value in newly allocated memory
 rather than modifying the memory of its parameters.
-Likewise, a call can not modify global memory.
+Likewise, a call cannot modify global memory.
 This means that Mercury programs often have a high rate of allocation,
 which places significant stress on the garbage collector.
 Therefore,
@@ -26,17 +26,17 @@ world, parallel marking.}
 Mercury uses the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
 \citep{boehm_gc},
 which is a conservative mark and sweep collector.
-Boehm GC supports parallel programming.
-It will stop all the threads (\emph{stop the world}) during its marking
+Boehm GC supports parallel programming:
+it will stop all the threads (\emph{stop the world}) during its marking
 phase.
-It also supports parallel marking,
+It also supports parallel marking:
 it will use its own set of pthreads to do parallel marking.
 
 \plan{Introduce collector time, mutator time.}
 A program's execution time is divided into two alternating phases:
 Collection time, which is when Boehm GC performs marking,
 and mutator time, which is when the Mercury program runs.
-The name mutator time refers to time that mutations (changes) to memory
+The name `mutator time' refers to time that mutations (changes) to memory
 structures are permitted.
 The collector may also perform some actions,
 such as sweeping,
@@ -61,9 +61,8 @@ $(1 + 19) \div (1 + 19\div4) = 3.48$.
 If we use a machine with 100 processors then this becomes:
 $(1 + 19) \div (1 + 19\div100) = 16.8$;
 with 84\% of the runtime spent in the collector.
-Adding more processors to the system means that
-as the number of processors increases a larger proportion of time is
-wasted waiting for collection to complete.
+As the number of processors increases,
+a larger proportion of time is wasted waiting for collection to complete.
 
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
@@ -80,12 +79,12 @@ parallel Mercury programs (Section \ref{sec:backgnd_merpar}).
 The second reason is that
 memory allocation routines must use locking to protect shared data
 structures,
-this will slow down allocation.
+which will slow down allocation.
 Boehm GC's authors recognised this problem and
 added support for thread-local resources such as free lists.
 Therefore,
-during memory allocation a thread uses its own free lists rather than
-locking a global structure.
+during memory allocation,
+a thread uses its own free lists rather than locking a global structure.
 From time to time, a thread will have to retrieve new free lists
 from a global structure and will need to lock the structure.
 This cost will be amortised across several memory allocations.
@@ -94,8 +93,8 @@ This cost will be amortised across several memory allocations.
 programs.}
 One of our benchmarks is a raytracer developed for the
 ICFP programming contest in 2000.
-For each pixel in the image the raytracer casts a ray into the scene to
-determine what colour to paint that pixel.
+For each pixel in the image,
+the raytracer casts a ray into the scene to determine what colour to paint that pixel.
 Two nested loops build the pixels for the image:
 the outer loop iterates over the rows in the image and
 the inner loop iterates over the pixels in each row.
@@ -107,15 +106,15 @@ colour.
 It is therefore memory allocation intensive.
 Since we suspected that garbage collection was having a negative affect on
 performance we developed a mandelbrot image generator.
-The mandelbrot image generator has a similar structure to the raytracer,
+The mandelbrot image generator has a similar structure to the raytracer:
 it draws an image using two nested loops as above.
 The mandelbrot image is drawn on the complex number plane.
 A complex number $C$ is in the mandelbrot set if
-$|N|$ is always smaller than 2 where $N_{i+1} = N_{i}^2 + C$ and $N_0 = 0$.
+$\forall i \cdot |N_i| < 2$ where $N_0 = 0$ and $N_{i+1} = N_{i}^2 + C$.
 For each pixel in the image the program tests if the pixel's coordinates are
-in the set,
-The pixel's colour is chosen based on how many iterations are needed
-before $|N| > 2$,
+in the set.
+The pixel's colour is chosen based on how many iterations $i$ are needed
+before $|N_i| \ge 2$,
 or black if the test survived 5,000 iterations.
 We parallelised this program the same way as we did the raytracer:
 by introducing an independent parallel conjunction into the outer loop.
@@ -124,10 +123,9 @@ the first version stores coordinates and complex numbers on the stack and in
 registers.
 Therefore, this version has a low rate of memory allocation.
 We call this version `mandelbrot\_lowalloc'.
-The second version of the mandelbrot program is called
-`mandelbrot\_highalloc'.
-This program represents its coordinates and complex numbers as structures on
-the heap.
+The second version of the mandelbrot program,
+called `mandelbrot\_highalloc',
+represents its coordinates and complex numbers as structures on the heap.
 Therefore,
 it has a higher rate of memory allocation.
 
@@ -138,20 +136,20 @@ Table \ref{tab:gc} shows benchmark results for these programs
 with different numbers of Mercury engines and garbage collector threads.
 All benchmarks have an initial heap size of 16MB.
 Each result is measured in seconds and represents the mean of eight samples.
-The first row is the number of garbage collector threads used.
-The second and third rows give sequential execution times
+The first column is the number of garbage collector threads used.
+The second and third columns give sequential execution times
 without and with thread safety enabled.
-In these rows the programs where executed in such a way so that they did not
-execute a parallel conjunction.
-The remaining four rows give parallel execution times using one to four
+In these columns the programs where executed in such a way so that they did
+not execute a parallel conjunction.
+The remaining four columns give parallel execution times using one to four
 Mercury engines.
 The numbers in parentheses show the relative speedup when compared with the
 sequential thread safe result for the same program.
 \label{cabsav}
-We ran our benchmarks on 'cabsav',
+We ran our benchmarks on
 a hand built system using a Intel i7-2600K CPU
-with 16GB of memory.
-Cabsav runs Debian/GNU Linux 6
+with 16GB of memory,
+and running Debian/GNU Linux 6
 with a 2.6.32-5-amd64 Linux kernel and GCC 4.4.5-8.
 The garbage collection benchmarks were collected using a recent version of
 Mercury (rotd-2012-04-29);
@@ -164,13 +162,15 @@ garbage collection without other performance problems affecting the results.
 \plan{Describe performance in practice.}
 The raytracer program benefits from parallelism in both Mercury and the
 garbage collector.
-Using four engines speeds the program up by a factor of 1.58,
-compared to 1.29 for four marker threads.
-When using four engines and four marker threads the raytracer
-achieves a speedup of 2.73,
-this likely indicates that the program's high allocation rate causes
-contention on the garbage collector's locks,
-although we investigate another likely cause below.
+Using Mercury's parallelism only (four Mercury engines, and one GC thread) 
+speeds the program up by a factor of 1.58,
+compared to 1.29 when using the GC's parallelism only (one Mercury engine,
+and four GC threads).
+When using both Mercury and the GC's parallelism (four engines and four
+marker threads)
+the raytracer achieves a speedup of 2.73.
+These speedups are much lower than we might expect from such a program,
+either the mutator, the collector or both are not being parallelised well.
 mandelbrot\_lowalloc does not see any benefit from parallel marking.
 It achieves very good speedups from multiple Mercury engines.
 We know that this program has a low allocation rate
@@ -181,18 +181,20 @@ difficult to achieve good speedups when parallelising programs.
 mandelbrot\_highalloc, which stores its data on the heap,
 sees similar trends in performance as raytracer.
 Also, it is universally slower than mandelbrot\_lowalloc.
-mandelbrot\_highalloc achieves a speedup of 2.16 when using four Mercury
-engines compared to 1.58 for the raytracer.
-It also achieves a speedup of 1.11 when using four marker threads compared
-with 1.29 for the raytracer.
+mandelbrot\_highalloc achieves a speedup of 2.16 when using parallelism in
+Mercury (four Mercury engines, and one GC thread)
+1.58 for the raytracer.
+It also achieves a speedup of 1.11 when using the GC's parallelism 
+(one Mercury engine, and four GC threads)
+compared with 1.29 for the raytracer.
 
 \input{tab_gc_amdahl}
 
 \plan{Introduce the table we use for our discussion of Amdahl's law.}
 We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
 more than raytracer does,
-similarly mandelbrot\_highalloc benefits less from parallelism in the garbage
-collector than raytracer does.
+similarly mandelbrot\_highalloc benefits from parallelism in the garbage
+collector less than raytracer does.
 Using \tscope (Chapter \ref{chap:tscope}),
 we analysed how much time these programs spend running the garbage collector
 or the mutator.
@@ -211,14 +213,14 @@ time respectively.
 
 \plan{Describe trends in either the mutator or GC time.}
 As we expected, mandelbrot\_lowalloc spends very little time running the collector.
-Typically, it ran the collector only twice during its execution,
-total collector time was usually between 5 and 30 milliseconds.
+Typically, it ran the collector only twice during its execution.
+Also, total collector time was usually between 5 and 30 milliseconds.
 The other two programs ran the collector hundreds of times.
 As we increased the number of Mercury engines
 we noticed that these programs made fewer collections.
 As we varied the number of collector threads,
-we saw no trend in the number of collections,
-any apparent variation is most likely noise in the data.
+we saw no trend in the number of collections.
+Any apparent variation is most likely noise in the data.
 All three programs see a speedup in the time spent in the mutator as the
 number of Mercury engines is increased.
 Similarly,
@@ -244,8 +246,8 @@ However, the elapsed time speeds up by only: 1.35, 1.53 and 1.66 times
 respectively.
 Although, there is little change in the time spent in the collector;
 there is an increase in collector time as a percentage of elapsed time.
-Similarly, with one GC thread mandelbrot\_highalloc's mutator time speeds up
-by 1.80, 2.63 and 3.34.
+Similarly, with one GC thread and two, three and four Mercury engines,
+mandelbrot\_highalloc's mutator time speeds up by 1.80, 2.63 and 3.34.
 However, its elapsed time speeds up by only: 1.52, 1.90 and 2.15 times
 respectively.
 The elapsed time speedups are less impressive than the mutator time
@@ -256,8 +258,8 @@ creating speedups in collector time has little benefit to elapsed time.
 The results in Table \ref{tab:gc_amdahl} show that
 mandelbrot\_highalloc spends less of its time (by percentage) in garbage
 collection than raytracer.
-This matches the results in \ref{tab:gc},
-whereby mandelbrot\_highalloc has better speedups because of parallelism in
+This matches the results in Table \ref{tab:gc},
+where mandelbrot\_highalloc has better speedups because of parallelism in
 Mercury than raytracer does.
 Likewise,
 raytracer has better speedups because of parallelism in the collector
@@ -293,8 +295,9 @@ measured in million allocations per second.
 It is calculated by dividing the number of allocations in the second column
 by the average mutator time reported in Table \ref{tab:gc_amdahl}.
 Therefore, it represents the allocation rate during mutation time.
-This is deliberate because, by definition allocation can not occur during
-collector time.
+This is deliberate because,
+by definition,
+allocation cannot occur during collector time.
 mandelbrot\_highalloc has a higher allocation rate than raytracer.
 However,
 it spends less time doing collection, when measured either absolutely
@@ -338,12 +341,12 @@ We also attempted to improve performance further by modifying the initial
 heap size of the program.
 Table \ref{tab:gc_heapsize} shows the performance of the raytracer and
 mandelbrot\_highalloc programs with various initial heap sizes.
-The first column shows the heap size used,
+The first column shows the heap size used;
 we picked a number of sizes from 1MB to 512MB.
 The remaining columns show the average elapsed times in seconds.
 The first of these columns shows timing for the programs compiled for
 sequential execution without thread safety;
-this means that the collector can not use parallel marking.
+this means that the collector cannot use parallel marking.
 The next column is for sequential execution with thread safety;
 the collector uses parallel marking with four threads.
 The next four columns give the results for the programs compiled for
@@ -351,7 +354,7 @@ parallel execution, and executed with one to four Mercury engines.
 These results also use four marker threads.
 The numbers in parentheses are the ratio of elapsed time compared with the
 sequential thread-safe result for the same initial heap size.
-All the results are the averages of eight samples.
+All the results are the averages of eight test runs.
 We ran these tests on raytracer and mandelbrot\_highalloc.
 mandelbrot\_lowalloc was not used as its collection time is insignificant.
 
@@ -391,6 +394,13 @@ and the benefits of a larger heap are not enough to overcome these
 limitations.
 
 \plan{Speedup observation with larger heap sizes.}
+Above, we said that programs perform better with larger heap sizes.
+This measurement compares their elapsed time with one heap
+size with the elapsed time using a different heap size.
+We also found that programs \emph{exploited parallelism more easily} with
+larger heap sizes:
+This measurement compares programs' speedups (which are themselves
+comparisons of elapsed time).
 When the raytracer uses a 16MB initial heap its speedup using four
 cores is 2.17 times.
 However, when it uses a 512MB initial heap the same speedup is 2.99.
@@ -402,12 +412,12 @@ larger heap sizes allow programs to exploit more parallelism.
 
 \plan{Reason 1}
 In a parallel program with more than one Mercury engine,
-each collection must \emph{stop the world}:
+each collection must \emph{stop-the-world}:
 All Mercury engines are stopped so that they do not modify the heap during
 the marking phase.
 This requires synchronisation which reduces the performance of parallel
 programs.
-Therefore, the less often collection occurs, the less stop the world's
+Therefore, the less often collection occurs, the less stop-the-world's
 synchronisation affects performance.
 This may be why larger initial heap sizes allow programs to exploit more
 parallelism.
@@ -416,13 +426,13 @@ Another reason was suggested by Simon Marlow:
 The Boehm GC does not try to mark objects with the same thread
 that allocated the objects.
 This is likely to cause many cache misses.
-For example, during collection processor one (P1) marks one of processor two's
-(P2) objects.
-Causing a cache miss in P1's cache and invalidating the corresponding cache
+For example, during collection, processor one (P1) marks one of processor two's
+(P2) objects,
+causing a cache miss in P1's cache and invalidating the corresponding cache
 line in P2's cache.
 Later, when collection is finished,
-P2 resumes execution and incurs a cache miss for the object that it had been
-using.
+P2's process resumes execution and incurs a cache miss for the object that
+it had been using.
 \paul{Find the citation.}
 Simon Marlow made a similar observation when working with GHC's garbage
 collector \cite{marlow-gc}.
@@ -440,9 +450,9 @@ allowing allocation intensive programs to have even better parallel
 performance.
 This can be adjusted by increasing the \texttt{HBLKSIZE} tunable.
 Unfortunately,
-this caused our programs to crash,
+this caused our programs to crash.
 Boehm GC may not not have been throughly tested for this configuration.
-Therefore, we can not reliably evaluate how \texttt{HBLKSIZE} affects our
+Therefore, we cannot reliably evaluate how \texttt{HBLKSIZE} affects our
 programs.
 However,
 this should be investigated in the future.
