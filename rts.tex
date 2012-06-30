@@ -50,6 +50,15 @@ and how and when they wake up to execute parallel work.
 
 \status{This section is ready for review.}
 
+\plan{Introduction}
+We introduced parallelism in Mercury in Sections \ref{sec:backgnd_merpar} and
+\ref{sec:backgnd_deppar};
+we described how the runtime system in generic terms.
+In this section we will explain how sparks were originally managed,
+prior to 2009, when I begun my PhD candidature.
+This will provide the background for the changes we have made to the
+runtime since.
+
 \plan{Global spark queue and Contention wrt global queue}
 Mercury has a global spark queue.
 The runtime easily schedules a spark by placing it on the end of the
@@ -81,14 +90,30 @@ Wang's scheduling decision has two aims:
 First, to reduce the contention on the global queue,
 especially in the common case that there is enough parallel work.
 This also reduces the amount of locking.
-Second, to reduce the amount of memory allocated
-in contexts' stacks by reducing the number of contexts allocated.
+The second aim is to reduce the amount of memory allocated
+as contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts,
 so they are also included in this limit.
 Note that sparks placed on the global queue are executed in a
 first-in-first-out manner;
 sparks placed on a context's local stack are executed in a
 last-in-first-out manner.
+
+\begin{figure}
+\begin{tabular}{rl}
+ 1 & \code{~~MR\_SyncTerm ST;} \\
+ 2 & \code{~~MR\_init\_syncterm(\&ST, 2);} \\
+ 3 & \code{~~spawn\_off(\&ST, Spawn\_Label\_1);} \\
+ 4 & \code{~~}$G_1$ \\
+ 5 & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
+ 6 & \code{Spawn\_Label:} \\
+ 7 & \code{~~}$G_2$ \\
+ 8 & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
+ 9 & \code{Cont\_Label:} \\
+\end{tabular}
+\caption{Parallel conjunction implementation}
+\label{fig:par_conj_impl_only}
+\end{figure}
 
 \begin{algorithm}
 \begin{algorithmic}
@@ -100,7 +125,7 @@ last-in-first-out manner.
       \State release\_lock($ST.lock$)
       \Goto{$ContLabel$}
     \Else
-      \State schedule($ST.parent$)
+      \State schedule($ST.parent$, $ContLabel$)
       \State release\_lock($ST.lock$)
       \Goto{MR\_get\_global\_work}
     \EndIf
@@ -129,56 +154,151 @@ last-in-first-out manner.
 \end{algorithm}
 
 \plan{barrier code, this is used to explain the right recursion problem.}
-As an engine finishes executing a parallel conjunct,
-it will execute the the barrier at the end of the conjunct.
-The barrier is named \joinandcontinue and shown in
+In Section \ref{sec:backgnd_merpar} we described how parallel
+conjunctions are compiled
+(Figure \ref{fig:par_conj} shows an example).
+Consider the compiled parallel conjunction in Figure
+\ref{fig:par_conj_impl_only}.
+The context that executes the parallel conjunction,
+lets call it $C_{Orig}$,
+begins by:
+setting up the sync term,
+spawning off $G_2$,
+and executing $G_1$ (lines 1--4).
+Then it executes the barrier code
+\joinandcontinue, which is shown in 
 Algorithm \ref{alg:join_and_continue_peterw}.
-If the parallel conjunction has been executed by
-only one context,
-then it is safe to use a version of the barrier code that does not use
-locking,
-this optimisation is not shown as it is equivalent and not relevant to
-our discussion,
+The algorithm includes an optimisation not shown here:
+if the parallel conjunction has been executed by only one context,
+then a version of the algorithm that does not use locking is used.
+This is not shown as it is equivalent and not relevant to
+our discussion:
 we mention it only for completeness.
+Depending on how full the global run queue is,
+and how parallel tasks are interleaved,
+there are three important scenarios:
 
-The algorithm begins by checking if there are any outstanding conjuncts in
-the parallel conjunction.
-If there are no outstanding conjuncts and the current context is the parent
-context,
-then execution jumps to the label after the parallel conjunction.
-If the current context is not the parent context then
-the parent context is suspended (or about to be suspended).
-We know this because there is no other parallel work to do for this
-conjunction and the parent context may only work on this conjunction,
-therefore it must be suspended.
-The engine will schedule the parent context.
-The current context's local work queue is guaranteed to be empty,
-as this conjunction and any nested conjunctions are complete.
-Therefore,
-the engine will continue by jumping to the \getglobalwork routine
-which is described below.
-Alternatively,
-if \joinandcontinue found that there are outstanding conjuncts then
-the local spark stack is checked for a spark.
-\paul{XXX: We compare parent\_sp, This works in all cases since the code
-generator will ensure that parent\_sp is set to sp when a conjunction is
-entered.}
-A spark is used only if it was spawned off by the same parallel conjunction.
-The only other spark that may exist, is one for a caller's parallel
-conjunction.~\footnote{
-    It is impossible to find a callee's spark on our local spark stack as
-    all the parallel conjuncts in a callee must be complete before context
-    would be allowed to continue from the barrier at the callee's parallel
-    conjunction.}
-This can only happen if this context is the original context for the
-current parallel conjunction.
-We cannot execute a spark for a caller's parallel conjunction because it may
-depend on the execution of the current parallel conjunction.
-Therefore, only sparks for the current parallel conjunction are executed.
-If there was no suitable spark,
-the algorithm checks if this context is the parent context.
-If so, the algorithm suspends the context and
-jumps to \getglobalwork.
+\begin{description}
+
+    \item[Scenario one:]~
+
+    The spark for $G_2$ was placed on $C_{Orig}$'s local spark stack.
+    When $C_{Orig}$ reaches the \joinandcontinue barrier on line 5,
+    there will be an outstanding conjunct ($G_2$) and so
+    $ST.num\_outstanding \neq 0$.
+    the else branch of the if-then-else will be executed,
+    whereby the spark for $G_2$ will be popped off the top of the spark
+    stack.
+    Only the spark for $G_2$ can be on the stack:
+    it was put on the stack before $G_1$ was called and $G_1$ cannot
+    leave any sparks on the stack as its own \joinandcontinue barrier
+    would have executed them.
+    
+    The check that the sparks stack pointer is equal to the current
+    parent stack pointer will succeed,\footnote{
+        The code generator will ensure that $MR\_parent\_sp$ is set
+        before the parallel conjunction is executed,
+        and that it is restored after.}
+    and the context will execute the spark.
+
+    After executing $G_2$,
+    $C_{Orig}$ will execute the second call to the barrier code,
+    the one on line 8.
+    This time $ST.num\_outstanding = 0$,
+    and the then branch of the if-then-else will be executed.
+    Within this branch,
+    execution will enter the then branch of the nested if-then-else
+    because
+    the current context is the original context.
+    The code in this branch will jump to the continuation label on line
+    9.
+    This parallel conjunction has executed sequentially.
+
+    \item[Scenario two:]~
+
+    The spark for $G_2$ was placed on the global spark queue,
+    where some other context, $C_{Other}$, picked it up and executed it
+    in parallel.
+    In this scenario, as distinct from scenario three,
+    $C_{Other}$ reaches the barrier on line 8 \emph{before}
+    $C_{Orig}$ reaches the barrier on line 5.
+    Even if they both seem to reach the barrier at the same time.
+    Their barrier operations are performed in sequence because of the
+    lock protecting the barrier code.
+
+    $C_{Other}$ executes \joinandcontinue (line 8).
+    It will find that $ST.num\_outstanding \neq 0$,
+    and will execute the else branch of the if-then-else.
+    It will attempt to pop a spark of the stack,
+    as a spark on the stack might representing the outstanding
+    conjunction:
+    it cannot tell that the outstanding conjunction is $G_1$ and not some
+    hypothetical $G_3$.
+    There will be no spark on the stack since $G_{Other}$ took this
+    spark from the global queue, and therefore it is an empty context,
+    and, as before, it is impossible for $G_2$ to return and leave a
+    spark on $C_{Other}$'s stack.
+    Therefore, execution will continue to the second if-then-else in
+    this branch which will also fail since this context ($C_{Other}$)
+    is not the original context ($C_{Orig}$).
+    The look will be released and the barrier will exit,
+    The current mercury engine and context will execute \getglobalwork.
+
+    When $C_{Orig}$ executes its call to \joinandcontinue on line 5,
+    it will find that $ST.num\_outstanding = 0$ and enter the then
+    branch of the if-then-else.
+    It will then enter the then branch of the nested if-then-else
+    because it is the original context.
+    This code jumps to the continuation label on line 9.
+    The conjunction has executed in parallel.
+
+    \item[Scenario three:]~
+
+    As in scenario two,
+    the spark for $G_2$ was placed on the global spark queue,
+    where some other context, $C_{Other}$, picked it up and executed it
+    in parallel.
+    However,
+    in this scenario 
+    $C_{Other}$ reaches the barrier on line 8 \emph{after}
+    $C_{Orig}$ reaches the barrier on line 5.
+
+    When $C_{Orig}$ executes \joinandcontinue on line 5,
+    it will find that $ST.num\_outstanding \neq 0$.
+    Execution will enter the then branch of the if-then-else.
+    $C_{Orig}$ will try to pop a spark of its local spark stack,
+    however the spark for $G_2$ will not be on the spark stack.
+    $C_{Orig}$ might find a spark for a parent context's goal on the
+    stack,
+    if so, its stack pointer will not match the current parent stack
+    pointer, and ti will put the spark back on the stack.
+    The second if-then-else's then branch will be entered, since this
+    context is the original context.
+    This branch will suspend $C_{Orig}$ 
+    (copying context specific data from the engine into the context),
+    and then set the engine's context pointer to NULL.
+    before jumping to the \getglobalwork code.
+
+    When $C_{Other}$ reaches the barrier on line 8,
+    it will find that $ST.num\_outstanding = 0$,
+    and will execute the then branch of the if-then-else.
+    Within this branch it will test to see if it is the original
+    context,
+    the test will fail and the else branch of the nested if-then-else
+    will be executed.
+    At this point we know that $C_{Orig}$ must be suspended because
+    there where no outstanding conjuncts and the current context is not
+    the original context;
+    this can only happen if $C_{Orig}$ is suspended.
+    The code wakes $C_{Orig}$ up by
+    setting its code pointer to the continuation label, 
+    placing it on the global run queue,
+    and then jumps to \getglobalwork.
+
+    When $C_{Orig}$ resumes execution it executes the code on line 9,
+    which is the continuation label.
+
+\end{description}
 
 \begin{algorithm}[htb]
 \begin{algorithmic}
@@ -229,36 +349,43 @@ This is done by calling \getglobalwork.
 Only one of the idle engines can execute \getglobalwork at a time.
 This protects the context run queue and the global context queue from
 concurrent access using the run queue's lock.
-After acquiring the lock engines execute an infinite loop.
+After acquiring the lock, 
+engines execute a loop.
+An engine exits the loop only when it finds some work to do or the
+program is exiting.
 Each iteration first checks if the runtime system is being shut down,
 if so,
-then this thread releases the lock then destroys itself.
+then this thread releases the lock,
+and then destroys itself.
 If the system is not being shut down,
 the engine will search for a runnable context.
 If it finds a context it releases the run queue lock, loads the context
 and jumps to the resume point for the context.
-If the engine already has a context that context is guaranteed to be unused;
+If the engine already has a context,
+that context is guaranteed to be unused;
 therefore, it is released to the context free list.
 If no context was found the engine attempts to take a spark from the global
 spark queue.
 If it finds a spark then it will need a context to execute the spark.
 It will try to get a context from the free list, if there is none it will
 create a new context.
-Once it has a context it loads it
-this copies the context's copies of registers into the engine such as the
+Once it has a context,
+it loads it.
+This copies the context's copies of registers into the engine such as the
 stack pointer.
 It loads the spark by initialising the engine's parent stack pointer
 register and the spark's thread local mutables
 (which are set by the context that created the spark)
 into the context.
-If the engine did not find any work it will wait using a condition
-variable and the run queue lock.
+If the engine does not find any work,
+it will wait using a condition variable and the run queue lock.
 The pthreads wait function is able to unlock the lock and wait on the
 condition atomically, preventing race conditions. 
 The condition variable is used to wake up the engine if either a spark is
 placed on the global spark queue or a context is placed on the context run
 queue.
-When the engine wakes it will re-execute the infinite loop.
+When the engine wakes,
+it will re-execute the infinite loop.
 
 %An engine looks for global work first by checking the global context run queue.
 %If it finds a runnable context and is still holding a context from a
@@ -396,7 +523,7 @@ The second and later conjuncts are spawned off while the first conjunct is
 executed by the current context.
 The barrier at the end of the first conjunct will block the context if
 the other conjuncts have not yet completed.
-This is likly as the recursive call almost always requires more
+This is likely as the recursive call almost always requires more
 computation than a single iteration.
 The context must either execute a spark due to the same parallel
 conjunction or be blocked.
