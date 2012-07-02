@@ -505,20 +505,20 @@ The numbers in parentheses are the ratio between the result and the
 sequential thread safe result.
 
 \plan{Observations}
-In general more parallelism is acheived when more contexts are used:
+In general more parallelism is achieved when more contexts are used:
 The mandelbrot program parallelises well with 512 contexts.
 However,
 if this limit is raised even higher,
 to 1024 or 2048 contexts,
 not much more parallelism is gained.
-When only 256 contexts are used the four core version acheives a speedup
+When only 256 contexts are used the four core version achieves a speedup
 of 1.30,
 compared to 3.55 for 512 or more contexts.
 With fewer contexts, parallel speedups are limited.
 Using independent parallelism there should be no need to suspend a context.
 Therefore, the program should parallelise well enough when restricted to
 a small (four to eight) number of contexts.
-Tnis suggests that there is a problem;
+This suggests that there is a problem;
 too many contexts are needed to execute this program.
 We noticed the same pattern in other programs with right recursive
 parallelism.
@@ -558,14 +558,17 @@ The mandelbrot program's parameters asked to to render an image with a
 resolution of $600\times600$,
 given that some sparks can be executed by the current context without
 loosing much parallelism,
-512 contexts is enough to effectivly parallelise the program as shown in
+512 contexts is enough to effectively parallelise the program as shown in
 the table.
-It is important to note that each context consumes a sagnificant amount
+It is important to note that each context consumes a significant amount
 of memory, more than one stack frame.
 Therefore,
 this problem makes programs that look tail recursive
 \emph{consume more memory than}
 sequential programs that are not tail recursive.
+This is the reason why there is a context limit,
+to prevent a parallel Mercury program from consuming all the memory on a
+system.
 Later in the project we developed a solution to this problem which is
 covered in Chapter \ref{chap:loop_control}.
 In this chapter we investigate workarounds.
@@ -574,10 +577,10 @@ In this chapter we investigate workarounds.
 Above we noted that while using 128 or 256 contexts,
 a program using three or four Mercury engines was slower than one using
 two engines.
-A possible resion is that:
+A possible reason is that:
 the more Mercury engines there are the more often at least one engine is
 idle.
-This information is used when placing a spark on the globql spark
+This information is used when placing a spark on the global spark
 queue (Section \ref{sec:old_scheduling}).
 If there is no idle engine,
 a spark is placed on the context's local queue regardless of the current
@@ -605,10 +608,10 @@ original context that executed the conjunction.
 \begin{table}
 \begin{center}
 \begin{tabular}{r|rrrrrr}
-\multicolumn{1}{c|}{Max no.\ of contexts} &
+\multicolumn{1}{c|}{Max no.} &
 \multicolumn{2}{c|}{Sequmential} &
 \multicolumn{4}{c}{Parallel w/ $N$ Engines} \\
-& \C{not TS} & \Cbr{TS}  & \C{1}& \C{2}& \C{3}& \C{4}\\
+\Cbr{of contexts} & \C{not TS} & \Cbr{TS}  & \C{1}& \C{2}& \C{3}& \C{4}\\
 \hline
 \hline
 \multicolumn{7}{c}{Right recursion} \\
@@ -649,55 +652,142 @@ Right and Left recursion shown with standard deviation}
 \plan{Show performance figures for left recursion.}
 Table \ref{tab:2009_left_nolimit} shows benchmark results using left
 recursion.
-The left recursive figures are underwhelming, they are worse than right recursion.
-\paul{I want to change the benchmarks before I do too much more work
-on this section.}
+The table is broken into three sections:
+a copy of the right recursion data from Table \ref{tab:right},
+which is presented again for comparison;
+the left recursive data,
+which we will discuss now;
+and left recursive data with a modified context limit,
+which we will discuss in a moment.
+As above, the first column represents the maximum number of contexts
+allowed.
+The next two columns give the sequential execution time, without and
+with thread safety.
+And the remaining four columns give the results for the parallelised
+program using one to four Mercury engines.
+All results are the mean of 20 test runs,
+printed next to each result is the sample standard deviation.
+
+The left recursive figures are underwhelming, they are worse than right
+recursion.
+Furthermore,
+the sample standard deviations in for left recursion results are much
+higher.
+In particular,
+the more contexts and Mercury engines are used, the higher the
+deviation.
+This means that few observations can be made using this data,
+however,
+the results are still much slower than the right recursive results and
+the large amount of variance in the results are observations that we can
+make.
 
 \plan{Explain the premature scheduling problem that affects left-recursive programs.}
+The left recursion problem looks similar to the right recursive problem
+since they are both affected by the context limit.
+However, they are different.
+To demonstrate the left recursion problem,
+let us assume that there is a context limit of eight,
+and there are two Mercury engines.
+The first Mercury engine is executing the original context,
+which enters the parallel conjunction and spawns off a spark adding it
+to the global queue.
+The context then executes the recursive call continues to spawn off
+sparks.
+As we described in Section \ref{sec:old_scheduling},
+each spark on the global spark queue may be converted into a new
+context,
+and therefore, sparks on the global queue contribute towards the context
+limit.
+After eight recursions,
+it is very likely that the context limit has been exceeded.
+It may not have been.
+The number of contexts and sparks will be reduced
+when the second engine executes its second spark,
+as it allocates a new context to execute the first spark and re-uses it
+for the second.
+If the second engine is quick enough,
+the first engine may have been able to place 9 or 10 sparks on the
+global queue before the limit was exceeded,
+but this is unlikely.
+The first Mercury engine is doing nothing more than following a
+recursive call,
+setting up a synchronisation term and
+then scheduling a spark;
+each iteration is very quick.
+Meanwhile,
+the second Mercury engine is executing the call to \code{P} in each
+recursion;
+which is much slower.
+Therefore,
+sparks are being created more quickly than they can be executed.
+When using a low context limit most of these sparks are placed on
+the original context's local stack,
+and will be executed sequentially.
 
-\plan{A second table of results shows that adjusting the context limit allows left-recursion to run faster.}
-\paul{I would like to try yet-another experiment on left recursion where we remove this limit completely}
+\plan{Left recursion w/out limit results}
+The left recursive version of mandelbrot uses independent
+parallelism and left recursion;
+it never needs more than one context per Mercury engine.
+Therefore, we are able to safely remove sparks from the context limit
+since we know that any contexts allocated in order to evaluate sparks
+can be re-used.
+The final row group (of a single row) in Table
+\ref{tab:2009_left_nolimit} shows results for the left recursive test
+with a modified context limit.
+As such, the context limit is no-longer relevant to the test,
+so only one row of values is shown.
+The standard deviation for this result is still very high, 
+nearly seven seconds for four Mercury engines,
+so it cannot be easily compared with other results.
+Nevertheless, this result is similar to those in the left recursive
+group that have a sufficiently high context limit.
+This supports the idea above, however the program still performs poorly,
+and the variance is high.
+
+\plan{Second problem, discuss the high variance}
+The high variance in all the left recursive results is
+indicative of a nondeterminism.
+The cause is going to be something that either varies between execution
+runs or does not always effect execution runs.
+Parallel task scheduling is a potential cause.
+When a spark is scheduled and placed on either the global queue or
+context local stack.
+the context limit is one of the two things used to make this scheduling
+decision;
+the other is, if there is no idle engine then the spark is always
+placed on the local spark stack (Section \ref{sec:old_scheduling}).
+At the time when the parallel conjunction in \code{map/3} is executed,
+the other engines will initially be idle but will quickly become busy,
+once they are busy the original context will not place sparks on the
+global spark queue.
+If the other engines are slow to respond to the first sparks placed
+on the global queue,
+then a larger number of sparks are placed on this queue and more
+parallel work is available.
+If they are quick to respond,
+then more sparks will be placed on the original contexts local queue,
+where they will be executed sequentially.
 
 \plan{Reinforce that these results support the idea that scheduling decisions are made prematurely}
+Both of the left recursive problems have the same cause.
+The decision to execute a spark sequentially or in parallel is
+made too early.
+This decision is made when the spark is scheduled,
+and placed either on the global spark queue or the context local spark
+stack.
+The data used to make the decision includes the number of contexts in
+use,
+the number of sparks on the global queue,
+and if there is an idle engine.
+These conditions will be different when the spark is scheduled compared
+to when it may be executed,
+and the conditions when it is scheduled are not a good indication of
+the conditions when it may be executed.
+In the next section,
+we solve this problem by delaying the decision to execute a spark in
+parallel or in sequence.
 
-%\paul{consider diagram with stack}
-%In the right recursive example,
-%the recursive call is spawned off,
-%the spark for the recursive call will be placed on the global spark queue.
-%Another engine will wake up and take the spark from the global queue and
-%convert it to a context.
-%When it makes the recursive call it will execute the parallel conjunction
-%inside and perform the same process.
-%There is at most one spark on the global spark queue at any time.
-%Each of these contexts,
-%after creating the spark for their recursive call,
-%will execute \code{P(X, Y)} and
-%\joinandcontinue which blocks the context on the completion of
-%its recursive call.
-%This process continues:
-%the runtime system will convert each spark into a context,
-%and block each one at the barrier for the conjunction within its
-%recursive call.
-%This will quickly consume a lot of memory,
-%most of which is used for the stacks within each context.
-%
-%Eventually the number of contexts in memory plus
-%the number of sparks on the global queue is equal to the maximum number of
-%contexts.
-%At this point sparks are not added to the global queue but to their parent
-%context's local stack.
-%Contexts will not be created to execute these sparks.
-%Therefore,
-%this restricts the amount of memory allocated in contexts.
-%Without this limit,
-%a simple loop, such as in Figure \ref{fig:map_right_recursive},
-%can easily consume all the physical memory in a system.
-%This limit has the adverse effect of restricting how much parallelism
-%in the program is exploited.
-%This is why performance improves as we allow more contexts per engine.
-%We will solve the memory usage problem and context limit in
-%Chapter \ref{chap:loop_control}.
-%
 %In the left recursive program scheduling is quite different.
 %The parallel conjunction creates a spark for \code{P(X, Y)} and executes the
 %recursive call directly.
@@ -764,8 +854,6 @@ on this section.}
 %and because contexts are re-used (in left recursion) there is either a free
 %context or we can easily create one.
 
-
-\plan{Avoid the right-recursion problem by reordering independent conjunctions.}
 
 
 \section{Work stealing implementation}
@@ -871,6 +959,8 @@ Describe work stealing timeout.
 \plan{Benchmark}
 
 This subsection was joint work with Peter Wang.
+
+\plan{Avoid the right-recursion problem by reordering independent conjunctions.}
 
 \subsection{Final work stealing implementation}
 
