@@ -19,10 +19,10 @@ This chapter is structured as follows:
 Section \ref{sec:gc} describes the garbage collector's effect on parallel
 execution performance and how tuning some parameters of the garbage
 collector can improve performance.
-Section \ref{sec:old_scheduling} describes how the existing runtime
+Section \ref{sec:original_scheduling} describes how the existing runtime
 system schedules sparks.
 It provides background material for Section
-\ref{sec:old_scheduling_performance}
+\ref{sec:d_scheduling_performance}
 which benchmarks the runtime system and describes a significant problem with
 spark scheduling.
 We address those problems by introducing work stealing in Section
@@ -46,7 +46,7 @@ and how and when they wake up to execute parallel work.
 
 
 \section{Original spark scheduling algorithm}
-\label{sec:old_scheduling}
+\label{sec:original_scheduling}
 
 \status{This section is ready for review.}
 
@@ -581,7 +581,7 @@ A possible reason is that:
 the more Mercury engines there are the more often at least one engine is
 idle.
 This information is used when placing a spark on the global spark
-queue (Section \ref{sec:old_scheduling}).
+queue (Section \ref{sec:original_scheduling}).
 If there is no idle engine,
 a spark is placed on the context's local queue regardless of the current
 number of contexts.
@@ -694,7 +694,7 @@ which enters the parallel conjunction and spawns off a spark adding it
 to the global queue.
 The context then executes the recursive call continues to spawn off
 sparks.
-As we described in Section \ref{sec:old_scheduling},
+As we described in Section \ref{sec:original_scheduling},
 each spark on the global spark queue may be converted into a new
 context,
 and therefore, sparks on the global queue contribute towards the context
@@ -756,7 +756,7 @@ context local stack.
 the context limit is one of the two things used to make this scheduling
 decision;
 the other is, if there is no idle engine then the spark is always
-placed on the local spark stack (Section \ref{sec:old_scheduling}).
+placed on the local spark stack (Section \ref{sec:original_scheduling}).
 At the time when the parallel conjunction in \code{map/3} is executed,
 the other engines will initially be idle but will quickly become busy,
 once they are busy the original context will not place sparks on the
@@ -784,6 +784,7 @@ These conditions will be different when the spark is scheduled compared
 to when it may be executed,
 and the conditions when it is scheduled are not a good indication of
 the conditions when it may be executed.
+We will refer to this problem as the \emph{premature spark scheduling problem}.
 In the next section,
 we solve this problem by delaying the decision to execute a spark in
 parallel or in sequence.
@@ -859,11 +860,21 @@ parallel or in sequence.
 \section{Work stealing implementation}
 \label{sec:work_stealing}
 
+\plan{Refer to Peter Wang's conclusion of the early scheduling problem}.
+\citet{wangp-hons} raises the premature scheduling problem without
+describing it in detail,
+or showing that left recursion can create a pathological case of early scheduling.
+He also proposes that work stealing is likely to be an approprite solution to
+the problem.
+
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
-A number of language implementations use work stealing \citep{XXX}.
-A work stealing system has no global work queue.
+A number of language implementations use work stealing.
+% XXX:
+\citet{blumofe:1999:work-stealing},
+\citet{two mutlilisp papers}.
+work stealing system has no global work queue.
 Each worker has a local queue, when parallel work is created a worker
 places it on its own queue.
 When a worker becomes idle it checks its own queue for any work,
@@ -890,6 +901,19 @@ Work stealing has several benefits:
     which is more costly.
 
 \end{itemize}
+
+\subsection{Initial work stealing implementation}
+
+Mercury's prior spark scheduling code (Section \ref{sec:prior_scheduling}) was
+written with work stealing in mind.
+
+\plan{I believe that Peter discussed work stealing briefly in his thesis,
+I should check this and see what he said.}
+
+\plan{Describe the data structure used to implement these stacks and its properties.}
+Local context can use the hot end without synchronisation.
+Other contexts can use the cold end with a CAS,
+Memory barriers are used to ensure writes appear in the correct order.
 
 \plan{Describe our implementation}
 The work stealing implementation in this section was joint work between
@@ -918,6 +942,12 @@ If the compare and swap fails it may busy-wait.
 
 \plan{Accessing the array of deques}
 
+\plan{Describe how work stealing policies work}
+What happens to the global queue,
+in what cases is work stolen,
+Show algorithms for work stealing attempts.
+Describe work stealing timeout.
+
 
 \plan{New barrier code.  If any?}
 
@@ -933,28 +963,44 @@ If the compare and swap fails it may busy-wait.
 %last-in-first-out manner.
 \plan{Work stealing fixes the premature scheduling decision problem}
 
+\begin{table}
+\begin{center}
+\begin{tabular}{r|rr|rrrr}
+\multicolumn{1}{c|}{Max no.} &
+\multicolumn{2}{c|}{Sequmential} &
+\multicolumn{4}{c}{Parallel w/ $N$ Engines} \\
+\Cbr{of contexts} & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
+\hline
+\hline
+\multicolumn{7}{c}{Prior right recursion results} \\
+\hline
+4        & 23.2 (0.93) & 21.5 (1.00)
+         & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
+64   &-&-& 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
+128  &-&-& 21.5 (1.00) & 19.8 (1.09) & 20.9 (1.03) & 21.2 (1.01) \\
+256  &-&-& 21.5 (1.00) & 13.2 (1.63) & 15.5 (1.38) & 16.5 (1.30) \\
+512  &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.1 (2.66) &  6.1 (3.55) \\ 
+1024 &-&-& 21.5 (1.00) & 11.8 (1.81) &  8.0 (2.67) &  6.1 (3.55) \\
+2048 &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.0 (2.67) &  6.0 (3.55) \\
+\hline
+\hline
+\multicolumn{7}{c}{Prior Left recursion results} \\
+\hline
+\hline
+\hline
+\multicolumn{7}{c}{New Left recursion results with work stealing} \\
+\hline
+\end{tabular}
+\end{center}
+\caption{Work stealing results --- initial implementation}
+\label{tab:work_stealing_initial}
+\end{table}
+
+
 \plan{Right \& Left recursion benchmarks.}
 
 
 
-
-\subsection{Initial work stealing implementation}
-
-\plan{I believe that Peter discussed work stealing briefly in his thesis,
-I should check this and see what he said.}
-
-\plan{Say that stacks queues are associated with contexts.}
-
-\plan{Describe the data structure used to implement these stacks and its properties.}
-Local context can use the hot end without synchronisation.
-Other contexts can use the cold end with a CAS,
-Memory barriers are used to ensure writes appear in the correct order.
-
-\plan{Describe how work stealing policies work}
-What happens to the global queue,
-in what cases is work stolen,
-Show algorithms for work stealing attempts.
-Describe work stealing timeout.
 
 \plan{Benchmark}
 
