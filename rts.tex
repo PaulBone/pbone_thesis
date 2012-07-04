@@ -870,10 +870,11 @@ the problem.
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
-A number of language implementations use work stealing.
-% XXX:
-\citet{blumofe:1999:work-stealing},
-\citet{two mutlilisp papers}.
+A number of language implementations use work stealing such as
+\citet{blumofe:1999:work-stealing}, and
+\citet{halstead:1985:multilisp}.
+% XXX: There may be earlier papers by keller 1984 as cited by halstead.
+
 work stealing system has no global work queue.
 Each worker has a local queue, when parallel work is created a worker
 places it on its own queue.
