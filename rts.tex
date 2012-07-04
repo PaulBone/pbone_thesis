@@ -166,7 +166,7 @@ setting up the sync term,
 spawning off $G_2$,
 and executing $G_1$ (lines 1--4).
 Then it executes the barrier code
-\joinandcontinue, which is shown in 
+\joinandcontinue, which is shown in
 Algorithm \ref{alg:join_and_continue_peterw}.
 The algorithm includes an optimisation not shown here:
 if the parallel conjunction has been executed by only one context,
@@ -193,7 +193,7 @@ there are three important scenarios:
     it was put on the stack before $G_1$ was called and $G_1$ cannot
     leave any sparks on the stack as its own \joinandcontinue barrier
     would have executed them.
-    
+
     The check that the sparks stack pointer is equal to the current
     parent stack pointer will succeed,\footnote{
         The code generator will ensure that $MR\_parent\_sp$ is set
@@ -259,7 +259,7 @@ there are three important scenarios:
     where some other context, $C_{Other}$, picked it up and executed it
     in parallel.
     However,
-    in this scenario 
+    in this scenario
     $C_{Other}$ reaches the barrier on line 8 \emph{after}
     $C_{Orig}$ reaches the barrier on line 5.
 
@@ -274,7 +274,7 @@ there are three important scenarios:
     pointer, and ti will put the spark back on the stack.
     The second if-then-else's then branch will be entered, since this
     context is the original context.
-    This branch will suspend $C_{Orig}$ 
+    This branch will suspend $C_{Orig}$
     (copying context specific data from the engine into the context),
     and then set the engine's context pointer to NULL.
     before jumping to the \getglobalwork code.
@@ -291,7 +291,7 @@ there are three important scenarios:
     the original context;
     this can only happen if $C_{Orig}$ is suspended.
     The code wakes $C_{Orig}$ up by
-    setting its code pointer to the continuation label, 
+    setting its code pointer to the continuation label,
     placing it on the global run queue,
     and then jumps to \getglobalwork.
 
@@ -349,7 +349,7 @@ This is done by calling \getglobalwork.
 Only one of the idle engines can execute \getglobalwork at a time.
 This protects the context run queue and the global context queue from
 concurrent access using the run queue's lock.
-After acquiring the lock, 
+After acquiring the lock,
 engines execute a loop.
 An engine exits the loop only when it finds some work to do or the
 program is exiting.
@@ -380,7 +380,7 @@ into the context.
 If the engine does not find any work,
 it will wait using a condition variable and the run queue lock.
 The pthreads wait function is able to unlock the lock and wait on the
-condition atomically, preventing race conditions. 
+condition atomically, preventing race conditions.
 The condition variable is used to wake up the engine if either a spark is
 placed on the global spark queue or a context is placed on the context run
 queue.
@@ -459,11 +459,11 @@ and therefore they write right recursive code wherever possible.
 \Cbr{of contexts} & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
 \hline
 4        & 23.2 (0.93) & 21.5 (1.00)
-         & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
-64   &-&-& 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
+         & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\
+64   &-&-& 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\
 128  &-&-& 21.5 (1.00) & 19.8 (1.09) & 20.9 (1.03) & 21.2 (1.01) \\
 256  &-&-& 21.5 (1.00) & 13.2 (1.63) & 15.5 (1.38) & 16.5 (1.30) \\
-512  &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.1 (2.66) &  6.1 (3.55) \\ 
+512  &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.1 (2.66) &  6.1 (3.55) \\
 1024 &-&-& 21.5 (1.00) & 11.8 (1.81) &  8.0 (2.67) &  6.1 (3.55) \\
 2048 &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.0 (2.67) &  6.0 (3.55) \\
 \end{tabular}
@@ -501,7 +501,7 @@ The sequential versions of the programs do not use the context limit:
 there is only one result for each sequential version of a program.
 The following four columns give the elapsed execution times
 using one to four Mercury engines.
-The numbers in parentheses are the ratio between the result and the 
+The numbers in parentheses are the ratio between the result and the
 sequential thread safe result.
 
 \plan{Observations}
@@ -617,11 +617,11 @@ original context that executed the conjunction.
 \multicolumn{7}{c}{Right recursion} \\
 \hline
 4        & 23.2 $\pm0.00$ & 21.5 $\pm0.04$
-         & 21.5 $\pm0.02$ & 21.5 $\pm0.00$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\ 
-64   &-&-& 21.5 $\pm0.03$ & 21.5 $\pm0.01$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\ 
+         & 21.5 $\pm0.02$ & 21.5 $\pm0.00$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\
+64   &-&-& 21.5 $\pm0.03$ & 21.5 $\pm0.01$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\
 128  &-&-& 21.5 $\pm0.02$ & 19.8 $\pm0.01$ & 20.9 $\pm0.03$ & 21.2 $\pm0.03$ \\
 256  &-&-& 21.5 $\pm0.02$ & 13.2 $\pm0.05$ & 15.5 $\pm0.06$ & 16.5 $\pm0.07$ \\
-512  &-&-& 21.5 $\pm0.02$ & 11.9 $\pm0.11$ &  8.1 $\pm0.09$ &  6.1 $\pm0.08$ \\ 
+512  &-&-& 21.5 $\pm0.02$ & 11.9 $\pm0.11$ &  8.1 $\pm0.09$ &  6.1 $\pm0.08$ \\
 1024 &-&-& 21.5 $\pm0.03$ & 11.8 $\pm0.11$ &  8.0 $\pm0.06$ &  6.1 $\pm0.08$ \\
 2048 &-&-& 21.5 $\pm0.03$ & 11.9 $\pm0.10$ &  8.0 $\pm0.08$ &  6.0 $\pm0.06$ \\
 \hline
@@ -737,7 +737,7 @@ The final row group (of a single row) in Table
 with a modified context limit.
 As such, the context limit is no-longer relevant to the test,
 so only one row of values is shown.
-The standard deviation for this result is still very high, 
+The standard deviation for this result is still very high,
 nearly seven seconds for four Mercury engines,
 so it cannot be easily compared with other results.
 Nevertheless, this result is similar to those in the left recursive
@@ -964,43 +964,7 @@ Describe work stealing timeout.
 %last-in-first-out manner.
 \plan{Work stealing fixes the premature scheduling decision problem}
 
-\begin{table}
-\begin{center}
-\begin{tabular}{r|rr|rrrr}
-\multicolumn{1}{c|}{Max no.} &
-\multicolumn{2}{c|}{Sequmential} &
-\multicolumn{4}{c}{Parallel w/ $N$ Engines} \\
-\Cbr{of contexts} & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
-\hline
-\hline
-\multicolumn{7}{c}{Prior right recursion results} \\
-\hline
-4        & 23.2 (0.93) & 21.5 (1.00)
-         & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
-64   &-&-& 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\ 
-128  &-&-& 21.5 (1.00) & 19.8 (1.09) & 20.9 (1.03) & 21.2 (1.01) \\
-256  &-&-& 21.5 (1.00) & 13.2 (1.63) & 15.5 (1.38) & 16.5 (1.30) \\
-512  &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.1 (2.66) &  6.1 (3.55) \\ 
-1024 &-&-& 21.5 (1.00) & 11.8 (1.81) &  8.0 (2.67) &  6.1 (3.55) \\
-2048 &-&-& 21.5 (1.00) & 11.9 (1.81) &  8.0 (2.67) &  6.0 (3.55) \\
-\hline
-\hline
-\multicolumn{7}{c}{Prior Left recursion results} \\
-\hline
-\hline
-\hline
-\multicolumn{7}{c}{New Left recursion results with work stealing} \\
-\hline
-\end{tabular}
-\end{center}
-\caption{Work stealing results --- initial implementation}
-\label{tab:work_stealing_initial}
-\end{table}
-
-
-\plan{Right \& Left recursion benchmarks.}
-
-
+\input{tab_work_stealing_initial}
 
 
 \plan{Benchmark}
