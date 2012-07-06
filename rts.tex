@@ -6,22 +6,21 @@ we tested two manually parallelised programs:
 a raytracer and a mandelbrot image generator.
 Both of them have a single significant loop
 whose iterations are independent of one another.
-We parallelised this loop in each program as it was the best place to
-introduce parallelism,
-but we did not get the speedups that we expected.
-For these programs, automatic parallelisation cannot achieve
-a greater speedup than we have achieved with manual parallelisation.
+We expect that automatic parallelisation would parallelise this loop
+as it is the best place to introduce parallelism.
+When we parallelised this loop manually we did
+we did not get the speedups that we expected.
 Therefore,
-we chose to address the performance problems with manual parallelism
+we chose to address the performance problems
 before we worked on automatic parallelism.
 
-This chapter is structured as follows:
-Section \ref{sec:gc} describes the garbage collector's effect on parallel
-execution performance and how tuning some parameters of the garbage
-collector can improve performance.
-Section \ref{sec:original_scheduling} describes how the existing runtime
+In this chapter we investigate and correct these performance problems.
+We start with the garbage collector in Section \ref{sec:gc};
+we analyise the collector's effects on performance and tune its parameters
+to improve performance.
+In Section \ref{sec:original_scheduling} we describe how the existing runtime
 system schedules sparks.
-It provides background material for Section
+The section provides background material for Section
 \ref{sec:d_scheduling_performance}
 which benchmarks the runtime system and describes a significant problem with
 spark scheduling.
