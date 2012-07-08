@@ -3,8 +3,8 @@
 
 One of the sources of poor parallel performance is the behaviour of the
 garbage collector.
-Like some declarative languages,
-Mercury does not allow destructive update, also known as mutation.
+Like other pure declarative languages,
+Mercury does not allow destructive update.
 %\footnote{
 %    Destructive update is allowed via support for mutable variables.
 %    Their use does not interfere with parallelism as they are used in
@@ -23,17 +23,18 @@ program.
 
 \plan{Introduce Boehm, \& details: conservative, mark and sweep, stop the
 world, parallel marking.}
-Mercury uses the Boehm-Demers-Weiser Conservative Garbage Collector (Boehm GC)
+Mercury uses the Boehm-Demers-Weiser conservative garbage collector (Boehm GC)
 \citep{boehm_gc},
 which is a conservative mark and sweep collector.
 Boehm GC supports parallel programming:
-it will stop all the threads (\emph{stop the world}) during its marking
-phase.
+it will stop all the program's threads (\emph{stop the world}) during its
+marking phase.
 It also supports parallel marking:
 it will use its own set of pthreads to do parallel marking.
 
 \plan{Introduce collector time, mutator time.}
-A program's execution time is divided into two alternating phases:
+For the purposes of this section
+we seperate the program's execution time into two alternating phases:
 Collection time, which is when Boehm GC performs marking,
 and mutator time, which is when the Mercury program runs.
 The name `mutator time' refers to time that mutations (changes) to memory
@@ -44,39 +45,46 @@ concurrently with the mutator.
 
 \plan{Describe theory of GC performance.}
 Amdahl's law~\citep{amdahl} describes the maximum speedup that
-can theoretically  be achieved by parallelising some part of a program,
-and allowing the rest of the program to run sequentially.
-When sequential marking is used then we can use Amdahl's
-law to predict the speedup of our programs.
-For example, consider a program with a runtime of 20 seconds
+can theoretically be achieved by parallelising a part of a program.
+We use Amdahl's law to predict the speedup of a program whose
+mutator is parallelised but whose collector runs sequentially.
+Consider a program with a runtime of 20 seconds
 which can be separated into one second of collector time and 19 seconds
 of mutator time.
 The sequential execution time of the program is $1 + 19 = 20$.
 If we parallelise the mutator and do not parallelise the
-collector then the minimum parallel execution time is $1 + 19{\div}P$
+collector then the minimum parallel execution time is $1 + 19/P$
 for $P$ processors.
 Using four processors the theoretical best speedup is:
-$(1 + 19) \div (1 + 19\div4) = 3.48$.
-17\% of the parallel runtime ($1 + 19\div4$) is collector time.
+%\paul{I prefer how \\frac displays maths but in text the fonts become tiny.}
+$(1 + 19) / (1 + 19/4) = 3.48$.
+17\% of the parallel runtime ($1 + 19/4$) is collector time.
 If we use a machine with 100 processors then this becomes:
-$(1 + 19) \div (1 + 19\div100) = 16.8$;
+$(1 + 19) / (1 + 19/100) = 16.8$;
 with 84\% of the runtime spent in the collector.
 As the number of processors increases,
-a larger proportion of time is wasted waiting for collection to complete.
+the mutator threads spend a larger proportion of their time waiting for
+collection to complete.
 
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
 To reduce this problem,
 \citet{boehm-gc} included parallel marking support in their collector.
-Parallel garbage collection is a continuing area of research
-and the Boehm GC project has modest goals for multicore scalability.
+Idealy this would remove the bottleneck described above.
+However,
+parallel garbage collection is a continuing area of research and
+the Boehm GC project has only modest multicore scalability goals.
 Therefore,
-parallel marking should partially remove the bottleneck described above.
-Thread safety has two other significant performance costs:
-The first is that
+we expect parallel marking to only partially reduce the bottleneck,
+rather than remove it completely.
+
+Furthermore, thread safety has two significant performance costs;
+These types of costs prevent us from acheiving the theoretical maximum
+speedups that Amdahl's law predicts.
+The first of these is that
 one less CPU register is available to GCC's code generator when compiling
 parallel Mercury programs (Section \ref{sec:backgnd_merpar}).
-The second reason is that
+The second is that
 memory allocation routines must use locking to protect shared data
 structures,
 which will slow down allocation.
@@ -87,25 +95,29 @@ during memory allocation,
 a thread uses its own free lists rather than locking a global structure.
 From time to time, a thread will have to retrieve new free lists
 from a global structure and will need to lock the structure.
-This cost will be amortised across several memory allocations.
+The costs of locking will be amortised across several memory allocations.
 
 \plan{Describe icfp2000, mandelbrot\_lowalloc and mandelbrot\_highalloc
 programs.}
-One of our benchmarks is a raytracer developed for the
+To how well Mercury and Boehm GC scale to multiple cores we used several
+benchmark programs with different memory allocation requirements.
+Our first benchmark is a raytracer developed for the
 ICFP programming contest in 2000.
 For each pixel in the image,
 the raytracer casts a ray into the scene to determine what colour to paint that pixel.
 Two nested loops build the pixels for the image:
 the outer loop iterates over the rows in the image and
 the inner loop iterates over the pixels in each row.
-We manually parallelised the program by introducing an independent parallel
+We manually parallelised the program by introducing an parallel
 conjunction into the outer loop;
 indicating that rows should be drawn in parallel.
+This parallelisation is independent.
 The raytracer uses many small structures to represent vectors and a pixel's
 colour.
 It is therefore memory allocation intensive.
 Since we suspected that garbage collection was having a negative affect on
-performance we developed a mandelbrot image generator.
+performance,
+we developed a mandelbrot image generator.
 The mandelbrot image generator has a similar structure to the raytracer:
 it draws an image using two nested loops as above.
 The mandelbrot image is drawn on the complex number plane.
@@ -118,22 +130,22 @@ before $|N_i| \ge 2$,
 or black if the test survived 5,000 iterations.
 We parallelised this program the same way as we did the raytracer:
 by introducing an independent parallel conjunction into the outer loop.
-We created two versions of this program,
-the first version stores coordinates and complex numbers on the stack and in
-registers.
-Therefore, this version has a low rate of memory allocation.
-We call this version `mandelbrot\_lowalloc'.
+We created two versions of this program.
+The first version represents coordinates and complex numbers as structures
+on the heap.
+Therefore it has a high rate of memory allocation.
+We call this version `mandelbrot\_highalloc'.
 The second version of the mandelbrot program,
-called `mandelbrot\_highalloc',
-represents its coordinates and complex numbers as structures on the heap.
-Therefore,
-it has a higher rate of memory allocation.
+called `mandelbrot\_lowalloc',
+stores its coordinates and complex numbers on the stack and in registers.
+Therefore it has a lower rate of memory allocation.
 
 \input{tab_gc}
 
 \plan{Benchmark data.}
-Table \ref{tab:gc} shows benchmark results for these programs
-with different numbers of Mercury engines and garbage collector threads.
+We benchmarked these three programs with different numbers of Mercury
+engines and garbage collector threads.
+We show the results in Table \ref{tab:gc}.
 All benchmarks have an initial heap size of 16MB.
 Each result is measured in seconds and represents the mean of eight samples.
 The first column is the number of garbage collector threads used.
@@ -147,11 +159,12 @@ The numbers in parentheses show the relative speedup when compared with the
 sequential thread safe result for the same program.
 \label{cabsav}
 We ran our benchmarks on
-a hand built system using a Intel i7-2600K CPU
+\paul{Find a brand name i7 I can borrow for some weeks}
+a Intel i7-2600K system
 with 16GB of memory,
-and running Debian/GNU Linux 6
+running Debian/GNU Linux 6
 with a 2.6.32-5-amd64 Linux kernel and GCC 4.4.5-8.
-The garbage collection benchmarks were collected using a recent version of
+The garbage collection benchmarks were gathered using a recent version of
 Mercury (rotd-2012-04-29);
 the other improvements discussed in this chapter and the loop control
 transformation (Chapter \ref{chap:loop_control})
