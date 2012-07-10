@@ -15,6 +15,7 @@
 
 :- implementation.
 
+:- import_module array.
 :- import_module bool.
 :- import_module char.
 :- import_module cord.
@@ -68,25 +69,42 @@ check_file_string(Name, Contents, Errors) :-
         parse(Contents, parse_texfile(Name), Result)
     ),
     (
-        Result = ok(Errors)
+        Result = ok(Tokens),
+        check_tokens(Tokens, Errors)
     ;
         Result = error(MaybeMessage, Line, Col),
-        make_parse_error(Name, MaybeMessage, Line, Col, Error),
+        make_parse_error(locn(Name, Line, Col), MaybeMessage, Error),
         Errors = singleton(Error)
     ).
 
-:- pred parse_texfile(string::in, src::in, cord(prose_error)::out,
+% Parsing code.
+%------------------------------------------------------------------------%
+
+:- type locn
+    --->    locn(
+                l_file      :: string,
+                l_line      :: int,
+                l_pos       :: int
+            ).
+
+:- type token
+    --->    word(
+                tw_word     :: string,
+                tw_locn     :: locn
+            ).
+
+:- pred parse_texfile(string::in, src::in, cord(token)::out,
     ps::in, ps::out) is semidet.
 
-parse_texfile(File, Src, Errors, !PS) :-
+parse_texfile(File, Src, Tokens, !PS) :-
     Lines = src_to_line_numbers(Src),
-    parse_tex(Lines, File, Src, Errors, !PS),
+    parse_tex(Lines, File, Src, Tokens, !PS),
     eof(Src, _, !PS).
 
-:- pred parse_tex(line_numbers::in, string::in, src::in, cord(prose_error)::out,
+:- pred parse_tex(line_numbers::in, string::in, src::in, cord(token)::out,
     ps::in, ps::out) is semidet.
 
-parse_tex(Lines, File, Src, Errors, !PS) :-
+parse_tex(Lines, File, Src, Tokens, !PS) :-
     whitespace(Src, _, !PS),
     (
         promise_equivalent_solutions [PS0] (
@@ -97,33 +115,33 @@ parse_tex(Lines, File, Src, Errors, !PS) :-
         )
     ->
         !:PS = PS0,
-        parse_tex(Lines, File, Src, Errors, !PS)
+        parse_tex(Lines, File, Src, Tokens, !PS)
     ;
-        ( parse_macro(Lines, File, Src, Errors0, !.PS, PS0) ->
-            Errors1 = Errors0,
+        ( parse_macro(Lines, File, Src, Tokens0, !.PS, PS0) ->
+            Tokens1 = Tokens0,
             PS1 = PS0
-        ; parse_and_check_word(Lines, File, Src, Errors0, !.PS, PS0) ->
-            Errors1 = Errors0,
+        ; parse_word(Lines, File, Src, Token, !.PS, PS0) ->
+            Tokens1 = cord.singleton(Token),
             PS1 = PS0
-        ; parse_group(Lines, File, Src, Errors0, !.PS, PS0) ->
-            Errors1 = Errors0,
+        ; parse_group(Lines, File, Src, Tokens0, !.PS, PS0) ->
+            Tokens1 = Tokens0,
             PS1 = PS0
         ;
             false
         )
     ->
-        ErrorsA = Errors1,
+        TokensA = Tokens1,
         !:PS = PS1,
-        parse_tex(Lines, File, Src, ErrorsB, !PS),
-        Errors = ErrorsA ++ ErrorsB
+        parse_tex(Lines, File, Src, TokensB, !PS),
+        Tokens = TokensA ++ TokensB
     ;
-        Errors = cord.init
+        Tokens = cord.init
     ).
 
 :- pred parse_tex_arg(line_numbers::in, string::in, src::in,
-    cord(prose_error)::out, ps::in, ps::out) is semidet.
+    cord(token)::out, ps::in, ps::out) is semidet.
 
-parse_tex_arg(Lines, File, Src, Errors, !PS) :-
+parse_tex_arg(Lines, File, Src, Tokens, !PS) :-
     whitespace(Src, _, !PS),
     (
         promise_equivalent_solutions [PS0] (
@@ -133,43 +151,44 @@ parse_tex_arg(Lines, File, Src, Errors, !PS) :-
         )
     ->
         !:PS = PS0,
-        parse_tex_arg(Lines, File, Src, Errors, !PS)
+        parse_tex_arg(Lines, File, Src, Tokens, !PS)
     ;
-        ( parse_macro(Lines, File, Src, Errors0, !.PS, PS0) ->
-            Errors1 = Errors0,
+        ( parse_macro(Lines, File, Src, Tokens0, !.PS, PS0) ->
+            Tokens1 = Tokens0,
             PS1 = PS0
-        ; parse_and_check_word(Lines, File, Src, Errors0, !.PS, PS0) ->
-            Errors1 = Errors0,
+        ; parse_word(Lines, File, Src, Token, !.PS, PS0) ->
+            Tokens1 = singleton(Token),
             PS1 = PS0
         ;
             false
         )
     ->
-        ErrorsA = Errors1,
+        TokensA = Tokens1,
         !:PS = PS1,
-        parse_tex_arg(Lines, File, Src, ErrorsB, !PS),
-        Errors = ErrorsA ++ ErrorsB
+        parse_tex_arg(Lines, File, Src, TokensB, !PS),
+        Tokens = TokensA ++ TokensB
     ;
-        Errors = cord.init
+        Tokens = cord.init
     ).
 
-:- pred parse_and_check_word(line_numbers::in, string::in, src::in,
-    cord(prose_error)::out, ps::in, ps::out) is semidet.
+:- pred parse_word(line_numbers::in, string::in, src::in,
+    token::out, ps::in, ps::out) is semidet.
 
-parse_and_check_word(Lines, File, Src, Errors, !PS) :-
+parse_word(Lines, File, Src, Token, !PS) :-
     current_offset(Src, Offset, !PS),
-    parse_word(Src, WordChars, !PS),
+    parse_word2(Src, WordChars, !PS),
     Word = string.from_char_list(WordChars),
-    offset_to_line_number_and_position(Lines, Offset, Line, _),
-    check_word(File, Word, Line, cord.init, Errors).
+    offset_to_line_number_and_position(Lines, Offset, Line, Pos),
+    Locn = locn(File, Line, Pos),
+    Token = word(Word, Locn).
 
-:- pred parse_word(src::in, list(char)::out, ps::in, ps::out) is semidet.
+:- pred parse_word2(src::in, list(char)::out, ps::in, ps::out) is semidet.
 
-parse_word(Src, Word, !PS) :-
+parse_word2(Src, Word, !PS) :-
     next_char(Src, C, !PS),
     not not_word_char(C),
     (
-        parse_word(Src, Word0, !.PS, PS0)
+        parse_word2(Src, Word0, !.PS, PS0)
     ->
         Word = [C | Word0],
         !:PS = PS0
@@ -179,9 +198,9 @@ parse_word(Src, Word, !PS) :-
     ).
 
 :- pred parse_macro(line_numbers::in, string::in, src::in,
-    cord(prose_error)::out, ps::in, ps::out) is semidet.
+    cord(token)::out, ps::in, ps::out) is semidet.
 
-parse_macro(Lines, File, Src, Errors, !PS) :-
+parse_macro(Lines, File, Src, Tokens, !PS) :-
     next_char(Src, '\\', !PS),
     (
         % Short macros are things like escapes spacing and \" for umlouts.
@@ -189,7 +208,7 @@ parse_macro(Lines, File, Src, Errors, !PS) :-
         macro_char_short(C)
     ->
         !:PS = PS0,
-        Errors = cord.init
+        Tokens = cord.init
     ;
         identifier(macro_chars, macro_chars, Src, Ident, !.PS, PS0)
     ->
@@ -199,46 +218,46 @@ parse_macro(Lines, File, Src, Errors, !PS) :-
         ;
             CheckArgs = yes
         ),
-        zero_or_more(parse_macro_arg(Lines, File, CheckArgs), Src, ArgErrors,
+        zero_or_more(parse_macro_arg(Lines, File, CheckArgs), Src, ArgTokens,
             !PS),
-        Errors = cord_list_to_cord(ArgErrors)
+        Tokens = cord_list_to_cord(ArgTokens)
     ;
         whitespace(Src, _, !PS),
-        Errors = cord.init
+        Tokens = cord.init
     ).
 
 :- pred parse_group(line_numbers::in, string::in, src::in,
-    cord(prose_error)::out, ps::in, ps::out) is semidet.
+    cord(token)::out, ps::in, ps::out) is semidet.
 
-parse_group(Lines, File, Src, Errors, !PS) :-
+parse_group(Lines, File, Src, Tokens, !PS) :-
     check.brackets('{', '}', parse_tex(Lines, File),
-        Src, Errors, !PS).
+        Src, Tokens, !PS).
 
 :- pred parse_macro_arg(line_numbers::in, string::in, bool::in, src::in,
-    cord(prose_error)::out, ps::in, ps::out) is semidet.
+    cord(token)::out, ps::in, ps::out) is semidet.
 
-parse_macro_arg(Lines, File, CheckArgs, Src, Errors, !PS) :-
+parse_macro_arg(Lines, File, CheckArgs, Src, Tokens, !PS) :-
     (
         check.brackets('{', '}', parse_tex_arg(Lines, File), 
-            Src, Errors0, !.PS, PS0)
+            Src, Tokens0, !.PS, PS0)
     ->
         !:PS = PS0,
-        Errors1 = Errors0
+        Tokens1 = Tokens0
     ;
         check.brackets('[', ']', parse_tex_arg(Lines, File),
-            Src, Errors0, !.PS, PS0)
+            Src, Tokens0, !.PS, PS0)
     ->
         !:PS = PS0,
-        Errors1 = Errors0
+        Tokens1 = Tokens0
     ;
         false
     ),
     (
         CheckArgs = yes,
-        Errors = Errors1
+        Tokens = Tokens1
     ;
         CheckArgs = no,
-        Errors = cord.init
+        Tokens = cord.init
     ).
 
 :- pred parse_comment(src::in, unit::out, ps::in, ps::out) is semidet.
@@ -273,55 +292,118 @@ macro_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ*".
 % Checking code.
 %------------------------------------------------------------------------%
 
-:- pred check_word(string::in, string::in, int::in,
-    cord(prose_error)::in, cord(prose_error)::out) is det.
+:- pred check_tokens(cord(token)::in, cord(prose_error)::out) is det.
 
-check_word(Name, Word, LineNo, !Errors) :-
-    foldl(check_contractions(Word, Name, LineNo), contractions, !Errors),
-    foldl(check_hypenations(Word, Name, LineNo), invalid_hypenations,
-        !Errors),
-    foldl(check_capitalizations(Word, Name, LineNo), acronyms, !Errors).
+check_tokens(Tokens, Errors) :-
+    WordErrors = cord_concat(cord.map(check_word, Tokens)),
+    check_ngrams(Tokens, NGramErrors),
+    Errors = WordErrors ++ NGramErrors.
 
-:- pred check_capitalizations(string::in, string::in, int::in,
-    string::in, cord(prose_error)::in, cord(prose_error)::out) is det.
+:- func check_word(token) = cord(prose_error).
 
-check_capitalizations(Word, Name, LineNo, Acronym, !Errors) :-
+check_word(word(Word, Locn)) = Errors :-
+    list.map(check_contractions(Word, Locn), contractions,
+        ContractionErrorMaybeList),
+    list.map(check_hypenations(Word, Locn), invalid_hypenations,
+        HypenationErrorMaybeList),
+    list.map(check_capitalizations(Word, Locn), acronyms, 
+        CapitalisationErrorMaybeList),
+    Errors = cord_from_maybe_list(ContractionErrorMaybeList) ++
+        cord_from_maybe_list(HypenationErrorMaybeList) ++
+        cord_from_maybe_list(CapitalisationErrorMaybeList).
+
+:- pred check_capitalizations(string::in, locn::in,
+    string::in, maybe(prose_error)::out) is det.
+
+check_capitalizations(Word, Locn, Acronym, MaybeError) :-
     (
         stri_compare(Word, Acronym, 0),
         Word \= Acronym
     ->
         Message = format("%s is an incorrect capitalization of %s.",
             [s(Word), s(Acronym)]),
-        record_error(Name, LineNo, Message, !Errors)
+        make_error(Locn, Message, Error),
+        MaybeError = yes(Error)
+    ;
+        MaybeError = no
+    ).
+
+:- pred check_contractions(string::in, locn::in,
+    string::in, maybe(prose_error)::out) is det.
+
+check_contractions(Word, Locn, Contraction, MaybeError) :-
+    check_bad_words(Word, Locn, Contraction,
+        "Contraction \"%s\" found.", MaybeError).
+
+:- pred check_hypenations(string::in, locn::in,
+    string::in, maybe(prose_error)::out) is det.
+
+check_hypenations(Word, Locn, Hypenation, MaybeError) :-
+    check_bad_words(Word, Locn, Hypenation,
+        "Hypenation is inconsistent \"%s\".", MaybeError).
+
+:- pred check_bad_words(string::in, locn::in,
+    string::in, string::in, maybe(prose_error)::out) is det.
+
+check_bad_words(Word, Locn, BadWord, Message, MaybeError) :-
+    (
+        stri_compare(BadWord, Word, 0)
+    ->
+        make_error(Locn, format(Message, [s(Word)]), Error),
+        MaybeError = yes(Error)
+    ;
+        MaybeError = no
+    ).
+
+:- pred check_ngrams(cord(token)::in, cord(prose_error)::out) is det.
+
+check_ngrams(Tokens, Errors) :-
+    TokensArray = array(list(Tokens)),
+    array.bounds(TokensArray, Start, End),
+    check_ngrams_pos(TokensArray, Start, End, cord.init, Errors).
+
+:- pred check_ngrams_pos(array(token)::in, int::in, int::in,
+    cord(prose_error)::in, cord(prose_error)::out) is det.
+
+check_ngrams_pos(Tokens, Pos, End, !Errors) :-
+    ( Pos =< End ->
+        list.foldl(check_ngram(Tokens, Pos, End), bad_ngrams,
+            !Errors),
+        check_ngrams_pos(Tokens, Pos+1, End, !Errors)
     ;
         true
     ).
 
-:- pred check_contractions(string::in, string::in, int::in, 
-    string::in, cord(prose_error)::in, cord(prose_error)::out) is det.
+:- pred check_ngram(array(token)::in, int::in, int::in, list(string)::in,
+    cord(prose_error)::in, cord(prose_error)::out) is det. 
 
-check_contractions(Word, Name, LineNo, Contraction, !Errors) :-
-    check_bad_words(Word, Name, LineNo, Contraction,
-        "Contraction \"%s\" found.", !Errors).
-
-:- pred check_hypenations(string::in, string::in, int::in,
-    string::in, cord(prose_error)::in, cord(prose_error)::out) is det.
-
-check_hypenations(Word, Name, LineNo, Hypenation, !Errors) :-
-    check_bad_words(Word, Name, LineNo, Hypenation,
-        "Hypenation is inconsistent \"%s\".", !Errors).
-
-:- pred check_bad_words(string::in, string::in, int::in,
-    string::in, string::in, cord(prose_error)::in, cord(prose_error)::out)
-    is det.
-
-check_bad_words(Word, Name, LineNo, BadWord, Message, !Errors) :-
+check_ngram(Tokens, Pos, End, NGram, !Errors) :-
+    compare_ngram(Tokens, Pos, End, NGram, Match),
     (
-        stri_compare(BadWord, Word, 0)
-    ->
-        record_error(Name, LineNo, format(Message, [s(Word)]), !Errors)
+        Match = yes,
+        array.lookup(Tokens, Pos, Token),
+        Token = word(_, Locn),
+        record_error(Locn, format("Bad ngram: %s", [s(string(NGram))]),
+            !Errors)
     ;
-        true
+        Match = no 
+    ).
+
+:- pred compare_ngram(array(token)::in, int::in, int::in, list(string)::in,
+    bool::out) is det.
+
+compare_ngram(_, _, _, [], yes).
+compare_ngram(Tokens, Pos, End, [H | T], Match) :-
+    ( Pos > End ->
+        Match = no
+    ;
+        array.lookup(Tokens, Pos, Token),
+        Token = word(Word, _),
+        ( stri_compare(Word, H, 0) ->
+            compare_ngram(Tokens, Pos + 1, End, T, Match)
+        ;
+            Match = no
+        )
     ).
 
 :- pred stri_compare(string::in, string::in, int::in) is semidet.
@@ -458,37 +540,64 @@ special_macros = [
         "label"
     ].
 
+:- func bad_ngrams = list(list(string)).
+
+bad_ngrams = [
+        ["speeds", "up"]
+    ].
+
 % Errors.
 %------------------------------------------------------------------------%
 
-:- type prose_error == string.
+:- type prose_error
+    --->    prose_error(
+                pe_locn         :: locn,
+                pe_message      :: string
+            ).
 
-:- pred record_error(string::in, int::in, string::in,
+:- pred record_error(locn::in, string::in,
     cord(prose_error)::in, cord(prose_error)::out) is det.
 
-record_error(File, LineNo, Message, !Errors) :-
-    make_error(File, Message, LineNo, no, Error),
-    !:Errors = snoc(!.Errors, Error).
+record_error(Locn, Message, !Errors) :-
+    !:Errors = snoc(!.Errors, prose_error(Locn, Message)).
 
-:- pred make_parse_error(string::in, maybe(string)::in, int::in, int::in,
+:- pred make_parse_error(locn::in, maybe(string)::in,
     prose_error::out) is det.
 
-make_parse_error(File, no, Line, Col, Error) :-
-    make_error(File, "Parse error", Line, yes(Col), Error). 
-make_parse_error(File, yes(Message0), Line, Col, Error) :-
+make_parse_error(Locn, no, Error) :-
+    Error = prose_error(Locn, "Parse error").
+make_parse_error(Locn, yes(Message0), Error) :-
     Message = format("Parse error: %s", [s(Message0)]),
-    make_error(File, Message, Line, yes(Col), Error).
+    Error = prose_error(Locn, Message).
 
-:- pred make_error(string::in, string::in, int::in, maybe(int)::in,
-    prose_error::out) is det.
+:- pred make_error(locn::in, string::in, prose_error::out) is det.
 
-make_error(File, Message, Line, no, Error) :-
-    format("%s:%d: %s", [s(File), i(Line), s(Message)], Error).
-make_error(File, Message, Line, yes(Col), Error) :-
-    format("%s:%d: col %d, %s", [s(File), i(Line), i(Col), s(Message)], Error).
+make_error(Locn, Message, prose_error(Locn, Message)).
 
 :- pred print_error(prose_error::in, io::di, io::uo) is det.
 
-print_error(Error, !IO) :-
-    io.format("%s\n", [s(Error)], !IO).
+print_error(prose_error(Locn, Message), !IO) :-
+    Locn = locn(File, Line, Col),
+    io.format("%s:%d: col %d, %s\n", [s(File), i(Line), i(Col), s(Message)],
+        !IO).
+
+% Utils
+%------------------------------------------------------------------------%
+
+:- func cord_concat(cord(cord(T))) = cord(T).
+
+cord_concat(Cords) = cord_list_to_cord(list(Cords)).
+
+:- func cord_from_maybe_list(list(maybe(T))) = cord(T).
+
+cord_from_maybe_list([]) = cord.empty.
+cord_from_maybe_list([H | T]) = Cord :-
+    Cord0 = cord_from_maybe_list(T),
+    (
+        H = no,
+        Cord = Cord0
+    ;
+        H = yes(Item),
+        Cord = cons(Item, Cord0)
+    ).
 
