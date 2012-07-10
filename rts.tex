@@ -124,7 +124,8 @@ last-in-first-out manner.
       \State release\_lock($ST.lock$)
       \Goto{$ContLabel$}
     \Else
-      \State schedule($ST.parent$, $ContLabel$)
+      \State $ST.orig\_context.resume\_label \gets ContLabel$
+      \State schedule($ST.orig\_context$, $ContLabel$)
       \State release\_lock($ST.lock$)
       \Goto{MR\_get\_global\_work}
     \EndIf
@@ -270,7 +271,7 @@ there are three important scenarios:
     $C_{Orig}$ might find a spark for a parent context's goal on the
     stack,
     if so, its stack pointer will not match the current parent stack
-    pointer, and ti will put the spark back on the stack.
+    pointer, and it will put the spark back on the stack.
     The second if-then-else's then branch will be entered, since this
     context is the original context.
     This branch will suspend $C_{Orig}$
@@ -317,7 +318,7 @@ there are three important scenarios:
       \State MR\_load\_context($ctxt$)
       \Goto $ctxt.resume$
     \EndIf
-    \State $spark \gets$ MR\_pop\_spark($MR\_global\_spark\_queue$)
+    \State $spark \gets$ MR\_dequeue\_spark($MR\_global\_spark\_queue$)
     \If{$spark$}
       \State release\_lock($MR\_runqueue\_lock$)
       \If{$\neg current\_context$}
@@ -987,7 +988,7 @@ The deque supports the following operations:
         \citet{Chase_2005_wsdeque} referrs to the bottom and vice-versa.
         We prefer to use the terminology of pushing onto and popping off of
         top, as we would when discussing a stack.
-        We clarify this terminogy below.}
+        We clarify this with the hot and cold metaphor.}
     of the deque.
     This can be done without synchronisation.
     If necessary
@@ -1026,33 +1027,103 @@ but is still quite fast.
 This is good because a context will 
 \push and \pop sparks onto and off of its local deque
 more often than it will \steal a spark from another's deque.
+This means that the top of the deque is used more often than the bottom.
+Therefore, we refer to the top as the \emph{hot} end,
+and to the bottom as the \emph{cold} end.
+These terms are less confusing than the disagreement between the stack
+like behaviour of a deque from its context's perspective,
+and the terminology used by \citet{Chase_2005_wsdeque}. 
 
-We have removed Mercury's global spark queue,
+Mercury was already using Chase's deques for spark storage,
+most likely because Wang had always planned to implement work stealing.
+We did not need to replace the data structure used for a context local
+spark storage,
+but we will now refer to it as a deque rather than a stack.
+We have removed the global spark queue,
 as work stealing does not use one.
-And we now refer to Mercury's context local spark stacks as context
-local deques,
-they already use the deque data structure,
-as Wang had always planned to implement work stealing.
-\paul{Can I make such a statement about another researcher's
-intentions?}
+Concequently,
+when a context creates a spark that spark is always placed on the
+context's local spark queue.
 
+\begin{algorithm}
+\begin{algorithmic}
+\Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
+  \State $finished \gets$ atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
+  \If{$finished$}
+    \If{$ST.orig\_context = this\_context$}
+      \Goto{$ContLabel$}
+    \Else
+      \While{$ST.orig\_context.resume\_label \neq ContLabel$}
+        \State CPU\_relax
+      \EndWhile
+      \State schedule($ST.parent$, $ContLabel$)
+      \Goto{MR\_get\_global\_work}
+    \EndIf
+  \Else
+    \State $spark \gets$ pop\_spark
+    \If{$spark$}
+      \Goto{$spark.code\_label$}
+    \Else
+      \If{$ST.orig\_context = this\_context$}
+         \State suspend($this\_context$)
+         \State $this\_context.resume\_label \gets ContLabel$
+         \State $this\_context \gets$ NULL
+      \EndIf
+      \Goto{MR\_get\_global\_work}
+    \EndIf
+  \EndIf
+\EndProcedure
+\end{algorithmic}
+\caption{MR\_join\_and\_continue}
+\label{alg:join_and_continue_ws1}
+\end{algorithm}
 
-%The top of the stack is sometimes referred to as the \emph{hot end},
-%since it is used frequently.
-%Likewise, the bottom of the stack is sometimes called the
-%\emph{cold end}, since it is only used to implement work stealing.
-%The top of the stack, or hot end, can be used without locking or atomic
-%operations.
-%This is desirable, since it makes common operations inexpensive.
-%The local context uses the top of the stack only,
-%therefore sparks placed on this stack are scheduled in a
-%last-in-first-out manner.
+\plan{Barrier code}
 
-\plan{Local deque useage}
-deques are used as stacks.
-hot end.
+\begin{algorithm}
+\begin{algorithmic}
+\Procedure{MR\_get\_global\_work}{}
+  \State acquire\_lock($MR\_runqueue\_lock$)
+  \Loop
+    \If{$MR\_exit\_now$}
+      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_destroy\_thread()
+    \EndIf
+    \State $ctxt \gets$ MR\_get\_runnable\_context()
+    \If{$ctxt$}
+      \State release\_lock($MR\_runqueue\_lock$)
+      \If{$current\_context$}
+        \State MR\_release\_context($current\_context$)
+      \EndIf
+      \State MR\_load\_context($ctxt$)
+      \Goto $ctxt.resume$
+    \EndIf
+    \If{$MR\_num\_outstanding\_contexts < MR\_max\_contexts$}
+      \State $spark \gets$ MR\_try\_steal\_spark()
+      \If{$spark$}
+        \State release\_lock($MR\_runqueue\_lock$)
+        \If{$\neg current\_context$}
+          \State $ctxt \gets$ MR\_get\_free\_context()
+          \If{$\neg ctxt$}
+            \State $ctxt \gets$ MR\_create\_context()
+          \EndIf
+          \State MR\_load\_context($ctxt$)
+        \EndIf
+        \State $MR\_parent\_sp \gets spark.parent\_sp$
+        \State $ctxt.thread\_local\_mutables \gets
+          spark.thread\_local\_mutables$
+        \Goto $spark.resume$
+      \EndIf
+    \EndIf
+    \State wait($MR\_runqueue\_cond, MR\_runqueue\_lock$)
+  \EndLoop
+\EndProcedure
+\end{algorithmic}
+\caption{\getglobalwork}
+\label{alg:MR_get_global_work}
+\end{algorithm}
 
-\plan{New barrier code.  If any?}
+\plan{Other changes to the idle loop?}
 
 \plan{Theif behaviour}
 \plan{Accessing the array of deques}
@@ -1060,8 +1131,6 @@ hot end.
 \plan{Work stealing attempts}
 
 \plan{Describe work stealing timeout.}
-
-\plan{Other changes to the idle loop?}
 
 \plan{Work stealing fixes the premature scheduling decision problem}
 
