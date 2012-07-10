@@ -400,8 +400,8 @@ it will re-execute the infinite loop.
 %run queue,
 %or sparks are added to the spark run queue.
 
-\section{Prior spark scheduling performance}
-\label{sec:old_scheduling_performance}
+\section{Original spark scheduling performance}
+\label{sec:oritinal_scheduling_performance}
 
 \status{Checking plan for this section.}
 
@@ -859,27 +859,45 @@ parallel or in sequence.
 \section{Work stealing implementation}
 \label{sec:work_stealing}
 
-\plan{Refer to Peter Wang's conclusion of the early scheduling problem}.
-\citet{wangp-hons} raises the premature scheduling problem without
-describing it in detail,
-or showing that left recursion can create a pathological case of early scheduling.
-He also proposes that work stealing is likely to be an approprite solution to
-the problem.
-
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
-A number of language implementations use work stealing such as
-\citet{blumofe:1999:work-stealing}, and
-\citet{halstead:1985:multilisp}.
+A number of language implementations use work stealing.
 % XXX: There may be earlier papers by keller 1984 as cited by halstead.
+\paul{XXX: I have skimed this paper, I must go back and read it
+properly}
+One of the earliest was Multilisp \citep{halstead:1985:multilisp};
+In this paper,
+Halstead discusses ``an unfair scheduling policy'',
+in which each worker thread maintains a queue of tasks
+and there is no global queue.
+When a thread spawns off a task it places the task on its queue.
+After completing a task, a thread looks for its next task first 
+on its own queue, and if there is none
+the thread attempts to steal a task from the other threads.
+\paul{XXX: I have not read this paper yet.
+It ranks highly in google scholar results and Peter used it so I suspect
+that it is notable.}
+Many more papers have been published about work stealing.
+A notable example is
+\citet{blumofe:1999:work-stealing},
+which quantifiably proves that work stealing is more efficent than
+\emph{work sharing}
+(using a global pool of work).
 
-work stealing system has no global work queue.
-Each worker has a local queue, when parallel work is created a worker
-places it on its own queue.
-When a worker becomes idle it checks its own queue for any work,
-if it finds none it attempts to steal work from another worker's queue.
-Work stealing has several benefits:
+\paul{XXX: Make sure these paragraphs flow once I read the papers above}
+\plan{Refer to Peter Wang's conclusion of the early scheduling problem}
+\citet{wangp-hons} also mentioned the premature spark scheduling problem
+from the previous section.
+However, he did not discuss it detail or
+recognize that left recursion can create pathological behaviour.
+Wang also proposes work stealing as a solution to the problem.
+In a work stealing system a spark placed on a context local stack
+is not comitted to running on that context;
+it may be executed on a different context if it is stolen.
+This delays the dicision of where to execute a spark until the moment
+before it is executed.
+Work stealing's other benifits can be summerised as follows:
 
 \begin{itemize}
 
@@ -887,69 +905,137 @@ Work stealing has several benefits:
     A worker can schedule parallel work quickly,
     it is quicker to place work on a local queue rather than a global
     one:
-    There is less contention and special data structures allow this to
-    be done without locking.
+    There is less contention on a local queue than a global one.
 
     \item
     A idle worker can take work from its own queue quickly.
-    Again, there is less contention on a local queue and often this can
-    be done without locking.
+    Again, there is less contention on a local queue.
 
     \item
     In ideal circumstances,
-    an idle worker rarely needs to steal work from another's queue,
-    which is more costly.
+    an idle worker rarely needs to steal work from another's queue.
+    Stealing work is more costly as it requires communication between
+    processors.
 
 \end{itemize}
 
 \subsection{Initial work stealing implementation}
 
-Mercury's prior spark scheduling code (Section \ref{sec:prior_scheduling}) was
-written with work stealing in mind.
+The initial work stealing implementation for Mercury was colaboration
+between Peter Wang and myself, Wang contributed about 80\% of the work
+and I contributed the remaining 20\%.
+Wang's honors thesis \citep{wang-hons} describes his proposal on which
+our implementation is heavily based.
 
-\plan{I believe that Peter discussed work stealing briefly in his thesis,
-I should check this and see what he said.}
+\plan{Mercury's needs for a deque}
+So far each context has used a stack to manage sparks.
+The last item pushed onto the stack is the first to be popped off the
+stack,
+this \emph{last-in-first-out} order is important for Mercury's parallel
+conjunctions.
+The main reasion for this is that when parallelism is not used and
+parallel conjunctions are nested,
+either within the same predicate
+or due to one or more predicate calls,
+the last-in-first-out order ensures that the left most spark is executed
+first.
+This is important because it allows a future to \signal a variable in an
+inner conjunct before \wait is executed on the future in the other
+conjunct.
+Therefore the data structure used for the deque must return sparks
+for the local context in a last-in-first-out order.
+This execution order does not affect multiple conjuncts in the same
+parallel conjunction.
+The second and later conjuncts are spawned off as a single spark
+and the left most conjunct is executed directly.
+The second reason to use a stack to manage context local sparks
+is that the last-in-first-out order ensures that a poped spark's data
+has a good chance of being hot in the processor's cache.
 
-\plan{Describe the data structure used to implement these stacks and its properties.}
-Local context can use the hot end without synchronisation.
-Other contexts can use the cold end with a CAS,
-Memory barriers are used to ensure writes appear in the correct order.
+Sparks added to Mercury's global spark queue where 
+returned in \emph{first-in-first-out} order.
+This does not encourage a left to right execution order.
+However \citet{wang_hons} proposes that this order may be better:
 
-\plan{Describe our implementation}
-The work stealing implementation in this section was joint work between
-myself and Peter Wang.
-Peter contributed roughly 80\% of the implementation.
-We removed the global spark queue.
-Each contest's local spark stack is implemented using data structure
-described by \citet{workstealing_queue}.
-Until now, we have used the word `stack' when talking about this
-structure,
-however it is a double ended queue (deque).
-It operates either as a queue
-(first-in-first-out) or as a stack (last-in-first-out).
-As described in previous sections, the context that owns the queue uses
-it as a stack;
-pushing and popping items on and off the \emph{hot end}.
-This end is named the hot end since these actions are common, this end
-of the queue is busier.
-\paul{Maybe they require write barriers, check this in the paper.}
-The data structure makes these operations thread safe without
-synchronisation,
-provided that they are always performed by the owner of the queue.
-Other contexts may steal work from the \emph{cold end} of the deque.
-This can be done with an atomic compare-and-swap.
-If the compare and swap fails it may busy-wait.
+\begin{quote}
+The global spark queue, however, is a queue because we assume that a
+spark generated earlier will have greater amounts of work underneath it
+than the latest generated spark, and hence is a better candidate for
+parallel execution.
+\end{quote}
 
-\plan{Accessing the array of deques}
+\plan{Describe the data structure used to implement these stacks and its
+properties.}
+To preserve the last-in-first-out behaviour of context local spark
+stacks,
+and first-in-first-out behaviour of the global queue;
+we chose to use double ended queues (deques) for context local spark
+storage.
+The deque implementation we chose 
+is described by
+\citet{Chase_2005_wsdeque}.
+It supports nonblocking operation and is dynamically resizeable,
+which are important for a work stealing deque.
+The deque supports the following operations:
 
-\plan{Describe how work stealing policies work}
-What happens to the global queue,
-in what cases is work stolen,
-Show algorithms for work stealing attempts.
-Describe work stealing timeout.
+\begin{description}
 
+    \item[\code{void push(deque *d, spark *s)}] The context that owns
+        the deque can push items onto the top%
+\footnote{
+        Note when we refer to the top of the deque
+        \citet{Chase_2005_wsdeque} referrs to the bottom and vice-versa.
+        We prefer to use the terminology of pushing onto and popping off of
+        top, as we would when discussing a stack.
+        We clarify this terminogy below.}
+    of the deque.
+    This can be done without synchronisation.
+    If necessary
+    \push will grow the array that is used to implement the
+    deque.
 
-\plan{New barrier code.  If any?}
+    \item[\code{bool pop(deque *d, spark **s)}] The deque's owner can pop items
+    from the top of the queue.
+    This can also be done without synchronisation,
+    except for when the deque contains only one item.
+    In this case an atomic compare and swap operation is used to
+    determine if the thread lost a race to another thread attempting to
+    steal a task from the deque (a \emph{theif}).
+    When this happens the single item was stolen by the theif and the
+    owner's call to \pop returns false,
+    indicating that the deque was empty.
+
+    \item[\code{result steal(deque *d, spark **s)}]
+    A thread other than the deque's owner can steal
+    items from the bottom of the deque.
+    This always uses an atomic compare and swap operation as multiple
+    theifs may call \steal on the same deque at the same time.
+    \steal can return one of three different values:
+    ``success'', ``failure'' and ``abort''.
+    ``abort'' indicates that the theif lost a race with either the owner
+    (\emph{victim}) or another theif.
+
+\end{description}
+
+All the atomic compare and swap operations here are wait free,
+rather than looping \pop will return false and \steal will abort.
+\push and \pop are very fast, this is good as a context uses its own
+spark deque more often than calling \steal on another's.
+\steal is slightly slower than either \push or \pop,
+but is still quite fast.
+This is good because a context will 
+\push and \pop sparks onto and off of its local deque
+more often than it will \steal a spark from another's deque.
+
+We have removed Mercury's global spark queue,
+as work stealing does not use one.
+And we now refer to Mercury's context local spark stacks as context
+local deques,
+they already use the deque data structure,
+as Wang had always planned to implement work stealing.
+\paul{Can I make such a statement about another researcher's
+intentions?}
+
 
 %The top of the stack is sometimes referred to as the \emph{hot end},
 %since it is used frequently.
@@ -961,6 +1047,22 @@ Describe work stealing timeout.
 %The local context uses the top of the stack only,
 %therefore sparks placed on this stack are scheduled in a
 %last-in-first-out manner.
+
+\plan{Local deque useage}
+deques are used as stacks.
+hot end.
+
+\plan{New barrier code.  If any?}
+
+\plan{Theif behaviour}
+\plan{Accessing the array of deques}
+
+\plan{Work stealing attempts}
+
+\plan{Describe work stealing timeout.}
+
+\plan{Other changes to the idle loop?}
+
 \plan{Work stealing fixes the premature scheduling decision problem}
 
 \input{tab_work_stealing_initial}
@@ -972,7 +1074,7 @@ This subsection was joint work with Peter Wang.
 
 \plan{Avoid the right-recursion problem by reordering independent conjunctions.}
 
-\subsection{Final work stealing implementation}
+\subsection{Revised work stealing implementation}
 
 \plan{Describe problems with associating stacks with contexts}
 The number of stacks varies,
