@@ -287,7 +287,8 @@ acronyms = [
 :- func bad_ngrams = list(list(string)).
 
 bad_ngrams = [
-        ["speeds", "up"]
+        ["time", "speeds", "up"],
+        ["can", "not"]
     ].
 
 % Errors.
