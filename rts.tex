@@ -16,7 +16,7 @@ before we worked on automatic parallelism.
 
 In this chapter we investigate and correct these performance problems.
 We start with the garbage collector in Section \ref{sec:gc};
-we analyise the collector's effects on performance and tune its parameters
+we analyse the collector's effects on performance and tune its parameters
 to improve performance.
 In Section \ref{sec:original_scheduling} we describe how the existing runtime
 system schedules sparks.
@@ -53,46 +53,49 @@ and how and when they wake up to execute parallel work.
 We introduced parallelism in Mercury in Sections \ref{sec:backgnd_merpar} and
 \ref{sec:backgnd_deppar};
 we described how the runtime system in generic terms.
-In this section we will explain how sparks were originally managed,
-prior to 2009, when I begun my PhD candidature.
+In this section we will explain how sparks were originally managed
+prior to 2009,
+when I begun my PhD candidature.
 This will provide the background for the changes we have made to the
 runtime since.
 
 \plan{Global spark queue and Contention wrt global queue}
-Mercury has a global spark queue.
-The runtime easily schedules a spark by placing it on the end of the
-global queue.
+Mercury (before 2009) uses a global spark queue.
+The runtime system \emph{schedules} sparks for parallel execution by placing
+them onto the end of the queue.
+In this chapter we use the word `schedule' to mean the act of making a spark
+available for parallel or sequential work.
 An idle engine runs a spark by taking it from the beginning of the queue.
 The global spark queue must be protected by a lock;
 this prevents concurrent access from corrupting the queue.
 The global spark queue and its lock can easily become a bottleneck when many
-engines content for access to the global queue.
+engines contend for access to the global queue.
 
 \plan{Local spark stack --- relieves contention on global queue}
 \citet{wang-hons} anticipated this problem and created context local spark
 stacks to avoid contention on the global queue.
 Furthermore, the local spark stacks do not require locking.
-When a parallel conjunction spawns off a spark; it places the spark either
-at the end of the global spark queue or at the top of its local spark stack.
+When a parallel conjunction spawns off a spark,
+it places the spark either at the end of the global spark queue or at the
+top of its local spark stack.
 \plan{Spark scheduling decision.}
-The runtime system appends the spark to the end of the global queue if:
+The runtime system appends the spark to the end of the global queue if
 an engine is idle, and
 the number of contexts in use plus the number of sparks on the global queue
 does not exceed the maximum number of contexts permitted.
-Otherwise,
+If either part of the condition is false,
 the runtime system pushes the spark onto the top of the context's local
 spark stack.
-% Note, if I ever change citations I need to fix 'Wang' here.
-% XXX The next line can be searched for to find citations.
-% \citet
-Wang's scheduling decision has two aims:
-First, to reduce the contention on the global queue,
+This algorithm has two aims.
+The first is to reduce contention on the global queue,
 especially in the common case that there is enough parallel work.
-This also reduces the amount of locking.
 The second aim is to reduce the amount of memory allocated
 as contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts,
 so they are also included in this limit.
+We explain this limit on the number of context in more detail
+in Section \ref{sec:original_scheduling_performance},
+after covering the background information in the current section.
 Note that sparks placed on the global queue are executed in a
 first-in-first-out manner;
 sparks placed on a context's local stack are executed in a
@@ -100,22 +103,22 @@ last-in-first-out manner.
 
 \begin{figure}
 \begin{tabular}{rl}
- 1 & \code{~~MR\_SyncTerm ST;} \\
- 2 & \code{~~MR\_init\_syncterm(\&ST, 2);} \\
- 3 & \code{~~spawn\_off(\&ST, Spawn\_Label\_1);} \\
- 4 & \code{~~}$G_1$ \\
- 5 & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
- 6 & \code{Spawn\_Label:} \\
- 7 & \code{~~}$G_2$ \\
- 8 & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
- 9 & \code{Cont\_Label:} \\
+ 1: & \code{~~MR\_SyncTerm ST;} \\
+ 2: & \code{~~MR\_init\_syncterm(\&ST, 2);} \\
+ 3: & \code{~~spawn\_off(\&ST, Spawn\_Label\_1);} \\
+ 4: & \code{~~}$G_1$ \\
+ 5: & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
+ 6: & \code{Spawn\_Label:} \\
+ 7: & \code{~~}$G_2$ \\
+ 8: & \code{~~MR\_join\_and\_continue(\&ST, Cont\_Label);} \\
+ 9: & \code{Cont\_Label:} \\
 \end{tabular}
 \caption{Parallel conjunction implementation}
 \label{fig:par_conj_impl_only}
 \end{figure}
 
 \begin{algorithm}
-\begin{algorithmic}
+\begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State acquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
@@ -130,15 +133,16 @@ last-in-first-out manner.
       \Goto{MR\_get\_global\_work}
     \EndIf
   \Else
-    \State $spark \gets$ pop\_spark
+    \State $spark \gets$ pop\_spark($this\_context.spark\_stack$)
     \If{$spark$}
       \If{$spark.ST.stack\_ptr = MR\_parent\_sp$}
 %        \Comment{This spark belongs to the same parallel conjunction.
 %        It can be executed immediatly.}
         \State release\_lock($ST.lock$)
         \Goto{$spark.code\_label$}
+      \Else
+        \State push\_spark($this\_context.spark\_stack$, $spark$)
       \EndIf
-      \State push\_spark($spark$)
     \EndIf
     \If{$ST.orig\_context = this\_context$}
        \State suspend($this\_context$)
@@ -161,19 +165,13 @@ Consider the compiled parallel conjunction in Figure
 \ref{fig:par_conj_impl_only}.
 The context that executes the parallel conjunction,
 lets call it $C_{Orig}$,
-begins by:
+begins by
 setting up the sync term,
 spawning off $G_2$,
 and executing $G_1$ (lines 1--4).
-Then it executes the barrier code
-\joinandcontinue, which is shown in
+Then it executes the barrier \joinandcontinue,
+whose is shown in
 Algorithm \ref{alg:join_and_continue_peterw}.
-The algorithm includes an optimisation not shown here:
-if the parallel conjunction has been executed by only one context,
-then a version of the algorithm that does not use locking is used.
-This is not shown as it is equivalent and not relevant to
-our discussion:
-we mention it only for completeness.
 Depending on how full the global run queue is,
 and how parallel tasks are interleaved,
 there are three important scenarios:
@@ -182,102 +180,112 @@ there are three important scenarios:
 
     \item[Scenario one:]~
 
-    The spark for $G_2$ was placed on $C_{Orig}$'s local spark stack.
-    When $C_{Orig}$ reaches the \joinandcontinue barrier on line 5,
-    there will be an outstanding conjunct ($G_2$) and so
-    $ST.num\_outstanding \neq 0$.
-    the else branch of the if-then-else will be executed,
-    whereby the spark for $G_2$ will be popped off the top of the spark
-    stack.
-    Only the spark for $G_2$ can be on the stack:
-    it was put on the stack before $G_1$ was called and $G_1$ cannot
-    leave any sparks on the stack as its own \joinandcontinue barrier
-    would have executed them.
+    In this scenario $C_{Orig}$ placed the spark for $G_2$ on the top of its
+    local spark stack.
+    Sparks placed on a context local spark stack cannot be executed by any
+    other context.
+    Therefore when $C_{Orig}$ reaches the \joinandcontinue barrier
+    (line 5 in the example),
+    the context $G_2$ will be outstanding and $ST.num\_outstanding$ will be
+    non-zero.
+    $C_{Orig}$ will execute else branch on line 14 of \joinandcontinue
+    where it will pop the spark for $G_2$ off the top of the spark stack.
+    It is not possible for some other spark to be on the top of the stack;
+    any sparks left on the stack by $G_1$ would have been poped off by 
+    the \joinandcontinue barriers of the conjunctions that spawned off the
+    sparks.
 
     The check that the sparks stack pointer is equal to the current
-    parent stack pointer will succeed,\footnote{
+    parent stack pointer\footnote{
         The code generator will ensure that $MR\_parent\_sp$ is set
         before the parallel conjunction is executed,
         and that it is restored after.}
+    will succeed (line 16 of \joinandcontinue),
     and the context will execute the spark.
 
     After executing $G_2$,
-    $C_{Orig}$ will execute the second call to the barrier code,
-    the one on line 8.
-    This time $ST.num\_outstanding = 0$,
-    and the then branch of the if-then-else will be executed.
-    Within this branch,
-    execution will enter the then branch of the nested if-then-else
-    because
-    the current context is the original context.
-    The code in this branch will jump to the continuation label on line
-    9.
-    This parallel conjunction has executed sequentially.
+    $C_{Orig}$ will execute the second call to \joinandcontinue,
+    the one on line 8 of the example.
+    This time $ST.num\_outstanding$ will be zero,
+    and $C_{Orig}$ will execute the then branch on line 5 of
+    \joinandcontinue.
+    In the condition of the nested if-then-else,
+    $C_{Orig}$ will find that the current context is the original context,
+    and therefore continue execution at line 6.
+    This causes $C_{Orig}$ to jump to the continuation label,
+    line 9 in the example,
+    completing the execution of the parallel conjunction.
 
     \item[Scenario two:]~
 
-    The spark for $G_2$ was placed on the global spark queue,
-    where some other context, $C_{Other}$, picked it up and executed it
+    In this scenario $C_{Orig}$ placed the spark for $G_2$ on the 
+    global spark queue,
+    where another context, $C_{Other}$, picked it up and executed it
     in parallel.
-    In this scenario, as distinct from scenario three,
-    $C_{Other}$ reaches the barrier on line 8 \emph{before}
+    Also, as distinct from scenario three,
+    $C_{Other}$ reaches the barrier on line 8 of the example \emph{before}
     $C_{Orig}$ reaches the barrier on line 5.
-    Even if they both seem to reach the barrier at the same time.
-    Their barrier operations are performed in sequence because of the
+    Even if they both seem to reach the barrier at the same time,
+    their barrier operations are performed in sequence because of the
     lock protecting the barrier code.
 
-    $C_{Other}$ executes \joinandcontinue (line 8).
-    It will find that $ST.num\_outstanding \neq 0$,
-    and will execute the else branch of the if-then-else.
-    It will attempt to pop a spark of the stack,
-    as a spark on the stack might representing the outstanding
-    conjunction:
-    it cannot tell that the outstanding conjunction is $G_1$ and not some
-    hypothetical $G_3$.
-    There will be no spark on the stack since $G_{Other}$ took this
-    spark from the global queue, and therefore it is an empty context,
-    and, as before, it is impossible for $G_2$ to return and leave a
-    spark on $C_{Other}$'s stack.
-    Therefore, execution will continue to the second if-then-else in
-    this branch which will also fail since this context ($C_{Other}$)
+    When $C_{Other}$ executes \joinandcontinue,
+    It will find that $ST.num\_outstanding$ is non-zero,
+    and will execute the else branch on line 14 of \joinandcontinue.
+    It then attempts to pop a spark off its stack,
+    as in another scenario a spark on the stack might represent an
+    outstanding conjunction
+    (it cannot tell that the outstanding conjunct is $G_1$ executing in
+    parallel, and not some hypothetical $G_3$).
+    $C_{Other}$ took this spark from the global queue,
+    and was either empty or brand new before executing this spark,
+    meaning that it had no sparks on its stack before executing $G_2$.
+    Therefore $C_{Other}$ will not have any sparks of its own and
+    \code{pop\_spark} will fail.
+    $C_{Other}$ will continue to line 21 in \joinandcontinue
+    which will also fail since it ($C_{Other}$)
     is not the original context ($C_{Orig}$).
-    The look will be released and the barrier will exit,
-    The current mercury engine and context will execute \getglobalwork.
+    The lock will be released and \joinandcontinue will determine what to do
+    next by jumping to \getglobalwork.
 
-    When $C_{Orig}$ executes its call to \joinandcontinue on line 5,
-    it will find that $ST.num\_outstanding = 0$ and enter the then
-    branch of the if-then-else.
-    It will then enter the then branch of the nested if-then-else
-    because it is the original context.
-    This code jumps to the continuation label on line 9.
-    The conjunction has executed in parallel.
+    Eventually $C_{Orig}$ will execute its call to \joinandcontinue
+    (line 5 of the example),
+    or be executed after waiting on the barrier's lock (line 2 of
+    \joinandcontinue),.
+    When this happens it will find that $ST.num\_outstanding$ is zero,
+    and execute the then branch beginning at line 5 of \joinandcontinue.
+    $C_{Orig}$ will test if it is the original context, 
+    which it is,
+    and continue on line 6 of \joinandcontinue.
+    It then jumps to the continuation label on line 9 of the example,
+    completing the parallel execution of the conjunction.
 
     \item[Scenario three:]~
 
-    As in scenario two,
-    the spark for $G_2$ was placed on the global spark queue,
-    where some other context, $C_{Other}$, picked it up and executed it
+    As in scenario two $C_{Orig}$ pl the spark for $G_2$ on the global spark
+    queue,
+    where another context, $C_{Other}$, picked it up and executed it
     in parallel.
     However,
     in this scenario
-    $C_{Other}$ reaches the barrier on line 8 \emph{after}
-    $C_{Orig}$ reaches the barrier on line 5.
+    $C_{Orig}$ reaches the barrier on line 5 in the example \emph{before}
+    $C_{Other}$ reaches its barrier on line 8.
 
-    When $C_{Orig}$ executes \joinandcontinue on line 5,
-    it will find that $ST.num\_outstanding \neq 0$.
-    Execution will enter the then branch of the if-then-else.
-    $C_{Orig}$ will try to pop a spark of its local spark stack,
-    however the spark for $G_2$ will not be on the spark stack.
-    $C_{Orig}$ might find a spark for a parent context's goal on the
-    stack,
-    if so, its stack pointer will not match the current parent stack
-    pointer, and it will put the spark back on the stack.
-    The second if-then-else's then branch will be entered, since this
+    When $C_{Orig}$ executes \joinandcontinue,
+    it finds that $ST.num\_outstanding$ is non-zero,
+    causing it to execute the else branch on line 14 of \joinandcontinue.
+    $C_{Orig}$ will try to pop a spark of its local spark stack.
+    However the the spark for $G_2$ was placed on the global
+    spark queue,
+    the only spark it might find is one created by an outer conjunction.
+    If a spark is found, the spark's parent stack pointer will not match the
+    current parent stack pointer,
+    and it will put the spark back on the stack.
+    $C_{Orig}$ executes the then branch (line 22 of \joinandcontinue), since this
     context is the original context.
-    This branch will suspend $C_{Orig}$
-    (copying context specific data from the engine into the context),
-    and then set the engine's context pointer to NULL.
-    before jumping to the \getglobalwork code.
+    This branch will suspend $C_{Orig}$,
+    and set the engine's context pointer to NULL
+    before jumping to \getglobalwork.
 
     When $C_{Other}$ reaches the barrier on line 8,
     it will find that $ST.num\_outstanding = 0$,
@@ -300,7 +308,15 @@ there are three important scenarios:
 
 \end{description}
 
-\begin{algorithm}[htb]
+\paul{XXX}
+The algorithm includes an optimisation not shown here:
+if the parallel conjunction has been executed by only one context,
+then a version of the algorithm without locking is used.
+We have not shown the optimisation because it is equivalent and not relevant
+to our discussion,
+we mention it only for completeness.
+
+\begin{algorithm}
 \begin{algorithmic}
 \Procedure{MR\_get\_global\_work}{}
   \State acquire\_lock($MR\_runqueue\_lock$)
@@ -402,7 +418,7 @@ it will re-execute the infinite loop.
 %or sparks are added to the spark run queue.
 
 \section{Original spark scheduling performance}
-\label{sec:oritinal_scheduling_performance}
+\label{sec:original_scheduling_performance}
 
 \status{Checking plan for this section.}
 
@@ -528,6 +544,7 @@ adding more Mercury engines \emph{slows down} the program.
 We will address this observation after explaining why right recursion
 requires so many contexts.
 
+\label{context_limit}
 \plan{Describe the context limit problem.}
 %Right recursion uses a context for each iteration of the loop,
 %and then suspends that context.
@@ -865,7 +882,7 @@ Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
 A number of language implementations use work stealing.
 % XXX: There may be earlier papers by keller 1984 as cited by halstead.
-\paul{XXX: I have skimed this paper, I must go back and read it
+\paul{XXX: I have skimmed this paper, I must go back and read it
 properly}
 One of the earliest was Multilisp \citep{halstead:1985:multilisp};
 In this paper,
@@ -882,7 +899,7 @@ that it is notable.}
 Many more papers have been published about work stealing.
 A notable example is
 \citet{blumofe:1999:work-stealing},
-which quantifiably proves that work stealing is more efficent than
+which quantifiably proves that work stealing is more efficient than
 \emph{work sharing}
 (using a global pool of work).
 
@@ -891,14 +908,14 @@ which quantifiably proves that work stealing is more efficent than
 \citet{wangp-hons} also mentioned the premature spark scheduling problem
 from the previous section.
 However, he did not discuss it detail or
-recognize that left recursion can create pathological behaviour.
+recognise that left recursion can create pathological behaviour.
 Wang also proposes work stealing as a solution to the problem.
 In a work stealing system a spark placed on a context local stack
-is not comitted to running on that context;
+is not committed to running on that context;
 it may be executed on a different context if it is stolen.
-This delays the dicision of where to execute a spark until the moment
+This delays the decision of where to execute a spark until the moment
 before it is executed.
-Work stealing's other benifits can be summerised as follows:
+Work stealing's other benefits can be summarised as follows:
 
 \begin{itemize}
 
@@ -922,10 +939,10 @@ Work stealing's other benifits can be summerised as follows:
 
 \subsection{Initial work stealing implementation}
 
-The initial work stealing implementation for Mercury was colaboration
+The initial work stealing implementation for Mercury was collaboration
 between Peter Wang and myself, Wang contributed about 80\% of the work
 and I contributed the remaining 20\%.
-Wang's honors thesis \citep{wang-hons} describes his proposal on which
+Wang's honours thesis \citep{wang-hons} describes his proposal on which
 our implementation is heavily based.
 
 \plan{Mercury's needs for a deque}
@@ -934,7 +951,7 @@ The last item pushed onto the stack is the first to be popped off the
 stack,
 this \emph{last-in-first-out} order is important for Mercury's parallel
 conjunctions.
-The main reasion for this is that when parallelism is not used and
+The main reason for this is that when parallelism is not used and
 parallel conjunctions are nested,
 either within the same predicate
 or due to one or more predicate calls,
@@ -985,7 +1002,7 @@ The deque supports the following operations:
         the deque can push items onto the top%
 \footnote{
         Note when we refer to the top of the deque
-        \citet{Chase_2005_wsdeque} referrs to the bottom and vice-versa.
+        \citet{Chase_2005_wsdeque} refers to the bottom and vice-versa.
         We prefer to use the terminology of pushing onto and popping off of
         top, as we would when discussing a stack.
         We clarify this with the hot and cold metaphor.}
@@ -1001,8 +1018,8 @@ The deque supports the following operations:
     except for when the deque contains only one item.
     In this case an atomic compare and swap operation is used to
     determine if the thread lost a race to another thread attempting to
-    steal a task from the deque (a \emph{theif}).
-    When this happens the single item was stolen by the theif and the
+    steal a task from the deque (a \emph{thief}).
+    When this happens the single item was stolen by the thief and the
     owner's call to \pop returns false,
     indicating that the deque was empty.
 
@@ -1010,11 +1027,11 @@ The deque supports the following operations:
     A thread other than the deque's owner can steal
     items from the bottom of the deque.
     This always uses an atomic compare and swap operation as multiple
-    theifs may call \steal on the same deque at the same time.
+    thieves may call \steal on the same deque at the same time.
     \steal can return one of three different values:
     ``success'', ``failure'' and ``abort''.
-    ``abort'' indicates that the theif lost a race with either the owner
-    (\emph{victim}) or another theif.
+    ``abort'' indicates that the thief lost a race with either the owner
+    (\emph{victim}) or another thief.
 
 \end{description}
 
@@ -1041,7 +1058,7 @@ spark storage,
 but we will now refer to it as a deque rather than a stack.
 We have removed the global spark queue,
 as work stealing does not use one.
-Concequently,
+Consequently,
 when a context creates a spark that spark is always placed on the
 context's local spark queue.
 
@@ -1125,7 +1142,7 @@ context's local spark queue.
 
 \plan{Other changes to the idle loop?}
 
-\plan{Theif behaviour}
+\plan{Thief behaviour}
 \plan{Accessing the array of deques}
 
 \plan{Work stealing attempts}

@@ -108,7 +108,7 @@ check_word(word(Word, Locn)) = Errors :-
         ContractionErrorMaybeList),
     list.map(check_hypenations(Word, Locn), invalid_hypenations,
         HypenationErrorMaybeList),
-    list.map(check_capitalizations(Word, Locn), acronyms, 
+    list.map(check_capitalizations(Word, Locn), acronyms ++ names,
         CapitalisationErrorMaybeList),
     Errors = cord_from_maybe_list(ContractionErrorMaybeList) ++
         cord_from_maybe_list(HypenationErrorMaybeList) ++
@@ -282,6 +282,13 @@ acronyms = [
     "GHC",
     "GCC",
     "GC"
+    ].
+
+% Proper nouns that should begin with a capital letter.
+:- func names = list(string).
+
+names = [
+    "Mercury"
     ].
 
 :- func bad_ngrams = list(list(string)).
