@@ -1,0 +1,45 @@
+
+\begin{table}
+\begin{center}
+\begin{tabular}{r|rr|rrrr}
+\multicolumn{1}{c|}{Max no.} &
+\multicolumn{2}{c|}{Sequmential} &
+\multicolumn{4}{c}{Parallel w/ $N$ Engines} \\
+\Cbr{of contexts} & \C{not TS} & \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}\\
+
+\hline
+\hline
+\multicolumn{7}{c}{Prior right recursion work stealing results} \\
+\hline
+4        & 23.2 (0.93) & 21.5 (1.00)
+         & 21.7 (0.99) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\
+64   &-&-& 21.7 (0.99) & 21.5 (1.00) & 21.5 (1.00) & 21.5 (1.00) \\
+128  &-&-& 21.5 (1.00) & 21.5 (1.00) & 21.1 (1.02) & 21.4 (1.01) \\
+256  &-&-& 21.5 (1.00) & 19.5 (1.10) & 18.0 (1.20) & 17.9 (1.20) \\
+512  &-&-& 21.6 (0.99) & 13.0 (1.65) &  9.2 (2.34) &  7.7 (2.78) \\
+1024 &-&-& 21.6 (0.99) & 10.8 (1.99) &  7.3 (2.94) &  5.6 (3.84) \\
+2048 &-&-& 21.5 (1.00) & 10.8 (1.98) &  7.4 (2.91) &  5.6 (3.84) \\
+\hline
+\hline
+\multicolumn{7}{c}{Right recursion results with revised work stealing} \\
+\hline
+
+\hline
+\hline
+\multicolumn{7}{c}{Prior left recursion work stealing results} \\
+\hline
+4        & 23.3 (0.92) & 21.5 (1.00)
+         & 21.5 (1.00) & 10.8 (1.99) & 21.5 (1.00) & 21.5 (1.00) \\
+8    &-&-& 21.5 (1.00) & 11.1 (1.94) &  7.2 (2.98) &  5.5 (3.93) \\
+16   &-&-& 21.6 (0.99) & 11.1 (1.94) &  7.2 (2.98) &  5.4 (3.96) \\
+32   &-&-& 21.5 (1.00) & 10.8 (1.99) &  7.2 (2.98) &  5.4 (3.96) \\
+\hline
+\hline
+\multicolumn{7}{c}{Left recursion results with revised work stealing} \\
+\hline
+\end{tabular}
+\end{center}
+\caption{Work stealing results --- initial implementation}
+\label{tab:work_stealing_initial}
+\end{table}
+
