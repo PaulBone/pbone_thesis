@@ -11,7 +11,7 @@
 %We present a proposal for a tool
 %for profiling the parallel execution of Mercury programs,
 %a proposal whose implementation we have already started.
-%This tool is an adaptation and extension of the ThreadScope profiler
+%This tool is an adaptation and extension of the \tscope profiler
 %that was first built to help programmers visualize
 %the execution of parallel Haskell programs.
 %\end{abstract}
@@ -120,17 +120,17 @@ We therefore looked around for alternative approaches.
 The one we selected was to adapt to Mercury
 an existing profiler for another parallel system.
 
-The profiler we chose was ThreadScope~\cite{threadscope},
+The profiler we chose was \tscope~\cite{threadscope},
 a profiler built by the team behind the Glasgow Haskell Compiler (GHC)
 for their parallel implementation of Haskell.
-We chose ThreadScope because
+We chose \tscope because
 the runtime system it was designed to record information from
 has substantial similarities to the Mercury runtime system,
 because it was \emph{designed} to be extensible,
 and, like many visualization tools, it is extremely useful
 for finding subtle issues that cause significant problems.
 
-% This paper presents the adaption of ThreadScope~\cite{threadscope}
+% This paper presents the adaption of \tscope~\cite{threadscope}
 % --- a tool for profiling the parallel execution of Haskell programs
 % --- to Mercury~\cite{jlp} --- a pure logic programming language.
 % We will use the above three types of users to determine the usefulness of our
@@ -141,9 +141,9 @@ Section~\ref{sec:background} gives the background
 needed for the rest of the paper:
 it introduces Mercury,
 the machinery involved in the parallel execution of Mercury programs,
-and the ThreadScope profiler.
+and the \tscope profiler.
 Section~\ref{sec:newevents}
-describes how we extended the ThreadScope system
+describes how we extended the \tscope system
 to collect the kinds of data needed to describe
 the parallel execution of Mercury programs,
 while section~\ref{sec:analysis} describes how
@@ -158,22 +158,22 @@ concludes with a discussion of related work.
 \section{Background}
 \label{sec:background}
 
-\subsection{ThreadScope}
+\subsection{\tscope}
 
-ThreadScope was originally built
+\tscope was originally built
 to help programmers visualize the parallel execution of Haskell programs
 compiled with the dominant implementation of Haskell,
 the Glasgow Haskell Compiler or GHC.
 The idea is that during the execution of a parallel Haskell program,
 the Haskell runtime system writes time-stamped reports
 about significant events to a log file.
-The ThreadScope tool later reads this log file,
+The \tscope tool later reads this log file,
 and shows the user graphically what each CPU was doing over time.
 The diagrams it displays reveal to the programmer
 the places where the program is getting the expected amount of parallelism,
 as well as the places where it is not.
 
-We could adapt the ThreadScope system to Mercury for two main reasons.
+We could adapt the \tscope system to Mercury for two main reasons.
 The first is that the parallel implementations of Haskell and Mercury
 in GHC and mmc (the Melbourne Mercury compiler)
 are quite similar in several important respects,
@@ -183,7 +183,7 @@ For example, what Mercury calls an engine GHC calls a \emph{capability},
 and what Mercury calls a context GHC calls a \emph{thread}.
 (We will use Mercury terminology in the rest of the paper.)
 The second reason is that
-the ThreadScope log file format was designed to be extensible.
+the \tscope log file format was designed to be extensible.
 Each log file starts with a description
 of each kind of event that may occur in it.
 This description lists the arguments of the event and their total size,
@@ -198,14 +198,14 @@ can skip events, and even of events, that they do not understand,
 and process the rest.
 
 Mercury is able to make use of a number of event types already supported by
-ThreadScope and GHC,
+\tscope and GHC,
 in other cases we are able to add support for Mercury-specific event types to
-ThreadScope.
+\tscope.
 Here we introduce the events in the first category,
 The next section describes those in the second category.
 Events of all types have a timestamp
 that records the time of their occurrence, measured in nanoseconds.
-This unit illustrates the level of precision ThreadScope aims for,
+This unit illustrates the level of precision \tscope aims for,
 although of course there is no guarantee
 that the system clock is capable of achieving it.
 
@@ -220,7 +220,7 @@ this makes the current engine id
 (the id of the engine in whose block an event appears)
 an implicit parameter of most event types.
 
-The event types supported by the original version of ThreadScope 
+The event types supported by the original version of \tscope 
 that are relevant to our work are the following.
 
 \emph{STARTUP:
@@ -324,7 +324,7 @@ To keep the sizes of log files down as much as possible,
 events include only the information they have to.
 If some information about an event
 can be inferred from information recorded for other events,
-then the design principles of ThreadScope say
+then the design principles of \tscope say
 that information should be inferred at analysis time
 rather than recorded at profiling runtime.
 (The presence of context ids in RUN\_SPARK and STEAL\_SPARK events
@@ -346,10 +346,10 @@ can be deduced from block headers.
 \label{sec:newevents}
 
 In order to support the profiling of parallel Mercury programs,
-we had to add new arguments to two of the existing ThreadScope events.
+we had to add new arguments to two of the existing \tscope events.
 Originally, the RUN\_SPARK and STEAL\_SPARK events
 did \emph{not} specify the identity of the spark being run or stolen.
-This is not a problem for the Haskell version of ThreadScope,
+This is not a problem for the Haskell version of \tscope,
 since it does not care about sparks' identities.
 However, we do, since sparks correspond to conjuncts in parallel conjunctions,
 and we want to give to the user not just general information
@@ -369,12 +369,12 @@ will be the id of the spark being converted.
 % In Haskell, their identities can always be inferred
 % by modelling the spark queues of all the capabilities (engines) in the system.
 
-We have extended the set of ThreadScope event types
+We have extended the set of \tscope event types
 to include several new types of events.
 Most of these record information about constructs that do not exist in Haskell:
 parallel conjunctions, conjuncts in those conjunctions, and futures.
 Some provide information about the behavior of Mercury engines
-that ThreadScope for Haskell does not need,
+that \tscope for Haskell does not need,
 either because that information is of no interest,
 or because the information is of interest
 but it can be deduced from other events.
@@ -383,12 +383,12 @@ generate many of the same events,
 the stream of these common events they generate
 do not necessarily obey the same invariants.
 
-However, most of the work we have done towards adapting ThreadScope to Mercury
+However, most of the work we have done towards adapting \tscope to Mercury
 has been in the modification of the parallel Mercury runtime system
 to generate all of the existing, modified and new events when called for.
 
 In the rest of this section,
-we report the event types we have added to ThreadScope.
+we report the event types we have added to \tscope.
 In the next section, section \ref{sec:analysis},
 we will show how the old and new events can be used together
 to infer interesting and useful information
@@ -646,7 +646,7 @@ replacing them with globally unique values.
 Its complexity can be close to linear, provided
 the maps are implemented using a suitable data structure, such as a hash table.
 This transformation does not even need an extra traversal of the log file data.
-The ThreadScope tool must traverse the log file anyway
+The \tscope tool must traverse the log file anyway
 when it gets ready to display its contents,
 and this transformation can be done
 as part of that traversal.
@@ -656,7 +656,7 @@ The extra cost is therefore quite small.
 \section{Deriving metrics from events}
 \label{sec:analysis}
 
-ThreadScope is primarily used to visualize the execution of parallel programs.
+\tscope is primarily used to visualize the execution of parallel programs.
 However, we can also use it, along with our new events,
 to calculate and to present to the user
 a number of different metrics about the execution of parallel Mercury programs.
@@ -746,7 +746,7 @@ then no parallelization of the program can yield a speedup of more than three,
 \emph{NANOSECS\_PER\_CALL:
 The average number of nanoseconds between successive procedure calls.}
 The Mercury profiler for sequential programs~\cite{conway:2001:mercury-deep}
-(which has nothing to do with ThreadScope)
+(which has nothing to do with \tscope)
 measures time in call sequence counts (CSCs);
 the call sequence counter is incremented at every procedure call.
 It does this because there is no portable, or even semi-portable way
@@ -766,7 +766,7 @@ The final value of the call sequence counter
 at the end of a sequential execution of a program 
 gives its length in CSCs; say $n$ CSCs.
 When a parallelized version of the same program is executed on the same data
-under ThreadScope,
+under \tscope,
 we can compute the total amount of \emph{user time}
 taken by the program on all CPUs; say $m$ nanoseconds.
 The ratio $n/m$ gives the average number of nanoseconds
@@ -1314,7 +1314,7 @@ measured by the previous metric.
 
 \subsection{Presenting metrics to users}
 
-The ThreadScope tool is a graphical program.
+The \tscope tool is a graphical program.
 Its main display screen shows
 a continuous timeline of the program's execution on the horizontal axis,
 while along the vertical axis,
@@ -1328,11 +1328,11 @@ or to focus on a specific period during the program run.
 If the current scale allows for it,
 the display also shows the individual events
 that the on-screen picture is derived from.
-Above the per-CPU rows ThreadScope shows a plot that is virtually identical
+Above the per-CPU rows \tscope shows a plot that is virtually identical
 to the curve of the CPUS\_OVER\_TIME metric we defined above,
 and now it can do so for Mercury programs as well as for Haskell programs.
 
-The main ThreadScope GUI also has a mechanism that allows the user
+The main \tscope GUI also has a mechanism that allows the user
 to ask for simple scalar data about the profiled program run.
 Originally, it was used only to display the overall time taken by the run.
 It is trivial to modify this to let the user input
@@ -1343,7 +1343,7 @@ the value of the NANOSECS\_PER\_CALL metric.
 It is not much harder to modify it to compute and then output
 the values of the GC\_STATS and MUTATOR\_VS\_GC\_TIME metrics.
 
-We plan to modify the ThreadScope GUI so that
+We plan to modify the \tscope GUI so that
 if the user hovers the pointer over the representation
 of an event connected with a parallel conjunction as a whole
 (such as a START\_PAR\_CONJUNCTION or END\_PAR\_CONJUNCTION event),
@@ -1355,7 +1355,7 @@ of an event connected with a specific parallel conjunct,
 they should be able to ask for and get
 the value of one of the conjunct-specific metrics.
 
-We plan to add to ThreadScope a screen
+We plan to add to \tscope a screen
 that lists all the parallel conjunctions executed by the program.
 (The information needed for that list is available in the strings
 representing the static ids of the executed parallel conjunctions.)
@@ -1366,7 +1366,7 @@ for any of the conjunction-specific metrics.
 It should also be able to take users
 to all those occurrences in the main display.
 
-We also plan to add to ThreadScope
+We also plan to add to \tscope
 a mechanism that allows the user to request
 the generation of a plain text file in a machine-readable format
 containing all the metrics that may be of interest
@@ -1422,12 +1422,12 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 
 % It is well established that a visualization tool is extremely useful
 % for programmers debugging and tuning complex systems.
-% ThreadScope definitely supports this when used either with
+% \tscope definitely supports this when used either with
 % Haskell~\cite{threadscope},
 % or, as we have proposed, when used with Mercury.
-% Furthermore, extending ThreadScope to work with Mercury has been
+% Furthermore, extending \tscope to work with Mercury has been
 % relatively straight forward,
-% largely due to ThreadScope's extensible file format.
+% largely due to \tscope's extensible file format.
 % 
 % Other tools have existed for profiling the parallel execution of other
 % languages such as Eden's trace viewer~\cite{edentraceviewer}.
@@ -1464,7 +1464,7 @@ and logic (\cite{Foster96,vace}
 and the systems cited by \cite{Gupta95parallelexecution}).
 
 Many of these visualizers share common ideas and features.
-For example, many systems (including ThreadScope)
+For example, many systems (including \tscope)
 use a horizontal bar with different parts colored differently
 to display the behavior of one CPU,
 while many other systems use trees
@@ -1516,10 +1516,10 @@ and many more by the end of the year.
 
 % XXX Acknowledgements.
 We would like to thank everyone
-who has contributed to the development of ThreadScope,
+who has contributed to the development of \tscope,
 in particular Simon Marlow and Duncan Coutts,
 who have answered many of our questions,
-and helped us add Mercury specific features to ThreadScope.
+and helped us add Mercury specific features to \tscope.
 
 % You can find these papers in ~pbone/papers/
 % berthold_eden.pdf

@@ -293,6 +293,7 @@ macro_char_short('-').
 :- func special_macros = list(string).
 
 special_macros = [
+        "cite",
         "citep",
         "citet",
         "ref",

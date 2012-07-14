@@ -108,10 +108,13 @@ check_word(word(Word, Locn)) = Errors :-
         ContractionErrorMaybeList),
     list.map(check_hypenations(Word, Locn), invalid_hypenations,
         HypenationErrorMaybeList),
+    list.map(check_macro_words(Word, Locn), macro_words,
+        MacroWordsErrorMaybeList),
     list.map(check_capitalizations(Word, Locn), acronyms ++ names,
         CapitalisationErrorMaybeList),
     Errors = cord_from_maybe_list(ContractionErrorMaybeList) ++
         cord_from_maybe_list(HypenationErrorMaybeList) ++
+        cord_from_maybe_list(MacroWordsErrorMaybeList) ++
         cord_from_maybe_list(CapitalisationErrorMaybeList).
 
 :- pred check_capitalizations(string::in, locn::in,
@@ -143,6 +146,13 @@ check_contractions(Word, Locn, Contraction, MaybeError) :-
 check_hypenations(Word, Locn, Hypenation, MaybeError) :-
     check_bad_words(Word, Locn, Hypenation,
         "Hypenation is inconsistent \"%s\".", MaybeError).
+
+:- pred check_macro_words(string::in, locn::in,
+    string::in, maybe(prose_error)::out) is det.
+
+check_macro_words(Word, Locn, MacroWord, MaybeError) :-
+    check_bad_words(Word, Locn, MacroWord,
+        "This word should be typed with a macro \"%s\".", MaybeError).
 
 :- pred check_bad_words(string::in, locn::in,
     string::in, string::in, maybe(prose_error)::out) is det.
@@ -289,6 +299,13 @@ acronyms = [
 
 names = [
     "Mercury"
+    ].
+
+% Words that should be written with macros.
+:- func macro_words = list(string).
+
+macro_words = [
+    "ThreadScope"
     ].
 
 :- func bad_ngrams = list(list(string)).
