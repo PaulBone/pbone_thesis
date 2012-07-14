@@ -47,8 +47,6 @@ and how and when they wake up to execute parallel work.
 \section{Original spark scheduling algorithm}
 \label{sec:original_scheduling}
 
-\status{This section is ready for review.}
-
 \plan{Introduction}
 We introduced parallelism in Mercury in Sections \ref{sec:backgnd_merpar} and
 \ref{sec:backgnd_deppar};
@@ -419,8 +417,6 @@ it will re-execute the infinite loop.
 
 \section{Original spark scheduling performance}
 \label{sec:original_scheduling_performance}
-
-\status{Checking plan for this section.}
 
 \begin{figure}
 \begin{center}
@@ -872,10 +868,10 @@ parallel or in sequence.
 %and because contexts are re-used (in left recursion) there is either a free
 %context or we can easily create one.
 
-
-
-\section{Work stealing implementation}
+\section{Initial work stealing implementation}
 \label{sec:work_stealing}
+
+\status{This section is ready for review.}
 
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
@@ -936,8 +932,6 @@ Work stealing's other benefits can be summarised as follows:
     processors.
 
 \end{itemize}
-
-\subsection{Initial work stealing implementation}
 
 The initial work stealing implementation for Mercury was collaboration
 between Peter Wang and myself, Wang contributed about 80\% of the work
@@ -1330,7 +1324,7 @@ this is not a problem under normal circumstances.
 In the case for right recursion with high context limits, work stealing
 performs better.
 This is somewhat expected since work stealing is regarded to be a very
-efficient way of managing parallel work on a multicore system.
+efficient way of managing parallel work on a shared memory system.
 However we did not expect to get such a significant improvement in
 performance.
 In the non work stealing system, a spark is placed on the global spark queue
@@ -1366,6 +1360,40 @@ and the creation of a new context will cause the context limit to rise.
 The work stealing program is more likely to reach the context limit earlier,
 whereby it will be forced into sequential execution.
 
+\section{Reorder independent conjunctions}
+
+\status{Not written}
+
+\plan{Avoid the right-recursion problem by reordering independent conjunctions.}
+
+\section{Idle loop}
+\label{sec:idle_loop}
+\status{Not written}
+
+\plan{Describe the problem with the current algorithm.}
+Engines wake up and periodically check for work by attempting to
+steal work,
+firstly, this means that there can be up to a 2ms (average 1ms) delay before
+a spark is executed.
+secondly, this checks for work too often, wasting resources.
+
+\plan{Solution, wake engines for different types of work}
+We modified the RTS so that waking an engine is easy, and it can be given a
+message so that it knows where to look for work.
+
+\plan{A lot of work went into preventing deadlocks due to race conditions,
+a thread that is not yet sleeping if notified must wake up immediately.}
+
+\plan{Extra benefit: when an engine is woken it can be told directly where
+to find work, or be given the work directly.}
+
+\plan{Extra benefit: we can be selective about which engine to wake,
+while not implemented fully, we can wake a `nearby' engine so that
+we can avoid communication between dies or sockets.}
+
+\plan{Show the algorithm for the new idle loop.}
+Note that we execute contexts before sparks,
+this is more-likely to produce futures and it may reduce memory consumption.
 
 \subsection{Revised work stealing implementation}
 
@@ -1404,9 +1432,6 @@ This invariant is soft.
 
 \plan{Benchmark}
 
-\section{Reorder independent conjunctions}
-\plan{Avoid the right-recursion problem by reordering independent conjunctions.}
-
 \section{Thread pinning}
 \label{sec:thread_pinning}
 \status{Not written}
@@ -1433,35 +1458,6 @@ We fall back to setcpuafinity() when it is not.
 
 \paul{I am not going to talk about busy waiting since I have not written the
 runtime system in a way that I can test or change this easily.}
-
-\section{Idle loop}
-\label{sec:idle_loop}
-\status{Not written}
-
-\plan{Describe the problem with the current algorithm.}
-Engines wake up and periodically check for work by attempting to
-steal work,
-firstly, this means that there can be up to a 2ms (average 1ms) delay before
-a spark is executed.
-secondly, this checks for work too often, wasting resources.
-
-\plan{Solution, wake engines for different types of work}
-We modified the RTS so that waking an engine is easy, and it can be given a
-message so that it knows where to look for work.
-
-\plan{A lot of work went into preventing deadlocks due to race conditions,
-a thread that is not yet sleeping if notified must wake up immediately.}
-
-\plan{Extra benefit: when an engine is woken it can be told directly where
-to find work, or be given the work directly.}
-
-\plan{Extra benefit: we can be selective about which engine to wake,
-while not implemented fully, we can wake a `nearby' engine so that
-we can avoid communication between dies or sockets.}
-
-\plan{Show the algorithm for the new idle loop.}
-Note that we execute contexts before sparks,
-this is more-likely to produce futures and it may reduce memory consumption.
 
 \section{Proposed scheduling tweaks}
 \label{sec:proposed_tweaks}
