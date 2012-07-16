@@ -358,11 +358,11 @@ we mention it only for completeness.
 \plan{Explain how work begins executing, for completeness.}
 When an engine cannot get any local work it must search for global work.
 Newly created engines, except for the first, also search for global work.
-This is done by calling \getglobalwork.
-\getglobalwork is shown in Algorithm \ref{alg:MR_get_global_work}.
+They do this by calling \getglobalwork,
+whose code is shown in Algorithm \ref{alg:MR_get_global_work}.
 Only one of the idle engines can execute \getglobalwork at a time.
-This protects the context run queue and the global context queue from
-concurrent access using the run queue's lock.
+The $MR\_runqueue\_lock$ lock protects the context run queue and the global
+context queue from concurrent access.
 After acquiring the lock,
 engines execute a loop.
 An engine exits the loop only when it finds some work to do or the
@@ -375,19 +375,19 @@ If the system is not being shut down,
 the engine will search for a runnable context.
 If it finds a context it releases the run queue lock, loads the context
 and jumps to the resume point for the context.
-If the engine already has a context,
-that context is guaranteed to be unused;
-therefore, it is released to the context free list.
-If no context was found the engine attempts to take a spark from the global
+If it already had a context then it first releases that context,
+doing so is safe as
+a precondition of an engine calling \getglobalwork is that if the engine has
+a context, the context must not contain a spark or represent a
+suspended computation.
+If no context was found, the engine attempts to take a spark from the global
 spark queue.
-If it finds a spark then it will need a context to execute the spark.
+If it finds a spark then it will need a context to execute that spark.
 It will try to get a context from the free list, if there is none it will
 create a new context.
 Once it has a context,
-it loads it.
-This copies the context's copies of registers into the engine such as the
-stack pointer.
-It loads the spark by initialising the engine's parent stack pointer
+it copies the context's copies of registers into the engine.
+It also initialises the engine's parent stack pointer
 register and the spark's thread local mutables
 (which are set by the context that created the spark)
 into the context.
@@ -399,21 +399,8 @@ The condition variable is used to wake up the engine if either a spark is
 placed on the global spark queue or a context is placed on the context run
 queue.
 When the engine wakes,
-it will re-execute the infinite loop.
+it will re-execute the loop.
 
-%An engine looks for global work first by checking the global context run queue.
-%If it finds a runnable context and is still holding a context from a
-%previous execution, it saves the old context onto the free context list.
-%If there are no runnable contexts,
-%it will take a spark from the global spark queue,
-%and either use its current context to execute the spark,
-%or allocate a new context (from the free context list if possible).
-%If it is unsuccessful at finding work,
-%it will go to sleep using a pthread condition variable and the global run
-%queue's lock.
-%This condition is used to wake engines when either contexts are added to the
-%run queue,
-%or sparks are added to the spark run queue.
 
 \section{Original spark scheduling performance}
 \label{sec:original_scheduling_performance}
@@ -427,7 +414,8 @@ it will re-execute the infinite loop.
 \code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
 \code{~~~~P(X, Y) \&} \\
 \code{~~~~map(P, Xs, Ys).} \\
-\end{tabular}}
+\end{tabular}
+}
 \subfigure[Left recursive]{%
 \label{fig:map_left_recursive}
 \begin{tabular}{l}
@@ -435,7 +423,8 @@ it will re-execute the infinite loop.
 \code{map(P, [X $|$ Xs], [Y $|$ Ys]) :-} \\
 \code{~~~~map(P, Xs, Ys) \&} \\
 \code{~~~~P(X, Y).} \\
-\end{tabular}}%
+\end{tabular}
+}%
 \end{center}
 \caption{Right and left recursive map/3}
 \label{fig:map_right_and_left_recursive}
@@ -456,11 +445,11 @@ are implemented by spawning off the second and later conjuncts and executing
 the first conjunct directly.
 In the right recursive case (Figure \ref{fig:map_right_recursive}),
 the recursive call is spawned off as a spark,
-and that in the left recursive case (Figure \ref{fig:map_left_recursive}),
-the recursive call is executed directly, and the loops \emph{body} is
+and in the left recursive case (Figure \ref{fig:map_left_recursive}),
+the recursive call is executed directly, and the loop \emph{body} is
 spawned off.
-Programmers are taught about tail recursion,
-and therefore they write right recursive code wherever possible.
+Declarative programmers are taught to prefer tail recursion,
+and therefore tend to write right recursive code.
 
 \begin{table}
 \begin{center}
@@ -496,112 +485,125 @@ It is similar to \code{map/3}
 in Figure \ref{fig:map_right_recursive}.
 The left most column shows the maximum number of contexts permitted at
 any time.
-This is the limit that was described in the previous section.
-Values are omitted in the range 3--31 as they are not interesting:
-their results are the same as those for 2 contexts per engine.
+This is the limit that was mentioned in the previous section.
 The next two columns give the elapsed execution time for a sequential
 version of the program,
 in this version of the program no parallel conjunctions where used.
-The first of these, labelled ``not TS'',
-is compiled without thread safety;
-the second, labelled ``TS'',
-is compiled with thread safety, meaning that it allows multiple engines to be
-used: requiring each thread to use a register to point to its engine
-structure (Section \ref{sec:backgnd_merpar}).
-The ``TS'' version also enables thread safety in the garbage collector.
-The sequential versions of the programs do not use the context limit:
-there is only one result for each sequential version of a program.
+These two columns give results without and with thread safety.
 The following four columns give the elapsed execution times
 using one to four Mercury engines.
-The numbers in parentheses are the ratio between the result and the
-sequential thread safe result.
+The numbers in parentheses are the ratio between the time and the
+sequential thread safe time.
 
 \plan{Observations}
-In general more parallelism is achieved when more contexts are used:
-The mandelbrot program parallelises well with 512 contexts.
-However,
-if this limit is raised even higher,
-to 1024 or 2048 contexts,
-not much more parallelism is gained.
+In general we acheive more parallelism when we use more contexts,
+until a threshold of 601 contexts,
+as there are 600 rows in the image and a base case each one consumes a
+context.
+This is why the program does not benifit greatly from a high limit such as
+1024 or 2048 xontexts.
+This program may use fewer than 600 contexts as any sequentially executed
+sparks use their parent context.
+This is possibly why a limit of 512 contexts also results in a good parallel
+speedup.
 When only 256 contexts are used the four core version achieves a speedup
 of 1.30,
 compared to 3.55 for 512 or more contexts.
-With fewer contexts, parallel speedups are limited.
-Using independent parallelism there should be no need to suspend a context.
-Therefore, the program should parallelise well enough when restricted to
-a small (four to eight) number of contexts.
-This suggests that there is a problem;
-too many contexts are needed to execute this program.
+Given that mandelbrot uses independent parallelism there should never be any
+need to suspend a context.
+Therefore the program should parallelise well enough when restricted to
+a small number of contexts (four to eight).
+Too many contexts are needed to execute this program at the level of
+parallelism that we want.
 We noticed the same pattern in other programs with right recursive
 parallelism.
-Interestingly,
-with either 128 or 256 contexts,
-adding more Mercury engines \emph{slows down} the program.
-We will address this observation after explaining why right recursion
-requires so many contexts.
 
 \label{context_limit}
 \plan{Describe the context limit problem.}
 %Right recursion uses a context for each iteration of the loop,
 %and then suspends that context.
-Parallel conjunctions are evaluated as described in Section
-\ref{sec:backgnd_merpar}.
-The second and later conjuncts are spawned off while the first conjunct is
-executed by the current context.
-The barrier at the end of the first conjunct will block the context if
-the other conjuncts have not yet completed.
-This is likely as the recursive call almost always requires more
-computation than a single iteration.
-The context must either execute a spark due to the same parallel
-conjunction or be blocked.
-It cannot continue execution after the parallel conjunction as the code
-after the conjunction often depends on values produced by the other
-conjuncts in the conjunction.
-Every spark placed on the global queue is converted into a new context,
-because no contexts have been released into the free list.
-Each of these new contexts in turn enters the recursive call and
+To understand this problem we must consider how parallel conjunctions are
+executed (see Section \ref{sec:backgnd_merpar}).
+The original context creates a spark for the second and later conjuncts and
+puts it on the global spark queue.
+It then executes the first conjunct \code{P/2}.
+This takes much less time to execute than the spawned off call to
+\code{map/3}.
+After executing \code{P/2} the original context will call the
+\joinandcontinue barrier.
+It then attempts to execute a spark from its local spark stack,
+this will fail because the only spark was placed on the global spark queue.
+The original context will be needed after the other conjunct finishes, 
+to execute the code after the parallel conjunction.
+The original context cannot proceed but will be needed later,
+therefore it is suspended until all the other 599 iterations of the loop
+have finished.
+Meanwhile the spark that was placed on the global run queue is converted
+into a new context.
+This new context enters the recursive call and
 becomes blocked within the recursive instance of the same parallel
-conjunction.
-The number of contexts quickly exceeds the context limit preventing
-parallel execution.
-If the context limit is not exceeded then a right recursive loop will
-consume a context for each level of recursion.
-
-The mandelbrot program's parameters asked to to render an image with a
-resolution of $600\times600$,
-given that some sparks can be executed by the current context without
-loosing much parallelism,
-512 contexts is enough to effectively parallelise the program as shown in
-the table.
-It is important to note that each context consumes a significant amount
-of memory, more than one stack frame.
-Therefore,
+conjunction, it must wait for the remaining 598 iterations of the loop.
+This process continues to repeat itself,
+allocating more contexts which can consume large amounts of memory.
+Each context consumes a significant amount of memory,
+much more than one stack frame,
+Therefore
 this problem makes programs that look tail recursive
-\emph{consume more memory than}
+\emph{consume much more memory than}
 sequential programs that are not tail recursive.
-This is the reason why there is a context limit,
-to prevent a parallel Mercury program from consuming all the memory on a
-system.
-Later in the project we developed a solution to this problem which is
-covered in Chapter \ref{chap:loop_control}.
-In this chapter we investigate workarounds.
+We implement the limit on the number of contexts to prevent pathological
+cases such as this one from crashing the program or the whole computer.
+Once the limit is reached sparks cannot be placed on the global run queue
+and sequential execution is used.
+Therefore the context limit is a trade off between memory usage and
+parallelism.
+
+\picfigure{linear_context_usage}{Linear context usage in right recursion}
+
+\plan{Diagram from the loop control talk}
+An example of context usage over time using four engines is shown in
+Figure \ref{fig:linear_context_usage}.
+Time is shown on the Y axis and contexts are drawn so that each additional
+context is further along the X axis.
+At the top left,
+four contexts are created and they execute four iterations of a loop;
+this execution is indicated by boxes.
+Once each of these iterations finishes,
+its context stays in memory but is suspended,
+indicated by the long vertical lines.
+Another four iterations of the loop create another four contexts, and so on.
+Later when all iterations of the loop have been executed,
+each of the blocked contexts resumes execution and immediately exits,
+indicated by the horizontal line at the bottom of each of the vertical
+lines.
+Later in the project we developed a solution to this problem
+(see Chapter \ref{chap:loop_control}).
+\paul{XXX: Point exactly to the workarounds.}
+In this chapter we describe our original workarounds before
+we developed the solution.
 
 \plan{Extra engines require more contexts}
-Above we noted that while using 128 or 256 contexts,
-a program using three or four Mercury engines was slower than one using
-two engines.
+\paul{XXX}
+When using either 128 or 256 contexts,
+we noticed that when we used three or four Mercury engines
+the program ran more slowly than with two Mercury engines.
 A possible reason is that:
 the more Mercury engines there are the more often at least one engine is
 idle.
-This information is used when placing a spark on the global spark
-queue (Section \ref{sec:original_scheduling}).
+When creating a spark the runtime system checks four an idle engine,
+if there is one then the spark may be placed on the global queue, subject to
+    the context limit (see Section \ref{sec:original_scheduling}).
 If there is no idle engine,
 a spark is placed on the context's local queue regardless of the current
 number of contexts.
-This happens more often when there are fewer Mercury engines being used,
-this means that the context limit will not be exceeded so quickly
-and in the meantime,
-more parallelism may be exploited.
+When there are fewer Mercury engines being used then it is less likely that
+one of them is idle.
+Therefore more sparks are placed on the local queue and executed
+sequentially and the program does not hit the context limit as quickly as
+one using more Mercury engines.
+The program can exploit more parallelism as it hits the context limit
+later,
+and achieve better speedups.
 
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
@@ -629,32 +631,32 @@ original context that executed the conjunction.
 \hline
 \multicolumn{7}{c}{Right recursion} \\
 \hline
-4        & 23.2 $\pm0.00$ & 21.5 $\pm0.04$
-         & 21.5 $\pm0.02$ & 21.5 $\pm0.00$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\
-64   &-&-& 21.5 $\pm0.03$ & 21.5 $\pm0.01$ & 21.5 $\pm0.01$ & 21.5 $\pm0.02$ \\
-128  &-&-& 21.5 $\pm0.02$ & 19.8 $\pm0.01$ & 20.9 $\pm0.03$ & 21.2 $\pm0.03$ \\
-256  &-&-& 21.5 $\pm0.02$ & 13.2 $\pm0.05$ & 15.5 $\pm0.06$ & 16.5 $\pm0.07$ \\
-512  &-&-& 21.5 $\pm0.02$ & 11.9 $\pm0.11$ &  8.1 $\pm0.09$ &  6.1 $\pm0.08$ \\
-1024 &-&-& 21.5 $\pm0.03$ & 11.8 $\pm0.11$ &  8.0 $\pm0.06$ &  6.1 $\pm0.08$ \\
-2048 &-&-& 21.5 $\pm0.03$ & 11.9 $\pm0.10$ &  8.0 $\pm0.08$ &  6.0 $\pm0.06$ \\
+4        & 23.2 (0.00) & 21.5 (0.04)
+         & 21.5 (0.02) & 21.5 (0.00) & 21.5 (0.01) & 21.5 (0.02) \\
+64   &-&-& 21.5 (0.03) & 21.5 (0.01) & 21.5 (0.01) & 21.5 (0.02) \\
+128  &-&-& 21.5 (0.02) & 19.8 (0.01) & 20.9 (0.03) & 21.2 (0.03) \\
+256  &-&-& 21.5 (0.02) & 13.2 (0.05) & 15.5 (0.06) & 16.5 (0.07) \\
+512  &-&-& 21.5 (0.02) & 11.9 (0.11) &  8.1 (0.09) &  6.1 (0.08) \\
+1024 &-&-& 21.5 (0.03) & 11.8 (0.11) &  8.0 (0.06) &  6.1 (0.08) \\
+2048 &-&-& 21.5 (0.03) & 11.9 (0.10) &  8.0 (0.08) &  6.0 (0.06) \\
 \hline
 \hline
 \multicolumn{7}{c}{Left recursion (Sparks included in context limit)} \\
 \hline
-4        & 23.2 $\pm0.01$ & 21.5 $\pm0.03$
-         & 21.5 $\pm0.02$ & 21.5 $\pm0.04$ & 21.5 $\pm0.04$ & 21.5 $\pm0.02$ \\
-64   &-&-& 21.5 $\pm0.02$ & 21.5 $\pm0.02$ & 21.4 $\pm0.03$ & 21.5 $\pm0.03$ \\
-128  &-&-& 21.5 $\pm0.04$ & 21.5 $\pm0.03$ & 21.5 $\pm0.03$ & 21.5 $\pm0.03$ \\
-256  &-&-& 21.5 $\pm0.02$ & 18.3 $\pm0.75$ & 18.2 $\pm0.03$ & 19.6 $\pm1.37$ \\
-512  &-&-& 21.5 $\pm0.02$ & 17.9 $\pm0.83$ & 15.5 $\pm1.29$ & 16.4 $\pm7.09$ \\
-1024 &-&-& 21.5 $\pm0.03$ & 18.0 $\pm0.85$ & 14.7 $\pm2.18$ & 16.1 $\pm5.23$ \\
-2048 &-&-& 21.5 $\pm0.02$ & 18.0 $\pm0.85$ & 15.4 $\pm2.15$ & 17.8 $\pm5.25$ \\
+4        & 23.2 (0.01) & 21.5 (0.03)
+         & 21.5 (0.02) & 21.5 (0.04) & 21.5 (0.04) & 21.5 (0.02) \\
+64   &-&-& 21.5 (0.02) & 21.5 (0.02) & 21.4 (0.03) & 21.5 (0.03) \\
+128  &-&-& 21.5 (0.04) & 21.5 (0.03) & 21.5 (0.03) & 21.5 (0.03) \\
+256  &-&-& 21.5 (0.02) & 18.3 (0.75) & 18.2 (0.03) & 19.6 (1.37) \\
+512  &-&-& 21.5 (0.02) & 17.9 (0.83) & 15.5 (1.29) & 16.4 (7.09) \\
+1024 &-&-& 21.5 (0.03) & 18.0 (0.85) & 14.7 (2.18) & 16.1 (5.23) \\
+2048 &-&-& 21.5 (0.02) & 18.0 (0.85) & 15.4 (2.15) & 17.8 (5.25) \\
 \hline
 \hline
 \multicolumn{7}{c}{Left recursion (Sparks excluded from context limit)} \\
 \hline
-N/A      & 23.3 $\pm0.01$ & 21.5 $\pm0.02$
-         & 21.7 $\pm0.78$ & 17.9 $\pm0.60$ & 15.6 $\pm2.49$ & 14.2 $\pm6.94$ \\
+N/A      & 23.3 (0.01) & 21.5 (0.02)
+         & 21.7 (0.78) & 17.9 (0.60) & 15.6 (2.49) & 14.2 (6.94) \\
 \end{tabular}
 \end{center}
 \caption{
@@ -681,8 +683,8 @@ program using one to four Mercury engines.
 All results are the mean of 20 test runs,
 printed next to each result is the sample standard deviation.
 
-The left recursive figures are underwhelming, they are worse than right
-recursion.
+The left recursive figures are underwhelming;
+they are worse than right recursion.
 Furthermore,
 the sample standard deviations in for left recursion results are much
 higher.
@@ -1366,7 +1368,7 @@ whereby it will be forced into sequential execution.
 
 \plan{Avoid the right-recursion problem by reordering independent conjunctions.}
 
-\section{Idle loop}
+\section{Idle loop and better work stealing}
 \label{sec:idle_loop}
 \status{Not written}
 
