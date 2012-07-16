@@ -22,7 +22,7 @@ program.
 \plan{Introduce Boehm, \& details: conservative, mark and sweep, stop the
 world, parallel marking.}
 Mercury uses the Boehm-Demers-Weiser conservative garbage collector (Boehm GC)
-\citep{boehm_gc},
+\citep{boehm:1988:gc},
 which is a conservative mark and sweep collector.
 Boehm GC supports parallel programming:
 it will stop all the program's threads (\emph{stop the world}) during its
@@ -42,7 +42,7 @@ such as sweeping,
 concurrently with the mutator.
 
 \plan{Describe theory of GC performance.}
-Amdahl's law~\citep{amdahl} describes the maximum speedup that
+Amdahl's law~\citep{amdahl:1967:law} describes the maximum speedup that
 can theoretically be achieved by parallelising a part of a program.
 We use Amdahl's law to predict the speedup of a program whose
 mutator is parallelised but whose collector runs sequentially.
@@ -67,7 +67,7 @@ collection to complete.
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
 To reduce this problem,
-\citet{boehm-gc} included parallel marking support in their collector.
+\citet{boehm:1988:gc} included parallel marking support in their collector.
 Ideally this would remove the bottleneck described above.
 However,
 parallel garbage collection is a continuing area of research and

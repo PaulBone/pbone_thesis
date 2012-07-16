@@ -718,7 +718,7 @@ and is described by \cite{threadscope}.
 \emph{GC\_STATS: The number of garbage collections,
 and the average, minimum, maximum and variance
 of the elapsed time taken by each collection.}
-Mercury uses the Boehm-Demers-Weiser garbage collector~\cite{boehm}.
+Mercury uses the Boehm-Demers-Weiser garbage collector~\cite{boehm:1988:gc}.
 This collector supports parallel marking using GC-specific helper threads
 rather than the OS threads that run Mercury engines.
 Therefore, even when parallel marking is used,

@@ -21,7 +21,7 @@ to improve performance.
 In Section \ref{sec:original_scheduling} we describe how the existing runtime
 system schedules sparks.
 The section provides background material for Section
-\ref{sec:d_scheduling_performance}
+\ref{sec:original_scheduling_performance}
 which benchmarks the runtime system and describes a significant problem with
 spark scheduling.
 We address those problems by introducing work stealing in Section
@@ -70,7 +70,7 @@ The global spark queue and its lock can easily become a bottleneck when many
 engines contend for access to the global queue.
 
 \plan{Local spark stack --- relieves contention on global queue}
-\citet{wang-hons} anticipated this problem and created context local spark
+\citet{wang:2006:hons} anticipated this problem and created context local spark
 stacks to avoid contention on the global queue.
 Furthermore, the local spark stacks do not require locking.
 When a parallel conjunction spawns off a spark,
@@ -352,14 +352,14 @@ we mention it only for completeness.
 \EndProcedure
 \end{algorithmic}
 \caption{\getglobalwork}
-\label{alg:MR_get_global_work}
+\label{alg:MR_get_global_work_initial}
 \end{algorithm}
 
 \plan{Explain how work begins executing, for completeness.}
 When an engine cannot get any local work it must search for global work.
 Newly created engines, except for the first, also search for global work.
 They do this by calling \getglobalwork,
-whose code is shown in Algorithm \ref{alg:MR_get_global_work}.
+whose code is shown in Algorithm \ref{alg:MR_get_global_work_initial}.
 Only one of the idle engines can execute \getglobalwork at a time.
 The $MR\_runqueue\_lock$ lock protects the context run queue and the global
 context queue from concurrent access.
@@ -608,7 +608,7 @@ and achieve better speedups.
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
 Only right recursion behaves in this way.
-A left recursive predicate (Figure \ref{fig:left_recursion} has its
+A left recursive predicate (Figure \ref{fig:map_left_recursive} has its
 recursive call on the left of the parallel conjunction.
 The context executing the conjunction sparks off the body of the loop,
 in the figure this is \code{P},
@@ -903,7 +903,7 @@ which quantifiably proves that work stealing is more efficient than
 
 \paul{XXX: Make sure these paragraphs flow once I read the papers above}
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
-\citet{wangp-hons} also mentioned the premature spark scheduling problem
+\citet{wang:2006:hons} also mentioned the premature spark scheduling problem
 from the previous section.
 However, he did not discuss it detail or
 recognise that left recursion can create pathological behaviour.
@@ -938,7 +938,7 @@ Work stealing's other benefits can be summarised as follows:
 The initial work stealing implementation for Mercury was collaboration
 between Peter Wang and myself, Wang contributed about 80\% of the work
 and I contributed the remaining 20\%.
-Wang's honours thesis \citep{wang-hons} describes his proposal on which
+Wang's honours thesis \citep{wang:2006:hons} describes his proposal on which
 our implementation is heavily based.
 
 \plan{Mercury's needs for a deque}
@@ -969,7 +969,7 @@ has a good chance of being hot in the processor's cache.
 Sparks added to Mercury's global spark queue where 
 returned in \emph{first-in-first-out} order.
 This does not encourage a left to right execution order.
-However \citet{wang_hons} proposes that this order may be better:
+However \citet{wang:2006:hons} proposes that this order may be better:
 
 \begin{quote}
 The global spark queue, however, is a queue because we assume that a
@@ -1103,7 +1103,7 @@ used}
 
 \plan{Barrier code}
 A context accesses its own local spark queue in the \joinandcontinue barrier
-introduced in Section \ref{sec:orig_scheduling}.
+introduced in Section \ref{sec:original_scheduling}.
 The new version of \joinandcontinue is shown in Algorithm
 \ref{alg:join_and_continue_ws1}.
 The first difference between this version and the previous one,
@@ -1183,11 +1183,12 @@ on page \pageref{alg:join_and_continue_peterw}.
 \EndProcedure
 \end{algorithmic}
 \caption{MR\_get\_global\_work}
-\label{alg:MR_get_global_work}
+\label{alg:MR_get_global_work_wsinitial}
 \end{algorithm}
 
 \plan{Other changes to the idle loop?}
-We have also modified \getglobalwork to use spark stealing.
+We have also modified \getglobalwork to use spark stealing,
+the new code is shown in Algorithm \ref{alg:MR_get_global_work_wsinitial}.
 On line 15 we no longer dequeue a spark from the global spark queue.
 Now a call to \trystealspark (see below) is used.
 Also as spark creation does not affect the runqueue condition,
@@ -1491,7 +1492,7 @@ I will not write it until at least the rest of this chapter is finished.
 %The spark is added to a global run queue of sparks, or if that queue is too
 %full, because there's already enough parallelism,
 %then the spark is added to a queue owned by the current context.
-%\citet{wang_hons_thesis} intended to use the local queues for work stealing
+%\citet{wang:2006:thesis} intended to use the local queues for work stealing
 %but had not completed his implementation,
 %The work-stealing dequeue structure
 %is described in \citet{Chase_2005_wsdeque}.
@@ -1535,7 +1536,7 @@ I will not write it until at least the rest of this chapter is finished.
 %the queue itself can become a bottleneck:
 %when many processors try to access it the same location in memory there will
 %be many cache misses and delays.
-%This is why \citet{wang_hons_thesis} choose to introduce local queues,
+%This is why \citet{wang:2006:thesis} choose to introduce local queues,
 %and place work on them when there is a surplus of work on the global queue.
 %
 %When a engine finishes executing a context and reaches the barrier at the
