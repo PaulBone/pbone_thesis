@@ -18,6 +18,9 @@ TEX_PROSE = \
 		backgnd_autopar.tex \
 		rts.tex \
 		rts_gc.tex \
+		rts_original_scheduling.tex \
+		rts_original_scheduling_performance.tex \
+		rts_work_stealing.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex
