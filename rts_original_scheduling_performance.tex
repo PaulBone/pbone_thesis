@@ -177,7 +177,6 @@ In this chapter we describe our original workarounds before
 we developed the solution.
 
 \plan{Extra engines require more contexts}
-\paul{XXX}
 When using either 128 or 256 contexts,
 we noticed that when we used three or four Mercury engines
 the program ran more slowly than with two Mercury engines.
@@ -201,7 +200,7 @@ and achieve better speedups.
 
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
-Only right recursion behaves in this way.
+Only right recursion use one context for each iteration of a loop. 
 A left recursive predicate (Figure \ref{fig:map_left_recursive} has its
 recursive call on the left of the parallel conjunction.
 The context executing the conjunction sparks off the body of the loop,
@@ -268,111 +267,106 @@ the left recursive data,
 which we will discuss now;
 and left recursive data with a modified context limit,
 which we will discuss in a moment.
+The figures in parenthesis are the standard deviation of the samples.
 
 The left recursive figures are underwhelming;
 they are worse than right recursion.
 Furthermore,
-the sample standard deviations in for left recursion results are much
+the standard deviations for left recursion results are much
 higher.
 In particular,
-the more contexts and Mercury engines are used, the higher the
-deviation.
-This means that few observations can be made using this data,
-however,
-the results are still much slower than the right recursive results and
-the large amount of variance in the results are observations that we can
-make.
+the more contexts and Mercury engines are used,
+the higher the standard deviation.
+Dispite this,
+we can see that the left recursion results are much slower than the right
+recursive results.
 
-\plan{Explain the premature scheduling problem that affects left-recursive programs.}
-The left recursion problem looks similar to the right recursive problem
-since they are both affected by the context limit.
-However, they are different.
-To demonstrate the left recursion problem,
-let us assume that there is a context limit of eight,
-and there are two Mercury engines.
+\plan{Explain the premature scheduling problem that affects left-recursive
+programs.}
+Both left and right recursion are affected by the context limit,
+however the cause for left recursion is different.
+Consider a case of two Mercury engines and a context limit of eight.
 The first Mercury engine is executing the original context,
-which enters the parallel conjunction and spawns off a spark adding it
-to the global queue.
-The context then executes the recursive call continues to spawn off
-sparks.
+which enters the left recursive parallel conjunction and spawns off a spark,
+adding it to the global spark queue.
+The original context then executes the recursive call and
+continues to spawn off sparks.
 As we described in Section \ref{sec:original_scheduling},
 each spark on the global spark queue may be converted into a new
 context,
-and therefore, sparks on the global queue contribute towards the context
+and therefore sparks on the global queue contribute towards the context
 limit.
-After eight recursions,
-it is very likely that the context limit has been exceeded.
-It may not have been.
-The number of contexts and sparks will be reduced
-when the second engine executes its second spark,
-as it allocates a new context to execute the first spark and re-uses it
-for the second.
-If the second engine is quick enough,
-the first engine may have been able to place 9 or 10 sparks on the
-global queue before the limit was exceeded,
-but this is unlikely.
-The first Mercury engine is doing nothing more than following a
-recursive call,
-setting up a synchronisation term and
-then scheduling a spark;
-each iteration is very quick.
-Meanwhile,
-the second Mercury engine is executing the call to \code{P} in each
-recursion;
-which is much slower.
-Therefore,
-sparks are being created more quickly than they can be executed.
-When using a low context limit most of these sparks are placed on
-the original context's local stack,
-and will be executed sequentially.
-
-\plan{Left recursion w/out limit results}
-The left recursive version of mandelbrot uses independent
-parallelism and left recursion;
-it never needs more than one context per Mercury engine.
-Therefore, we are able to safely remove sparks from the context limit
-since we know that any contexts allocated in order to evaluate sparks
-can be re-used.
-The final row group (of a single row) in Table
-\ref{tab:2009_left_nolimit} shows results for the left recursive test
-with a modified context limit.
-As such, the context limit is no-longer relevant to the test,
-so only one row of values is shown.
-The standard deviation for this result is still very high,
-nearly seven seconds for four Mercury engines,
-so it cannot be easily compared with other results.
-Nevertheless, this result is similar to those in the left recursive
-group that have a sufficiently high context limit.
-This supports the idea above, however the program still performs poorly,
-and the variance is high.
+With left recursion,
+the first engine executes its tight loop which spawns off sparks.
+Meanwhile the second engine takes sparks from the queue and executes them,
+the execution of the work that a spark represents takes more time than each
+recursive call executed by the first engine.
+Therefore the first engine will put sparks on the global queue more quickly
+than the second engine can remove and execute them.
+After eight to twelve recursions,
+it is very likely that the sparks on the global queue will exceed the
+context limit,
+and that new sparks are now placed on the original context's local spark
+stack.
+This happens sooner if the context limit is low.
 
 \plan{Second problem, discuss the high variance}
 The high variance in all the left recursive results is
-indicative of a nondeterminism.
+indicative of nondeterminism.
 The cause is going to be something that either varies between execution
 runs or does not always effect execution runs.
-Parallel task scheduling is a potential cause.
-When a spark is scheduled and placed on either the global queue or
-context local stack.
-the context limit is one of the two things used to make this scheduling
+A potential explaination is that in different runs different numbers of
+sparks are executed in parallel before the context limit is reached.
+However this cannot be true, or at least is only partly true,
+as the variance is higher when the context limit is higher including cases
+where 2048 contexts are permitted and we know the program needs at most 601
+(usually less).
+Fortunatly there is a better explaination.
+The context limit is one of the two things used to make this scheduling
 decision;
 the other is, if there is no idle engine then the spark is always
-placed on the local spark stack (Section \ref{sec:original_scheduling}).
+placed on the context local spark stack
+(Section \ref{sec:original_scheduling}).
 At the time when the parallel conjunction in \code{map/3} is executed,
 the other engines will initially be idle but will quickly become busy,
 once they are busy the original context will not place sparks on the
 global spark queue.
 If the other engines are slow to respond to the first sparks placed
 on the global queue,
-then a larger number of sparks are placed on this queue and more
+then more sparks are placed on this queue and more
 parallel work is available.
 If they are quick to respond,
 then more sparks will be placed on the original contexts local queue,
 where they will be executed sequentially.
 
-\plan{Reinforce that these results support the idea that scheduling decisions are made prematurely}
-Both of the left recursive problems have the same cause.
-The decision to execute a spark sequentially or in parallel is
+\plan{Left recursion w/out limit results}
+Mandelbrot uses only independent parallelism, which means no context can
+ever be blocked by a future.
+In a left recursive case a computation that is spawned off on a spark is
+never blocked by a \joinandcontinue barrier,
+only the original context executes a \joinandcontinue that may block.
+Therefore the program never uses more than one context per Mercury engine
+plus the original context.
+For this program we can safely modify the runtime system so that globally
+shceduled sparks do not count towards the context limit.
+We did to test 
+that a low context limit prevents the majority of sparks from being placed on
+the global queue and being eligible for parallel execution.
+The final row group in Table
+\ref{tab:2009_left_nolimit} shows results for the left recursive test
+where sparks in the global queue do not count towards the context limit.
+As expected, we got similar results for different values of the context
+limit.
+We have therefore shown only one row of results in the table.
+This result is similar to those in the left recursive group with an
+unmodified runtime system and a sufficiently high context limit.
+Therefore we can say that the context limit is affecting left recursion in
+this way.
+
+\plan{Reinforce that these results support the idea that scheduling
+decisions are made prematurely}
+Both of the left recursive problems have the same cause:
+the decision to execute a spark sequentially or in parallel is
 made too early.
 This decision is made when the spark is scheduled,
 and placed either on the global spark queue or the context local spark
