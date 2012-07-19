@@ -90,12 +90,12 @@ The numbers in parentheses are the ratio between the time and the
 sequential thread safe time.
 
 \plan{Observations}
-In general we acheive more parallelism when we use more contexts,
+In general we achieve more parallelism when we use more contexts,
 until a threshold of 601 contexts,
 as there are 600 rows in the image and a base case each one consumes a
 context.
-This is why the program does not benifit greatly from a high limit such as
-1024 or 2048 xontexts.
+This is why the program does not benefit greatly from a high limit such as
+1024 or 2048 contexts.
 This program may use fewer than 600 contexts as any sequentially executed
 sparks use their parent context.
 This is possibly why a limit of 512 contexts also results in a good parallel
@@ -172,9 +172,8 @@ indicated by the horizontal line at the bottom of each of the vertical
 lines.
 Later in the project we developed a solution to this problem
 (see Chapter \ref{chap:loop_control}).
-\paul{XXX: Point exactly to the workarounds.}
-In this chapter we describe our original workarounds before
-we developed the solution.
+Before developing the solution, we developed a work around (see Section
+\ref{sec:rts_reorder}.
 
 \plan{Extra engines require more contexts}
 When using either 128 or 256 contexts,
@@ -277,7 +276,7 @@ higher.
 In particular,
 the more contexts and Mercury engines are used,
 the higher the standard deviation.
-Dispite this,
+Despite this,
 we can see that the left recursion results are much slower than the right
 recursive results.
 
@@ -315,13 +314,13 @@ The high variance in all the left recursive results is
 indicative of nondeterminism.
 The cause is going to be something that either varies between execution
 runs or does not always effect execution runs.
-A potential explaination is that in different runs different numbers of
+A potential explanation is that in different runs different numbers of
 sparks are executed in parallel before the context limit is reached.
 However this cannot be true, or at least is only partly true,
 as the variance is higher when the context limit is higher including cases
 where 2048 contexts are permitted and we know the program needs at most 601
 (usually less).
-Fortunatly there is a better explaination.
+Fortunately there is a better explanation.
 The context limit is one of the two things used to make this scheduling
 decision;
 the other is, if there is no idle engine then the spark is always
@@ -348,7 +347,7 @@ only the original context executes a \joinandcontinue that may block.
 Therefore the program never uses more than one context per Mercury engine
 plus the original context.
 For this program we can safely modify the runtime system so that globally
-shceduled sparks do not count towards the context limit.
+scheduled sparks do not count towards the context limit.
 We did to test 
 that a low context limit prevents the majority of sparks from being placed on
 the global queue and being eligible for parallel execution.
