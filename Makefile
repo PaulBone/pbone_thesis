@@ -22,6 +22,7 @@ TEX_PROSE = \
 		rts_original_scheduling_performance.tex \
 		rts_work_stealing.tex \
 		rts_reorder.tex \
+		rts_work_stealing2.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex

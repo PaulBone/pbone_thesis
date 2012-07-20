@@ -1,0 +1,64 @@
+
+\status{Not written}
+
+\plan{Describe the problem with the current algorithm.}
+Engines wake up and periodically check for work by attempting to
+steal work,
+firstly, this means that there can be up to a 2ms (average 1ms) delay before
+a spark is executed.
+secondly, this checks for work too often, wasting resources.
+
+\plan{Solution, wake engines for different types of work}
+We modified the RTS so that waking an engine is easy, and it can be given a
+message so that it knows where to look for work.
+
+\plan{A lot of work went into preventing deadlocks due to race conditions,
+a thread that is not yet sleeping if notified must wake up immediately.}
+
+\plan{Extra benefit: when an engine is woken it can be told directly where
+to find work, or be given the work directly.}
+
+\plan{Extra benefit: we can be selective about which engine to wake,
+while not implemented fully, we can wake a `nearby' engine so that
+we can avoid communication between dies or sockets.}
+
+\plan{Show the algorithm for the new idle loop.}
+Note that we execute contexts before sparks,
+this is more-likely to produce futures and it may reduce memory consumption.
+
+%\subsection{Revised work stealing implementation}
+
+\plan{Work stealing attempts}
+
+\plan{Describe work stealing timeout.}
+
+
+\plan{Describe problems with associating stacks with contexts}
+The number of stacks varies,
+Stealing uses a global lock to determine which stack to steal from.
+
+\plan{Prove that even though there are N engines and M contexts and M may be
+larger than N, that there will be at most N of the M contexts with work on
+their queues}
+Therefore:
+Stealing is unnecessary complicated.
+In pathological cases many attempts can be made without success,
+a thief may give up even though there is parallelism.
+
+\plan{We associate stacks with engines}
+This removes the above problems how.
+
+\plan{Show stealing algorithm there are any,}
+Find out if I started tracking stealing per engine or not.
+
+\plan{Show how this is safe.}
+When a parallel conjunction's barrier is executed and a conjunct is
+outstanding, if its spark is on this engine's stack it must be at the top of
+the stack.
+This invariant should be kept because the context can be re-used if
+'compatible' work is found at the top of the spark stack.
+This invariant is soft.
+
+\input{tab_work_stealing_revised}
+
+\plan{Benchmark}
