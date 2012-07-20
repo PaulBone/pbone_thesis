@@ -1,13 +1,93 @@
 
 \status{Writing}
 
-\plan{Acknoledge results of previous chapter}
-Right recursion has a context limit problem and is generally slower.
-Left recursion is faster.
+\plan{Acknowledge results of previous section}
+We have shown that right recursion suffers from a context limit problem.
+Right recursive programs also get smaller speedups when compared with left
+recursive problems.
+The problem with right recursion is the large number of contexts needed,
+this is memory intensive and becomes CPU intensive once we consider that
+the Boehm GC must scan these context's stacks to check for pointers.
+This can happen whenever a the second or later
+conjunct of a parallel conjunction
+takes longer to execute than the first conjunct;
+the first conjunct becomes blocked on the later conjuncts.
 
-\plan{Describe the intuation for the transformation.}
+\plan{Describe the intuition for the transformation.}
+Meanwhile left recursion works well,
+using work stealing we are able to get very good speedups (3.96 for
+mandelbrot when using four Mercury engines).
+When the conjunction is independent,
+meaning there are no dependences between the conjuncts,
+Mercury's purity allows us to re-order the conjuncts of the computation and
+transform right recursion into left recursion.
+Essentially transforming the procedure in Figure
+\ref{fig:map_right_recursive} into the one in Figure
+\ref{fig:map_left_recursive} (page \pageref{fig:map_right_recursive}.
+
+\begin{algorithm}
+\[
+\begin{array}{l @{}l}
+    \reorder SCC\,\epsilon      &= \epsilon \\
+    \reorder SCC\,(conj:conjs)  &=
+    \begin{cases}
+        (conj:conjs') &
+            \text{if } conj \text{ has a call to } SCC \\
+        \trypushconjlater conj,conjs' &
+            \text{otherwise} \\
+    \end{cases} \\
+                                &
+    \begin{array}{l l @{}l}
+        \text{where} & conjs'  &= \reorder SCC\,conjs \\
+    \end{array} \\
+\end{array}
+\]
+\[
+\begin{array}{l @{}l}
+    \trypushconjlater conj\,\epsilon    &= \epsilon \\
+    \trypushconjlater conj\,(pivot:rest)&=
+        \begin{cases}
+            (conj:pivot:rest)   & \text{if } \neg \canswap conj\,pivot \\
+            (pivot:pushed)      & \text{otherwise}
+        \end{cases} \\
+                                        &
+    \begin{array}{l l @{}l}
+        \text{where} & pushed &= \trypushconjlater conj\,rest \\
+    \end{array} \\
+\end{array}
+\]
+\caption{Reorder independent conjunctions}
+\label{alg:reorder_conjunction}
+\end{algorithm}
 
 \plan{Describe the transformation}
+At the moment we only attempt to re-order completely independent
+conjunctions.
+It may be possible to find independent sections of dependent conjunctions
+and reorder them but we have not tried.
+This transformation can occur as an alternative to the dependent conjunction
+transformation described by \citep{wang:2011:dep-par}.
+If the conjunction has no shared variables then a dependency analysis of the
+current module is performed.
+From this we gather the identify of the SCC that the current procedure
+belongs to,
+and the SCCs of any calls in each of the conjuncts.
+The algorithm for \code{reorder} is shown in Algorithm
+\ref{alg:reorder_conjunction}.
+This code iterates over a conjunction, for each conjunct it tests if that
+conjunct is recursive.
+To reorder a conjunction so that the recursive conjuncts occur to the left,
+the algorithm attempts to push non-recursive conjuncts to the right.
+Each non-recursive conjunct found is swapped with the one to its until if
+doing so is legal.
+After each successful swap the algorithm attempts to swap the conjunct with
+the one to the right of its new position.
+There are a few cases where swaps are illegal, the only relevant example is
+when one of the two conjuncts being swapped is impure.
 
 \plan{Discuss reasoning for not showing results}.
+We have benchmarked and tested this,
+however the benchmarks are not interesting:
+independent right recursion is transformed into independent left
+recursion and therefore performs the same as independent left recursion.
 
