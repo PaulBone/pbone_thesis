@@ -1,35 +1,128 @@
 
 \status{Not written}
 
-%\subsection{Revised work stealing implementation}
-
 In this section we take the opportunity to improve on our work stealing
 implementation from Section \ref{sec:work_stealing}.
+While we made these improvments we also found it useful to change how idle
+engines are managed.
+Although some of these changes can be conceptually distinct,
+they where made together and their implementations are interlinked.
+Therefore we will present and benchmark them together as one set of changes.
 
 \plan{Describe problems with associating stacks with contexts}
-The number of stacks varies,
-Stealing uses a global lock to determine which stack to steal from.
+Sparks are stored on context local deques,
+this has a several significant problems.
 
-\plan{Prove that even though there are N engines and M contexts and M may be
-larger than N, that there will be at most N of the M contexts with work on
-their queues}
-Therefore:
-Stealing is unnecessary complicated.
-In pathological cases many attempts can be made without success,
-a thief may give up even though there is parallelism.
-Stealing is $O(N)$ where $N$ is the number of contexts, this is exasserbated
-by round robin.
+\begin{description}
 
+    \item[There are a dyanic number of spark deques]~
+
+    The number of contexts changes during a programs execution,
+    therefore the number of spark deques also changes.
+    This means that we must have code to manage this chaging number of
+    deques.
+    This code makes the runtime system more complicated than what is
+    necessary,
+    both when stealing a spark and when destroying or creating a context.
+
+    \item[This requires locking]~
+
+    The management of contexts must be done with thread safety so that the
+    set of contexts is not currupted.
+    We are using a simple implementation with an array where locking is
+    necessary.
+    It may be possible to replace this with a lock free datastructure,
+    however removing the code is preferable.
+
+    \item[A large number of contexts makes work stealing slower]~
+    
+    In previous sections
+    we have shown that the number of contexts in use can often be very high,
+    much higher than the number of Mercury engines.
+    If there are $N$ engines and $M$ contexts,
+    then there can be at most $N$ of the $M$ contexts running and
+    at least $M-1$ contexts suspended (blocked and waiting to run).
+    Contexts can become suspended in one of two ways:
+    by blocking on a future's value in call to \wait,
+    or by blocking on an incomplete conjunct in a call to \joinandcontinue.
+    We attempt to minimise the former case and the later case cannot occur
+    if the context has a spark on its local spark deque (it would run the
+    spark rather than block).
+    Therefore the large majority of the $M-N$ contexts that are suspended
+    will not have sparks on their deques,
+    and the probability of selecting a deque at random with a spark on its
+    stack is only a little bit higher than $M \choose N$.
+    Furthermore the value of $M$ can be very high in pathological cases.
+    The runtime system will continue to try to steal a spark from different
+    deques its complexity is $O(M)$.
+    This is also true in cases where it gives up and tries again later,
+    this can happen even when there is parallelism available.
+    It also happens when a theif is successful,  
+    as the victim counter is always incremented.
+
+\end{description}
+
+\noindent
 \plan{We associate stacks with engines}
-This removes the above problems how.
+The solution to all of these problems is to associate spark deques with
+engines rather than with contexts.
+A running Mercury program has a constant number of engines,
+and therefore the number of spark deques will not vary.
+This means that we can remove the code used to resize the deque array when a
+context is created or destroyed, simplfying the system and making these
+procedures faster.
+We can also remove the locking code in \trystealspark used to ensure that
+the array is not changed while a theif is trying to steal a spark.
+The cost of work stealing also becomes linear in the number of engines
+rather than the number of contexts (which is usually larger).
 
 \plan{Show how this is safe.}
-When a parallel conjunction's barrier is executed and a conjunct is
-outstanding, if its spark is on this engine's stack it must be at the top of
-the stack.
-This invariant should be kept because the context can be re-used if
-'compatible' work is found at the top of the spark stack.
-This invariant is soft.
+Associating the spark deques with engines can change the order in which
+sparks are executed.
+A context that is suspended by a call to \wait may contain sparks,
+when engines contain spark deques those sparks can be executed by the engine
+that was running the context.
+This does not affect the program's safety,
+the program will not become deadlocked provided that
+each\footnote{
+    Sometimes a specific engine must execute a specific context so that the
+    context's computation can access something on the C stack.
+    Therefore all engines must check the context run queue for such a
+    context.
+    This is an implementation detail of foreign C code.
+    }
+of the engines checks the context run queue for a context
+to execute.
+It is generally a good idea to check the context run queue often as a
+suspended context may be able to make more parallel work available either by
+creating a spark or signaling a future.
+Signaling a future as early as possible can,
+in some cases,
+prevent a call to \wait from blocking a context.
+
+\begin{algorithm}
+\begin{algorithmic}[1]
+\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
+  \State $result \gets false$
+  \For{$attempt = 0$ to $MR\_num\_engines$}
+    \State $victim\_index \gets
+        (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
+    \State $deque \gets
+       MR\_spark\_deques$[$victim\_index$]
+    \State $result \gets$ \steal($deque$, $spark\_ptr$)
+    \If{$result$}
+      \State $result \gets true$
+      \State break
+    \EndIf
+  \EndFor
+  \State $MR\_engine.victim\_counter \gets
+    MR\_engine.victim\_counter + offset$
+  \State \Return $result$
+\EndProcedure
+\end{algorithmic}
+\caption{MR\_try\_steal\_spark}
+\label{alg:try_steal_spark_initial}
+\end{algorithm}
 
 \plan{Show new \trystealspark}
 Find out if I started tracking stealing per engine or not.
