@@ -2,7 +2,6 @@
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
-A number of language implementations use work stealing.
 % XXX: There may be earlier papers by keller 1984 as cited by halstead.
 \paul{XXX: I have skimmed this paper, I must go back and read it
 properly}
@@ -12,14 +11,13 @@ Halstead discusses ``an unfair scheduling policy'',
 in which each worker thread maintains a queue of tasks
 and there is no global queue.
 When a thread spawns off a task it places the task on its queue.
-After completing a task, a thread looks for its next task first 
-on its own queue, and if there is none
+After completing a task, a thread looks for its next task first
+on its own queue, and if there is none,
 the thread attempts to steal a task from the other threads.
 \paul{XXX: I have not read this paper yet.
 It ranks highly in google scholar results and Peter used it so I suspect
 that it is notable.}
-Many more papers have been published about work stealing.
-A notable example is
+Another notable example is
 \citet{blumofe:1999:work-stealing},
 which quantifiably proves that work stealing is more efficient than
 \emph{work sharing}
@@ -27,25 +25,30 @@ which quantifiably proves that work stealing is more efficient than
 
 \paul{XXX: Make sure these paragraphs flow once I read the papers above}
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
-\citet{wang:2006:hons} also mentioned the premature spark scheduling problem
-from the previous section.
-However, he did not discuss it detail or
-recognise that left recursion can create pathological behaviour.
-Wang also proposes work stealing as a solution to the problem.
-In a work stealing system a spark placed on a context local stack
-is not committed to running on that context;
-it may be executed on a different context if it is stolen.
+\citet{wang:2006:hons} recognises the premature spark scheduling problem
+that we described in the previous section.
+He proposed work stealing as a solution to the problem.
+In a work stealing system,
+sparks are placed on a context's local spark stack
+is not committed to running in that context;
+it may be executed in a different context if it is stolen.
 This delays the decision of where to execute a spark until the moment
 before it is executed.
-Work stealing's other benefits can be summarised as follows:
+Work stealing's other benefits can be summarised as follows.
 
 \begin{itemize}
 
     \item
-    A worker can schedule parallel work quickly,
-    it is quicker to place work on a local queue rather than a global
-    one:
-    There is less contention on a local queue than a global one.
+    It is quicker to schedule sparks becase
+    a context can place sparks on its local spark stack more quickly
+    than it can place sparks on the global spark queue.
+    This is because there there is less contention on a context's
+    local spark stack.
+    THe only source of contention is work stealing which is balanced all of
+    the contexts.
+    Assume each of the $C$ contexts' spark stacks contains sparks, then
+    contention on any one of these stacks is $1/C$ less than it would be on
+    a gobal queue.
 
     \item
     A idle worker can take work from its own queue quickly.
@@ -59,38 +62,165 @@ Work stealing's other benefits can be summarised as follows:
 
 \end{itemize}
 
-The initial work stealing implementation for Mercury was collaboration
-between Peter Wang and myself, Wang contributed about 80\% of the work
+The initial work stealing implementation was built jointly by
+Peter Wang and myself,
+Wang contributed about 80\% of the work
 and I contributed the remaining 20\%.
 Wang's honours thesis \citep{wang:2006:hons} describes his proposal on which
 our implementation is heavily based.
 
-\plan{Mercury's needs for a deque}
-So far each context has used a stack to manage sparks.
-The last item pushed onto the stack is the first to be popped off the
-stack,
-this \emph{last-in-first-out} order is important for Mercury's parallel
-conjunctions.
-The main reason for this is that when parallelism is not used and
-parallel conjunctions are nested,
-either within the same predicate
-or due to one or more predicate calls,
-the last-in-first-out order ensures that the left most spark is executed
-first.
-This is important because it allows a future to \signal a variable in an
-inner conjunct before \wait is executed on the future in the other
-conjunct.
-Therefore the data structure used for the deque must return sparks
-for the local context in a last-in-first-out order.
-This execution order does not affect multiple conjuncts in the same
-parallel conjunction.
-The second and later conjuncts are spawned off as a single spark
-and the left most conjunct is executed directly.
-The second reason to use a stack to manage context local sparks
-is that the last-in-first-out order ensures that a poped spark's data
-has a good chance of being hot in the processor's cache.
+\begin{figure}
+\begin{center}
 
-Sparks added to Mercury's global spark queue where 
+\begin{minipage}[b][3in]{0.29\textwidth}
+\subfigure[Nested parallel conjunctions]{%
+\label{fig:nexted_par_conjunctions}
+\begin{tabular}{l}
+\code{p(...) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~q(Y::out, ...)} \\
+\code{~~~~\&} \\
+\code{~~~~~~~~r(Y::in, ...)} \\
+\code{~~~~\&} \\
+\code{~~~~~~~~s(...)} \\
+\code{~~~~).} \\
+\code{} \\
+\code{q(Y::out, ...) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~t(X::out, ...)} \\
+\code{~~~~\&} \\
+\code{~~~~~~~~u(X::in, Y::out)} \\
+\code{~~~~).} \\
+\end{tabular}
+}
+\hfill
+\end{minipage}
+\begin{minipage}[b][3in]{0.69\textwidth}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 1]{%
+\label{fig:spark_stack_step1}
+\picfigurenofloat{spark_stack_step1} }
+\hfill
+\end{minipage}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 2]{%
+\label{fig:spark_stack_step2}
+\picfigurenofloat{spark_stack_step2} }
+\hfill
+\end{minipage}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 3]{%
+\label{fig:spark_stack_step3}
+\picfigurenofloat{spark_stack_step3} }
+\hfill
+\end{minipage}
+
+\vspace{0.5in}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 4]{%
+\label{fig:spark_stack_step4}
+\picfigurenofloat{spark_stack_step2} }
+\hfill
+\end{minipage}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 5]{%
+\label{fig:spark_stack_step5}
+\picfigurenofloat{spark_stack_step5} }
+\hfill
+\end{minipage}
+\begin{minipage}[b]{0.32\textwidth}
+\subfigure[Step 6]{%
+\label{fig:spark_stack_step6}
+\picfigurenofloat{spark_stack_step1} }
+\hfill
+\end{minipage}
+\hfill
+\end{minipage}
+
+\end{center}
+\caption{Spark execution order}
+\label{fig:spark_execution_order}
+\end{figure}
+
+\plan{Mercury's needs for a deque}
+Until now each context has used a stack to manage sparks.
+The last item pushed onto the stack is the first to be popped off the
+stack.
+This \emph{last-in-first-out} order is important for Mercury's parallel
+conjunctions.
+Parallel conjunctions may be nested, either in the same procedure or through
+procedure calls such as in Figure
+\ref{fig:nested_par_conjunctions}.
+Consider a context whose spark stack's contents are initially undefined,
+the spark stack is represented by
+Figure \ref{fig:spark_stack_step1}.
+When the context calls \code{p} it creates a spark 
+for the second and third conjuncts \code{r(\ldots) \& q(\ldots)}
+and places the spark on its local stack (Figure
+\ref{fig:spark_stack_step2}).
+It then calls \code{q} where it creates another spark,
+this spark represents the call to \code{u},
+and now the spark stack looks like
+Figure \ref{fig:spark_stack_step3}.
+Assuming that no work stealing has occured,
+when the context finishes executing \code{t} it pops the spark from the top
+of its stack;
+the popped spark represents the call to \code{u} because
+the stack returns items in a last-in-first-out order.
+This is desirable because it follows the same execution order as sequential
+execution would,
+we call this left-to-right execution since by default the left operad of a
+conjunction is executed first.
+The conjunction in \code{q} contains a shared variable named \code{X},
+This execution order ensures that the \signal opration for \code{X}'s future
+occurs before the \wait operation;
+the context is not blocked by the call to \wait.
+Note that the mode annotations are illistrative,
+they not part of Mercury's syntax.
+Once the spark for \code{u} is popped off the spark stack then the spark
+stack looks like Figure \ref{fig:spark_stack_step4}.
+After the execution of \code{u}, \code{q} returns control to \code{p},
+which then continues the execution of its own parallel conjunction.
+\code{p} pops a spark off the spark stack,
+the spark popped off is the parallel conjunction
+\code{r(\ldots) \& s(\ldots)}.
+This immediatly creates a spark for \code{s} and pushes it onto the spark
+stack (Figure \ref{fig:spark_stack_step5},
+it then executes \code{r}.
+The execution of \code{r} at this point is also the same as what would occur
+if sequential conjunctions were used.
+This is straightforward because
+the spark represented the \emph{rest} of the parallel
+conjunction.
+Finally \code{r} returns and \code{p} pops the spark for \code{s} off of the
+spark stack and executes it.
+At this point the contest's spark stack looks like Figure
+\ref{fig:spark_stack_step6}.
+
+If at step 3,
+the context executed the spark for \code{r(\ldots) \& s(\ldots)} then
+\code{r} would have blocked on the future for \code{Y}.
+This would have used more contexts than necessary and more overheads than
+necessary.
+It may have also caused a deadlock:
+since stealing a spark may create a context which may not be permitted due
+to the context limit.
+Furthermore
+the original context would not be able to continue the execution in \code{p}
+without special stack handling routines,
+this would make the implementation more complicated than necessary.
+%The system must be able to make progress by executing contexts from the
+%global context run queue or by executing sparks from a context's own local
+%spark stack.
+Therefore from a context's perspective its local spark storage must behave
+like a stack.
+Keeping this sequential execution order for parallel conjunctions has
+an additional benifit,
+it ensures that a poped spark's data has a good chance of being hot in the
+processor's cache.
+
+Prior to work stealing
+sparks added to Mercury's global spark queue where
 returned in \emph{first-in-first-out} order.
 This does not encourage a left to right execution order.
 However \citet{wang:2006:hons} proposes that this order may be better:
@@ -102,6 +232,18 @@ than the latest generated spark, and hence is a better candidate for
 parallel execution.
 \end{quote}
 
+\noindent
+If we translate this execution order into the work stealing system,
+it means that work is stolen from the bottom end of a context's local spark
+stack.
+Consider step 3 of the example above.
+If a thief removes the spark for \code{r \& s}
+then only the spark for \code{u} is on the stack,
+the original context can continue its execution by taking the spark to
+\code{u}.
+By comparison if the spark for \code{u} was stolen,
+it would force the original context to try to execute \code{r \& s}
+which, for the reasons above, is less optimal.
 \plan{Describe the data structure used to implement these stacks and its
 properties.}
 To preserve the last-in-first-out behaviour of context local spark
@@ -109,7 +251,7 @@ stacks,
 and first-in-first-out behaviour of the global queue;
 we chose to use double ended queues (deques) for context local spark
 storage.
-The deque implementation we chose 
+The deque implementation we chose
 is described by
 \citet{Chase_2005_wsdeque}.
 It supports nonblocking operation and is dynamically resizable,
@@ -168,7 +310,7 @@ rather than looping \pop will return false and \steal will abort.
 spark deque more often than calling \steal on another's.
 \steal is slightly slower than either \push or \pop,
 but is still quite fast.
-This is good because a context will 
+This is good because a context will
 \push and \pop sparks onto and off of its local deque
 more often than it will \steal a spark from another's deque.
 This means that the top of the deque is used more often than the bottom.
@@ -176,7 +318,7 @@ Therefore, we refer to the top as the \emph{hot} end,
 and to the bottom as the \emph{cold} end.
 These terms are less confusing than the disagreement between the stack
 like behaviour of a deque from its context's perspective,
-and the terminology used by \citet{Chase_2005_wsdeque}. 
+and the terminology used by \citet{Chase_2005_wsdeque}.
 
 Mercury was already using Chase's deques for spark storage,
 most likely because Wang had always planned to implement work stealing.
@@ -356,7 +498,7 @@ protected by the $MR\_spark\_deques\_lock$ lock.
         \State release\_lock($MR\_spark\_deques\_lock$)
         \State \Return $true$
       \EndIf
-    \EndIf 
+    \EndIf
   \EndFor
   \State release\_lock($MR\_spark\_deques\_lock$)
   \State \Return $false$
@@ -367,7 +509,7 @@ protected by the $MR\_spark\_deques\_lock$ lock.
 \end{algorithm}
 
 \plan{Thief behaviour}
-The algorithm for \trystealspark is shown in 
+The algorithm for \trystealspark is shown in
 Algorithm \ref{alg:try_steal_spark_initial}.
 It must also acquire the lock before using the array.
 A thief may need to make a number of attempts before it successfully finds a
@@ -409,7 +551,7 @@ program from previous sections.
 Table \ref{tab:work_stealing_initial} shows the results of our benchmarks.
 The first and their row groups are the same results as the first and second
 row groups from Table \ref{tab:2009_left_nolimit} respectively.
-They are included to allow for easy comparison. 
+They are included to allow for easy comparison.
 The second and fourth row groups where generated with a newer version of
 Mercury that implements work stealing as described above.\footnote{
     The version of Mercury used is slightly modified,

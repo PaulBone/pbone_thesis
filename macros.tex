@@ -101,17 +101,21 @@
 \setlength{\figboxwidth}{\textwidth}
 \addtolength{\subfigcapskip}{1em}
 
+\newcommand{\picfigurenofloat}[1]{
+	\newcommand{\spf}{\footnotesize}      % Sets font size for the picture
+	\input{pics/#1}                       % defines macro called \graph
+	\centerline{\raise 1em\box\graph}     % Prints the picture.
+    \vspace{1mm}
+}
+
 % 2 arguments:
 % 	- the figure filename
 % 	- the caption
 % note that the filename will be used to form the label "fig:filename"
 \newcommand{\picfigure}[2]{
 	\begin{figure}[t]
-	\newcommand{\spf}{\footnotesize}      % Sets font size for the picture
-	\input{pics/#1}                      % defines macro called \graph
-	\centerline{\raise 1em\box\graph}     % Prints the picture.
-	\vspace{1mm}
-	\caption{#2}
+	\picfigurenofloat{#1}
+    \caption{#2}
 	\label{fig:#1}
 	\end{figure}
 }
