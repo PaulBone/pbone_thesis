@@ -1,0 +1,11 @@
+
+Spelling
+Revisits
+Cross references
+Citations
+Labels
+Overlong/underlong lines
+Line numbers for algorithms.
+Acknoledgment of comtributors (in front matter)
+Positioning of floats
+
