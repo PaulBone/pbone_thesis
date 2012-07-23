@@ -280,7 +280,8 @@ invalid_hypenations = [
     "most-likely",
     "work-stealing",
     "heap-size",
-    "one-another"
+    "one-another",
+    "no-longer"
     ].
 
 :- func acronyms = list(string).
@@ -312,7 +313,8 @@ macro_words = [
 
 bad_ngrams = [
         ["time", "speeds", "up"],
-        ["can", "not"]
+        ["can", "not"],
+        ["round", "robin"]
     ].
 
 % Errors.
