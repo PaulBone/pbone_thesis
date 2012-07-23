@@ -216,14 +216,15 @@ Therefore from a context's perspective its local spark storage must behave
 like a stack.
 Keeping this sequential execution order for parallel conjunctions has
 an additional benifit,
-it ensures that a poped spark's data has a good chance of being hot in the
+it ensures that a popped spark's data has a good chance of being hot in the
 processor's cache.
 
-Prior to work stealing
-sparks added to Mercury's global spark queue where
-returned in \emph{first-in-first-out} order.
-This does not encourage a left to right execution order.
-However \citet{wang:2006:hons} proposes that this order may be better:
+Prior to work stealing,
+context local spark stacks returned sparks in last-in-first-out
+order,
+the global spark queue returns sparks in \emph{first-in-first-out} order.
+This does not encourage a left to right execution order,
+however \citet{wang:2006:hons} proposes that this order may be better:
 
 \begin{quote}
 The global spark queue, however, is a queue because we assume that a
@@ -244,44 +245,63 @@ the original context can continue its execution by taking the spark to
 By comparison if the spark for \code{u} was stolen,
 it would force the original context to try to execute \code{r \& s}
 which, for the reasons above, is less optimal.
+
 \plan{Describe the data structure used to implement these stacks and its
 properties.}
 To preserve the last-in-first-out behaviour of context local spark
 stacks,
-and first-in-first-out behaviour of the global queue;
+and first-in-first-out behaviour of the global queue,
 we chose to use double ended queues (deques) for context local spark
 storage.
-The deque implementation we chose
-is described by
-\citet{Chase_2005_wsdeque}.
-It supports nonblocking operation and is dynamically resizable,
-which are important for a work stealing deque.
-The deque supports the following operations:
+Since the deque will be used by multiple Mercury engines we must either
+choose a data structure that is thread safe or use a mutex to protect a non
+thread safe data structure.
+The pop and push operations are always made by the same thread,%
+\footnote{
+    Contexts move between engines by being suspended and resumed,
+    but this always involves the context run queue's lock or other
+    protection.
+    Therefore the context's data structures including the
+    spark deque are protected from concurrent access.}
+therefore the stealing of work by another context is what creates the need
+for synchronisation.
+The deque described by \citet{Chase_2005_wsdeque} supports lock free,
+nonblocking
+operation, it has very low overheads (especially for pop and push operations),
+and is dynamically resizable;
+all of these qualities are very important to our runtime system's
+implementation.
+The deque provides the following operations.
 
 \begin{description}
 
     \item[\code{void push\_spark(deque *d, spark *s)}]
-    The context that owns the deque can push items onto the top%
+    The deque's owner can call this to push an item onto the
+    top%
 \footnote{
         Note when we refer to the top of the deque
         \citet{Chase_2005_wsdeque} refers to the bottom and vice-versa.
-        We prefer to use the terminology of pushing onto and popping off of
-        top, as we would when discussing a stack.
-        We clarify this with the hot and cold metaphor.}
-    of the deque.
-    This can be done without synchronisation.
-    If necessary
+        Most people prefer to imagine that stacks grow upwards,
+        and since the deque is most often used as a stack we consider this
+        end of the deque to be the top.
+        We also call this the \emph{hot end} as it is the busiest end of the
+        deque.}
+    or \emph{hot end} of the deque.
+    This can be done without synchronisation,
+    atomic increment is used to manipulate a counter.
+    If necessary,
     \push will grow the array that is used to implement the
     deque.
 
     \item[\code{bool pop\_spark(deque *d, spark *s)}]
-    The deque's owner can pop items from the top of the queue.
+    The deque's owner can call this to pop an item from the top of the
+    queue.
     This can also be done without synchronisation,
     except for when the deque contains only one item.
     In this case an atomic compare and swap operation is used to
     determine if the thread lost a race to another thread attempting to
-    steal a task from the deque (a \emph{thief}).
-    When this happens the single item was stolen by the thief and the
+    steal the only task from the deque (a \emph{thief}).
+    When this happens, the single item was stolen by the thief and the
     owner's call to \pop returns false,
     indicating that the deque was empty.
     Internally the deque is stored as an array of sparks, not spark
@@ -290,7 +310,8 @@ The deque supports the following operations:
     double pointer as one might expect.
     This implementation detail avoids memory allocation for sparks inside
     the deque implementation.
-    Callers of these function usually store sparks on their stack.
+    A callers of any of these functions temporarily stores the spark on 
+    its program stack.
 
     \item[\code{result steal\_spark(deque *d, spark *s)}]
     A thread other than the deque's owner can steal
@@ -304,23 +325,24 @@ The deque supports the following operations:
 
 \end{description}
 
-All the atomic compare and swap operations here are wait free,
-rather than looping \pop will return false and \steal will abort.
-\push and \pop are very fast, this is good as a context uses its own
-spark deque more often than calling \steal on another's.
-\steal is slightly slower than either \push or \pop,
-but is still quite fast.
-This is good because a context will
-\push and \pop sparks onto and off of its local deque
-more often than it will \steal a spark from another's deque.
-This means that the top of the deque is used more often than the bottom.
-Therefore, we refer to the top as the \emph{hot} end,
-and to the bottom as the \emph{cold} end.
-These terms are less confusing than the disagreement between the stack
-like behaviour of a deque from its context's perspective,
-and the terminology used by \citet{Chase_2005_wsdeque}.
+%All the atomic compare and swap operations here are wait free,
+%rather than looping \pop will return false and \steal will abort.
+%\push and \pop are very fast, this is good as a context uses its own
+%spark deque more often than calling \steal on another's.
+%\steal is slightly slower than either \push or \pop,
+%but is still quite fast.
+%This is good because a context will
+%\push and \pop sparks onto and off of its local deque
+%more often than it will \steal a spark from another's deque.
+%This means that the top of the deque is used more often than the bottom.
+%Therefore, we refer to the top as the \emph{hot} end,
+%and to the bottom as the \emph{cold} end.
+%These terms are less confusing than the disagreement between the stack
+%like behaviour of a deque from its context's perspective,
+%and the terminology used by \citet{Chase_2005_wsdeque}.
 
-Mercury was already using Chase's deques for spark storage,
+Mercury was already using \citet{Chase_2005_wsdeque}'s deques for spark
+storage,
 most likely because Wang had always planned to implement work stealing.
 We did not need to replace the data structure used for a context local
 spark storage,
@@ -370,7 +392,9 @@ used}
 \plan{Barrier code}
 A context accesses its own local spark queue in the \joinandcontinue barrier
 introduced in Section \ref{sec:original_scheduling}.
-The new version of \joinandcontinue is shown in Algorithm
+The introduction of work stealing has allowed us to optimise
+\joinandcontinue,
+the new version of \joinandcontinue is shown in Algorithm
 \ref{alg:join_and_continue_ws1}.
 The first difference between this version and the previous one,
 is that this version is lock free.
