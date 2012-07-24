@@ -39,16 +39,16 @@ Work stealing's other benefits can be summarised as follows.
 \begin{itemize}
 
     \item
-    It is quicker to schedule sparks becase
+    It is quicker to schedule sparks because
     a context can place sparks on its local spark stack more quickly
     than it can place sparks on the global spark queue.
     This is because there there is less contention on a context's
     local spark stack.
-    THe only source of contention is work stealing which is balanced all of
+    The only source of contention is work stealing which is balanced all of
     the contexts.
     Assume each of the $C$ contexts' spark stacks contains sparks, then
     contention on any one of these stacks is $1/C$ less than it would be on
-    a gobal queue.
+    a global queue.
 
     \item
     A idle worker can take work from its own queue quickly.
@@ -162,20 +162,20 @@ It then calls \code{q} where it creates another spark,
 this spark represents the call to \code{u},
 and now the spark stack looks like
 Figure \ref{fig:spark_stack_step3}.
-Assuming that no work stealing has occured,
+Assuming that no work stealing has occurred,
 when the context finishes executing \code{t} it pops the spark from the top
 of its stack;
 the popped spark represents the call to \code{u} because
 the stack returns items in a last-in-first-out order.
 This is desirable because it follows the same execution order as sequential
 execution would,
-we call this left-to-right execution since by default the left operad of a
+we call this left-to-right execution since by default the left operand of a
 conjunction is executed first.
 The conjunction in \code{q} contains a shared variable named \code{X},
-This execution order ensures that the \signal opration for \code{X}'s future
+This execution order ensures that the \signal operation for \code{X}'s future
 occurs before the \wait operation;
 the context is not blocked by the call to \wait.
-Note that the mode annotations are illistrative,
+Note that the mode annotations are illustrative,
 they not part of Mercury's syntax.
 Once the spark for \code{u} is popped off the spark stack then the spark
 stack looks like Figure \ref{fig:spark_stack_step4}.
@@ -184,7 +184,7 @@ which then continues the execution of its own parallel conjunction.
 \code{p} pops a spark off the spark stack,
 the spark popped off is the parallel conjunction
 \code{r(\ldots) \& s(\ldots)}.
-This immediatly creates a spark for \code{s} and pushes it onto the spark
+This immediately creates a spark for \code{s} and pushes it onto the spark
 stack (Figure \ref{fig:spark_stack_step5},
 it then executes \code{r}.
 The execution of \code{r} at this point is also the same as what would occur
@@ -215,7 +215,7 @@ this would make the implementation more complicated than necessary.
 Therefore from a context's perspective its local spark storage must behave
 like a stack.
 Keeping this sequential execution order for parallel conjunctions has
-an additional benifit,
+an additional benefit,
 it ensures that a popped spark's data has a good chance of being hot in the
 processor's cache.
 
@@ -425,7 +425,7 @@ $C_{Other}$ attempts to schedule $C_{Orig}$ on line 10.
 However attempting to schedule $C_{Orig}$ before it has finished suspending
 would cause an inconsistent state and memory corruption.
 Therefore lines 7--10 wait until $C_{Orig}$ has been suspended.
-The engine that is executing $C_{Orig}$ first suspendeds $C_{Orig}$ and then
+The engine that is executing $C_{Orig}$ first suspends $C_{Orig}$ and then
 indicates that it has been suspended by setting $C_{Orig}$'s resume label
 (lines 18--19).
 The busy loop on lines 7--10 includes a \code{CPU\_relax} instruction,
@@ -567,8 +567,8 @@ If it does so it will release the lock and return false.
 Whether or not a thief steals work or gives up,
 the next thief will resume the round-robin selection where the previous
 thief left off,
-this is gaurenteed because \var{MR\_victim\_counter} is protected by the
-lock aquired on line 2.
+this is guaranteed because \var{MR\_victim\_counter} is protected by the
+lock acquired on line 2.
 
 \plan{Work stealing fixes the premature scheduling decision problem}
 All sparks created by a context are placed on its local spark deque.
@@ -580,7 +580,7 @@ idle and able to run the spark.
 We expect this to correct the premature scheduling decision problem we
 described in Section \ref{sec:original_scheduling_performance}.
 
-\paul{XXX: Fix the context limit condition (allow it to suceed if the engine
+\paul{XXX: Fix the context limit condition (allow it to succeed if the engine
 has an empty context.
 }
 \input{tab_work_stealing_initial}
@@ -614,7 +614,7 @@ We can also see that the context limit no longer affects performance
 with left recursion.
 There is no significant difference between the rows with 8, 16 or 32
 context limits.
-Specifing a limit of four contexts limits performance when using three or
+Specifying a limit of four contexts limits performance when using three or
 four Mercury engines, but not with two engines.
 The runtime system allows the user to specify the context limit as a
 multiple of the number of engines.
