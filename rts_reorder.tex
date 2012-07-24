@@ -26,36 +26,34 @@ Essentially transforming the procedure in Figure
 \ref{fig:map_left_recursive} (page \pageref{fig:map_right_recursive}.
 
 \begin{algorithm}
-\[
-\begin{array}{l @{}l}
-    \reorder SCC\,\epsilon      &= \epsilon \\
-    \reorder SCC\,(conj:conjs)  &=
-    \begin{cases}
-        (conj:conjs') &
-            \text{if } conj \text{ has a call to } SCC \\
-        \trypushconjlater conj,conjs' &
-            \text{otherwise} \\
-    \end{cases} \\
-                                &
-    \begin{array}{l l @{}l}
-        \text{where} & conjs'  &= \reorder SCC\,conjs \\
-    \end{array} \\
-\end{array}
-\]
-\[
-\begin{array}{l @{}l}
-    \trypushconjlater conj\,\epsilon    &= \epsilon \\
-    \trypushconjlater conj\,(pivot:rest)&=
-        \begin{cases}
-            (conj:pivot:rest)   & \text{if } \neg \canswap conj\,pivot \\
-            (pivot:pushed)      & \text{otherwise}
-        \end{cases} \\
-                                        &
-    \begin{array}{l l @{}l}
-        \text{where} & pushed &= \trypushconjlater conj\,rest \\
-    \end{array} \\
-\end{array}
-\]
+\begin{algorithmic}
+\Procedure{reorder}{$SCC$, $Conjs$}
+    \If{$Conjs = $ \nil}
+        \State \Return \nil
+    \Else
+        \State \cons{ConjsHead}{ConjsTail} $\gets Conjs$
+        \State $ConjsTail \gets$ reorder($SCC$, $ConjsTail$)
+        \If{$ConjsHead$ contains a call to $SCC$}
+            \State \Return \cons{ConjsHead}{ConjsTail}
+        \Else
+            \State \Return try\_push\_conj\_later($Conj$, $ConjsTail$)
+        \EndIf
+    \EndIf
+\EndProcedure
+\Procedure{try\_push\_conj\_later}{$Goal$, $Conjs$}
+    \If{$Conjs =$ \nil}
+        \State \Return \single{Goal}
+    \Else
+        \State \cons{Pivot}{Rest} $\gets Conjs$
+        \If{can\_swap($Goal$, $Pivot$)}
+            \State $Pushed \gets$ try\_push\_conj\_later($Goal$, $Rest$)
+            \State \Return \cons{Pivot}{Pushed}
+        \Else
+            \State \Return \cons{Conj}{Conjs}
+        \EndIf
+    \EndIf
+\EndProcedure
+\end{algorithmic}
 \caption{Reorder independent conjunctions}
 \label{alg:reorder_conjunction}
 \end{algorithm}
