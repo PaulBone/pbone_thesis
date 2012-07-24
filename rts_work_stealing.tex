@@ -3,17 +3,18 @@
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
 % XXX: There may be earlier papers by keller 1984 as cited by halstead.
-\paul{XXX: I have skimmed this paper, I must go back and read it
-properly}
-One of the earliest was Multilisp \citep{halstead:1985:multilisp};
-In this paper,
-Halstead discusses ``an unfair scheduling policy'',
-in which each worker thread maintains a queue of tasks
-and there is no global queue.
-When a thread spawns off a task it places the task on its queue.
-After completing a task, a thread looks for its next task first
-on its own queue, and if there is none,
-the thread attempts to steal a task from the other threads.
+Multilisp \citep{halstead:1985:multilisp} was one of the first systems to
+use work stealing,
+which Halstead calls ``an unfair scheduling policy''.
+The term ``unfair'' is not an expression of the morals of stealing (work),
+instead it refers to the unfairness of \emph{cooperative multitasking} when
+compared to something like \emph{round-robin scheduling}.
+Each processor in Multilisp has a currently running task,
+and a stack of suspended tasks.
+If the current task is suspended on a future or finishes,
+the processor will execute task at the top of its task stack.
+If there is no such task,
+it attempts to steal a task from the bottom of another processor's stack.
 \paul{XXX: I have not read this paper yet.
 It ranks highly in google scholar results and Peter used it so I suspect
 that it is notable.}
@@ -22,6 +23,12 @@ Another notable example is
 which quantifiably proves that work stealing is more efficient than
 \emph{work sharing}
 (using a global pool of work).
+
+%Using a task stack encourages a task execution order that is similar to
+%seuential execution (we explain why below),
+%Halstead reports that this results in lower parallel execution overheads,
+%especially for embarassingly parallel workloads.
+%We agree that this can improve 
 
 \paul{XXX: Make sure these paragraphs flow once I read the papers above}
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
@@ -245,6 +252,26 @@ the original context can continue its execution by taking the spark to
 By comparison if the spark for \code{u} was stolen,
 it would force the original context to try to execute \code{r \& s}
 which, for the reasons above, is less optimal.
+Therefore a thief steals work from the bottom of a context local stack
+so that a first-in-first-out order is used for parallel tasks.
+
+\citet{halstead:1985:multilisp} also uses processor local task stacks,
+so that when a processor executes a task from its own stack,
+a last-in-first-out order is used.
+He also chose to have thieves steal work from the bottom of a spark stack.
+Halstead's reasons are similar to ours,
+he asserts that maintaining a near-sequential execution order is
+desirable because it has lower overheads,
+however he goes on to say that this can improve performance for
+embarrassingly parallel workloads.
+We believe that work stealing can only reduce overheads in general;
+an embarrassing workload will still create more parallelism than the system
+can make use of,
+and whose overheads must still be paid.
+There are better methods for reducing these overheads
+such as the use of sparks to represent computations whose execution has not
+begun,
+or granularity control.
 
 \plan{Describe the data structure used to implement these stacks and its
 properties.}
