@@ -9,7 +9,7 @@ when I begun my PhD candidature.
 This will provide the background for the changes we have made to the
 runtime since.
 
-\plan{Global spark queue and Contention wrt global queue}
+\plan{Global spark queue and contention WRT global queue}
 Mercury (before 2009) uses a global spark queue.
 The runtime system \emph{schedules} sparks for parallel execution by placing
 them onto the end of the queue.
@@ -141,7 +141,7 @@ there are three important scenarios:
     $C_{Orig}$ will execute else branch on line 14 of \joinandcontinue
     where it will pop the spark for $G_2$ off the top of the spark stack.
     It is not possible for some other spark to be on the top of the stack;
-    any sparks left on the stack by $G_1$ would have been poped off by 
+    any sparks left on the stack by $G_1$ would have been popped off by 
     the \joinandcontinue barriers of the conjunctions that spawned off the
     sparks.
 
