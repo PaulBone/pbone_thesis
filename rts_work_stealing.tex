@@ -481,7 +481,7 @@ otherwise the deque will be empty.
       \State MR\_destroy\_thread()
     \EndIf
     \State $ctxt \gets$ MR\_get\_runnable\_context()
-    \If{$ctxt$}
+    \If{$ctxt \neq \text{NULL}$}
       \State release\_lock($MR\_runqueue\_lock$)
       \If{$current\_context$}
         \State MR\_release\_context($current\_context$)
@@ -489,11 +489,16 @@ otherwise the deque will be empty.
       \State MR\_load\_context($ctxt$)
       \Goto $ctxt.resume$
     \EndIf
-    \If{$MR\_num\_outstanding\_contexts < MR\_max\_contexts$}
+    \If{$\left(
+        \begin{array}{l}
+        (current\_context \neq \text{NULL})\, \vee \\
+        (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
+        \end{array}
+        \right)$}
       \State $result \gets$ MR\_try\_steal\_spark(\&$spark$)
       \If{$result$}
         \State release\_lock($MR\_runqueue\_lock$)
-        \If{$\neg current\_context$}
+        \If{$current\_context \neq \text{NULL}$}
           \State $ctxt \gets$ MR\_get\_free\_context()
           \If{$\neg ctxt$}
             \State $ctxt \gets$ MR\_create\_context()
@@ -520,8 +525,18 @@ its new code is shown in Algorithm \ref{alg:MR_get_global_work_wsinitial}.
 We have replaced the old code which dequeued a spark from the global spark
 queue
 with a call to \trystealspark (see below).
-Also as spark creation does not affect the runqueue condition,
-engines must wake up and check if there is any parallel work available.
+Before attempting to steal a spark \getglobalwork must ensure that the context limit
+will not be exceeded
+(this was previously done when choosing where to place a new spark).
+This check is on line 14; it is true of either,
+the engine already has a context (which is guaranteed to be available for a
+new spark), 
+or that the current number of contexts is lower than the limit.
+When sparks are placed on a contexts local stack the runqueue's condition
+variable is not signalled,
+doing so would be wasteful.
+Therefore engines must wake up periodically to check if there is any
+parallel work available.
 This is done on line 26 using a call to \code{timed\_wait} with a
 configurable timeout (it defaults to 2ms).
 We discuss this timeout later in Section \ref{sec:idle_loop}.
@@ -607,10 +622,7 @@ idle and able to run the spark.
 We expect this to correct the premature scheduling decision problem we
 described in Section \ref{sec:original_scheduling_performance}.
 
-\paul{XXX: Fix the context limit condition (allow it to succeed if the engine
-has an empty context.
-}
-\input{tab_work_stealing_initial}
+\input{tab_work_stealing_initial2}
 
 \plan{Benchmark}
 We benchmarked our initial work stealing implementation with the mandelbrot
@@ -632,55 +644,38 @@ The first conclusion that we can draw from the results is that
 left recursion with work stealing is much faster than left recursion without
 work stealing.
 We can see that work stealing has solved the premature spark scheduling problem
-problem for mandelbrot.
+for mandelbrot.
 Given that left recursive mandelbrot represented a pathological case of this
 problem,
 we are confident that the problem has generally been solved.
 
 We can also see that the context limit no longer affects performance
 with left recursion.
-There is no significant difference between the rows with 8, 16 or 32
-context limits.
-Specifying a limit of four contexts limits performance when using three or
-four Mercury engines, but not with two engines.
-The runtime system allows the user to specify the context limit as a
-multiple of the number of engines.
-Therefore in setting up our tests we divided the desired context limit by
-the number of engines, then the runtime system multiplied it,
-this process used integer division and results in a context limit that
-does not always match the desired context limit.
-The context limits used for 1--4 engines are 4, 4, 2, 4.
-In the case for three engines the division operation rounded down affecting
-the actual context limit used.
-\paul{XXX: Re-test then finish this discussion}
-%after each engine but the initial one had stolen a spark and created a
-%context for it, there will be $N$ contexts in use for $N$ engines.
-%Next time an engine executes \getglobalwork it would not attempt to steal a
-%spark as doing so would exceed the context limit.
-%As the default value for the number of contexts per engine is two,
-%this is not a problem under normal circumstances.
+There is no significant difference between the results for the various
+settings of the context limit.
 
 \paul{XXX: Consider always putting left and right in italics.}
-Work stealing improves the performance of right recursion with high context
-limits.
+When we consider the case for right recursion we can see that
+work stealing has improved performance when there is a 
+high context limit.
 This is somewhat expected since work stealing is known as a very
 efficient way of managing parallel work on a shared memory system.
-However we did not expect to get such a significant improvement in
+However we did not expect such a significant improvement in
 performance.
-In the non work stealing system, a spark is placed on the global spark queue
-if both the context limit has not been reached, and there is an idle engine.
-We believe that the premature scheduling problem was also affecting right
-recursion.
+In the non work stealing system,
+a spark is placed on the global spark queue if both the context limit has
+not been reached,
+and there is an idle engine.
 When a spark is being created there may not be an idle engine,
 however an engine may become idle soon and wish to execute a spark.
 With work stealing,
 all sparks are placed on local deques and an idle
 engine will attempt to steal work when it is ready ---
-the decision to run a spark in parallel is no longer premature.
-This is the same reason as why work stealing benefits left recursive
-programs so much:
-left recursive programs simply happen to have a pathological case of
-the premature scheduling problem.
+delaying the decision to run the spark in parallel.
+This suggests that the premature scheduling problem was also affecting right
+recursion.
+But the effect was minor compared to the pathological case was saw with left
+recursion.
 
 There is a second observation we can make about right recursion.
 In the cases for 256 or 512 contexts work stealing performs worse than
