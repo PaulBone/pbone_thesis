@@ -25,13 +25,13 @@ The section provides background material for Section
 which benchmarks the runtime system and describes two significant problems with
 spark scheduling.
 We address one of these problems by introducing work stealing in Section
-\ref{sec:work_stealing}.
+\ref{sec:rts_work_stealing}.
 Then in Section \ref{sec:rts_reorder} we reorder conjuncts in independent
 parallel conjunctions to work around the other spark scheduling problem.
-In Section \ref{sec:work_stealing_improved} we make further improvments to
+In Section \ref{sec:rts_work_stealing2} we make further improvments to
 work stealing and change how idle engines look for work, sleep and are
 woken up.
-Finally, Section \ref{sec:thread_pinning} describes how we pin Mercury
+Finally, Section \ref{sec:rts_thread_pinning} describes how we pin Mercury
 engines to CPU cores and SMT threads evenly.
 
 \section{Garbage collection tweaks}
@@ -50,7 +50,7 @@ engines to CPU cores and SMT threads evenly.
 \input{rts_original_scheduling_performance}
 
 \section{Initial work stealing implementation}
-\label{sec:work_stealing}
+\label{sec:rts_work_stealing}
 
 \input{rts_work_stealing}
 
@@ -60,12 +60,12 @@ engines to CPU cores and SMT threads evenly.
 \input{rts_reorder}
 
 \section{Improved work stealing and new idle engine managment}
-\label{sec:idle_loop}
+\label{sec:rts_work_stealing2}
 
 \input{rts_work_stealing2}
 
 \section{Thread pinning}
-\label{sec:thread_pinning}
+\label{sec:rts_thread_pinning}
 \status{Not written}
 
 \plan{Explain why we want $P$ engines when there are $P$ processors}

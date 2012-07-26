@@ -79,7 +79,7 @@ our implementation is heavily based.
 
 \begin{minipage}[b][3in]{0.29\textwidth}
 \subfigure[Nested parallel conjunctions]{%
-\label{fig:nexted_par_conjunctions}
+\label{fig:nested_par_conjunctions}
 \begin{tabular}{l}
 \code{p(...) :-} \\
 \code{~~~~(} \\
@@ -547,7 +547,7 @@ Therefore engines must wake up periodically to check if there is any
 parallel work available.
 This is done on line 26 using a call to \code{timed\_wait} with a
 configurable timeout (it defaults to 2ms).
-We discuss this timeout later in Section \ref{sec:idle_loop}.
+We discuss this timeout later in Section \ref{sec:rts_work_stealing2}.
 
 \plan{Accessing the array of deques}
 Engines that attempt to steal a spark must have access to all the spark
