@@ -38,6 +38,8 @@
 :- import_module unit.
 
 :- import_module parse_tex.
+:- import_module util.
+:- import_module tex.
 
 %----------------------------------------------------------------------------%
 
@@ -50,7 +52,7 @@ main(!IO) :-
     ;
         true
     ).
-    
+
 :- pred check_file(string::in, cord(prose_error)::in, cord(prose_error)::out,
     io::di, io::uo) is det.
 
@@ -97,11 +99,12 @@ check_file_string(Name, Contents, Errors) :-
 :- pred check_tokens(cord(token)::in, cord(prose_error)::out) is det.
 
 check_tokens(Tokens, Errors) :-
-    WordErrors = cord_concat(cord.map(check_word, Tokens)),
+    Words = words(Tokens),
+    WordErrors = cord_concat(cord.map(check_word, Words)),
     check_ngrams(Tokens, NGramErrors),
     Errors = WordErrors ++ NGramErrors.
 
-:- func check_word(token) = cord(prose_error).
+:- func check_word(word) = cord(prose_error).
 
 check_word(word(Word, Locn)) = Errors :-
     list.map(check_contractions(Word, Locn), contractions,
@@ -170,49 +173,81 @@ check_bad_words(Word, Locn, BadWord, Message, MaybeError) :-
 :- pred check_ngrams(cord(token)::in, cord(prose_error)::out) is det.
 
 check_ngrams(Tokens, Errors) :-
-    TokensArray = array(list(Tokens)),
-    array.bounds(TokensArray, Start, End),
-    check_ngrams_pos(TokensArray, Start, End, cord.init, Errors).
+    tokens_to_consecutive_words(Tokens, Words),
+    cord.map_pred(check_ngrams_words, Words, Errorss),
+    Errors = cord_concat(Errorss).
 
-:- pred check_ngrams_pos(array(token)::in, int::in, int::in,
+:- pred check_ngrams_words(cord(word)::in, cord(prose_error)::out) is det.
+
+check_ngrams_words(Words, Errors) :-
+    WordsArray = array(list(Words)),
+    array.bounds(WordsArray, Start, End),
+    check_ngrams_pos(WordsArray, Start, End, cord.init, Errors).
+
+:- pred check_ngrams_pos(array(word)::in, int::in, int::in,
     cord(prose_error)::in, cord(prose_error)::out) is det.
 
-check_ngrams_pos(Tokens, Pos, End, !Errors) :-
+check_ngrams_pos(Words, Pos, End, !Errors) :-
     ( Pos =< End ->
-        list.foldl(check_ngram(Tokens, Pos, End), bad_ngrams,
+        list.foldl(check_ngram(Words, Pos, End), bad_ngrams,
             !Errors),
-        check_ngrams_pos(Tokens, Pos+1, End, !Errors)
+        check_double(Words, Pos, End, !Errors),
+        check_ngrams_pos(Words, Pos+1, End, !Errors)
     ;
         true
     ).
 
-:- pred check_ngram(array(token)::in, int::in, int::in, list(string)::in,
-    cord(prose_error)::in, cord(prose_error)::out) is det. 
+:- pred check_ngram(array(word)::in, int::in, int::in, list(string)::in,
+    cord(prose_error)::in, cord(prose_error)::out) is det.
 
-check_ngram(Tokens, Pos, End, NGram, !Errors) :-
-    compare_ngram(Tokens, Pos, End, NGram, Match),
+check_ngram(Words, Pos, End, NGram, !Errors) :-
+    compare_ngram(Words, Pos, End, NGram, Match),
     (
         Match = yes,
-        array.lookup(Tokens, Pos, Token),
-        Token = word(_, Locn),
+        array.lookup(Words, Pos, Word),
+        Word = word(_, Locn),
         record_error(Locn, format("Bad ngram: %s", [s(string(NGram))]),
             !Errors)
     ;
-        Match = no 
+        Match = no
     ).
 
-:- pred compare_ngram(array(token)::in, int::in, int::in, list(string)::in,
+:- pred check_double(array(word)::in, int::in, int::in,
+    cord(prose_error)::in, cord(prose_error)::out) is det.
+
+check_double(Words, Pos, End, !Errors) :-
+    ( Pos = End ->
+        true
+    ;
+        array.lookup(Words, Pos, WordA),
+        array.lookup(Words, Pos+1, WordB),
+        WordA = word(WordStrA, Locn),
+        WordB = word(WordStrB, _),
+        (
+            WordStrA \= "~",
+            stri_compare(WordStrA, WordStrB, 0)
+        ->
+            record_error(Locn, format("Double word: %s", [s(WordStrA)]),
+                !Errors)
+        ;
+            true
+        )
+    ).
+
+:- pred compare_ngram(array(word)::in, int::in, int::in, list(string)::in,
     bool::out) is det.
 
 compare_ngram(_, _, _, [], yes).
-compare_ngram(Tokens, Pos, End, [H | T], Match) :-
+compare_ngram(Words, Pos, End, [H | T], Match) :-
     ( Pos > End ->
         Match = no
     ;
-        array.lookup(Tokens, Pos, Token),
-        Token = word(Word, _),
-        ( stri_compare(Word, H, 0) ->
-            compare_ngram(Tokens, Pos + 1, End, T, Match)
+        array.lookup(Words, Pos, Word),
+        (
+            Word = word(WordStr, _),
+            stri_compare(WordStr, H, 0)
+        ->
+            compare_ngram(Words, Pos + 1, End, T, Match)
         ;
             Match = no
         )
@@ -317,6 +352,99 @@ bad_ngrams = [
         ["round", "robin"]
     ].
 
+% Convert the document into different data structures.
+%----------------------------------------------------------------------------%
+
+    % Build a cord of cords containing consecutive words.
+    %
+    % Words are consecutive when not seperated by a macro unless the macro
+    % is something like \emph or \code.
+    %
+:- pred tokens_to_consecutive_words(cord(token)::in, cord(cord(word))::out)
+    is det.
+
+tokens_to_consecutive_words(Tokens, Words) :-
+    list.foldl2(token_to_consecutive_words, list(Tokens), cord.empty, LastGroup,
+        cord.empty, Groups),
+    Words = snoc(Groups, LastGroup).
+
+:- pred token_to_consecutive_words(token::in,
+    cord(word)::in, cord(word)::out,
+    cord(cord(word))::in, cord(cord(word))::out) is det.
+
+token_to_consecutive_words(word(Word, Locn), !LastGroup, !Groups) :- 
+    !:LastGroup = snoc(!.LastGroup, word(Word, Locn)).
+token_to_consecutive_words(punct(_, _), !LastGroup, !Groups) :-
+    end_group(!LastGroup, !Groups).
+token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups) :-
+    ( length(Name, 1) ->
+        % Short macros usually just stand for a letter, or sometimes a line
+        % break.
+        ( Name = "\\" ->
+            % Linebreak, this is whitespace and is ignored.
+            true
+        ; Name = " " ->
+            % A tex whitespace hint, this is also ignored.
+            true
+        ;
+            % Some other short charicter, usually punctuation.
+            end_group(!LastGroup, !Groups)
+        )
+    ;
+        conservative_macro_info(Name, IsRef, BreaksFlow),
+        (
+            IsRef = macro_is_reference,
+            % Reference macros don't get checked, just pretend that they're a
+            % proper noun.
+            !:LastGroup = snoc(!.LastGroup, word("RefNoun", Locn))
+        ;
+            IsRef = macro_is_anchor
+        ;
+            IsRef = macro_is_not_reference,
+            % The macro breaks the flow of text.
+            foldl2(macro_arg_to_consecutive_words(BreaksFlow),
+                list(Args), !LastGroup, !Groups)
+        )
+    ).
+token_to_consecutive_words(environment(Name, _Args, Tokens, _), !LastGroup,
+        !Groups) :-
+    ( not environment_does_not_contain_prose(Name) ->
+        % Note that we don't check the environments args, I don't know of
+        % any that have prose to check.
+        list.foldl2(token_to_consecutive_words, list(Tokens),
+            !LastGroup, !Groups)
+    ;
+        true
+    ).
+
+:- pred macro_arg_to_consecutive_words(macro_breaks_flow::in, macro_arg::in,
+    cord(word)::in, cord(word)::out,
+    cord(cord(word))::in, cord(cord(word))::out) is det.
+
+macro_arg_to_consecutive_words(BreaksFlow, macro_arg(Tokens, _),
+        !LastGroup, !Groups) :-
+    (
+        BreaksFlow = macro_breaks_flow,
+        end_group(!LastGroup, !Groups)
+    ;
+        BreaksFlow = macro_does_not_break_flow
+    ),
+    list.foldl2(token_to_consecutive_words, list(Tokens),
+        !LastGroup, !Groups),
+    (
+        BreaksFlow = macro_breaks_flow,
+        end_group(!LastGroup, !Groups)
+    ;
+        BreaksFlow = macro_does_not_break_flow
+    ).
+
+:- pred end_group(cord(T)::in, cord(T)::out,
+    cord(cord(T))::in, cord(cord(T))::out) is det.
+
+end_group(!LastGroup, !Groups) :-
+    !:Groups = snoc(!.Groups, !.LastGroup),
+    !:LastGroup = cord.empty.
+
 % Errors.
 %------------------------------------------------------------------------%
 
@@ -351,24 +479,4 @@ print_error(prose_error(Locn, Message), !IO) :-
     Locn = locn(File, Line, Col),
     io.format("%s:%d: col %d, %s\n", [s(File), i(Line), i(Col), s(Message)],
         !IO).
-
-% Utils
-%------------------------------------------------------------------------%
-
-:- func cord_concat(cord(cord(T))) = cord(T).
-
-cord_concat(Cords) = cord_list_to_cord(list(Cords)).
-
-:- func cord_from_maybe_list(list(maybe(T))) = cord(T).
-
-cord_from_maybe_list([]) = cord.empty.
-cord_from_maybe_list([H | T]) = Cord :-
-    Cord0 = cord_from_maybe_list(T),
-    (
-        H = no,
-        Cord = Cord0
-    ;
-        H = yes(Item),
-        Cord = cons(Item, Cord0)
-    ).
 

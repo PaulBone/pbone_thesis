@@ -87,7 +87,7 @@ checked : $(TEX_PROSE) check
 	fi
 	touch checked
 
-check : check.m parse_tex.m
+check : check.m parse_tex.m tex.m util.m
 	if [ -e .use_mercury ]; then \
 		mmc --make check; \
 	else \
