@@ -1,4 +1,16 @@
 
+\plan{Refer to Peter Wang's conclusion of the early scheduling problem}
+Work stealing addresses the premature spark scheduling problem that we
+described in the previous section.
+\citet{wang:2006:hons} recongized this problem and proposed work stealing as
+its solution.
+In a work stealing system,
+sparks are placed on a context's local spark stack
+is not committed to running in that context;
+it may be executed in a different context if it is stolen.
+This delays the decision of where to execute a spark until the moment
+before it is executed.
+
 \plan{Introduce work stealing}
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
@@ -27,32 +39,6 @@ even though the two have similar symptoms.
 Furthermore,
 work stealing does not fix the right recursion problem.
 
-\paul{XXX: I have not read this paper yet.
-It ranks highly in google scholar results and Peter used it so I suspect
-that it is notable.}
-Another notable example is
-\citet{blumofe:1999:work-stealing},
-which quantifiably proves that work stealing is more efficient than
-\emph{work sharing}
-(using a global pool of work).
-
-%Using a task stack encourages a task execution order that is similar to
-%seuential execution (we explain why below),
-%Halstead reports that this results in lower parallel execution overheads,
-%especially for embarrassingly parallel workloads.
-%We agree that this can improve 
-
-\paul{XXX: Make sure these paragraphs flow once I read the papers above}
-\plan{Refer to Peter Wang's conclusion of the early scheduling problem}
-\citet{wang:2006:hons} recognises the premature spark scheduling problem
-that we described in the previous section.
-He proposed work stealing as a solution to the problem.
-In a work stealing system,
-sparks are placed on a context's local spark stack
-is not committed to running in that context;
-it may be executed in a different context if it is stolen.
-This delays the decision of where to execute a spark until the moment
-before it is executed.
 Work stealing's other benefits can be summarised as follows.
 
 \begin{itemize}
