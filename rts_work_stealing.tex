@@ -15,6 +15,18 @@ If the current task is suspended on a future or finishes,
 the processor will execute task at the top of its task stack.
 If there is no such task,
 it attempts to steal a task from the bottom of another processor's stack.
+
+Halstead's ``unfair scheduling'' is motivated by his need to reduce the
+problems of embarrassing parallelism.
+Most significantly,
+he says that the system can deadlock due to running out of resources but
+needing resources to proceed.
+We would like to point out that 
+this is not the same as our right recursion problem,
+even though the two have similar symptoms.
+Furthermore,
+work stealing does not fix the right recursion problem.
+
 \paul{XXX: I have not read this paper yet.
 It ranks highly in google scholar results and Peter used it so I suspect
 that it is notable.}
@@ -27,7 +39,7 @@ which quantifiably proves that work stealing is more efficient than
 %Using a task stack encourages a task execution order that is similar to
 %seuential execution (we explain why below),
 %Halstead reports that this results in lower parallel execution overheads,
-%especially for embarassingly parallel workloads.
+%especially for embarrassingly parallel workloads.
 %We agree that this can improve 
 
 \paul{XXX: Make sure these paragraphs flow once I read the papers above}
@@ -258,20 +270,30 @@ so that a first-in-first-out order is used for parallel tasks.
 \citet{halstead:1985:multilisp} also uses processor local task stacks,
 so that when a processor executes a task from its own stack,
 a last-in-first-out order is used.
-He also chose to have thieves steal work from the bottom of a spark stack.
-Halstead's reasons are similar to ours,
-he asserts that maintaining a near-sequential execution order is
-desirable because it has lower overheads,
-however he goes on to say that this can improve performance for
-embarrassingly parallel workloads.
-We believe that work stealing can only reduce overheads in general;
-an embarrassing workload will still create more parallelism than the system
-can make use of,
-and whose overheads must still be paid.
-There are better methods for reducing these overheads
-such as the use of sparks to represent computations whose execution has not
-begun,
-or granularity control.
+He chose to have thieves steal work from the top of a task stack so
+that a thief also executes work in the last-in-first-out order.
+However, Halstead remarks that it may be better to steal work from the
+bottom of a stack.
+Halstead chose a last-in-first-out execution order for the same reasons
+that we did:
+so that when a processor runs its own task,
+the task is executed in the same order as it would be if the program were
+running sequentially.
+We agree with his claim that this reduces resource usage overheads,
+we also agree with his speculation that it results in more efficient cache
+usage.
+However, 
+Halstead also claims that this can improve performance for
+embarrassingly parallel workloads,
+this claim is only true insofar as work stealing reduces runtime costs
+\emph{in general}.
+No runtime method can completely eliminate the overheads of parallel
+execution.
+%therefore only during development or compile time can 
+%embarrassing parallelism be addressed effectively.
+Furthermore,
+in our experience using sparks to represent computations whose execution has
+not begin has had a more significant improvement in reducing runtime costs.
 
 \plan{Describe the data structure used to implement these stacks and its
 properties.}
