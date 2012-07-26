@@ -4,37 +4,36 @@
 \plan{Acknowledge results of previous section}
 We have shown that right recursion suffers from a context limit problem.
 Right recursive programs also get smaller speedups when compared with left
-recursive problems.
-The problem with right recursion is the large number of contexts needed,
-this is memory intensive and becomes CPU intensive once we consider that
+recursive programs.
+The problem with right recursion is the large number of contexts needed.
+This is memory intensive, and CPU intensive once we consider that
 the Boehm GC must scan these context's stacks to check for pointers.
-This can happen whenever a the second or later
+This can happen whenever the second or later
 conjunct of a parallel conjunction
 takes longer to execute than the first conjunct;
-the first conjunct becomes blocked on the later conjuncts.
+the first conjunct becomes blocked on the later conjunct(s).
 
 \plan{Describe the intuition for the transformation.}
-Meanwhile left recursion works well,
+On the other hand left recursion works well,
 using work stealing we are able to get very good speedups (3.96 for
 mandelbrot when using four Mercury engines).
 When the conjunction is independent,
-meaning there are no dependences between the conjuncts,
-Mercury's purity allows us to re-order the conjuncts of the computation and
+Mercury's purity allows us to reorder the conjuncts of the computation and
 transform right recursion into left recursion.
-Essentially transforming the procedure in Figure
+For example it would transform the procedure in Figure
 \ref{fig:map_right_recursive} into the one in Figure
-\ref{fig:map_left_recursive} (page \pageref{fig:map_right_recursive}.
+\ref{fig:map_left_recursive} (page \pageref{fig:map_right_recursive}).
 
 \begin{algorithm}
-\begin{algorithmic}
+\begin{algorithmic}[1]
 \Procedure{reorder}{$SCC$, $Conjs$}
     \If{$Conjs = $ \nil}
         \State \Return \nil
     \Else
-        \State \cons{ConjsHead}{ConjsTail} $\gets Conjs$
+        \State \cons{Conj}{ConjsTail} $\gets Conjs$
         \State $ConjsTail \gets$ reorder($SCC$, $ConjsTail$)
-        \If{$ConjsHead$ contains a call to $SCC$}
-            \State \Return \cons{ConjsHead}{ConjsTail}
+        \If{$Conj$ contains a call to $SCC$}
+            \State \Return \cons{Conj}{ConjsTail}
         \Else
             \State \Return try\_push\_conj\_later($Conj$, $ConjsTail$)
         \EndIf
@@ -49,7 +48,7 @@ Essentially transforming the procedure in Figure
             \State $Pushed \gets$ try\_push\_conj\_later($Goal$, $Rest$)
             \State \Return \cons{Pivot}{Pushed}
         \Else
-            \State \Return \cons{Conj}{Conjs}
+            \State \Return \cons{Goal}{Conjs}
         \EndIf
     \EndIf
 \EndProcedure
@@ -59,33 +58,33 @@ Essentially transforming the procedure in Figure
 \end{algorithm}
 
 \plan{Describe the transformation}
-At the moment we only attempt to re-order completely independent
-conjunctions.
+We only attempted to re-order completely independent conjunctions.
 It may be possible to find independent sections of dependent conjunctions
-and reorder them but we have not tried.
-This transformation can occur as an alternative to the dependent conjunction
-transformation described by \citep{wang:2011:dep-par}.
-If the conjunction has no shared variables then a dependency analysis of the
-current module is performed.
-From this we gather the identify of the SCC that the current procedure
-belongs to,
-and the SCCs of any calls in each of the conjuncts.
-The algorithm for \code{reorder} is shown in Algorithm
-\ref{alg:reorder_conjunction}.
-This code iterates over a conjunction, for each conjunct it tests if that
-conjunct is recursive.
-To reorder a conjunction so that the recursive conjuncts occur to the left,
-the algorithm attempts to push non-recursive conjuncts to the right.
-Each non-recursive conjunct found is swapped with the one to its until if
-doing so is legal.
-After each successful swap the algorithm attempts to swap the conjunct with
-the one to the right of its new position.
-There are a few cases where swaps are illegal, the only relevant example is
-when one of the two conjuncts being swapped is impure.
+and reorder them,
+but we have not needed to.
+\reorder is invoked on parallel conjunctions without shared variables,
+its code is shown in Algorithm \ref{alg:reorder_conjunction}.
+Its arguments are a reference to the current SCC and a list of the parallel
+conjunction's conjuncts.
+\reorder iterates over these goals in reverse order by means of the
+recursive call on line 6.
+For each goal it tests if that goal makes a call to the current SCC,
+if so it leaves the goal where it is,
+if not \reorder will attempt to push the goal towards the end of the
+list using \trypushconjlater.
+\trypushconjlater is also very simple,
+It takes the current goal and the list representing the \emph{rest} of the
+conjunction,
+It iterates down this list attempting to swap the goal being pushed
+(\code{Goal}) with the goal at the front of the list (\code{Pivot}).
+Not all swaps are legal,
+for example a goal cannot be swapped with an impure goal,
+therefore \trypushconjlater may not always push a goal all the way to the
+end of the list.
 
 \plan{Discuss reasoning for not showing results}.
 We have benchmarked and tested this,
-however the benchmarks are not interesting:
+however the benchmark results are not interesting:
 independent right recursion is transformed into independent left
 recursion and therefore performs the same as independent left recursion.
 
