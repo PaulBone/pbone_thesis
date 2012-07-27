@@ -71,41 +71,18 @@ The solution to all of these problems is to associate spark deques with
 engines rather than with contexts.
 A running Mercury program has a constant number of engines,
 and therefore the number of spark deques will not vary.
-This means that we can remove the code used to resize the deque array when a
-context is created or destroyed, simplfying the system and making these
-procedures faster.
+This has allowed us to remove the code used to resize the deque array,
+the array is filled in when the engines are created during startup,
+after which it is never modified.
+This code is much simpler as it never needs to resize the array.
+Context creation and distruction is now simpler and faster,
+it does not need to use the spark array at all, and certainly never contends
+for the spark array lock.
 We can also remove the locking code in \trystealspark used to ensure that
 the array is not changed while a thief is trying to steal a spark.
 The cost of work stealing also becomes linear in the number of engines
 rather than the number of contexts (there are usually fewer engines than
 contexts).
-
-\plan{Show how this is safe.}
-Associating the spark deques with engines can change the order in which
-sparks are executed.
-A context that is suspended by a call to \wait may contain sparks,
-when engines contain spark deques those sparks can be executed by the engine
-that was running the context.
-This does not affect the program's safety,
-the program will not become deadlocked provided that
-each\footnote{
-    Sometimes a specific engine must execute a specific context so that the
-    context's computation can access something on the C stack.
-    Therefore all engines must check the context run queue for such a
-    context.
-    This is an implementation detail of foreign C code.
-    }
-of the engines checks the context run queue for a context
-to execute.
-This happens each time an engine calls \getglobalwork.
-We believe that it is preferable to run an idle context rather than a new
-spark,
-a context represents work that was scheduled earlier and therefore may
-make more parallel work available,
-either by creating spark(s) or signalling future(s).
-Signaling a future as early as possible can,
-in some cases,
-prevent a call to \wait from blocking some other context.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
@@ -127,18 +104,173 @@ prevent a call to \wait from blocking some other context.
 \EndProcedure
 \end{algorithmic}
 \caption{MR\_try\_steal\_spark}
-\label{alg:try_steal_spark_initial}
+\label{alg:try_steal_spark_revised}
 \end{algorithm}
 
 \plan{Show new \trystealspark}
-Find out if I started tracking stealing per engine or not.
+We have made some other changes to \trystealspark,
+its new code is shown in Algorithm \ref{alg:try_steal_spark_revised}.
+The lock was also used to protect the victim counter,
+ensuring that round robbin selection of the victim was maintained.
+Now each engine independently performs its own round robin selection of the
+victim using a new field \code{victim\_counter} in the engine structure.
+We have not evaluated if this policy works better or worse,
+even if it is worse,
+it avoids the cost of a lock which is more significant.
+The two other changes are minor,
+we have removed the configurable limit of the number of work stealing
+attempts per round,
+and the test for null array slots has been removed as it is now unnecessary.
 
-\plan{Describe the problem with the current algorithm.}
-Engines wake up and periodically check for work by attempting to
-steal work,
-firstly, this means that there can be up to a 2ms (average 1ms) delay before
-a spark is executed.
-secondly, this checks for work too often, wasting resources.
+\plan{Show how this is safe.}
+Associating the spark deques with engines can change the order in which
+sparks are executed,
+we have to ensure that the system is still deadlock free.
+In the previous version
+a context that is suspended by a call to \wait may contain sparks,
+while the context is suspended those sparks can only be accessed by a theif,
+even if the theif is the same engine that created the sparks.
+In the current version,
+those sparks are now associated with the engine,
+once the context is suspended the engine can access those sparks from its
+own spark deque.
+If the engine attempts to execute one of these sparks it will need a
+context.
+At this point we have two choices,
+the engine must either execute an existing suspended context,
+or allocate a new context for a spark on its spark deque \emph{dispite} the
+context limit.
+There may not always be a suspended context but if there is it should
+eventually be executed to avoid a deadlock
+(it may unblock a future that another context is blocked on).
+It may also be optimal to execute a suspended context,
+since it may prevent the context limit from being exeeded.
+But more importantly,
+if the engine executed a spark,
+and created a new context for the spark,
+then that context might also block on a future,
+this situation could loop, allocating more contexts dispite the context
+limit.
+Therefore this would not create a deadlock provided that an engine without a
+context attempts to resume a suspended context before attempting to execute
+one of its own sparks.
+
+We have modified \getglobalwork to implement this,
+now \getglobalwork attempts to run a suspended context,
+then attempts to run a local spark and finally attempts to steal a spark
+before going to sleep.
+We took this opportunity to significantly change \getglobalwork,
+we introduced a number of optimisations and fixed another problem.
+When an engine fails to find any work and goes to sleep a timout is used to
+wake it up.
+This timeout defaults to 2ms.
+When a context created a spark,
+the idle engine would take an average of 1ms before attempting to steal the
+spark.
+If the context finished the first conjunct of a parallel conjunction it
+would often take the task back off its deque before the thief stole it.
+This results in sequential execution even though an idle engine was
+available to run the spark.
+Secondly,
+using the timeout when there is no parallel work available is wasteful
+as idle engines would wake up and needlessly attempt to steal work.
+Therefore while modifying \getglobalwork we chose to remove the timeout,
+we should instead notify sleeping engines of sparks, but this notification
+should have a low cost.
+
+%\begin{multicols}{2}
+
+\begin{algorithm}
+
+\begin{minipage}{\textwidth}
+\begin{multicols}{2}
+\begin{verbatim}
+#define TRAMPOLINE(call)        \\
+    do {                        \\
+        MR_Code *code;          \\
+        code = (call);          \\
+        if (code) {             \\
+            goto code;          \\
+        }                       \\
+    } while(0)
+\end{verbatim}
+
+\begin{algorithmic}
+    \Procedure{MR\_idle}{}
+        \State \tramp{try\_run\_context()}
+        \State \tramp{try\_run\_local\_spark($NULL$)}
+        \State \tramp{try\_steal\_spark($NULL$)}
+        \Goto MR\_sleep
+    \EndProcedure
+\end{algorithmic}
+
+\begin{algorithmic}
+    \Procedure{MR\_idle\_dirty\_context}{}
+        \State $join\_label \gets MR\_r1$
+        \State \tramp{try\_run\_local\_spark($join\_label$)}
+        \State \tramp{try\_steal\_spark($join\_label$)}
+        \State save\_dirty\_context($join\_label$)
+        \State \tramp{try\_run\_context()}
+        \Goto MR\_sleep
+    \EndProcedure
+\end{algorithmic}
+
+\end{multicols}
+
+\begin{verbatim}
+struct engine_sleep_sync_i {
+    sem_t                               sleep_sem;
+    sem_t                               wake_sem;
+    volatile unsigned                   state;
+    volatile unsigned                   action;
+    union MR_engine_wake_action_data    action_data;
+};
+
+union MR_engine_wake_action_data {      
+    MR_EngineId     worksteal_engine;
+    MR_Context      *context;
+};
+\end{verbatim}
+
+\begin{algorithmic}
+    \Procedure{MR\_sleep}{}
+        \Loop
+            \State $eng\_data \gets MR\_engien\_sleep\_data$[$engine\_id$]
+            \State $eng\_data.state \gets$ SLEEPING
+            \State $sem\_wait(eng\_data.sleep_sem)$
+            \Switch{$eng\_data.action$}
+              \Case{ACTION\_SHUTDOWN}
+                \State $\cdots$
+              \EndCase
+              \Case{ACTION\_RUN\_CONTEXT}
+                \State $ctxt \gets eng\_data.action\_data.context$
+                \State MR\_load\_context($ctxt$)
+                \Goto $ctxt.resume\_label$
+              \EndCase
+              \Case{ACTION\_STEAL\_SPARK}
+                \State $MR\_engine.victim\_counter \gets
+                    eng\_data.action\_data.worksteal\_engine$ 
+                \State \tramp{try\_steal\_spark(NULL)}
+                \State \tramp{try\_run\_context}
+                \State break
+              \EndCase
+              \Case{ACTION\_NONE}
+                \State \tramp{try\_run\_context}
+                \State \tramp{try\_steal\_spark(NULL)}
+                \State break
+              \EndCase
+            \EndSwitch
+        \EndLoop
+    \EndProcedure
+\end{algorithmic}
+
+\end{minipage}
+\caption{New \getglobalwork ~/ \idle code}
+\end{algorithm}
+
+\paul{Consider removing MR\_ from most if not all symbols.}
+
+%\end{multicols}
 
 \plan{Solution, wake engines for different types of work}
 We modified the RTS so that waking an engine is easy, and it can be given a

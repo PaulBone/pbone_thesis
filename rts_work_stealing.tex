@@ -488,7 +488,7 @@ otherwise the deque will be empty.
       \State release\_lock($MR\_runqueue\_lock$)
       \State MR\_destroy\_thread()
     \EndIf
-    \State $ctxt \gets$ MR\_get\_runnable\_context()
+    \State $ctxt \gets$ try\_run\_context()
     \If{$ctxt \neq \text{NULL}$}
       \State release\_lock($MR\_runqueue\_lock$)
       \If{$current\_context$}
@@ -503,13 +503,13 @@ otherwise the deque will be empty.
         (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
         \end{array}
         \right)$}
-      \State $result \gets$ MR\_try\_steal\_spark(\&$spark$)
+      \State $result \gets$ try\_steal\_spark(\&$spark$)
       \If{$result$}
         \State release\_lock($MR\_runqueue\_lock$)
         \If{$current\_context \neq \text{NULL}$}
-          \State $ctxt \gets$ MR\_get\_free\_context()
+          \State $ctxt \gets$ get\_free\_context()
           \If{$\neg ctxt$}
-            \State $ctxt \gets$ MR\_create\_context()
+            \State $ctxt \gets$ create\_context()
           \EndIf
           \State MR\_load\_context($ctxt$)
         \EndIf
@@ -567,7 +567,7 @@ protected by the \code{MR\_spark\_deques\_lock} lock.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
-\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
+\Procedure{try\_steal\_spark}{$spark\_ptr$}
   \State acquire\_lock($MR\_spark\_deques\_lock$)
 
   \State $max\_attempts \gets$ min($MR\_max\_spark\_deques$,
@@ -589,7 +589,7 @@ protected by the \code{MR\_spark\_deques\_lock} lock.
   \State \Return $false$
 \EndProcedure
 \end{algorithmic}
-\caption{MR\_try\_steal\_spark}
+\caption{try\_steal\_spark}
 \label{alg:try_steal_spark_initial}
 \end{algorithm}
 
