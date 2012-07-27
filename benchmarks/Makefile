@@ -5,6 +5,7 @@ TARGETS = tags report \
 	bench_right_vs_left \
 	bench_right_vs_left_2010 \
 	bench_right_vs_left_2011 \
+	bench_right_vs_left_2011_04 \
 	bench_nolimit \
 	bench_gc \
     bench_gc_extra \
@@ -22,6 +23,9 @@ bench_right_vs_left_2010 : *.m
 	mmc --make $@
 
 bench_right_vs_left_2011 : *.m
+	mmc --make $@
+
+bench_right_vs_left_2011_04 : *.m
 	mmc --make $@
 
 bench_nolimit : *.m
