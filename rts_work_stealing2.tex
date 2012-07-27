@@ -4,8 +4,8 @@
 In this section we take the opportunity to improve on our work stealing
 implementation from Section \ref{sec:rts_work_stealing}.
 While we made these improvments we also found it useful to change how idle
-engines are managed.
-Although some of these changes can be conceptually distinct,
+engines behave.
+Although these too changes are conceptually distinct,
 they where made together and their implementations are interlinked.
 Therefore we will present and benchmark them together as one set of changes.
 
@@ -15,24 +15,23 @@ this has a several significant problems.
 
 \begin{description}
 
-    \item[There are a dyanic number of spark deques]~
+    \item[There is a dynanic number of spark deques]~
 
     The number of contexts changes during a programs execution,
     therefore the number of spark deques also changes.
     This means that we must have code to manage this chaging number of
     deques.
-    This code makes the runtime system more complicated than what is
-    necessary,
+    This code makes the runtime system more complicated necessary,
     both when stealing a spark and when destroying or creating a context.
 
     \item[This requires locking]~
 
-    The management of contexts must be done with thread safety so that the
-    set of contexts is not currupted.
-    We are using a simple implementation with an array where locking is
-    necessary.
-    It may be possible to replace this with a lock free datastructure,
-    however removing the code is preferable.
+    The management of contexts must be thread safe so that the set of
+    spark deques is not currupted.
+    We store spark deques in a global array protected by a lock.
+    It may be possible to replace the array with a lock free datastructure.
+    However it is better to remove the need of thread safty by using a
+    constant set of deques.
 
     \item[A large number of contexts makes work stealing slower]~
     
@@ -40,25 +39,29 @@ this has a several significant problems.
     we have shown that the number of contexts in use can often be very high,
     much higher than the number of Mercury engines.
     If there are $N$ engines and $M$ contexts,
-    then there can be at most $N$ of the $M$ contexts running and
-    at least $M-1$ contexts suspended (blocked and waiting to run).
-    Contexts can become suspended in one of two ways:
+    then there can be at most $N$ contexts running and
+    at least $M-N$ contexts suspended (blocked and waiting to run),
+    In some cases there can be at most $M-1$ suspended contexts.
+    A context can become suspended in one of two ways:
     by blocking on a future's value in call to \wait,
     or by blocking on an incomplete conjunct in a call to \joinandcontinue.
     We attempt to minimise the former case and the later case cannot occur
     if the context has a spark on its local spark deque (it would run the
     spark rather than block).
-    Therefore the large majority of the $M-N$ contexts that are suspended
-    will not have sparks on their deques,
+    Therefore the large majority of the suspended contexts will not have
+    sparks on their deques,
     and the probability of selecting a deque at random with a spark on its
-    stack is only a little bit higher than $M \choose N$.
+    stack is only a little bit higher than $M \choose N$ at best and
+    and $M \choose 1$ at worst.
     Furthermore the value of $M$ can be very high in pathological cases.
-    The runtime system will continue to try to steal a spark from different
-    deques its complexity is $O(M)$.
-    This is also true in cases where it gives up and tries again later,
-    this can happen even when there is parallelism available.
-    It also happens when a theif is successful,  
-    as the victim counter is always incremented.
+    If an engine does not successfully steal a spark from a deque,
+    it will continue by trying to steal a spark from a different deque.
+    An engine can exhaust all its attempts, even when there is work
+    available.
+    Upon exhausting all its attempts or all the deques,
+    the engine will sleep before making another round of attempts.
+    Each round of attempts (regardless of success or failure) has a
+    complexity of $O(M)$.
 
 \end{description}
 
@@ -72,9 +75,10 @@ This means that we can remove the code used to resize the deque array when a
 context is created or destroyed, simplfying the system and making these
 procedures faster.
 We can also remove the locking code in \trystealspark used to ensure that
-the array is not changed while a theif is trying to steal a spark.
+the array is not changed while a thief is trying to steal a spark.
 The cost of work stealing also becomes linear in the number of engines
-rather than the number of contexts (which is usually larger).
+rather than the number of contexts (there are usually fewer engines than
+contexts).
 
 \plan{Show how this is safe.}
 Associating the spark deques with engines can change the order in which
@@ -93,12 +97,15 @@ each\footnote{
     }
 of the engines checks the context run queue for a context
 to execute.
-It is generally a good idea to check the context run queue often as a
-suspended context may be able to make more parallel work available either by
-creating a spark or signaling a future.
+This happens each time an engine calls \getglobalwork.
+We believe that it is preferable to run an idle context rather than a new
+spark,
+a context represents work that was scheduled earlier and therefore may
+make more parallel work available,
+either by creating spark(s) or signalling future(s).
 Signaling a future as early as possible can,
 in some cases,
-prevent a call to \wait from blocking a context.
+prevent a call to \wait from blocking some other context.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
@@ -109,9 +116,8 @@ prevent a call to \wait from blocking a context.
         (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
     \State $deque \gets
        MR\_spark\_deques$[$victim\_index$]
-    \State $result \gets$ \steal($deque$, $spark\_ptr$)
+    \State $result \gets$ steal\_spark($deque$, $spark\_ptr$)
     \If{$result$}
-      \State $result \gets true$
       \State break
     \EndIf
   \EndFor
