@@ -68,7 +68,7 @@ num_max_contexts_per_thread =
 % XXX: this was unused in my testing so far.
 :- func base_mcflags = string.
 
-base_mcflags="-O2 --intermodule-optimization".
+base_mcflags="--no-parallel-reorder-right-recursion -O2 --intermodule-optimization".
 
 :- func control_group_grades = list(grade_spec).
 
