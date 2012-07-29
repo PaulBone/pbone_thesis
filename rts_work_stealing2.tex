@@ -86,7 +86,7 @@ contexts).
 
 \begin{algorithm}
 \begin{algorithmic}[1]
-\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
+\Procedure{try\_steal\_spark}{$spark\_ptr$}
   \State $result \gets false$
   \For{$attempt = 0$ to $MR\_num\_engines$}
     \State $victim\_index \gets
@@ -103,7 +103,7 @@ contexts).
   \State \Return $result$
 \EndProcedure
 \end{algorithmic}
-\caption{MR\_try\_steal\_spark}
+\caption{try\_steal\_spark}
 \label{alg:try_steal_spark_revised}
 \end{algorithm}
 
@@ -127,63 +127,37 @@ Associating the spark deques with engines can change the order in which
 sparks are executed,
 we have to ensure that the system is still deadlock free.
 In the previous version
-a context that is suspended by a call to \wait may contain sparks,
-while the context is suspended those sparks can only be accessed by a theif,
-even if the theif is the same engine that created the sparks.
+a context that is blocked on a call to \wait may contain sparks
+which can only be accessed by a thief,
 In the current version,
-those sparks are now associated with the engine,
-once the context is suspended the engine can access those sparks from its
-own spark deque.
-If the engine attempts to execute one of these sparks it will need a
-context.
-At this point we have two choices,
-the engine must either execute an existing suspended context,
-or allocate a new context for a spark on its spark deque \emph{dispite} the
-context limit.
-There may not always be a suspended context but if there is it should
-eventually be executed to avoid a deadlock
-(it may unblock a future that another context is blocked on).
-It may also be optimal to execute a suspended context,
-since it may prevent the context limit from being exeeded.
-But more importantly,
-if the engine executed a spark,
-and created a new context for the spark,
-then that context might also block on a future,
-this situation could loop, allocating more contexts dispite the context
-limit.
-Therefore this would not create a deadlock provided that an engine without a
-context attempts to resume a suspended context before attempting to execute
-one of its own sparks.
-
-We have modified \getglobalwork to implement this,
-now \getglobalwork attempts to run a suspended context,
-then attempts to run a local spark and finally attempts to steal a spark
-before going to sleep.
-We took this opportunity to significantly change \getglobalwork,
-we introduced a number of optimisations and fixed another problem.
-When an engine fails to find any work and goes to sleep a timout is used to
-wake it up.
-This timeout defaults to 2ms.
-When a context created a spark,
-the idle engine would take an average of 1ms before attempting to steal the
-spark.
-If the context finished the first conjunct of a parallel conjunction it
-would often take the task back off its deque before the thief stole it.
-This results in sequential execution even though an idle engine was
-available to run the spark.
-Secondly,
-using the timeout when there is no parallel work available is wasteful
-as idle engines would wake up and needlessly attempt to steal work.
-Therefore while modifying \getglobalwork we chose to remove the timeout,
-we should instead notify sleeping engines of sparks, but this notification
-should have a low cost.
-
-%\begin{multicols}{2}
+those sparks are now associated with the engine that the context was running
+on,
+and therefore that engine has the opportinuty to run those sparks by
+retriving them from the hot end of its own deque.
+If the engine attempts to axecute one of these sparks it will need a
+context,
+and the creation of a new context may exceed the context limit even though
+the spark is being executed locally.
+This is just one instance where an engine \emph{without a context}
+may try to run a spark from its own deque,
+in the previous version a context would always be available because sparks
+where associated with contexts.
 
 \begin{algorithm}
+\begin{multicols}{2}
+
+\parbox{\textwidth}{
+\begin{algorithmic}
+    \Procedure{MR\_idle}{}
+        \State \tramp{try\_run\_context()}
+        \State \tramp{try\_run\_local\_spark($NULL$)}
+        \State \tramp{try\_steal\_spark($NULL$)}
+        \Goto MR\_sleep
+    \EndProcedure
+\end{algorithmic}
+}
 
 \begin{minipage}{\textwidth}
-\begin{multicols}{2}
 \begin{verbatim}
 #define TRAMPOLINE(call)        \\
     do {                        \\
@@ -194,31 +168,73 @@ should have a low cost.
         }                       \\
     } while(0)
 \end{verbatim}
-
-\begin{algorithmic}
-    \Procedure{MR\_idle}{}
-        \State \tramp{try\_run\_context()}
-        \State \tramp{try\_run\_local\_spark($NULL$)}
-        \State \tramp{try\_steal\_spark($NULL$)}
-        \Goto MR\_sleep
-    \EndProcedure
-\end{algorithmic}
-
-\begin{algorithmic}
-    \Procedure{MR\_idle\_dirty\_context}{}
-        \State $join\_label \gets MR\_r1$
-        \State \tramp{try\_run\_local\_spark($join\_label$)}
-        \State \tramp{try\_steal\_spark($join\_label$)}
-        \State save\_dirty\_context($join\_label$)
-        \State \tramp{try\_run\_context()}
-        \Goto MR\_sleep
-    \EndProcedure
-\end{algorithmic}
+\end{minipage}
 
 \end{multicols}
+\caption{New \idle code}
+\label{alg:idle_entry_point}
+\end{algorithm}
 
+\paul{Rename \getglobalwork throughout previous sections to \idle}.
+
+An idle engine without a context calls \idle to acquire new work,
+\idle's code is shown in Algorithm \ref{alg:idle_entry_point}.
+\idle has changed sagnificantly,
+many of its details shown in previous sections have been moved into C
+functions,
+these include:
+\tryruncontext which tries to execute a suspended but runnable context;
+\tryrunlocalspark which tries to run a spark from the top of the engine's
+spark deque, possibly creating a new context for the spark;
+and 
+\trystealspark which was shown above in Algorithm
+\ref{alg:try_steal_spark_revised}.
+Because running a local spark may allocate a context and exceed the context
+limit,
+the engine must execute any suspended but runnable context instead.
+Doing so is always permitted dispite the context limit.
+Furthermore,
+a context whose execution has already begin may make more parallel work
+available creating sparks or signalling futures.
+If the engine is able to run the context until the completion of its work
+(until the contexts executes the \joinandcontinue barrier at the end of a
+parallel conjunct)
+then this may make the context available to execute a spark from the
+engine's local spark queue.
+Therefore we always try to run a context (using \tryruncontext)
+before attempting to run a local spark (using \tryrunlocalspark).
+Of course there will be cases when \tryruncontext fails and an engine
+without a context then attempts to run a local spark.
+To facilitate this, the context limit is not checked in \tryrunlocalspark
+(it is still used in \trystealspark).
+
+\idle is a hard coded Mercury procedure and it does not return control to
+its caller,
+therefore it continues execution by jumping to the code address of the next
+thing to execute.
+This can either be the resume address of a context,
+the entry point of a spark,
+or the Mercury procedure \sleep.
+However
+the C functions are used to find the next context or spark to execute,
+if successful these C functions prepare the engine to execute the spark or
+context and then return the address that the engine should execute.
+they \emph{must} return rather than execute the spark or context directly so
+that the C stack pointer has the same value that it did upon entering \idle.
+\idle uses a \emph{trampoline}\footnote{
+    Trampoline is an overloaded term in computer science.
+    The reader may or may not agree with our use of this term.
+    }
+macro to jump to the returned code
+address or fall through to the next instruction if the function returned
+false.
+If the idle engine cannot find a spark or context to execute then it jumps
+to \sleep.
+
+\begin{algorithm}
+\begin{minipage}{\textwidth}
 \begin{verbatim}
-struct engine_sleep_sync_i {
+struct engine_sleep_sync {
     sem_t                               sleep_sem;
     sem_t                               wake_sem;
     volatile unsigned                   state;
@@ -265,7 +281,104 @@ union MR_engine_wake_action_data {
 \end{algorithmic}
 
 \end{minipage}
-\caption{New \getglobalwork ~/ \idle code}
+\caption{The \sleep code}
+\end{algorithm}
+
+\sleep is another hand written Mercury procedure.
+It uses an an
+\code{engine\_sleep\_sync} structure to manage the state of each engine.
+These structure are organized into a global array indesed by engine ids,
+making them accessable to other engines.
+The structure contains two semaphores;
+the engine owning the structure will wait on \code{sleep\_sem} when it is
+idle and has found no work,
+meanwhile \code{wake\_sem} is used by other enignes to cotrol their mutual
+access to the \enginesleepsync structure.
+There are three other fields in the structure:
+\code{state} is used by the engine that owns the structure to communicate
+its state to other enignes,
+\code{action} and \code{action\_data} are used by other threads when
+communicating to this engine.
+
+Upon jumping into \idle an enigne sets its state to \code{SLEEPING} and
+waits on \code{sleep\_sem}.
+If another engine posts to \code{sleep\_sem} then the engine is woken up,
+and retrives the value of the \code{action} field.
+This field can be used to tell the engine what to do upon wakeing.
+It may be instructed to shutdown, to execute a context or to steal a spark.
+If it is instructed to run a context it can be passed the context directly
+using the \code{action\_data} field,
+similarly, if it instructed to steal a spark \code{action\_data} will tell
+it whose spark stack it should begin its round robin search from.
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXX
+
+If the engine attempts to execute one of these sparks it will need a
+context.
+At this point we have two choices,
+the engine must either execute an existing suspended context,
+or allocate a new context for a spark on its spark deque \emph{dispite} the
+context limit.
+It is best to attept to 
+There may not always be a suspended context but if there is it should
+eventually be executed to avoid a deadlock
+(it may unblock a future that another context is blocked on).
+
+It may also be optimal to execute suspended context,
+since it may prevent the context limit from being exeeded.
+But more importantly,
+if the engine executed a spark,
+and created a new context for the spark,
+then that context might also block on a future,
+this situation could loop, allocating more contexts dispite the context
+limit.
+Therefore this would not create a deadlock provided that an engine without a
+context attempts to resume a suspended context before attempting to execute
+one of its own sparks.
+
+We have modified \getglobalwork to implement this,
+now \getglobalwork attempts to run a suspended context,
+then attempts to run a local spark and finally attempts to steal a spark
+before going to sleep.
+We took this opportunity to significantly change \getglobalwork,
+we introduced a number of optimisations and fixed another problem.
+When an engine fails to find any work and goes to sleep a timout is used to
+wake it up.
+This timeout defaults to 2ms.
+When a context created a spark,
+the idle engine would take an average of 1ms before attempting to steal the
+spark.
+If the context finished the first conjunct of a parallel conjunction it
+would often take the task back off its deque before the thief stole it.
+This results in sequential execution even though an idle engine was
+available to run the spark.
+Secondly,
+using the timeout when there is no parallel work available is wasteful
+as idle engines would wake up and needlessly attempt to steal work.
+Therefore while modifying \getglobalwork we chose to remove the timeout,
+we should instead notify sleeping engines of sparks, but this notification
+should have a low cost.
+
+%\begin{multicols}{2}
+
+
+
+\begin{algorithm}
+\parbox{\textwidth}{
+\begin{algorithmic}
+    \Procedure{MR\_idle\_dirty\_context}{}
+        \State $join\_label \gets MR\_r1$
+        \State \tramp{try\_run\_local\_spark($join\_label$)}
+        \State \tramp{try\_steal\_spark($join\_label$)}
+        \State save\_dirty\_context($join\_label$)
+        \State \tramp{try\_run\_context()}
+        \Goto MR\_sleep
+    \EndProcedure
+\end{algorithmic}
+}
+\caption{New entry point to the idle loop for dirty contexts.}
 \end{algorithm}
 
 \paul{Consider removing MR\_ from most if not all symbols.}
