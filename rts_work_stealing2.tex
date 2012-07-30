@@ -151,7 +151,7 @@ where associated with contexts.
     \Procedure{MR\_idle}{}
         \State \tramp{try\_run\_context()}
         \State \tramp{try\_run\_local\_spark($NULL$)}
-        \State \tramp{try\_steal\_spark($NULL$)}
+        \State \tramp{try\_steal\_spark()}
         \Goto MR\_sleep
     \EndProcedure
 \end{algorithmic}
@@ -266,13 +266,13 @@ union MR_engine_wake_action_data {
               \Case{ACTION\_STEAL\_SPARK}
                 \State $MR\_engine.victim\_counter \gets
                     eng\_data.action\_data.worksteal\_engine$ 
-                \State \tramp{try\_steal\_spark(NULL)}
-                \State \tramp{try\_run\_context}
+                \State \tramp{try\_steal\_spark()}
+                \State \tramp{try\_run\_context()}
                 \State break
               \EndCase
               \Case{ACTION\_NONE}
-                \State \tramp{try\_run\_context}
-                \State \tramp{try\_steal\_spark(NULL)}
+                \State \tramp{try\_run\_context()}
+                \State \tramp{try\_steal\_spark()}
                 \State break
               \EndCase
             \EndSwitch
@@ -378,9 +378,11 @@ this is the normal calling convention used by compiled Mercury procedures.
     \Procedure{MR\_idle\_orig\_context}{}
         \State $join\_label \gets MR\_r1$
         \State \tramp{try\_run\_local\_spark($join\_label$)}
-        \State \tramp{try\_steal\_spark($join\_label$)}
-        \State save\_dirty\_context($join\_label$)
+        \State suspend($join\_label$);
+        \State $this\_context.resume\_label \gets join\_label$
+        \State $this\_context \gets$ NULL
         \State \tramp{try\_run\_context()}
+        \State \tramp{try\_steal\_spark()}
         \Goto MR\_sleep
     \EndProcedure
 \end{algorithmic}
