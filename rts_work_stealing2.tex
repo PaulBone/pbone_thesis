@@ -35,7 +35,7 @@ this has a several significant problems.
 
     \item[A large number of contexts makes work stealing slower]~
     
-    In previous sections
+    In prior sections
     we have shown that the number of contexts in use can often be very high,
     much higher than the number of Mercury engines.
     If there are $N$ engines and $M$ contexts,
@@ -349,21 +349,21 @@ and the set of states that we may awaken the engine from (usually
 The implementation of \wakeengine is mostly straightforward,
 the important details are that we must only wake the engine if it has not
 been woken already, this is done by checking the value of
-\code{eng\_data.state} after acquireing the lock,
+\code{eng\_data.state} after acquiring the lock,
 and setting the new state while holding the lock.
 The action and action data must also be written to the
 \enginesleepsync structure before posting to the engine's sleep
 semaphore.
-The parameter \code{states} is a bitfield, with each state represented by
+The parameter \code{states} is a bit field, with each state represented by
 its own bit.
 This is flexible, it allows us to message an engine regardless of its
 current state.
 For example,
 we shutdown an engine by calling \wakeengine with the shutdown action a and
-all bits set in the \code{states} bitfield.
-Compared to the pervious system where a lock and condition variable were
+all bits set in the \code{states} bit field.
+Compared to the previous system where a lock and condition variable were
 used,
-this system allows us to wake engines selectivly.
+this system allows us to wake engines selectively.
 This is useful in the case when a context must be executed on a particular
 engine because that engine's C stack contains a frame that made a call to
 some Mercury code and now must be returned into.
@@ -425,29 +425,6 @@ This is done using \code{MR\_r1}, the first Mercury abstract machine
 register;
 this is the normal calling convention used by compiled Mercury procedures.
 
-\begin{algorithm}[tbp]
-\begin{algorithmic}
-    \Procedure{MR\_idle\_orig\_context}{}
-        \State $join\_label \gets MR\_r1$
-        \State \tramp{try\_run\_local\_spark($join\_label$)}
-        \State suspend($join\_label$);
-        \State $this\_context.resume\_label \gets join\_label$
-        \State $this\_context \gets$ NULL
-        \State \tramp{try\_run\_context()}
-        \State \tramp{try\_steal\_spark()}
-        \Goto MR\_sleep
-    \EndProcedure
-\end{algorithmic}
-\caption{New entry point to the idle loop for dirty contexts.}
-\label{alg:idle_orig_context}
-\end{algorithm}
-
-The new entry point \idleorigcontext is shown in Algorithm
-\ref{alg:idle_orig_context}.
-\paul{XXX: Check for changes to this algorithm in more recent versions.}
-\paul{XXX: Discuss the ability to add further entry points such as
-specialising the cases of clean context and no context.}
-
 The other change is an optimisation on line 10.
 if the parallel conjunction has been finished and this engine is not
 executing the original context,
@@ -467,6 +444,51 @@ recently completed the parallel conjunction,
 we may be able to take advantage of relevant data being hot in the CPU's
 cache.
 
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+    \Procedure{MR\_idle\_orig\_context}{}
+        \State $join\_label \gets MR\_r1$
+        \State \tramp{try\_run\_local\_spark($join\_label$)}
+        \State suspend($join\_label$);
+        \State $this\_context.resume\_label \gets join\_label$
+        \State $this\_context \gets$ NULL
+        \State \tramp{try\_run\_context()}
+        \State \tramp{try\_run\_local\_spark(NULL)}
+        \State \tramp{try\_steal\_spark()}
+        \Goto MR\_sleep
+    \EndProcedure
+\end{algorithmic}
+\caption{New entry point to the idle loop for dirty contexts.}
+\label{alg:idle_orig_context}
+\end{algorithm}
+
+The new entry point \idleorigcontext is shown in Algorithm
+\ref{alg:idle_orig_context}.
+This entry point expects to be called from \joinandcontinue while the engine
+is holding a context that is needed to complete a parallel conjunction.
+It tries to run a spark from the engine's local spark deque first,
+the \tryrunlocalspark will check if the spark at the top of the spark deque
+is compatible with the current context,
+if it is not it will put the spark back onto the spark deque and return
+\NULL, it also returns \NULL if there is no spark on the deque.
+\idleorigcontext uses the trampoline macro from Algorithm
+\ref{alg:idle_entry_point} to jump to the spark's entry point
+\tryrunlocalspark found a valid spark.
+Next \idleorigcontext saves the context that the engine was using and then
+attempts to resume a suspended context,
+failing that it retries running a local spark,
+this is done because there may have been a spark on the engine's spark deque
+that was not compatible, but now that the engine has no context, any spark
+is compatible.
+If this also fails then
+\idleorigcontext will attempt to steal a spark from another engine and run
+it,
+failing that the engine will jump to \sleep.
+We could add further entry points in the future if we found them useful,
+for example,
+it may be useful to distinguish between cases where an engine already has a
+context or does not have a context.
+
 \paul{XXX: Consider removing MR\_ from most if not all symbols.}
 
 \input{tab_work_stealing_revised}
@@ -477,5 +499,24 @@ cache.
 
 \plan{Further potential work}
 \plan{Steal half}
+Our work stealing implementation could be improved and tuned further.
+We have noticed that in many workloads such as a left recursive parallel
+loop one engine creates all the sparks, all the parallelism comes from one
+place.
+In a situation like this work stealing becomes more common than local work
+execution,
+one processor would execute work locally while $P - 1$ processors act as
+thieves, and a single work queue can again become a bottleneck.
+To avoid this behaviour
+a steal-half implementation (such as \citet{hendler:2002:stealhalf})
+should quickly distributed work evenly between the processors,
+reducing the overall number of work stealing operations.
 \plan{memory hierarchy awareness}
+Another potential improvement is in the selection of a thief's victim.
+A thief may wish to prefer victims that are nearby in terms of memory
+topology, so that communication of the data relevant to the spark is
+cheaper.
+This can also be used when selecting which engine to wake up in order to
+pass work to it.
+We discuss memory hierarchy awareness in more detail in the next section.
 
