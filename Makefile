@@ -23,6 +23,7 @@ TEX_PROSE = \
 		rts_work_stealing.tex \
 		rts_reorder.tex \
 		rts_work_stealing2.tex \
+        rts_thread_pinning.tex \
 		overlap.tex \
 		loop_control.tex \
 		tscope.tex

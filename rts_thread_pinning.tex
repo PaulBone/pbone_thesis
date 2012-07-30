@@ -1,0 +1,38 @@
+
+\status{Not written}
+
+\plan{Explain why we want $P$ engines when there are $P$ processors}
+As explained in Chapter \ref{chap:background} Mercury manages its parallel
+work with userspace scheduling.
+Parallel tasks are represented by contexts or sparks,
+depending on whether the task has started execution or not.
+Engines run contexts and can switch between them without using the operating
+system.
+We use a set of operating system threads,
+each thread running a Mercury engine.
+The operating system manages these threads including their mapping onto
+processors.
+
+
+
+\plan{Explain briefly how we detect how many processors there are,}
+Explain that this method is good because it is (mostly) cross platform.
+
+\plan{Explain why we want thread pinning.}
+I wonder if there's any relevant literature.
+
+\plan{Explain how we get thread pinning.}
+This method is also (mostly) cross platform.
+
+\plan{What about SMT, not all processors are equal.}
+This does not matter when we are creating $P$ engines.
+But it does matter when we create less than $P$ engines,
+explain how bad CPU assignments are sub-optimal.
+
+\plan{How do we handle SMT}
+This uses a support library, which is cross platform, provided that it is installed.
+We fall back to setcpuafinity() when it is not.
+
+\paul{I am not going to talk about busy waiting since I have not written the
+runtime system in a way that I can test or change this easily.}
+
