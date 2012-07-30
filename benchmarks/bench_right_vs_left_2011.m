@@ -23,7 +23,7 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        "/srv/scratch/dev//old_2011-05.install/bin",
+        "/srv/scratch/dev//old_2011-06.install/bin",
         mem_limit,
         base_mcflags,
         Groups,
@@ -68,7 +68,7 @@ num_max_contexts_per_thread =
 % XXX: this was unused in my testing so far.
 :- func base_mcflags = string.
 
-base_mcflags="-O2 --intermodule-optimization".
+base_mcflags="--no-parallel-reorder-right-recursion -O2 --intermodule-optimization".
 
 :- func control_group_grades = list(grade_spec).
 
