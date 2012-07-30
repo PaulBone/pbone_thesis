@@ -84,7 +84,7 @@ The cost of work stealing also becomes linear in the number of engines
 rather than the number of contexts (there are usually fewer engines than
 contexts).
 
-\begin{algorithm}
+\begin{algorithm}[tbp]
 \begin{algorithmic}[1]
 \Procedure{try\_steal\_spark}{$spark\_ptr$}
   \State $result \gets false$
@@ -143,7 +143,7 @@ may try to run a spark from its own deque,
 in the previous version a context would always be available because sparks
 where associated with contexts.
 
-\begin{algorithm}
+\begin{algorithm}[tbp]
 \begin{multicols}{2}
 
 \parbox{\textwidth}{
@@ -231,12 +231,12 @@ false.
 If the idle engine cannot find a spark or context to execute then it jumps
 to \sleep.
 
-\begin{algorithm}
+\begin{algorithm}[tbp]
 \begin{minipage}{\textwidth}
 \begin{verbatim}
 struct engine_sleep_sync {
     sem_t                               sleep_sem;
-    sem_t                               wake_sem;
+    lock                                lock;
     volatile unsigned                   state;
     volatile unsigned                   action;
     union MR_engine_wake_action_data    action_data;
@@ -251,7 +251,7 @@ union MR_engine_wake_action_data {
 \begin{algorithmic}
     \Procedure{MR\_sleep}{}
         \Loop
-            \State $eng\_data \gets MR\_engien\_sleep\_data$[$engine\_id$]
+            \State $eng\_data \gets MR\_engine\_sleep\_data$[$engine\_id$]
             \State $eng\_data.state \gets$ SLEEPING
             \State $sem\_wait(eng\_data.sleep_sem)$
             \Switch{$eng\_data.action$}
@@ -289,10 +289,10 @@ It uses an
 \enginesleepsync structure to manage the state of each engine.
 These structures are organised into a global array indexed by engine ids,
 making them accessible to other engines.
-The structure contains two semaphores;
+The structure contains a semaphore and a lock;
 the engine owning the structure waits on \code{sleep\_sem} in order to
 sleep,
-and \code{wake\_sem} is used by other engines to control their mutual
+and \code{lock} is used by other engines to control their mutual
 access to the \enginesleepsync structure.
 There are three other fields in the structure:
 \code{state} is used by the engine that owns the structure to communicate
@@ -318,10 +318,61 @@ If no action is specified
 them \sleep will try to run a context from the global context queue before
 attempting to steal a spark.
 
-\paul{XXX: Check a newer version of this code to see how it handles
-potential races that could cause it to drop a context.}
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{wake\_engine}{$engine\_id, action, action\_data, states$}
+    \State $eng\_data \gets MR\_engine\_sleep\_data$[$engine\_id$]
+    \State acquire\_lock($eng\_data.lock$)
+    \If{$eng\_data.state \in states$}
+        \State $eng\_data.action \gets action$
+        \State $eng\_data.action\_data \gets action\_data$
+        \State $eng\_data.state \gets$ WOKEN
+        \State sem\_post($eng\_data.sleep\_sem$)
+        \State $result \gets$ true
+    \Else
+        \State $result \gets$ false
+    \EndIf
+    \State release\_lock($eng\_data.lock$)
+    \Return $result$
+\EndProcedure
+\end{algorithmic}
+\caption{\wakeengine}
+\label{alg:wake_engine}
+\end{algorithm}
 
-\begin{algorithm}
+Engines may be woken with a call to \wakeengine whose code is shown in
+Algorithm \ref{alg:wake_engine}.
+\wakeengine takes id of the engine to awaken,
+the action and its data that the engine should perform upon awakening,
+and the set of states that we may awaken the engine from (usually
+\code{SLEEPING}).
+The implementation of \wakeengine is mostly straightforward,
+the important details are that we must only wake the engine if it has not
+been woken already, this is done by checking the value of
+\code{eng\_data.state} after acquireing the lock,
+and setting the new state while holding the lock.
+The action and action data must also be written to the
+\enginesleepsync structure before posting to the engine's sleep
+semaphore.
+The parameter \code{states} is a bitfield, with each state represented by
+its own bit.
+This is flexible, it allows us to message an engine regardless of its
+current state.
+For example,
+we shutdown an engine by calling \wakeengine with the shutdown action a and
+all bits set in the \code{states} bitfield.
+Compared to the pervious system where a lock and condition variable were
+used,
+this system allows us to wake engines selectivly.
+This is useful in the case when a context must be executed on a particular
+engine because that engine's C stack contains a frame that made a call to
+some Mercury code and now must be returned into.
+In the future this feature could be used to schedule computations on
+\emph{nearby} processors,
+processors that may share a second or third level cache with the current
+processor.
+
+\begin{algorithm}[tbp]
 \begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State $finished \gets$ atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
@@ -351,9 +402,10 @@ potential races that could cause it to drop a context.}
 \label{alg:join_and_continue_ws2}
 \end{algorithm}
 
-Before we describe the algorithms for waking sleeping engines,
-we will cover the three changes to the \joinandcontinue barrier
-whose code is shown in Algorithm \ref{alg:join_and_continue_ws2}.
+By moving spark deques from contexts to engines we had to change \idle.
+We have also had to change the \joinandcontinue barrier.
+The new version of \joinandcontinue is shown in Algorithm
+\ref{alg:join_and_continue_ws2}.
 The most significant change is on line 15,
 \joinandcontinue no longer attempts to run a spark from the local deque,
 it relies on \idle to do this.
@@ -373,7 +425,7 @@ This is done using \code{MR\_r1}, the first Mercury abstract machine
 register;
 this is the normal calling convention used by compiled Mercury procedures.
 
-\begin{algorithm}
+\begin{algorithm}[tbp]
 \begin{algorithmic}
     \Procedure{MR\_idle\_orig\_context}{}
         \State $join\_label \gets MR\_r1$
@@ -416,15 +468,6 @@ we may be able to take advantage of relevant data being hot in the CPU's
 cache.
 
 \paul{XXX: Consider removing MR\_ from most if not all symbols.}
-
-\plan{Show the code for waking engines.}
-
-\plan{A lot of work went into preventing deadlocks due to race conditions,
-a thread that is not yet sleeping if notified must wake up immediately.}
-
-\plan{Extra benefit: we can be selective about which engine to wake,
-while not implemented fully, we can wake a `nearby' engine so that
-we can avoid communication between dies or sockets.}
 
 \input{tab_work_stealing_revised}
 
