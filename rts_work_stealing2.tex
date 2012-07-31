@@ -494,6 +494,10 @@ context or does not have a context.
 \input{tab_work_stealing_revised}
 
 \plan{Benchmark}
+\paul{XXX: There's something wrong with the prior left recursive results,
+the thread safe sequential time is slower than it should be thus we get stupidly high speedups}
+\paul{Also, when comparing absolute times the new work stealing code is
+slower, maybe due to the order we check for work in \idle in?}
 
 \plan{Evaluation}
 
