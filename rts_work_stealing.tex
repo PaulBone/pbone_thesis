@@ -490,14 +490,16 @@ otherwise the deque will be empty.
       \State release\_lock($MR\_runqueue\_lock$)
       \State MR\_destroy\_thread()
     \EndIf
-    \State $ctxt \gets$ try\_run\_context()
+    \State $ctxt \gets$ MR\_get\_runnable\_context()
     \If{$ctxt \neq \text{NULL}$}
       \State release\_lock($MR\_runqueue\_lock$)
       \If{$current\_context$}
         \State MR\_release\_context($current\_context$)
       \EndIf
       \State MR\_load\_context($ctxt$)
-      \Goto $ctxt.resume$
+      \State $resume \gets ctxt.resume$
+      \State $ctxt.resume \gets$ NULL
+      \Goto $resume$
     \EndIf
     \If{$\left(
         \begin{array}{l}
@@ -508,9 +510,9 @@ otherwise the deque will be empty.
       \State $result \gets$ try\_steal\_spark(\&$spark$)
       \If{$result$}
         \State release\_lock($MR\_runqueue\_lock$)
-        \If{$current\_context \neq \text{NULL}$}
+        \If{$current\_context = \text{NULL}$}
           \State $ctxt \gets$ get\_free\_context()
-          \If{$\neg ctxt$}
+          \If{$ctxt = \text{NULL}$}
             \State $ctxt \gets$ create\_context()
           \EndIf
           \State MR\_load\_context($ctxt$)
@@ -575,7 +577,7 @@ protected by the \code{MR\_spark\_deques\_lock} lock.
   \State $max\_attempts \gets$ min($MR\_max\_spark\_deques$,
     $MR\_worksteal\_max\_attempts$)
 
-  \For{$attempt = 1$ to $max\_attempts$}
+  \For{$attempt = 0$ to $max\_attempts - 1$}
     \State $MR\_victim\_counter$++
     \State $deque \gets
        MR\_spark\_deques$[$MR\_victim\_counter \bmod MR\_max\_spark\_deques$]
