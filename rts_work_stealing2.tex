@@ -1,5 +1,5 @@
 
-\status{Not written}
+\status{Currently acting on feedback}
 
 In this section we take the opportunity to improve on our work stealing
 implementation from Section \ref{sec:rts_work_stealing}.
@@ -84,15 +84,15 @@ rather than the number of contexts.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}[1]
-\Procedure{try\_steal\_spark}{$spark\_ptr$}
+\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
   \State $result \gets false$
   \For{$attempt = 0$ to $MR\_num\_engines - 1$}
     \State $victim\_index \gets
         (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
     \State $result \gets$
-        steal\_spark($MR\_spark\_deques$[$victim\_index$], $spark\_ptr$)
+        MR\_steal\_spark($MR\_spark\_deques$[$victim\_index$], $spark\_ptr$)
     \If{$result$}
-      \State break
+      \State \Break
     \EndIf
   \EndFor
   \State $MR\_engine.victim\_counter \gets
@@ -149,19 +149,16 @@ were associated with contexts.
         \State $code\_ptr \gets$ MR\_try\_run\_context()
         \If{$code\_ptr$}
             \Goto $code\_ptr$
-        \Else
-            \State $code\_ptr \gets$ MR\_try\_run\_local\_spark($NULL$)
-            \If{$code\_ptr$}
-                \Goto $code\_ptr$
-            \Else
-                \State $code\_ptr \get$ MR\_try\_steal\_spark()
-                \If{$code\_ptr$}
-                    \Goto $code\_ptr$
-                \Else
-                    \Goto MR\_sleep
-                \EndIf
-            \EndIf
         \EndIf
+        \State $code\_ptr \gets$ MR\_try\_run\_local\_spark($NULL$)
+        \If{$code\_ptr$}
+            \Goto $code\_ptr$
+        \EndIf
+        \State $code\_ptr \get$ MR\_try\_steal\_spark()
+        \If{$code\_ptr$}
+            \Goto $code\_ptr$
+        \EndIf
+        \Goto MR\_sleep
     \EndProcedure
 \end{algorithmic}
 \caption{New \idle code}
@@ -171,9 +168,9 @@ were associated with contexts.
 \begin{algorithm}
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_context}{}
-    \State acquire\_lock($MR\_runqueue\_lock$)
+    \State MR\_acquire\_lock($MR\_runqueue\_lock$)
     \State $ctxt \gets$ MR\_get\_runnable\_context()
-    \State release\_lock($MR\_runqueue\_lock$)
+    \State MR\_release\_lock($MR\_runqueue\_lock$)
     \If{$ctxt \neq$ NULL}
         \If{$current\_context \neq$ NULL}
             \State MR\_release\_context($current\_context$)
@@ -192,7 +189,7 @@ were associated with contexts.
 \begin{algorithm}
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_local\_spark}{$join\_label$}
-    \State $result \gets$ pop\_spark($this\_engine.spark\_deque$)
+    \State $result \gets$ MR\_pop\_spark($this\_engine.spark\_deque$)
     \If{$result$}
         \State MR\_prepare\_engine\_for\_spark($spark$, $join\_label$)
         \State \Return $spark.resume$
@@ -236,9 +233,9 @@ were associated with contexts.
         \State $this\_context \gets$ NULL
     \EndIf
     \If{$this\_context = \text{NULL}$}
-        \State $ctxt \gets$ get\_free\_context()
+        \State $ctxt \gets$ MR\_get\_free\_context()
         \If{$ctxt = \text{NUL}$}
-            \State $ctxt \gets$ create\_context()
+            \State $ctxt \gets$ MR\_create\_context()
         \EndIf
         \State MR\_load\_context($ctxt$)
     \EndIf
@@ -249,8 +246,6 @@ were associated with contexts.
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
-
-\paul{XXX: Rename \getglobalwork throughout previous sections to \idle}.
 
 An idle engine without a context will call \idle to acquire new work.
 \idle has changed significantly;
@@ -309,7 +304,7 @@ to \sleep.
 \begin{algorithm}[tbp]
 \begin{minipage}{\textwidth}
 \begin{verbatim}
-struct engine_sleep_sync {
+struct MR_engine_sleep_sync {
     sem_t                               sleep_sem;
     lock                                lock;
     volatile unsigned                   state;
@@ -341,14 +336,26 @@ union MR_engine_wake_action_data {
               \Case{ACTION\_STEAL\_SPARK}
                 \State $MR\_engine.victim\_counter \gets
                     eng\_data.action\_data.worksteal\_engine$ 
-                \State \tramp{try\_steal\_spark()}
-                \State \tramp{try\_run\_context()}
-                \State break
+                \State $jump\_target \gets$ MR\_try\_steal\_spark()
+                \If{$jump\_target \neq$ NULL}
+                    \Goto $jump\_target$
+                \EndIf
+                \State $jump\_target \gets$ MR\_try\_run\_context()
+                \If{$jump\_target \neq$ NULL}
+                    \Goto $jump\_target$
+                \EndIf
+                \State \Break
               \EndCase
               \Case{ACTION\_NONE}
-                \State \tramp{try\_run\_context()}
-                \State \tramp{try\_steal\_spark()}
-                \State break
+                \State $jump\_target \gets$ MR\_try\_run\_context()
+                \If{$jump\_target \neq$ NULL}
+                    \Goto $jump\_target$
+                \EndIf
+                \State $jump\_target \gets$ MR\_try\_steal\_spark()
+                \If{$jump\_target \neq$ NULL}
+                    \Goto $jump\_target$
+                \EndIf
+                \State \Break
               \EndCase
             \EndSwitch
         \EndLoop
@@ -395,19 +402,19 @@ attempting to steal a spark.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}
-\Procedure{wake\_engine}{$engine\_id, action, action\_data, states$}
+\Procedure{MR\_wake\_engine}{$engine\_id, action, action\_data, states$}
     \State $eng\_data \gets MR\_engine\_sleep\_data$[$engine\_id$]
-    \State acquire\_lock($eng\_data.lock$)
+    \State MR\_acquire\_lock($eng\_data.lock$)
     \If{$eng\_data.state \in states$}
         \State $eng\_data.action \gets action$
         \State $eng\_data.action\_data \gets action\_data$
         \State $eng\_data.state \gets$ WOKEN
-        \State sem\_post($eng\_data.sleep\_sem$)
+        \State MR\_sem\_post($eng\_data.sleep\_sem$)
         \State $result \gets$ true
     \Else
         \State $result \gets$ false
     \EndIf
-    \State release\_lock($eng\_data.lock$)
+    \State MR\_release\_lock($eng\_data.lock$)
     \Return $result$
 \EndProcedure
 \end{algorithmic}
@@ -450,7 +457,7 @@ processor.
 \begin{algorithm}[tbp]
 \begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
-  \State $finished \gets$ atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
+  \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
   \If{$finished$}
     \If{$ST.orig\_context = this\_context$}
       \Goto{$ContLabel$}
@@ -458,9 +465,9 @@ processor.
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
         \State CPU\_relax
       \EndWhile
-      \State release\_context($this\_context$)
+      \State MR\_release\_context($this\_context$)
       \State $this\_context \gets$ NULL
-      \State load\_context($ST.parent$)
+      \State MR\_load\_context($ST.parent$)
       \Goto{$ContLabel$}
     \EndIf
   \Else
@@ -523,13 +530,25 @@ cache.
 \begin{algorithmic}
     \Procedure{MR\_idle\_orig\_context}{}
         \State $join\_label \gets MR\_r1$
-        \State \tramp{try\_run\_local\_spark($join\_label$)}
-        \State suspend($join\_label$);
+        \State $jump\_target \gets$ MR\_try\_run\_local\_spark($join\_label$)
+        \If{$jump\_target \neq$ NULL}
+            \Goto $jump\_target$
+        \EndIf
+        \State MR\_save\_context($ctxt$);
         \State $this\_context.resume\_label \gets join\_label$
         \State $this\_context \gets$ NULL
-        \State \tramp{try\_run\_context()}
-        \State \tramp{try\_run\_local\_spark(NULL)}
-        \State \tramp{try\_steal\_spark()}
+        \State $jump\_target \gets$ MR\_try\_run\_context()
+        \If{$jump\_target \neq$ NULL}
+            \Goto $jump\_target$
+        \EndIf
+        \State $jump\_target \gets$ MR\_try\_run\_local\_spark(NULL)
+        \If{$jump\_target \neq$ NULL}
+            \Goto $jump\_target$
+        \EndIf
+        \State $jump\_target \gets$ MR\_try\_steal\_spark()
+        \If{$jump\_target \neq$ NULL}
+            \Goto $jump\_target$
+        \EndIf
         \Goto MR\_sleep
     \EndProcedure
 \end{algorithmic}
@@ -563,8 +582,6 @@ We could add further entry points in the future if we found them useful,
 for example,
 it may be useful to distinguish between cases in which an engine already has a
 context or does not have a context.
-
-\paul{XXX: Consider removing MR\_ from most if not all symbols.}
 
 \input{tab_work_stealing_revised}
 

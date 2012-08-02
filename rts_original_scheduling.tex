@@ -70,36 +70,36 @@ last-in-first-out manner.
 \begin{algorithm}
 \begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
-  \State acquire\_lock($ST.lock$)
+  \State MR\_acquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
   \If{$ST.num\_outstanding = 0$}
     \If{$ST.orig\_context = this\_context$}
-      \State release\_lock($ST.lock$)
+      \State MR\_release\_lock($ST.lock$)
       \Goto{$ContLabel$}
     \Else
       \State $ST.orig\_context.resume\_label \gets ContLabel$
-      \State schedule($ST.orig\_context$, $ContLabel$)
-      \State release\_lock($ST.lock$)
-      \Goto{MR\_get\_global\_work}
+      \State MR\_schedule($ST.orig\_context$, $ContLabel$)
+      \State MR\_release\_lock($ST.lock$)
+      \Goto{MR\_idle}
     \EndIf
   \Else
-    \State $spark \gets$ pop\_spark($this\_context.spark\_stack$)
+    \State $spark \gets$ MR\_pop\_spark($this\_context.spark\_stack$)
     \If{$spark$}
       \If{$spark.ST.stack\_ptr = MR\_parent\_sp$}
 %        \Comment{This spark belongs to the same parallel conjunction.
 %        It can be executed immediatly.}
-        \State release\_lock($ST.lock$)
+        \State MR\_release\_lock($ST.lock$)
         \Goto{$spark.code\_label$}
       \Else
-        \State push\_spark($this\_context.spark\_stack$, $spark$)
+        \State MR\_push\_spark($this\_context.spark\_stack$, $spark$)
       \EndIf
     \EndIf
     \If{$ST.orig\_context = this\_context$}
-       \State suspend($this\_context$)
+       \State MR\_save\_context($this\_context$)
        \State $this\_context \gets NULL$
     \EndIf
-    \State release\_lock($ST.lock$)
-    \Goto{MR\_get\_global\_work}
+    \State MR\_release\_lock($ST.lock$)
+    \Goto{MR\_idle}
   \EndIf
 \EndProcedure
 \end{algorithmic}
@@ -196,7 +196,7 @@ there are three important scenarios:
     which will also fail since it ($C_{Other}$)
     is not the original context ($C_{Orig}$).
     The lock will be released and \joinandcontinue will determine what to do
-    next by jumping to \getglobalwork.
+    next by jumping to \idle.
 
     Eventually $C_{Orig}$ will execute its call to \joinandcontinue
     (line 5 of the example),
@@ -235,7 +235,7 @@ there are three important scenarios:
     context is the original context.
     This branch will suspend $C_{Orig}$,
     and set the engine's context pointer to \NULL
-    before jumping to \getglobalwork.
+    before jumping to \idle.
 
     When $C_{Other}$ reaches the barrier on line 8,
     it will find that $ST.num\_outstanding = 0$,
@@ -251,7 +251,7 @@ there are three important scenarios:
     The code wakes $C_{Orig}$ up by
     setting its code pointer to the continuation label,
     placing it on the global run queue,
-    and then jumps to \getglobalwork.
+    and then jumps to \idle.
 
     When $C_{Orig}$ resumes execution it executes the code on line 9,
     which is the continuation label.
@@ -267,16 +267,16 @@ we mention it only for completeness.
 
 \begin{algorithm}
 \begin{algorithmic}
-\Procedure{MR\_get\_global\_work}{}
-  \State acquire\_lock($MR\_runqueue\_lock$)
+\Procedure{MR\_idle}{}
+  \State MR\_acquire\_lock($MR\_runqueue\_lock$)
   \Loop
     \If{$MR\_exit\_now$}
-      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_release\_lock($MR\_runqueue\_lock$)
       \State MR\_destroy\_thread()
     \EndIf
     \State $ctxt \gets$ MR\_get\_runnable\_context()
     \If{$ctxt$}
-      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_release\_lock($MR\_runqueue\_lock$)
       \If{$current\_context$}
         \State MR\_release\_context($current\_context$)
       \EndIf
@@ -285,7 +285,7 @@ we mention it only for completeness.
     \EndIf
     \State $spark \gets$ MR\_dequeue\_spark($MR\_global\_spark\_queue$)
     \If{$spark$}
-      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_release\_lock($MR\_runqueue\_lock$)
       \If{$\neg current\_context$}
         \State $ctxt \gets$ MR\_get\_free\_context()
         \If{$\neg ctxt$}
@@ -298,22 +298,22 @@ we mention it only for completeness.
         spark.thread\_local\_mutables$
       \Goto $spark.resume$
     \EndIf
-    \State wait($MR\_runqueue\_cond, MR\_runqueue\_lock$)
+    \State MR\_wait($MR\_runqueue\_cond, MR\_runqueue\_lock$)
   \EndLoop
 \EndProcedure
 \end{algorithmic}
-\caption{\getglobalwork}
-\label{alg:MR_get_global_work_initial}
+\caption{\idle}
+\label{alg:MR_idle_initial}
 \end{algorithm}
 
 \plan{Explain how work begins executing, for completeness.}
 When an engine cannot get any local work it must search for global work.
 Newly created engines, except for the first, also search for global work.
-They do this by calling \getglobalwork,
-whose code is shown in Algorithm \ref{alg:MR_get_global_work_initial}.
-Only one of the idle engines can execute \getglobalwork at a time.
-The $MR\_runqueue\_lock$ lock protects the context run queue and the global
-context queue from concurrent access.
+They do this by calling \idle,
+whose code is shown in Algorithm \ref{alg:MR_idle_initial}.
+Only one of the idle engines can execute \idle at a time.
+The \var{MR\_runqueue\_lock} lock protects the context run queue and the
+global context queue from concurrent access.
 After acquiring the lock,
 engines execute a loop.
 An engine exits the loop only when it finds some work to do or the
@@ -328,7 +328,7 @@ If it finds a context it releases the run queue lock, loads the context
 and jumps to the resume point for the context.
 If it already had a context then it first releases that context,
 doing so is safe as
-a precondition of an engine calling \getglobalwork is that if the engine has
+a precondition of an engine calling \idle is that if the engine has
 a context, the context must not contain a spark or represent a
 suspended computation.
 If no context was found, the engine attempts to take a spark from the global

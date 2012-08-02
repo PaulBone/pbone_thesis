@@ -312,7 +312,7 @@ The deque provides the following operations.
 
 \begin{description}
 
-    \item[\code{void push\_spark(deque *d, spark *s)}]
+    \item[\code{void MR\_push\_spark(deque *d, spark *s)}]
     The deque's owner can call this to push an item onto the
     top%
 \footnote{
@@ -330,7 +330,7 @@ The deque provides the following operations.
     \push will grow the array that is used to implement the
     deque.
 
-    \item[\code{bool pop\_spark(deque *d, spark *s)}]
+    \item[\code{bool MR\_pop\_spark(deque *d, spark *s)}]
     The deque's owner can call this to pop an item from the top of the
     queue.
     This can also be done without synchronisation,
@@ -350,7 +350,7 @@ The deque provides the following operations.
     A callers of any of these functions temporarily stores the spark on 
     its program stack.
 
-    \item[\code{result steal\_spark(deque *d, spark *s)}]
+    \item[\code{result MR\_steal\_spark(deque *d, spark *s)}]
     A thread other than the deque's owner can steal
     items from the bottom of the deque.
     This always uses an atomic compare and swap operation as multiple
@@ -395,7 +395,7 @@ context's local spark queue.
 used}
 \begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
-  \State $finished \gets$ atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
+  \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
   \If{$finished$}
     \If{$ST.orig\_context = this\_context$}
       \Goto{$ContLabel$}
@@ -403,21 +403,21 @@ used}
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
         \State CPU\_relax
       \EndWhile
-      \State schedule($ST.parent$, $ContLabel$)
+      \State MR\_schedule($ST.parent$, $ContLabel$)
       \Goto{MR\_get\_global\_work}
     \EndIf
   \Else
-    \State $got\_spark \gets$ pop\_spark($this\_context.spark\_deque$,
+    \State $got\_spark \gets$ MR\_pop\_spark($this\_context.spark\_deque$,
         \&$spark$)
     \If{$got\_spark$}
       \Goto{$spark.code\_label$}
     \Else
       \If{$ST.orig\_context = this\_context$}
-         \State suspend($this\_context$)
+         \State MR\_save\_context($this\_context$)
          \State $this\_context.resume\_label \gets ContLabel$
          \State $this\_context \gets$ NULL
       \EndIf
-      \Goto{MR\_get\_global\_work}
+      \Goto{MR\_idle}
     \EndIf
   \EndIf
 \EndProcedure
@@ -483,16 +483,16 @@ otherwise the deque will be empty.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
-\Procedure{MR\_get\_global\_work}{}
-  \State acquire\_lock($MR\_runqueue\_lock$)
+\Procedure{MR\_idle}{}
+  \State MR\_acquire\_lock($MR\_runqueue\_lock$)
   \Loop
     \If{$MR\_exit\_now$}
-      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_release\_lock($MR\_runqueue\_lock$)
       \State MR\_destroy\_thread()
     \EndIf
     \State $ctxt \gets$ MR\_get\_runnable\_context()
     \If{$ctxt \neq \text{NULL}$}
-      \State release\_lock($MR\_runqueue\_lock$)
+      \State MR\_release\_lock($MR\_runqueue\_lock$)
       \If{$current\_context$}
         \State MR\_release\_context($current\_context$)
       \EndIf
@@ -507,13 +507,13 @@ otherwise the deque will be empty.
         (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
         \end{array}
         \right)$}
-      \State $result \gets$ try\_steal\_spark(\&$spark$)
+      \State $result \gets$ MR\_try\_steal\_spark(\&$spark$)
       \If{$result$}
-        \State release\_lock($MR\_runqueue\_lock$)
+        \State MR\_release\_lock($MR\_runqueue\_lock$)
         \If{$current\_context = \text{NULL}$}
-          \State $ctxt \gets$ get\_free\_context()
+          \State $ctxt \gets$ MR\_get\_free\_context()
           \If{$ctxt = \text{NULL}$}
-            \State $ctxt \gets$ create\_context()
+            \State $ctxt \gets$ MR\_create\_context()
           \EndIf
           \State MR\_load\_context($ctxt$)
         \EndIf
@@ -527,17 +527,17 @@ otherwise the deque will be empty.
   \EndLoop
 \EndProcedure
 \end{algorithmic}
-\caption{MR\_get\_global\_work}
-\label{alg:MR_get_global_work_wsinitial}
+\caption{MR\_idle}
+\label{alg:MR_idle_wsinitial}
 \end{algorithm}
 
 \plan{Other changes to the idle loop?}
-We have also modified \getglobalwork to use spark stealing,
-its new code is shown in Algorithm \ref{alg:MR_get_global_work_wsinitial}.
+We have also modified \idle to use spark stealing,
+its new code is shown in Algorithm \ref{alg:MR_idle_wsinitial}.
 We have replaced the old code which dequeued a spark from the global spark
 queue
 with a call to \trystealspark (see below).
-Before attempting to steal a spark \getglobalwork must ensure that the context limit
+Before attempting to steal a spark \idle must ensure that the context limit
 will not be exceeded
 (this was previously done when choosing where to place a new spark).
 This check is on line 14; it is true of either,
@@ -571,8 +571,8 @@ protected by the \code{MR\_spark\_deques\_lock} lock.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
-\Procedure{try\_steal\_spark}{$spark\_ptr$}
-  \State acquire\_lock($MR\_spark\_deques\_lock$)
+\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
+  \State MR\_acquire\_lock($MR\_spark\_deques\_lock$)
 
   \State $max\_attempts \gets$ min($MR\_max\_spark\_deques$,
     $MR\_worksteal\_max\_attempts$)
@@ -582,18 +582,18 @@ protected by the \code{MR\_spark\_deques\_lock} lock.
     \State $deque \gets
        MR\_spark\_deques$[$MR\_victim\_counter \bmod MR\_max\_spark\_deques$]
     \If{$deque \neq$ NULL}
-      \State $result \gets$ steal\_spark($deque$, $spark\_ptr$)
+      \State $result \gets$ MR\_steal\_spark($deque$, $spark\_ptr$)
       \If{$result$}
-        \State release\_lock($MR\_spark\_deques\_lock$)
+        \State MR\_release\_lock($MR\_spark\_deques\_lock$)
         \State \Return $true$
       \EndIf
     \EndIf
   \EndFor
-  \State release\_lock($MR\_spark\_deques\_lock$)
+  \State MR\_release\_lock($MR\_spark\_deques\_lock$)
   \State \Return $false$
 \EndProcedure
 \end{algorithmic}
-\caption{try\_steal\_spark}
+\caption{MR\_try\_steal\_spark}
 \label{alg:try_steal_spark_initial}
 \end{algorithm}
 
@@ -647,7 +647,7 @@ The second and fourth row groups were generated with a newer version of
 Mercury that implements work stealing as described above.\footnote{
     The version of Mercury used is slightly modified,
     due to an oversight we had forgotten to include the context limit
-    condition in \getglobalwork.
+    condition in \idle.
     The version we benchmarked includes this limit and matches the
     algorithms shown in this section.}
 The figures in parenthesis are speedup figures.

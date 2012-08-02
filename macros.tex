@@ -11,21 +11,26 @@
 \newcommand{\uo}{\code{uo}\xspace}
 \newcommand{\NULL}{\code{NULL}\xspace}
 \newcommand{\n}{{\textbackslash}n\xspace}
+
+% These three don't get the MR prefix because they're mercury predicates
+% rather than runtime procedures.
 \newcommand{\signal}{\code{future\_signal/2}\xspace}
 \newcommand{\wait}{\code{future\_wait/2}\xspace}
 \newcommand{\get}{\code{future\_get/2}\xspace}
+
 \newcommand{\joinandcontinue}{\code{MR\_join\_and\_continue}\xspace}
-\newcommand{\getglobalwork}{\code{MR\_get\_global\_work}\xspace}
+%\newcommand{\getglobalwork}{\code{MR\_get\_global\_work}\xspace}
 \newcommand{\idle}{\code{MR\_idle}\xspace}
 \newcommand{\idleorigcontext}{\code{MR\_idle\_orig\_context}\xspace}
 \newcommand{\sleep}{\code{MR\_sleep}\xspace}
-\newcommand{\trystealspark}{\code{try\_steal\_spark()}\xspace}
-\newcommand{\tryruncontext}{\code{try\_run\_context()}\xspace}
-\newcommand{\tryrunlocalspark}{\code{try\_run\_local\_spark()}\xspace}
-\newcommand{\enginesleepsync}{\code{engine\_sleep\_sync}\xspace}
-\newcommand{\wakeengine}{\code{wake\_engine}\xspace}
-
-\newcommand{\tscope}{ThreadScope\xspace}
+\newcommand{\trystealspark}{\code{MR\_try\_steal\_spark()}\xspace}
+\newcommand{\tryruncontext}{\code{MR\_try\_run\_context()}\xspace}
+\newcommand{\tryrunlocalspark}{\code{MR\_try\_run\_local\_spark()}\xspace}
+\newcommand{\enginesleepsync}{\code{MR\_engine\_sleep\_sync}\xspace}
+\newcommand{\wakeengine}{\code{MR\_wake\_engine}\xspace}
+\newcommand{\push}[0]{\code{MR\_push\_spark()}\xspace}
+\newcommand{\pop}[0]{\code{MR\_pop\_spark()}\xspace}
+\newcommand{\steal}[0]{\code{MR\_steal\_spark()}\xspace}
 
 % the name 'det' is already taken.  So I've prefixed all the detisms with 'd'
 \newcommand{\ddet}{\code{det}\xspace}
@@ -40,14 +45,13 @@
 \newcommand{\seqfn}[0]{\texttt{seq}\xspace}
 \newcommand{\parfn}[0]{\texttt{par}\xspace}
 
+\newcommand{\tscope}{ThreadScope\xspace}
+
 \newcommand{\PS}[0]{\code{ProcStatic}\xspace}
 \newcommand{\PD}[0]{\code{ProcDynamic}\xspace}
 \newcommand{\CSS}[0]{\code{CallSiteStatic}\xspace}
 \newcommand{\CSD}[0]{\code{CallSiteDynamic}\xspace}
 \newcommand{\Clique}[0]{\code{Clique}\xspace}
-\newcommand{\push}[0]{\code{push\_spark()}\xspace}
-\newcommand{\pop}[0]{\code{pop\_spark()}\xspace}
-\newcommand{\steal}[0]{\code{steal\_spark()}\xspace}
 \newcommand{\reorder}{\code{reorder()}\xspace}
 \newcommand{\trypushconjlater}{\code{try\_push\_conj\_later()}\xspace}
 \newcommand{\tramp}[1]{\code{TRAMPOLINE(}#1\code{)}\xspace}
@@ -135,6 +139,7 @@
 
 % Extra control-flow code for algorithmic
 \algloopdefx[Goto]{Goto}[1]{\textbf{goto} #1}
+\newcommand{\Break}{\textbf{break}}
 
 % Don't print closing statments in algorithmic examples.
 \algnotext{EndIf}
