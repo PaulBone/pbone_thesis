@@ -397,7 +397,7 @@ used}
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
   \If{$finished$}
-    \If{$ST.orig\_context = this\_context$}
+    \If{$ST.orig\_context = current\_context$}
       \Goto{$ContLabel$}
     \Else
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
@@ -407,15 +407,15 @@ used}
       \Goto{MR\_get\_global\_work}
     \EndIf
   \Else
-    \State $got\_spark \gets$ MR\_pop\_spark($this\_context.spark\_deque$,
+    \State $got\_spark \gets$ MR\_pop\_spark($current\_context.spark\_deque$,
         \&$spark$)
     \If{$got\_spark$}
       \Goto{$spark.code\_label$}
     \Else
-      \If{$ST.orig\_context = this\_context$}
-         \State MR\_save\_context($this\_context$)
-         \State $this\_context.resume\_label \gets ContLabel$
-         \State $this\_context \gets$ NULL
+      \If{$ST.orig\_context = current\_context$}
+         \State MR\_save\_context($current\_context$)
+         \State $current\_context.resume\_label \gets ContLabel$
+         \State $current\_context \gets$ NULL
       \EndIf
       \Goto{MR\_idle}
     \EndIf

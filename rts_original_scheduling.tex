@@ -73,7 +73,7 @@ last-in-first-out manner.
   \State MR\_acquire\_lock($ST.lock$)
   \State $ST.num\_outstanding \gets ST.num\_outstanding - 1$
   \If{$ST.num\_outstanding = 0$}
-    \If{$ST.orig\_context = this\_context$}
+    \If{$ST.orig\_context = current\_context$}
       \State MR\_release\_lock($ST.lock$)
       \Goto{$ContLabel$}
     \Else
@@ -83,7 +83,7 @@ last-in-first-out manner.
       \Goto{MR\_idle}
     \EndIf
   \Else
-    \State $spark \gets$ MR\_pop\_spark($this\_context.spark\_stack$)
+    \State $spark \gets$ MR\_pop\_spark($current\_context.spark\_stack$)
     \If{$spark$}
       \If{$spark.ST.stack\_ptr = MR\_parent\_sp$}
 %        \Comment{This spark belongs to the same parallel conjunction.
@@ -91,12 +91,12 @@ last-in-first-out manner.
         \State MR\_release\_lock($ST.lock$)
         \Goto{$spark.code\_label$}
       \Else
-        \State MR\_push\_spark($this\_context.spark\_stack$, $spark$)
+        \State MR\_push\_spark($current\_context.spark\_stack$, $spark$)
       \EndIf
     \EndIf
-    \If{$ST.orig\_context = this\_context$}
-       \State MR\_save\_context($this\_context$)
-       \State $this\_context \gets NULL$
+    \If{$ST.orig\_context = current\_context$}
+       \State MR\_save\_context($current\_context$)
+       \State $current\_context \gets NULL$
     \EndIf
     \State MR\_release\_lock($ST.lock$)
     \Goto{MR\_idle}

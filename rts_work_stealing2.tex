@@ -224,15 +224,15 @@ were associated with contexts.
 \Procedure{MR\_prepare\_engine\_for\_spark}{$spark$, $join\_label$}
     \If{$\left(
         \begin{array}{l}
-            (this\_context \neq \text{NULL}) \wedge \\
+            (current\_context \neq \text{NULL}) \wedge \\
             (join\_label \neq \text{NULL}) \wedge \\
-            (spark.sync\_term.orig\_context \neq this\_context)
+            (spark.sync\_term.orig\_context \neq current\_context)
         \end{array}\right)$}
-        \State MR\_save\_context($this\_context$)
-        \State $this\_context.resume \gets join\_label$
-        \State $this\_context \gets$ NULL
+        \State MR\_save\_context($current\_context$)
+        \State $current\_context.resume \gets join\_label$
+        \State $current\_context \gets$ NULL
     \EndIf
-    \If{$this\_context = \text{NULL}$}
+    \If{$current\_context = \text{NULL}$}
         \State $ctxt \gets$ MR\_get\_free\_context()
         \If{$ctxt = \text{NUL}$}
             \State $ctxt \gets$ MR\_create\_context()
@@ -459,19 +459,19 @@ processor.
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
   \If{$finished$}
-    \If{$ST.orig\_context = this\_context$}
+    \If{$ST.orig\_context = current\_context$}
       \Goto{$ContLabel$}
     \Else
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
         \State CPU\_relax
       \EndWhile
-      \State MR\_release\_context($this\_context$)
-      \State $this\_context \gets$ NULL
+      \State MR\_release\_context($current\_context$)
+      \State $current\_context \gets$ NULL
       \State MR\_load\_context($ST.parent$)
       \Goto{$ContLabel$}
     \EndIf
   \Else
-    \If{$ST.orig\_context = this\_context$}
+    \If{$ST.orig\_context = current\_context$}
       \State $MR\_r1 \gets ContLabel$
       \Goto{MR\_idle\_orig\_context}
     \Else
@@ -535,8 +535,8 @@ cache.
             \Goto $jump\_target$
         \EndIf
         \State MR\_save\_context($ctxt$);
-        \State $this\_context.resume\_label \gets join\_label$
-        \State $this\_context \gets$ NULL
+        \State $current\_context.resume\_label \gets join\_label$
+        \State $current\_context \gets$ NULL
         \State $jump\_target \gets$ MR\_try\_run\_context()
         \If{$jump\_target \neq$ NULL}
             \Goto $jump\_target$
