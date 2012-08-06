@@ -154,7 +154,7 @@ were associated with contexts.
         \If{$code\_ptr$}
             \Goto $code\_ptr$
         \EndIf
-        \State $code\_ptr \get$ MR\_try\_steal\_spark()
+        \State $code\_ptr \gets$ MR\_try\_steal\_spark()
         \If{$code\_ptr$}
             \Goto $code\_ptr$
         \EndIf
@@ -459,17 +459,15 @@ processor.
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
   \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
   \If{$finished$}
-    \If{$ST.orig\_context = current\_context$}
-      \Goto{$ContLabel$}
-    \Else
+    \If{$ST.orig\_context \neq current\_context$}
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
         \State CPU\_relax
       \EndWhile
       \State MR\_release\_context($current\_context$)
       \State $current\_context \gets$ NULL
       \State MR\_load\_context($ST.parent$)
-      \Goto{$ContLabel$}
     \EndIf
+    \Goto{$ContLabel$}
   \Else
     \If{$ST.orig\_context = current\_context$}
       \State $MR\_r1 \gets ContLabel$
