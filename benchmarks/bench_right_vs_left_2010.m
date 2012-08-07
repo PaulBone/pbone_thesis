@@ -23,7 +23,8 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        "/srv/scratch/dev/old_2010_gcc34.install/bin",
+        [compiler("2010_ws1",
+            "/srv/scratch/dev/old_2010_gcc34.install/bin")],
         mem_limit,
         base_mcflags,
         Groups,

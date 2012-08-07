@@ -1,0 +1,11 @@
+
+-include Mmake.params
+
+MAIN_TARGET = all
+
+all:    fibs
+
+depend: fibs.depend
+
+tags:	$(wildcard *.m)
+	mtags *.m

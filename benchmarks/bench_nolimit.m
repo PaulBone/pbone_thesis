@@ -24,7 +24,8 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        "/srv/scratch/dev/old_2009_nolimit.install/bin",
+        [compiler("2009_nolimit", 
+            "/srv/scratch/dev/old_2009_nolimit.install/bin")],
         mem_limit,
         base_mcflags,
         Groups,

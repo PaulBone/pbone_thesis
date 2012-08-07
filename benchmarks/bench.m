@@ -11,12 +11,18 @@
 
 :- type config_data
     --->    config_data(
-                cd_mercury_path                 :: string,
+                cd_compilers                    :: list(compiler),
                 cd_mem_limit                    :: int,
                 cd_base_mcflags                 :: string,
                 cd_test_groups                  :: list(test_group),
                 cd_programs                     :: list(program)
     ).
+
+:- type compiler
+    --->    compiler(
+                c_name                          :: string,
+                c_path                          :: string
+            ).
 
 :- type test_group
     --->    test_group(
@@ -189,6 +195,9 @@ run(Options, ConfigData, !IO) :-
                     % configure the build.
                 b_params    :: string,
 
+                    % The path to mmc (not including mmc).
+                b_mercury_path  :: string,
+
                     % The binary that mmake will generate.
                 b_binary    :: string
             ).
@@ -198,17 +207,14 @@ run(Options, ConfigData, !IO) :-
 :- pred rebuild(config::in, io::di, io::uo) is det.
 
 rebuild(config(_, ConfigData, BuildConfigs, _), !IO) :-
-    getenv("PATH", PATH0, !IO),
-    MercuryPath = ConfigData ^ cd_mercury_path,
-    PATH = MercuryPath ++ ":" ++ PATH0,
-    setenv("PATH", PATH, !IO),
+    getenv("PATH", OrigPath, !IO),
     write_string("Rebuilding\n", !IO),
     flush_output(!IO),
     Programs = ConfigData ^ cd_programs,
     Builds = condense(map((func(P) =
             map(make_build(P), BuildConfigs)),
         Programs)),
-    foldl(rebuild_prog, Builds, !IO),
+    foldl(rebuild_prog(OrigPath), Builds, !IO),
     write_string("Done rebuilding\n", !IO),
     flush_output(!IO).
 
@@ -217,9 +223,10 @@ rebuild(config(_, ConfigData, BuildConfigs, _), !IO) :-
     %
 :- func make_build(program, build_config) = build.
 
-make_build(Program, build_config(Group, Grade, MCFlags)) =
-        build(Target, Dir, Params, Binary) :-
-    Target = get_target(Group, Grade, Program),
+make_build(Program, build_config(Group, Compiler, Grade, MCFlags)) =
+        build(Target, Dir, Params, Path, Binary) :-
+    Target = get_target(Group, Compiler, Grade, Program),
+    Path = format("%s/bin", [s(Compiler ^ c_path)]),
     Dir = Program ^ p_dir,
     Params = format("GRADE = %s\nMCFLAGS = %s\n",
         [s(GradeStr), s(MCFlags)]),
@@ -228,19 +235,23 @@ make_build(Program, build_config(Group, Grade, MCFlags)) =
 
     % Generate a target name.
     %
-:- func get_target(string, grade_spec, program) = string.
+:- func get_target(string, compiler, grade_spec, program) = string.
 
-get_target(Group, Grade, Program) =
-        format("%s_%s_%s", [s(Group), s(ProgName), s(GradeName)]) :-
+get_target(Group, Compiler, Grade, Program) = Target :-
+    Target = format("%s_%s_%s_%s", [s(Group), s(ProgName), s(CompilerName), 
+        s(GradeName)]),
+    CompilerName = Compiler ^ c_name,
     ProgName = Program ^ p_name,
     GradeName = Grade ^ g_name.
 
     % Build the build described,
     %
-:- pred rebuild_prog(build::in, io::di, io::uo) is det.
+:- pred rebuild_prog(string::in, build::in, io::di, io::uo) is det.
 
-rebuild_prog(Build, !IO) :-
-    Build = build(Target, Dir, Params, Binary),
+rebuild_prog(OrigPath, Build, !IO) :-
+    Build = build(Target, Dir, Params, Path, Binary),
+    format("adding %s to path\n", [s(Path)], !IO),
+    setenv("PATH", Path ++ ":" ++ OrigPath, !IO),
     system("rm -rf tempdir", !IO),
     system(format("cp -a %s tempdir", [s(Dir)]), !IO),
     cd("tempdir", !IO),
@@ -307,8 +318,8 @@ make_tests(config(_, ConfigData, _, Configs), Tests) :-
 
 make_test(Program, Config) =
         test(Name, Cmd, Eventlog, Envs) :-
-    Config = test_config(Group, Grade, Envs),
-    Target = get_target(Group, Grade, Program),
+    Config = test_config(Group, Compiler, Grade, Envs),
+    Target = get_target(Group, Compiler, Grade, Program),
     EnvOptsName = Envs ^ evs_name,
     Name = format("%s_%s", [s(Target), s(EnvOptsName)]),
     ProgArgs = Program ^ p_args,
@@ -402,6 +413,7 @@ run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
 :- type build_config
     --->    build_config(
                 bc_group        :: string,
+                bc_compiler     :: compiler,
                 bc_grade        :: grade_spec,
                 bc_mcflags      :: string
             ).
@@ -411,6 +423,7 @@ run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
 :- type test_config
     --->    test_config(
                 tc_group        :: string,
+                tc_compiler     :: compiler,
                 tc_grade        :: grade_spec,
 
                     % Runtime/environment options.
@@ -425,34 +438,38 @@ run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
 
 configure(Samples, ConfigData, config(Samples, ConfigData, Builds, Tests)) :-
     Groups = ConfigData ^ cd_test_groups,
-    MCFlags = ConfigData ^ cd_base_mcflags,
-    map2(configure_group(MCFlags), Groups, GroupBuilds, GroupTests),
+    BaseMCFlags = ConfigData ^ cd_base_mcflags,
+    Compilers = ConfigData ^ cd_compilers,
+    map2(configure_group(BaseMCFlags, Compilers), 
+        Groups, GroupBuilds, GroupTests),
     Builds = condense(GroupBuilds),
     Tests = condense(GroupTests).
 
-:- pred configure_group(string::in, test_group::in,
+:- pred configure_group(string::in, list(compiler)::in, test_group::in,
     list(build_config)::out, list(test_config)::out) is det.
 
-configure_group(MCFlags, Group, Builds, Tests) :-
+configure_group(BaseMCFlags, Compilers, Group, Builds, Tests) :-
     Group = test_group(Name, Grades, Rtsopts, GCInitialHeapSizes, GCMarkerss),
-    config_builds(Name, Grades, MCFlags, Builds),
-    config_tests(Name, Grades, GCMarkerss, GCInitialHeapSizes,
+    config_builds(Name, Compilers, Grades, BaseMCFlags, Builds),
+    config_tests(Name, Compilers, Grades, GCMarkerss, GCInitialHeapSizes,
         Rtsopts, Tests).
 
-:- pred config_builds(string::in, list(grade_spec)::in, string::in,
-    list(build_config)::out) is det.
+:- pred config_builds(string::in, list(compiler)::in, list(grade_spec)::in,
+    string::in, list(build_config)::out) is det.
 
-config_builds(Group, Grades, MCFlags, Configs) :-
-    Configs = map((func(G) =
-            build_config(Group, G, MCFlags)
-        ),
-        Grades).
+config_builds(Group, Compilers, Grades, MCFlags, Configs) :-
+    Configs = condense(map((func(C) = 
+            map((func(G) =
+                build_config(Group, C, G, MCFlags)
+            ),
+            Grades)),
+        Compilers)).
 
-:- pred config_tests(string::in, list(grade_spec)::in,
+:- pred config_tests(string::in, list(compiler)::in, list(grade_spec)::in,
     list(int)::in, list(int)::in, list(rtopts_spec)::in,
     list(test_config)::out) is det.
 
-config_tests(Group, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
+config_tests(Group, Compilers, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
         Configs) :-
     Environments = condense(map((func(RTO) =
         condense(map((func(GCMarkers) =
@@ -473,20 +490,22 @@ config_tests(Group, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
             GCMarkerss))
         ),
         RTOpts)),
-    Configs = condense(map((func(G) =
-        map((func(Ev) =
-                test_config(Group, G, Ev)
+    Configs = condense(map((func(C) = 
+        condense(map((func(G) =
+            map((func(Ev) =
+                    test_config(Group, C, G, Ev)
+                ),
+                Environments)
             ),
-            Environments)
+            Grades))
         ),
-        Grades)).
+        Compilers)).
 
 :- pred print_config(config::in, cord(string)::out) is det.
 
 print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
     map(print_build, Builds, BuildsRes),
     map(print_test, Tests, TestsRes),
-    MercuryPath = ConfigData ^ cd_mercury_path,
     Programs = ConfigData ^ cd_programs,
     map(print_program, Programs, ProgsRes),
     LN = singleton("\n"),
@@ -494,7 +513,6 @@ print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
         singleton("Configuration:\n") ++
         LN ++
         singleton(format("\tSamples: %d\n", [i(Samples)])) ++
-        singleton(format("\tPath: %s\n", [s(MercuryPath)])) ++
         LN ++
         singleton("\tBuilds:\n") ++
         cord_list_to_cord(map(compose(indent(2), line), BuildsRes)) ++
@@ -507,17 +525,18 @@ print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
 
 :- pred print_build(build_config::in, cord(string)::out) is det.
 
-print_build(build_config(Group, Grade, _), Result) :-
+print_build(build_config(Group, Compiler, Grade, _), Result) :-
     Result = singleton(
-        format("%s, Grade: %s",
-            [s(Group), s(Grade ^ g_name)])).
+        format("%s, Compiler: %s Grade: %s",
+            [s(Group), s(Compiler ^ c_name), s(Grade ^ g_name)])).
 
 :- pred print_test(test_config::in, cord(string)::out) is det.
 
-print_test(test_config(Group, Grade, Env), Result) :-
+print_test(test_config(Group, Compiler, Grade, Env), Result) :-
     Result = singleton(
-        format("%s, Grade: %s Env: %s",
-            [s(Group), s(Grade ^ g_name), s(Env ^ evs_name)])).
+        format("%s, Compiler %s Grade: %s Env: %s",
+            [s(Group), s(Compiler ^ c_name), s(Grade ^ g_name),
+             s(Env ^ evs_name)])).
 
 :- func indent(int, cord(string)) = cord(string).
 

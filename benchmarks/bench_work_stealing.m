@@ -1,4 +1,4 @@
-:- module bench_right_vs_left_2011.
+:- module bench_work_stealing.
 
 :- interface.
 
@@ -23,12 +23,18 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        "/srv/scratch/dev//old_2011-06.install/bin",
+        Compilers,
         mem_limit,
         base_mcflags,
         Groups,
         programs
     ),
+    Compilers = [
+        compiler("orig-ws",     BaseDir ++ "/old_2011-04.install"),
+        compiler("revised-ws",  BaseDir ++ "/old_2011-04.install"),
+        compiler("current",     BaseDir ++ "/par_rts.install")
+    ],
+    BaseDir = "/srv/scratch/dev",
     Groups = [
         test_group("control",
             control_group_grades,
@@ -40,7 +46,7 @@ config = Data :-
             test_group_rtopts,
             [gc_initial_heap_size],
             [1])
-        ].
+    ].
 
     % The GC's initial heap size, in bytes.  (512MB)
     %
@@ -112,7 +118,15 @@ programs = [
         mandelbrot_args),
     program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
         "-l -x 600 -y 600",
-        mandelbrot_args)
+        mandelbrot_args),
+    program("fibs_43_gc43", "fibs", "fibs",
+        "43 43", no_args),
+    program("fibs_43_gc30", "fibs", "fibs",
+        "43 30", no_args),
+    program("fibs_43_gc20", "fibs", "fibs",
+        "43 20", no_args),
+    program("fibs_43_gc10", "fibs", "fibs",
+        "43 10", no_args)
     ].
 
 :- func mandelbrot_args(string) = string.
