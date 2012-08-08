@@ -31,7 +31,7 @@ config = Data :-
     ),
     Compilers = [
         compiler("orig-ws",     BaseDir ++ "/old_2011-04.install"),
-        compiler("revised-ws",  BaseDir ++ "/old_2011-04.install"),
+        compiler("revised-ws",  BaseDir ++ "/old_2011-06.install"),
         compiler("current",     BaseDir ++ "/par_rts.install")
     ],
     BaseDir = "/srv/scratch/dev",
@@ -68,8 +68,7 @@ mercury_engines = 1..4.
     %
 :- func num_max_contexts_per_thread = list(int).
 
-num_max_contexts_per_thread =
-    map((func(X) = pow(2,X)), 2..11).
+num_max_contexts_per_thread = [32].
 
 % XXX: this was unused in my testing so far.
 :- func base_mcflags = string.
