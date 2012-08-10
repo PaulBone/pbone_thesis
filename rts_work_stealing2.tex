@@ -143,7 +143,9 @@ may try to run a spark from its own deque.
 In the previous version a context would always be available because sparks
 were associated with contexts.
 
-\begin{algorithm}[tbp]
+\begin{float}
+
+\begin{algorithm}[H]
 \begin{algorithmic}
     \Procedure{MR\_idle}{}
         \State $code\_ptr \gets$ MR\_try\_run\_context()
@@ -165,7 +167,7 @@ were associated with contexts.
 \label{alg:idle_entry_point}
 \end{algorithm}
 
-\begin{algorithm}
+\begin{algorithm}[H]
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_context}{}
     \State MR\_acquire\_lock($MR\_runqueue\_lock$)
@@ -184,7 +186,11 @@ were associated with contexts.
     \EndIf
 \EndProcedure
 \end{algorithmic}
+\caption{MR\_try\_run\_context()}
+\label{alg:try_run_context}
 \end{algorithm}
+
+\end{float}
 
 \begin{algorithm}
 \begin{algorithmic}
