@@ -57,7 +57,7 @@ a spark may be placed on a deque after the engine has already attempted
 to steal from it.
 Upon exhausting all its attempts or all the deques,
 the engine will sleep before making another round of attempts
-(see \trystealspark in Algorithm \ref{alg:try_steal_spark_initial} on 
+(see \trystealspark in Algorithm \ref{alg:try_steal_spark_initial} on
 page \pageref{alg:try_steal_spark_initial}).
 Each round of attempts (regardless of success or failure) has a
 complexity of $O(M)$.
@@ -83,21 +83,27 @@ The cost of work stealing also becomes linear in the number of engines
 rather than the number of contexts.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}[1]
-\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
-  \State $result \gets false$
-  \For{$attempt = 0$ to $MR\_num\_engines - 1$}
-    \State $victim\_index \gets
-        (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
-    \State $result \gets$
-        MR\_steal\_spark($MR\_spark\_deques$[$victim\_index$], $spark\_ptr$)
-    \If{$result$}
-      \State \Break
-    \EndIf
-  \EndFor
-  \State $MR\_engine.victim\_counter \gets
-    MR\_engine.victim\_counter + attempt$
-  \State \Return $result$
+\begin{algorithmic}
+\Procedure{MR\_try\_steal\_spark}{}
+  \If{$\left(
+          \begin{array}{l}
+          (current\_context \neq \text{NULL})\, \vee \\
+          (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
+          \end{array}
+          \right)$}
+    \For{$attempt = 0$ to $MR\_num\_engines - 1$}
+      \State $victim\_index \gets
+          (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
+      \If{MR\_steal\_spark($MR\_spark\_deques$[$victim\_index$],
+          \text{\code{\&}}$spark$)}
+        \State $MR\_engine.victim\_counter \gets
+          MR\_engine.victim\_counter + attempt$
+        \State MR\_prepare\_engine\_for\_spark($spark$, NULL)
+        \State \Return $spark.resume$
+      \EndIf
+    \EndFor
+  \EndIf
+  \State \Return NULL
 \EndProcedure
 \end{algorithmic}
 \caption{try\_steal\_spark}
@@ -107,7 +113,12 @@ rather than the number of contexts.
 \plan{Show new \trystealspark}
 We have made some other changes to \trystealspark,
 whose new code is shown in Algorithm \ref{alg:try_steal_spark_revised}.
-The lock was also used to protect the victim counter,
+In the previous version we only called \trystealspark if the context limit
+was not already exceeded,
+We have now moved this test into \trystealspark (line 2) as it makes it
+easier to call \trystealspark from different places.
+The locking code in the previous version was also used to protect the victim
+counter,
 ensuring that round robin selection of the victim was maintained.
 Now each engine independently performs its own round robin selection of the
 victim using a new field \code{victim\_counter} in the engine structure.
@@ -143,21 +154,19 @@ may try to run a spark from its own deque.
 In the previous version a context would always be available because sparks
 were associated with contexts.
 
-\begin{float}
-
-\begin{algorithm}[H]
+\begin{algorithm}[tbp]
 \begin{algorithmic}
     \Procedure{MR\_idle}{}
         \State $code\_ptr \gets$ MR\_try\_run\_context()
-        \If{$code\_ptr$}
+        \If{$code\_ptr \neq$ NULL}
             \Goto $code\_ptr$
         \EndIf
         \State $code\_ptr \gets$ MR\_try\_run\_local\_spark($NULL$)
-        \If{$code\_ptr$}
+        \If{$code\_ptr \neq$ NULL}
             \Goto $code\_ptr$
         \EndIf
         \State $code\_ptr \gets$ MR\_try\_steal\_spark()
-        \If{$code\_ptr$}
+        \If{$code\_ptr \neq$ NULL}
             \Goto $code\_ptr$
         \EndIf
         \Goto MR\_sleep
@@ -166,6 +175,13 @@ were associated with contexts.
 \caption{New \idle code}
 \label{alg:idle_entry_point}
 \end{algorithm}
+
+%
+% This float is invisible and used only to group the following three
+% algorithms which do not /float/ because they have the position H.
+% We do this to place the three algorithms together on a seperate page.
+%
+\begin{float}[p]
 
 \begin{algorithm}[H]
 \begin{algorithmic}
@@ -190,57 +206,36 @@ were associated with contexts.
 \label{alg:try_run_context}
 \end{algorithm}
 
-\end{float}
-
-\begin{algorithm}
+\begin{algorithm}[H]
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_local\_spark}{$join\_label$}
     \State $result \gets$ MR\_pop\_spark($this\_engine.spark\_deque$)
-    \If{$result$}
-        \State MR\_prepare\_engine\_for\_spark($spark$, $join\_label$)
-        \State \Return $spark.resume$
-    \Else
+    \If{$result =$ NULL}
         \State \Return NULL
     \EndIf
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\begin{algorithmic}
-\Procedure{MR\_try\_steal\_spark}{$join\_label$}
-    \If{$\left(
-            \begin{array}{l}
-            (current\_context \neq \text{NULL})\, \vee \\
-            (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
-            \end{array}
-            \right)$}
-        \If{MR\_try\_steal\_spark($spark$)}
-            \State MR\_prepare\_engine\_for\_spark($spark$, NULL)
-            \State \Return $spark.resume$
-        \EndIf
-    \EndIf
-    \State \Return NULL
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\begin{algorithmic}
-\Procedure{MR\_prepare\_engine\_for\_spark}{$spark$, $join\_label$}
     \If{$\left(
         \begin{array}{l}
             (current\_context \neq \text{NULL}) \wedge \\
             (join\_label \neq \text{NULL}) \wedge \\
             (spark.sync\_term.orig\_context \neq current\_context)
         \end{array}\right)$}
-        \State MR\_save\_context($current\_context$)
-        \State $current\_context.resume \gets join\_label$
-        \State $current\_context \gets$ NULL
+        \State MR\_push\_spark($this\_engine.spark\_deque$, $spark$)
+        \State \Return NULL
     \EndIf
+    \State MR\_prepare\_engine\_for\_spark($spark$, $join\_label$)
+    \State \Return $spark.resume$
+\EndProcedure
+\end{algorithmic}
+\caption{MR\_try\_run\_local\_spark()}
+\label{alg:try_run_local_spark}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\begin{algorithmic}
+\Procedure{MR\_prepare\_engine\_for\_spark}{$spark$, $join\_label$}
     \If{$current\_context = \text{NULL}$}
         \State $ctxt \gets$ MR\_get\_free\_context()
-        \If{$ctxt = \text{NUL}$}
+        \If{$ctxt = \text{NULL}$}
             \State $ctxt \gets$ MR\_create\_context()
         \EndIf
         \State MR\_load\_context($ctxt$)
@@ -251,61 +246,83 @@ were associated with contexts.
     \State \Return $spark.resume$
 \EndProcedure
 \end{algorithmic}
+\caption{MR\_prepare\_engine\_for\_spark()}
+\label{alg:prepare_engine_for_spark}
 \end{algorithm}
+
+\end{float}
 
 An idle engine without a context will call \idle to acquire new work.
 \idle has changed significantly;
 the new version is shown in Algorithm \ref{alg:idle_entry_point}.
-Many of its details shown in previous sections have been moved into C
-functions,
-these include:
-\tryruncontext which tries to execute a suspended but runnable context;
-\tryrunlocalspark which tries to run a spark from the top of the engine's
-spark deque, possibly creating a new context for the spark;
-and 
-\trystealspark which was shown above in Algorithm
-\ref{alg:try_steal_spark_revised}.
-Because running a local spark may allocate a context and exceed the context
-limit,
-the engine must execute any suspended but runnable context instead.
-Doing so is always permitted despite the context limit.
+Three new procedures are now used to implement the details of \idle, these
+are:
+\tryruncontext, \tryrunlocalspark and \trystealspark.
+They are procedures so that we can use them from procedures other than
+\idle, such as \joinandcontinue below.
+\idle always tries to find a runnable context before a local spark;
+running a spark may require creation of a context which may exceed the
+context limit,
+where as running a spark does not.
 Furthermore,
-a context whose execution has already begin may make more parallel work
-available creating sparks or signalling futures.
+we beleive that executing a context is optimal
+as a context whose execution has already begin may make more parallel work
+available by creating sparks or signalling futures.
 If the engine is able to run the context until the completion of its work
 (until the contexts executes the \joinandcontinue barrier at the end of a
 parallel conjunct)
 then this may make the context available to execute a spark from the
 engine's local spark queue.
-Therefore we always try to run a context (using \tryruncontext)
-before attempting to run a local spark (using \tryrunlocalspark).
-Of course there will be cases when \tryruncontext fails and an engine
-without a context then attempts to run a local spark.
-To facilitate this, the context limit is not checked in \tryrunlocalspark
-(it is still used in \trystealspark).
+Therefore \idle always tries to run a context using \tryruncontext,
+before it attempts to run a local spark using \tryrunlocalspark.
+If both of these fail to find work, \idle will then attempt to steal a spark using
+\trystealspark,
+if this also fails then \idle will jump to \sleep (below).
 
 \idle is a hard coded Mercury procedure and it does not return control to
-its caller,
-therefore it continues execution by jumping to the code address of the next
+its caller.
+Instead it continues execution by jumping to the code address of the next
 thing to execute.
-This can either be the resume address of a context,
-the entry point of a spark,
-or the Mercury procedure \sleep.
-However
-the C functions are used to find the next context or spark to execute,
-if successful these C functions prepare the engine to execute the spark or
-context and then return the address that the engine should execute.
-they \emph{must} return rather than execute the spark or context directly so
-that the C stack pointer has the same value that it did upon entering \idle.
-\idle uses a \emph{trampoline}\footnote{
-    Trampoline is an overloaded term in computer science.
-    The reader may or may not agree with our use of this term.
-    }
-macro to jump to the returned code
-address or fall through to the next instruction if the function returned
-false.
-If the idle engine cannot find a spark or context to execute then it jumps
-to \sleep.
+such as the
+the resume address of a context,
+or the entry point of a spark.
+When it jumps to the next thing to execute the Mercury and C stack pointers
+must have the same values that they had when the control entered \idle.
+This means that the C functions \tryruncontext, \tryrunlocalspark and
+\trystealspark \emph{must} return
+rather than making the jump themselves.
+so that the C stack pointer has the same value that it did upon entering
+\idle.
+
+\tryruncontext is shown in Algorithm \ref{alg:try_run_context};
+it attempts to take a context from the context runqueue while holding the
+context runqueue lock.
+Previously this lock protected all of \idle.
+If \tryruncontext finds a context,
+it first checks for and unloads the engine's current context,
+and then loads the new context.
+It clears the contexts resume field and then returns the field's previous
+value, which \idle will jump to.
+
+\tryrunlocalspark is shown in Algorithm \ref{alg:try_run_local_spark};
+It attempts to pop a spark of the engine's deque.
+If the spark deque is empty then \tryrunlocalspark
+will return NULL.
+If it successfully popped a spark it will
+check that the engine's current context is compatible with the spark.
+If incompatible \tryrunlocalspark will put the spark back on the engines
+spark deque return NULL.
+However when \idle calls \tryrunlocalspark the spark will always be
+compatible;
+we will return to this point later.
+We then prepare the engine for to execute the spark using
+\prepareengineforspark
+(Algorithm \ref{alg:prepare_engine_for_spark}),
+all this entails is making sure that the engine has a context, the context
+is loaded and has the correct parent stack pointer in its parent stack
+pointer register.
+After this \tryrunlocalspark returns the spark's entry point to \idle which
+will jump to the code address.
 
 \begin{algorithm}[tbp]
 \begin{minipage}{\textwidth}
@@ -318,7 +335,7 @@ struct MR_engine_sleep_sync {
     union MR_engine_wake_action_data    action_data;
 };
 
-union MR_engine_wake_action_data {      
+union MR_engine_wake_action_data {
     MR_EngineId     worksteal_engine;
     MR_Context      *context;
 };
@@ -341,25 +358,25 @@ union MR_engine_wake_action_data {
               \EndCase
               \Case{ACTION\_STEAL\_SPARK}
                 \State $MR\_engine.victim\_counter \gets
-                    eng\_data.action\_data.worksteal\_engine$ 
-                \State $jump\_target \gets$ MR\_try\_steal\_spark()
-                \If{$jump\_target \neq$ NULL}
-                    \Goto $jump\_target$
+                    eng\_data.action\_data.worksteal\_engine$
+                \State $code\_ptr \gets$ MR\_try\_steal\_spark()
+                \If{$code\_ptr \neq$ NULL}
+                    \Goto $code\_ptr$
                 \EndIf
-                \State $jump\_target \gets$ MR\_try\_run\_context()
-                \If{$jump\_target \neq$ NULL}
-                    \Goto $jump\_target$
+                \State $code\_ptr \gets$ MR\_try\_run\_context()
+                \If{$code\_ptr \neq$ NULL}
+                    \Goto $code\_ptr$
                 \EndIf
                 \State \Break
               \EndCase
               \Case{ACTION\_NONE}
-                \State $jump\_target \gets$ MR\_try\_run\_context()
-                \If{$jump\_target \neq$ NULL}
-                    \Goto $jump\_target$
+                \State $code\_ptr \gets$ MR\_try\_run\_context()
+                \If{$code\_ptr \neq$ NULL}
+                    \Goto $code\_ptr$
                 \EndIf
-                \State $jump\_target \gets$ MR\_try\_steal\_spark()
-                \If{$jump\_target \neq$ NULL}
-                    \Goto $jump\_target$
+                \State $code\_ptr \gets$ MR\_try\_steal\_spark()
+                \If{$code\_ptr \neq$ NULL}
+                    \Goto $code\_ptr$
                 \EndIf
                 \State \Break
               \EndCase
@@ -534,26 +551,14 @@ cache.
 \begin{algorithmic}
     \Procedure{MR\_idle\_orig\_context}{}
         \State $join\_label \gets MR\_r1$
-        \State $jump\_target \gets$ MR\_try\_run\_local\_spark($join\_label$)
-        \If{$jump\_target \neq$ NULL}
-            \Goto $jump\_target$
+        \State $code\_ptr \gets$ MR\_try\_run\_local\_spark($join\_label$)
+        \If{$code\_ptr \neq$ NULL}
+            \Goto $code\_ptr$
         \EndIf
         \State MR\_save\_context($ctxt$);
         \State $current\_context.resume\_label \gets join\_label$
         \State $current\_context \gets$ NULL
-        \State $jump\_target \gets$ MR\_try\_run\_context()
-        \If{$jump\_target \neq$ NULL}
-            \Goto $jump\_target$
-        \EndIf
-        \State $jump\_target \gets$ MR\_try\_run\_local\_spark(NULL)
-        \If{$jump\_target \neq$ NULL}
-            \Goto $jump\_target$
-        \EndIf
-        \State $jump\_target \gets$ MR\_try\_steal\_spark()
-        \If{$jump\_target \neq$ NULL}
-            \Goto $jump\_target$
-        \EndIf
-        \Goto MR\_sleep
+        \Goto MR\_idle
     \EndProcedure
 \end{algorithmic}
 \caption{New entry point to the idle loop for dirty contexts.}
