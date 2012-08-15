@@ -573,23 +573,22 @@ the \tryrunlocalspark will check if the spark at the top of the spark deque
 is compatible with the current context,
 if it is not it will put the spark back onto the spark deque and return
 \NULL, it also returns \NULL if there is no spark on the deque.
-\idleorigcontext uses the trampoline macro from Algorithm
-\ref{alg:idle_entry_point} to jump to the spark's entry point
-\tryrunlocalspark found a valid spark.
-Next \idleorigcontext saves the context that the engine was using and then
-attempts to resume a suspended context,
-failing that it retries running a local spark,
-this is done because there may have been a spark on the engine's spark deque
-that was not compatible, but now that the engine has no context, any spark
-is compatible.
-If this also fails then
-\idleorigcontext will attempt to steal a spark from another engine and run
-it,
-failing that the engine will jump to \sleep.
+idleorigcontext will jump to the code address that \tryrunlocalspark returned
+provided that it is non-\NULL.
+Otherwise \idleorigcontext will save the corrent context,
+set its \code{resume\_label} field
+and jump to \idle which attempts to find work as described above.
+If \idleorigcontext could not run a local spark because the spark at the top
+of the deque was incompatible;
+then this spark will be executed by \idle if it was not stolen by another
+engine in the meantime.
 We could add further entry points in the future if we found them useful,
-for example,
-it may be useful to distinguish between cases in which an engine already has a
-context or does not have a context.
+and they do not have to jump to \idle when they finish.
+For example,
+it may be useful to create a special case for when an engine is known to
+have a empty context;
+this case could check for work in a different order and and if it does not
+find any work it could jump to \sleep the way \idle currently does.
 
 \input{tab_work_stealing_revised}
 
