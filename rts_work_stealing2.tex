@@ -83,7 +83,7 @@ The cost of work stealing also becomes linear in the number of engines
 rather than the number of contexts.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}
+\begin{algorithmic}[1]
 \Procedure{MR\_try\_steal\_spark}{}
   \If{$\left(
           \begin{array}{l}
@@ -110,16 +110,43 @@ rather than the number of contexts.
 \label{alg:try_steal_spark_revised}
 \end{algorithm}
 
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{MR\_prepare\_engine\_for\_spark}{$spark$, $join\_label$}
+    \If{$current\_context = \text{NULL}$}
+        \State $ctxt \gets$ MR\_get\_free\_context()
+        \If{$ctxt = \text{NULL}$}
+            \State $ctxt \gets$ MR\_create\_context()
+        \EndIf
+        \State MR\_load\_context($ctxt$)
+    \EndIf
+    \State $MR\_parent\_sp \gets spark.parent\_sp$
+    \State $ctxt.thread\_local\_mutables \gets
+      spark.thread\_local\_mutables$
+    \State \Return $spark.resume$
+\EndProcedure
+\end{algorithmic}
+\caption{MR\_prepare\_engine\_for\_spark()}
+\label{alg:prepare_engine_for_spark}
+\end{algorithm}
+
 \plan{Show new \trystealspark}
 We have made some other changes to \trystealspark,
 whose new code is shown in Algorithm \ref{alg:try_steal_spark_revised}.
-In the previous version we only called \trystealspark if the context limit
-was not already exceeded,
-We have now moved this test into \trystealspark (line 2) as it makes it
-easier to call \trystealspark from different places.
-The locking code in the previous version was also used to protect the victim
-counter,
-ensuring that round robin selection of the victim was maintained.
+Previously \trystealspark required its caller to check that stealing a spark
+would not exceed the context limit;
+this check has been moved into \trystealspark (line 2).
+Another change is that \trystealspark
+will now call \prepareengineforspark (line 7)
+which will load a context into the engine if it doesn't already have one.
+(Algorithm \ref{alg:prepare_engine_for_spark}).
+Finallly \trystealspark will return the address of the spark's code;
+the caller will jump to this address,
+if it is not NULL.
+
+In the previous version the lock was also used to protect the victim
+counter;
+it ensured that round robin selection of the victim was maintained.
 Now each engine independently performs its own round robin selection of the
 victim using a new field \code{victim\_counter} in the engine structure.
 We have not evaluated if this policy is an improvment.
@@ -176,14 +203,7 @@ were associated with contexts.
 \label{alg:idle_entry_point}
 \end{algorithm}
 
-%
-% This float is invisible and used only to group the following three
-% algorithms which do not /float/ because they have the position H.
-% We do this to place the three algorithms together on a seperate page.
-%
-\begin{float}[p]
-
-\begin{algorithm}[H]
+\begin{algorithm}[tbp]
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_context}{}
     \State MR\_acquire\_lock($MR\_runqueue\_lock$)
@@ -206,7 +226,7 @@ were associated with contexts.
 \label{alg:try_run_context}
 \end{algorithm}
 
-\begin{algorithm}[H]
+\begin{algorithm}[tbp]
 \begin{algorithmic}
 \Procedure{MR\_try\_run\_local\_spark}{$join\_label$}
     \State $result \gets$ MR\_pop\_spark($this\_engine.spark\_deque$)
@@ -230,29 +250,8 @@ were associated with contexts.
 \label{alg:try_run_local_spark}
 \end{algorithm}
 
-\begin{algorithm}[H]
-\begin{algorithmic}
-\Procedure{MR\_prepare\_engine\_for\_spark}{$spark$, $join\_label$}
-    \If{$current\_context = \text{NULL}$}
-        \State $ctxt \gets$ MR\_get\_free\_context()
-        \If{$ctxt = \text{NULL}$}
-            \State $ctxt \gets$ MR\_create\_context()
-        \EndIf
-        \State MR\_load\_context($ctxt$)
-    \EndIf
-    \State $MR\_parent\_sp \gets spark.parent\_sp$
-    \State $ctxt.thread\_local\_mutables \gets
-      spark.thread\_local\_mutables$
-    \State \Return $spark.resume$
-\EndProcedure
-\end{algorithmic}
-\caption{MR\_prepare\_engine\_for\_spark()}
-\label{alg:prepare_engine_for_spark}
-\end{algorithm}
-
-\end{float}
-
-An idle engine without a context will call \idle to acquire new work.
+An idle engine with a context that is free (it can be used for any spark) or
+no context will call \idle to acquire new work.
 \idle has changed significantly;
 the new version is shown in Algorithm \ref{alg:idle_entry_point}.
 Three new procedures are now used to implement the details of \idle, these
