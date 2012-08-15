@@ -140,7 +140,7 @@ Another change is that \trystealspark
 will now call \prepareengineforspark (line 7)
 which will load a context into the engine if it doesn't already have one.
 (Algorithm \ref{alg:prepare_engine_for_spark}).
-Finallly \trystealspark will return the address of the spark's code;
+Finally \trystealspark will return the address of the spark's code;
 the caller will jump to this address,
 if it is not NULL.
 
@@ -149,9 +149,9 @@ counter;
 it ensured that round robin selection of the victim was maintained.
 Now each engine independently performs its own round robin selection of the
 victim using a new field \code{victim\_counter} in the engine structure.
-We have not evaluated if this policy is an improvment.
+We have not evaluated if this policy is an improvement.
 However when compared with the improvement due to removing the lock and
-potentially large numver of spark deques,
+potentially large number of spark deques,
 any difference in performance due to the selection of victims will be
 negligible.
 The two other changes are minor:
@@ -264,7 +264,7 @@ running a spark may require creation of a context which may exceed the
 context limit,
 where as running a spark does not.
 Furthermore,
-we beleive that executing a context is optimal
+we believe that executing a context is optimal
 as a context whose execution has already begin may make more parallel work
 available by creating sparks or signalling futures.
 If the engine is able to run the context until the completion of its work
@@ -575,7 +575,7 @@ if it is not it will put the spark back onto the spark deque and return
 \NULL, it also returns \NULL if there is no spark on the deque.
 idleorigcontext will jump to the code address that \tryrunlocalspark returned
 provided that it is non-\NULL.
-Otherwise \idleorigcontext will save the corrent context,
+Otherwise \idleorigcontext will save the current context,
 set its \code{resume\_label} field
 and jump to \idle which attempts to find work as described above.
 If \idleorigcontext could not run a local spark because the spark at the top
