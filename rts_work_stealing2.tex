@@ -262,7 +262,7 @@ limit is exceeded.
 We cannot guarantee the order in which sparks are executed (thieves
 may steal from any deque);
 a situation can occur when a context may block on
-a future that can only be signaled by another computation that is currently
+a future that can only be signalled by another computation that is currently
 represented by a spark, and therefore the creation of a new context may be
 necessary.
 If we did not allow contexts to be created for local sparks then deadlocks
@@ -593,13 +593,69 @@ have a empty context;
 this case could check for work in a different order and and if it does not
 find any work it could jump to \sleep the way \idle currently does.
 
+\plan{Benchmark}
+
+\begin{figure}
+\begin{verbatim}
+:- func fibs(int, int) = int.
+
+fibs(N, Depth) = F :-
+    (
+        N < 2
+    ->
+        F = 1
+    ;
+        ( Depth > 0 ->
+            (
+                F1 = fibs(N-1, Depth-1)
+            &
+                F2 = fibs(N-2, Depth-1)
+            )
+        ;
+            F1 = fibs_seq(N-1),
+            F2 = fibs_seq(N-2)
+        ),
+        F = F1 + F2
+    ).
+\end{verbatim}
+\caption{\fibs with granularity control}
+\label{fig:fibs}
+\end{figure}
+
+We used four programs to test the new work stealing implementation against
+the previous one.
+These are:
+the left and right versions of mandelbrot from previous sections,
+and two different versions of the recursive (na\"ve) definition of the 43rd
+Fibonacci number (named fibs).
+The parallel \fibs function is shown in Figure \ref{fig:fibs}.
+The recursive definition of fibs has two independent recursive calls in its
+recursive which have been parallelised against one another.
+An extra augment is used to describe at what depth in the call tree
+sequential execution should be used instead of parallel execution.
+At each recursive call this value (\code{Depth}) is decremented.
+If \code{Depth} reaches zero, then the implementation will call a sequential
+version of the \fibs function.
+We have shown results where the initial depth is 30,
+meaning that the top 30 levels of the call graph are executed in parallel
+and any work beneath that is executed sequentially.
+Granularity control avoids embarrassing parallelism by
+turning a computation with 
+many small parallel tasks into one with fewer larger parallel tasks,
+this means that the overheads of parallel execution affect the computation
+less.
+However since we are including fibs because it is a micro benchmark then
+observing how these overheads affect its performance is desirable,
+which is why we use a high initial value for \code{Depth} such as 30,
+and why we've shown a version without granularity control.
+
+
 \input{tab_work_stealing_revised}
 
-\plan{Benchmark}
-\paul{XXX: There's something wrong with the prior left recursive results,
-the thread safe sequential time is slower than it should be thus we get stupidly high speedups}
-\paul{Also, when comparing absolute times the new work stealing code is
-slower, maybe due to the order we check for work in \idle in?}
+
+the first of these uses some granularity control (GC) and the second does
+not.
+
 
 \plan{Evaluation}
 
