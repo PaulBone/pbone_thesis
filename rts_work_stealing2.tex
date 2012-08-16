@@ -160,27 +160,6 @@ attempts per round,
 and the test for null array slots has been removed;
 both are now unnecessary.
 
-\plan{Show how this is safe.}
-Associating the spark deques with engines can change the order in which
-sparks are executed,
-so we must ensure that the system is still deadlock free.
-In the previous version,
-a context that is blocked on a call to \wait may contain sparks
-which can only be accessed by a thief.
-In the new version,
-those sparks are now associated with the engine that the context was running
-on,
-and therefore that engine has the opportunity to run those sparks by
-retrieving them from the hot end of its own deque.
-If the engine attempts to execute one of these sparks it will need a
-context,
-and the creation of a new context may exceed the context limit even though
-the spark is being executed locally.
-This is just one instance in which an engine \emph{without a context}
-may try to run a spark from its own deque.
-In the previous version a context would always be available because sparks
-were associated with contexts.
-
 \begin{algorithm}[tbp]
 \begin{algorithmic}
     \Procedure{MR\_idle}{}
@@ -250,33 +229,57 @@ were associated with contexts.
 \label{alg:try_run_local_spark}
 \end{algorithm}
 
+We have also made changes to the code that \idle engines execute.
 An idle engine with a context that is free (it can be used for any spark) or
-no context will call \idle to acquire new work.
+without a context will call \idle to acquire new work.
 \idle has changed significantly;
 the new version is shown in Algorithm \ref{alg:idle_entry_point}.
-Three new procedures are now used to implement the details of \idle, these
+Three new C functions are now used to implement the details of \idle, these
 are:
 \tryruncontext, \tryrunlocalspark and \trystealspark.
-They are procedures so that we can use them from procedures other than
-\idle, such as \joinandcontinue below.
+They are separate C functions so that we can use them from procedures other
+than \idle, such as \joinandcontinue below.
 \idle always tries to find a runnable context before a local spark;
-running a spark may require creation of a context which may exceed the
+running a spark may require the creation of a context which may exceed the
 context limit,
-where as running a spark does not.
+where as running a context does not.
 Furthermore,
 we believe that executing a context is optimal
 as a context whose execution has already begin may make more parallel work
 available by creating sparks or signalling futures.
-If the engine is able to run the context until the completion of its work
-(until the contexts executes the \joinandcontinue barrier at the end of a
+If the engine is able to run a context until the completion of its work
+(until the context executes the \joinandcontinue barrier at the end of a
 parallel conjunct)
 then this may make the context available to execute a spark from the
 engine's local spark queue.
 Therefore \idle always tries to run a context using \tryruncontext,
 before it attempts to run a local spark using \tryrunlocalspark.
-If both of these fail to find work, \idle will then attempt to steal a spark using
-\trystealspark,
-if this also fails then \idle will jump to \sleep (below).
+If \tryrunlocalspark finds a spark to execute and the conjunction does not
+have a context, a new context will be created.
+This is done without checking the context limit.
+This is necessary as it allows the system to make progress when the context
+limit is exceeded.
+We cannot guarantee the order in which sparks are executed (thieves
+may steal from any deque);
+a situation can occur when a context may block on
+a future that can only be signaled by another computation that is currently
+represented by a spark, and therefore the creation of a new context may be
+necessary.
+If we did not allow contexts to be created for local sparks then deadlocks
+would be possible.
+Not checking the context limit in \tryrunlocalspark does not usually cause
+the number of contexts to rise:
+local spark execution tends to be in depth first left to right order
+(sequential order) and is unlikely to block contexts and create new
+contexts.
+As described above \trystealspark does check the context limit.
+While the context limit is a work-around to prevent some worst case
+behaviour,
+it is still important to use scheduling policies that keep the number of
+contexts low:
+contexts consume significant amounts of memory and
+the garbage collector spends time scanning that memory.
+By reducing the number of contexts we can improve memory and time usage.
 
 \idle is a hard coded Mercury procedure and it does not return control to
 its caller.
