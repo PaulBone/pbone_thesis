@@ -240,27 +240,29 @@ are:
 They are separate C functions so that we can use them from procedures other
 than \idle, such as \joinandcontinue below.
 \idle always tries to find a runnable context before a local spark;
-running a spark may require the creation of a context which may exceed the
-context limit,
-where as running a context does not.
-Furthermore,
 we believe that executing a context is optimal
-as a context whose execution has already begin may make more parallel work
-available by creating sparks or signalling futures.
-If the engine is able to run a context until the completion of its work
-(until the context executes the \joinandcontinue barrier at the end of a
-parallel conjunct)
-then this may make the context available to execute a spark from the
-engine's local spark queue.
-Therefore \idle always tries to run a context using \tryruncontext,
-before it attempts to run a local spark using \tryrunlocalspark.
-If \tryrunlocalspark finds a spark to execute and the conjunction does not
-have a context, a new context will be created.
-This is done without checking the context limit.
-This is necessary as it allows the system to make progress when the context
-limit is exceeded.
-We cannot guarantee the order in which sparks are executed (thieves
-may steal from any deque);
+as a context whose execution has already begun,
+may make more parallel work available by creating sparks or signalling
+futures.
+Also if the context does not block then when it finishes its work it can be
+used to execute a spark from the engine's local spark queue.
+Checking for runnable contexts first also helps to avoid the creation of new
+contexts before existing context's computations are finished.
+This partially avoids deadlocks that can occur when the context limit is
+exceeded:
+executing a waiting context rather than attempting to create a new context
+for a spark does not increase the number of contexts that exist.
+
+If \idle cannot find a context to resume then it
+will call \tryrunlocalspark.
+If there is a spark to execute and the engine does not have a context,
+a new one will be created.
+We do this without checking the context limit;
+this, combined with attempting to run contexts before sparks (above)
+avoids deadlocks.
+We ensure that the system can still make progress when the context limit is
+exceeded by not checking the limit when executing a local spark.
+For example,
 a situation can occur when a context may block on
 a future that can only be signalled by another computation that is currently
 represented by a spark, and therefore the creation of a new context may be
@@ -281,20 +283,19 @@ contexts consume significant amounts of memory and
 the garbage collector spends time scanning that memory.
 By reducing the number of contexts we can improve memory and time usage.
 
-\idle is a hard coded Mercury procedure and it does not return control to
+\idle is a hand written Mercury procedure and it does not return control to
 its caller.
 Instead it continues execution by jumping to the code address of the next
 thing to execute.
 such as the
 the resume address of a context,
 or the entry point of a spark.
-When it jumps to the next thing to execute the Mercury and C stack pointers
-must have the same values that they had when the control entered \idle.
-This means that the C functions \tryruncontext, \tryrunlocalspark and
-\trystealspark \emph{must} return
-rather than making the jump themselves.
-so that the C stack pointer has the same value that it did upon entering
-\idle.
+if one of its callees such as \trystealspark where to make this jump rather
+than returning and then letting \idle jump,
+then this would leak the stack frames created for \trystealspark.
+Therefore, each of the functions \tryrunlocalspark, \tryruncontext and
+\trystealspark must return the address of the next thing to execute and
+allow \idle to jump to this code or jump to \sleep.
 
 \tryruncontext is shown in Algorithm \ref{alg:try_run_context};
 it attempts to take a context from the context runqueue while holding the
@@ -371,7 +372,7 @@ union MR_engine_wake_action_data {
                 \EndIf
                 \State \Break
               \EndCase
-              \Case{ACTION\_NONE}
+              \Case{ACTION\_NOT\_SPECIFIED}
                 \State $code\_ptr \gets$ MR\_try\_run\_context()
                 \If{$code\_ptr \neq$ NULL}
                     \Goto $code\_ptr$
@@ -396,85 +397,90 @@ It uses an
 \enginesleepsync structure to manage the state of each engine.
 These structures are organised into a global array indexed by engine ids,
 making them accessible to other engines.
-The structure contains a semaphore and a lock;
-the engine owning the structure waits on \code{sleep\_sem} in order to
+each structure contains a semaphore and a lock.
+The engine owning the structure waits on \code{sleep\_sem} in order to
 sleep,
-and \code{lock} is used by other engines to control their mutual
-access to the \enginesleepsync structure.
-There are three other fields in the structure:
+and \code{lock} is used by other engines to ensure mutual exclusion for
+their accesses to the \enginesleepsync structure.
+There are three other fields in each structure:
 \code{state} is used by the engine that owns the structure to communicate
 its state to other engines,
-\code{action} and \code{action\_data} are used by other threads when
+while \code{action} and \code{action\_data} are used by other threads when
 communicating to this engine.
 
-Upon jumping into \idle an engine sets its state to \code{SLEEPING} and
-waits on \code{sleep\_sem}.
+Upon jumping into \idle,
+an engine sets its state to \code{SLEEPING} and waits on \code{sleep\_sem}.
 If another engine posts to \code{sleep\_sem} then the engine is woken up,
 and retrieves the value of the \code{action} field.
-This field can be used to tell the engine what to do upon wakening.
-It may be instructed to shutdown, to execute a context or to steal a spark.
-If it is instructed to run a context it can be passed the context directly
-using the \code{action\_data} field,
-similarly, if it instructed to steal a spark \code{action\_data} will tell
+The engine switches on this value to determine what to do,
+such as:
+shut down, 
+execute a context, or
+steal and execute a spark.
+If it is instructed to run a context,
+it will be passed the context directly
+using the \code{action\_data} field.
+Similarly, if it instructed to steal a spark,
+then \code{action\_data} will tell
 it whose spark stack it should begin its round robin search from.
-If thread stealing fails the engine will check the global contest queue for
-a runnable context,
-if that fails then \idle will loop and putting the engine back to sleep.
+If thread stealing fails,
+the engine will check the global context queue for
+a runnable context;
+if that fails,
+then \idle will loop and put the engine back to sleep.
 If no action is specified
-(the value of the \code{action} field is \code{ACTION\_NONE})
-them \sleep will try to run a context from the global context queue before
+(the value of the \code{action} field is \code{ACTION\_NOT\_SPECIFIED}),
+then \sleep will try to run a context from the global context queue before
 attempting to steal a spark.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}
 \Procedure{MR\_wake\_engine}{$engine\_id, action, action\_data, states$}
-    \State $eng\_data \gets MR\_engine\_sleep\_data$[$engine\_id$]
-    \State MR\_acquire\_lock($eng\_data.lock$)
+    \State MR\_acquire\_lock($MR\_engine\_sleep\_data$[$engine\_id$]$.lock$)
     \If{$eng\_data.state \in states$}
-        \State $eng\_data.action \gets action$
-        \State $eng\_data.action\_data \gets action\_data$
-        \State $eng\_data.state \gets$ WOKEN
-        \State MR\_sem\_post($eng\_data.sleep\_sem$)
+        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.action \gets action$
+        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.action\_data \gets action\_data$
+        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.state \gets$ WOKEN
+        \State MR\_sem\_post($MR\_engine\_sleep\_data$[$engine\_id$]$.sleep\_sem$)
         \State $result \gets$ true
     \Else
         \State $result \gets$ false
     \EndIf
-    \State MR\_release\_lock($eng\_data.lock$)
-    \Return $result$
+    \State MR\_release\_lock($MR\_engine\_sleep\_data$[$engine\_id$]$.lock$)
+    \State \Return $result$
 \EndProcedure
 \end{algorithmic}
 \caption{\wakeengine}
 \label{alg:wake_engine}
 \end{algorithm}
 
-Engines may be woken with a call to \wakeengine whose code is shown in
-Algorithm \ref{alg:wake_engine}.
-\wakeengine takes id of the engine to awaken,
+Engines may be woken with a call to \wakeengine,
+whose code is shown in Algorithm \ref{alg:wake_engine}.
+\wakeengine takes as parameters the id of the engine to awaken,
 the action and its data that the engine should perform upon awakening,
-and the set of states that we may awaken the engine from (usually
+and the set of states from which we may awaken the engine from (usually
 \code{SLEEPING}).
 The implementation of \wakeengine is mostly straightforward,
-the important details are that we must only wake the engine if it has not
+one important detail is that we must only wake the engine if it has not
 been woken already, this is done by checking the value of
 \code{eng\_data.state} after acquiring the lock,
 and setting the new state while holding the lock.
 The action and action data must also be written to the
-\enginesleepsync structure before posting to the engine's sleep
+\enginesleepsync structure before posting to the target engine's sleep
 semaphore.
 The parameter \code{states} is a bit field, with each state represented by
 its own bit.
 This is flexible, it allows us to message an engine regardless of its
 current state.
 For example,
-we shutdown an engine by calling \wakeengine with the shutdown action a and
+we shut down an engine by calling \wakeengine with the shut down action and
 all bits set in the \code{states} bit field.
-Compared to the previous system in which a lock and condition variable were
-used,
+Compared to the previous system which used a lock and a condition variable,
 this system allows us to wake engines selectively.
 This is useful in the case when a context must be executed on a particular
 engine because that engine's C stack contains a frame that made a call to
 some Mercury code and now must be returned into.
-In the future this feature could be used to schedule computations on
+In the future, this feature could be used to schedule computations on
 \emph{nearby} processors,
 processors that may share a second or third level cache with the current
 processor.
@@ -507,8 +513,9 @@ processor.
 \label{alg:join_and_continue_ws2}
 \end{algorithm}
 
-By moving spark deques from contexts to engines we had to change \idle.
-We have also had to change the \joinandcontinue barrier.
+Moving spark deques from contexts to engines made it necessary to change
+\idle.
+Similarly we must also change the \joinandcontinue barrier.
 The new version of \joinandcontinue is shown in Algorithm
 \ref{alg:join_and_continue_ws2}.
 The most significant change is on line 15,
@@ -523,31 +530,26 @@ parallel conjunction that it is currently executing.
 The new \idle code allows us to create any number of entry points,
 we have created the \idleorigcontext entry point which expects to be called
 with such a context.
-However, since we do not set the contest's \code{resume\_label} field until
+However, since we do not set the context's \code{resume\_label} field until
 the engine has given up the context,
-we must pass the value of the continuation label into \idleorigcontext.
-This is done using \code{MR\_r1}, the first Mercury abstract machine
+we must pass the value of the continuation label to \idleorigcontext.
+We do this by using \code{MR\_r1}, the first Mercury abstract machine
 register;
-this is the normal calling convention used by compiled Mercury procedures.
+this is the normal calling convention for Mercury procedures.
 
 The other change is an optimisation on line 10.
-if the parallel conjunction has been finished and this engine is not
-executing the original context,
-then instead of placing the original context on the context run queue as the
-previous version did,
-the new version unloads its current context and resumes execution of the
-original context,
-This has three benefits,
-firstly, this does not use the run queue's lock,
-making it more efficient.
-Secondly, in the old algorithm, the engine would schedule the context and
-call \idle,
-in which it would check the context run queue and was likely to run the same
-context anyway.
-Thirdly, by deliberately running the context on the CPU that most
-recently completed the parallel conjunction,
-we may be able to take advantage of relevant data being hot in the CPU's
-cache.
+In the old version of this algorithm the engine would schedule the original
+context,
+by placing it on the run queue,
+and then call \idle,
+which would most likely take the same context off the run queue and then
+execute it.
+We are able to take advantage of the knowledge that the original context is
+now runnable and the engine's current context is finished,
+Therefore, we can release the engine's current context and load the original
+context without calling \idle or using the run queue.
+This is more efficient as it uses the runqueue less and,
+in turn uses the run queue's lock less.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}
@@ -571,20 +573,42 @@ The new entry point \idleorigcontext is shown in Algorithm
 \ref{alg:idle_orig_context}.
 This entry point expects to be called from \joinandcontinue while the engine
 is holding a context that is needed to complete a parallel conjunction.
-It tries to run a spark from the engine's local spark deque first,
-the \tryrunlocalspark will check if the spark at the top of the spark deque
-is compatible with the current context,
-if it is not it will put the spark back onto the spark deque and return
-\NULL, it also returns \NULL if there is no spark on the deque.
-idleorigcontext will jump to the code address that \tryrunlocalspark returned
-provided that it is non-\NULL.
-Otherwise \idleorigcontext will save the current context,
-set its \code{resume\_label} field
-and jump to \idle which attempts to find work as described above.
-If \idleorigcontext could not run a local spark because the spark at the top
-of the deque was incompatible;
-then this spark will be executed by \idle if it was not stolen by another
-engine in the meantime.
+Using \tryrunlocalspark (Algorithm \ref{alg:try_run_local_spark},
+it tries to run a spark from the engine's local spark deque first.
+When we introduced \tryrunlocalspark above,
+we said that it checked whether the spark at the top of the spark deque was
+compatible with the current context;
+when \tryrunlocalspark is called from \idleorigcontext this test can fail
+because the spark may be related to a different parallel conjunction than
+the one that the engine's current context has been executing.
+When this happens \tryrunlocalspark will put the spark back onto the spark
+deque and return \NULL.
+Below we describe why it is best to put the spark back on the deque.
+It will also return \NULL when there is no spark on the deque.
+If non-\NULL was returned then \idleorigcontext will jump to the code
+address that \tryrunlocalspark returned,
+otherwise it will save its current context,
+set the context's \code{resume\_label} field
+and jump to \idle which attempts to find work as described above,
+which involves looking for work with \tryruncontext, \tryrunlocalspark, and
+\trystealspark.
+If the earlier call to \tryrunlocalspark put an incompatible spark back onto
+the spark deque,
+and the call to \tryruncontext did not find a runnable context then
+the next call to \tryrunlocalspark
+will retrieve the spark from the top of the deque and be able to execute it,
+provided that the spark was not stolen in the meantime.
+The spark will now be compatible because the engine released its context
+before jumping to \idle.
+This is one of two simple ways to handle context-spark incompatibility:
+the other is to suspend the current context at the moment when we find that
+a spark is incompatible.
+Both solutions require a context switch,
+but the solution that we have chosen will also attempt to execute a
+suspended context before attempting to execute the spark using a new context
+(we described above that it is best to execute a suspended context rather
+than a spark).
+
 We could add further entry points in the future if we found them useful,
 and they do not have to jump to \idle when they finish.
 For example,
@@ -661,18 +685,45 @@ not.
 
 \plan{Further potential work}
 \plan{Steal half}
-Our work stealing implementation could be improved and tuned further.
 We have noticed that in many workloads such as a left recursive parallel
-loop one engine creates all the sparks, all the parallelism comes from one
-place.
-In a situation like this work stealing becomes more common than local work
-execution,
-one processor would execute work locally while $P - 1$ processors act as
-thieves, and a single work queue can again become a bottleneck.
-To avoid this behaviour
-a steal-half implementation (such as \citet{hendler:2002:stealhalf})
-should quickly distributed work evenly between the processors,
-reducing the overall number of work stealing operations.
+loop one engine creates all the sparks.
+In a situation like this,
+work stealing becomes more common than local work execution.
+One processor would execute work locally while $P - 1$ processors act as
+thieves,
+and the original engine's work queue can become a bottleneck.
+To avoid this behaviour,
+a thief could steal more than one spark from a victim and put all but one of
+those sparks on its own deque.
+Each time this happens work becomes distributed among more of the engines,
+which improves the probability that a given victim has work on its deque.
+The numbers of sparks on each engine's deque should stabilise,
+and then work stealing will become less frequent as each engine will prefer to
+take work from the hot end of its own deque.
+Executing more work from one's own deque, and decreasing the amount of stealing
+should both improve the efficiency of the program as a whole.
+
+We are currently using the the deque data structure and algorithms described by
+\citet{Chase_2005_wsdeque} (CL Deque).
+\citet{hendler:2002:stealhalf} (HS Deque) describes a similar data structure
+and set of algorithms that allow half the work to be stolen in a single lock
+free operation.
+These data structures are similar:
+they are both based on \citet{arora:1998:work-stealing}.
+The HS Deque differs from 
+\citet{arora:1998:work-stealing}
+by stealing half the work from a victim's deque,
+whilst the CL Deque differs by structuring each deque as
+dynamically resizable circular buffer.
+We have chosen to use the CL Deque because it is resizable,
+a feature that we identified as important (Section \ref{sec:rts_work_stealing}).
+Furthermore,
+if we ever adopt a steal half deque (or any work stealing deque that allows
+us to steal more than one item in a single operation) we will have to
+consider spark execution order carefully.
+Therefore,
+these ideas may be interesting for further work.
+
 \plan{memory hierarchy awareness}
 Another potential improvement is in the selection of a thief's victim.
 A thief may wish to prefer victims that are nearby in terms of memory
