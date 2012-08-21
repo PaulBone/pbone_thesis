@@ -118,14 +118,16 @@ programs = [
     program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
         "-l -x 600 -y 600",
         mandelbrot_args),
-    program("fibs_43_gc43", "fibs", "fibs",
-        "43 43", no_args),
+    program("fibs_43_gc40", "fibs", "fibs",
+        "-d 43 43", fibs_args),
     program("fibs_43_gc30", "fibs", "fibs",
-        "43 30", no_args),
+        "-d 30 43", fibs_args),
     program("fibs_43_gc20", "fibs", "fibs",
-        "43 20", no_args),
+        "-d 20 43", fibs_args),
     program("fibs_43_gc10", "fibs", "fibs",
-        "43 10", no_args)
+        "-d 10 43", fibs_args),
+    program("fibs_43_gc0", "fibs", "fibs",
+        "43", fibs_args)
     ].
 
 :- func mandelbrot_args(string) = string.
@@ -135,6 +137,17 @@ mandelbrot_args(Group) = Args :-
         Args = ""
     ; Group = "control" ->
         Args = "-s"
+    ;
+        unexpected($module, $pred, "Unknown group")
+    ).
+
+:- func fibs_args(string) = string.
+
+fibs_args(Group) = Args :-
+    ( Group = "test" ->
+        Args = "--parallel"
+    ; Group = "control" ->
+        Args = "--no-parallel"
     ;
         unexpected($module, $pred, "Unknown group")
     ).
