@@ -20,7 +20,12 @@
 main(!IO) :-
     bench(config, !IO).
 
-:- func config = config_data.
+/* ###  In definition of function `bench_gc_ts.config'/2: */
+/* ###    error: undefined type `config_data'/0. */
+:- type group
+    --->    test.
+
+:- func config = config_data(group).
 
 config = Data :-
     Data = config_data(
@@ -32,7 +37,7 @@ config = Data :-
         programs
     ),
     Groups = [
-        test_group("test",
+        test_group(test,
             test_group_grades,
             test_group_rtopts,
             gc_initial_heap_size,
@@ -93,10 +98,12 @@ asmfast = grade("asmfast", "asm_fast.gc.stseg").
 test_group_rtopts =
     map((func(P) = rtopts(format("P%d", [i(P)]),
             format("-P %d", [i(P)]))),
+/* ###  In definition of function `bench_gc_ts.programs'/2: */
+/* ###    error: undefined type `program'/0. */
         mercury_engines).
 
     % The programs to test.
-:- func programs = list(program).
+:- func programs = list(program(group)).
 
 programs = [
     program("mandelbrot", "mandelbrot", "mandelbrot",
@@ -110,14 +117,7 @@ programs = [
         no_args)
     ].
 
-:- func mandelbrot_args(string) = string.
+:- func mandelbrot_args(group) = string.
 
-mandelbrot_args(Group) = Args :-
-    ( Group = "test" ->
-        Args = ""
-    ; Group = "control" ->
-        Args = "-s"
-    ;
-        unexpected($module, $pred, "Unknown group")
-    ).
+mandelbrot_args(test) = "".
 

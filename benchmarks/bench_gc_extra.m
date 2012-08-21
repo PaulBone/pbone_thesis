@@ -20,7 +20,10 @@
 main(!IO) :-
     bench(config, !IO).
 
-:- func config = config_data.
+:- type group
+    --->    control2.
+
+:- func config = config_data(group).
 
 config = Data :-
     Data = config_data(
@@ -31,7 +34,7 @@ config = Data :-
         programs
     ),
     Groups = [
-        test_group("control2",
+        test_group(control2,
             control_group_grades,
             control_group_rtopts,
             gc_initial_heap_size,
@@ -96,7 +99,7 @@ test_group_rtopts =
         mercury_engines).
 
     % The programs to test.
-:- func programs = list(program).
+:- func programs = list(program(group)).
 
 programs = [
     program("mandelbrot_heap", "mandelbrot_heap", "mandelbrot",
@@ -107,14 +110,7 @@ programs = [
         no_args)
     ].
 
-:- func mandelbrot_args(string) = string.
+:- func mandelbrot_args(group) = string.
 
-mandelbrot_args(Group) = Args :-
-    ( Group = "test" ->
-        Args = ""
-    ; Group = "control2" ->
-        Args = "-s"
-    ;
-        unexpected($module, $pred, "Unknown group")
-    ).
+mandelbrot_args(control2) = "-s".
 

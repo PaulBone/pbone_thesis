@@ -19,7 +19,11 @@
 main(!IO) :-
     bench(config, !IO).
 
-:- func config = config_data.
+:- type group
+    --->    control
+    ;       test.
+
+:- func config = config_data(group).
 
 config = Data :-
     Data = config_data(
@@ -36,12 +40,12 @@ config = Data :-
     ],
     BaseDir = "/srv/scratch/dev",
     Groups = [
-        test_group("control",
+        test_group(control,
             control_group_grades,
             control_group_rtopts,
             [gc_initial_heap_size],
             [1]),
-        test_group("test",
+        test_group(test,
             test_group_grades,
             test_group_rtopts,
             [gc_initial_heap_size],
@@ -109,7 +113,7 @@ test_group_rtopts =
         mercury_engines)).
 
     % The programs to test.
-:- func programs = list(program).
+:- func programs = list(program(group)).
 
 programs = [
     program("mandelbrot_indep", "mandelbrot", "mandelbrot",
@@ -130,25 +134,13 @@ programs = [
         "43", fibs_args)
     ].
 
-:- func mandelbrot_args(string) = string.
+:- func mandelbrot_args(group) = string.
 
-mandelbrot_args(Group) = Args :-
-    ( Group = "test" ->
-        Args = ""
-    ; Group = "control" ->
-        Args = "-s"
-    ;
-        unexpected($module, $pred, "Unknown group")
-    ).
+mandelbrot_args(test) = "".
+mandelbrot_args(control) = "-s".
 
-:- func fibs_args(string) = string.
+:- func fibs_args(group) = string.
 
-fibs_args(Group) = Args :-
-    ( Group = "test" ->
-        Args = "--parallel"
-    ; Group = "control" ->
-        Args = "--no-parallel"
-    ;
-        unexpected($module, $pred, "Unknown group")
-    ).
+fibs_args(test) = "--parallel".
+fibs_args(control) = "--no-parallel".
 
