@@ -18,7 +18,7 @@ of it to place elsewhere, for example, in the background section.}
 
 Introducing parallelism into a Mercury program is easy.
 A programmer can use the parallel conjunction operator (an ampersand)
-insetead of the plain conjunction operator (a comma) to tell the compiler
+instead of the plain conjunction operator (a comma) to tell the compiler
 that conjuncts of the conjunction should be executed in parallel with one
 another.
 This simple change can also be done automatically.
@@ -30,7 +30,7 @@ spawning off a task that takes only a hundred instructions is clearly a loss.
 and even spawning off a tack of a few thousand instructions is not a win;
 it should only be done for computations
 that take long enough to benefit from parallelism.
-Autoparallelizing compilers have therefore
+Autoparallelising compilers have therefore
 long tried to use granularity analysis
 to ensure that they only spawn off computations
 whose cost will probably exceed the spawn-off cost by a comfortable margin.
@@ -39,9 +39,9 @@ because data dependencies may \emph{also} limit
 the usefulness of running computations in parallel.
 If one computation blocks almost immediately
 and can resume only after another has completed its work,
-then the cost of parallelization again exceeds the benefit.
+then the cost of parallelisation again exceeds the benefit.
 
-We present a set of algorithms for recognizing places in a program
+We present a set of algorithms for recognising places in a program
 where it is worthwhile to execute two or more computations in parallel
 that pay attention to the second of these issues as well as the first.
 Our system uses profiling information to compute
@@ -56,10 +56,10 @@ and therefore whether executing them in parallel is a good idea or not.
 
 We have implemented this technique for Mercury
 in the form of a tool that uses profiling data
-to generate recommendations about what to parallelize,
+to generate recommendations about what to parallelise,
 for the Mercury compiler to apply on the next compilation of the program.
 We present preliminary results that show that
-this technique can yield useful parallelization speedups,
+this technique can yield useful parallelisation speedups,
 while requiring nothing more from the programmer
 than representative input data for the profiling run.
 
@@ -73,14 +73,14 @@ than representative input data for the profiling run.
 % Parallel programming is hard.
 
 % Pure Declarative languages make it safe, and Automatic
-% parallelization makes it easier.
+% parallelisation makes it easier.
 
-When parallelizing Mercury~\cite{mercury_jlp} programs,
-the best parallelization opportunities occur
+When parallelising Mercury~\cite{mercury_jlp} programs,
+the best parallelisation opportunities occur
 where two goals take a significant and roughly similar time to execute.
 Their execution time should be as large as possible
 so that the relative costs of parallel execution are small,
-and they should be independent to minimize synchronization costs.
+and they should be independent to minimise synchronisation costs.
 Unfortunately, goals expensive enough to be worth executing in parallel
 are rarely independent.
 For example, in the Mercury compiler itself,
@@ -116,9 +116,9 @@ Unfortunately, in real Mercury programs,
 almost all conjunctions are dependent conjunctions,
 and in most of them,
 shared variables are produced very late and consumed very early.
-Parallelizing them would therefore yield slowdowns instead of speedups,
+Parallelising them would therefore yield slowdowns instead of speedups,
 because the overheads of parallel execution would far outweigh the benefits.
-We want to parallelize only conjunctions
+We want to parallelise only conjunctions
 in which any shared variables are produced early, consumed late,
 or (preferably) both.
 The first purpose of this paper is to show how one can find these conjunctions.
@@ -138,7 +138,7 @@ map_foldl(M, F, [X | Xs], Acc0, Acc) :-
 %\vspace{-2\baselineskip}
 \end{figure}
 
-The second purpose is to find the best way to parallelize these conjunctions.
+The second purpose is to find the best way to parallelise these conjunctions.
 Consider the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
 The body of the recursive clause has three conjuncts.
 We could make each conjunct execute in parallel,
@@ -161,7 +161,7 @@ will have significant execution overlap
 with its parent processing the first element of the list
 even if (as is typical) the fold predicate generates \code{Acc1} very late.
 (This is the kind of computation that
-Reform Prolog \cite{bevemyr:reform} was designed to parallelize.)
+Reform Prolog \cite{bevemyr:reform} was designed to parallelise.)
 
 The structure of this paper is as follows.
 Section~\ref{sec:background} gives
@@ -170,7 +170,7 @@ Section~\ref{sec:approach} outlines our general approach,
 which the later sections fill in.
 Section~\ref{sec:overlap} describes our algorithm for calculating
 the execution overlap between two or more dependent conjuncts.
-A conjunction with more than two conjuncts can be parallelized
+A conjunction with more than two conjuncts can be parallelised
 in several different ways;
 section~\ref{sec:howto} shows how we choose the best way.
 \tr{Section~\ref{sec:pragmatic} discusses some pragmatic issues.}
@@ -193,11 +193,11 @@ with comparisons to related work.
 % \include{prof_fb}
 % \centerline{\raise 1em\box\graph}
 % \end{center}
-% \caption{Automatic parallelization workflow}
+% \caption{Automatic parallelisation workflow}
 % \label{fig:profiler_feedback_workflow}
 % \end{figure}
 
-% During automatic parallelization,
+% During automatic parallelisation,
 % a compiler may be able to estimate some cost information from static
 % analysis.
 % However, this will not be accurate;
@@ -210,7 +210,7 @@ with comparisons to related work.
 % compiler to build the parallel version of the program.
 
 We want to find the conjunctions in the program
-whose parallelization would be the most profitable.
+whose parallelisation would be the most profitable.
 This means finding the conjunctions with conjuncts
 whose execution cost exceeds the spawning-off cost by the highest margin,
 and whose interdependencies, if any,
@@ -229,7 +229,7 @@ allow their executions to overlap the most.
 Essentially, the greater the margin by which
 the likely runtime of the parallel version of a conjunction beats
 the likely runtime of the sequential version,
-the more beneficial parallelizing that conjunction will be.
+the more beneficial parallelising that conjunction will be.
 
 To compute this likely benefit,
 we need information
@@ -243,16 +243,16 @@ after they have tested and debugged the program.
 \item
 Compile the program
 with options asking for profiling.
-% for automatic parallelization.
+% for automatic parallelisation.
 \item
 Run the program on a representative set of input data.
 This will generate a profiling data file.
 \item
 Invoke our feedback tool on the profiling data file.
-This will generate a parallelization advice file.
+This will generate a parallelisation advice file.
 \item
 Compile the program for parallel execution,
-specifying the parallelization advice file.
+specifying the parallelisation advice file.
 The advice file tells the compiler
 \emph{which} sequential conjunctions to convert to parallel conjunctions,
 and exactly \emph{how}.
@@ -268,7 +268,7 @@ the speedups you get from them can be strikingly different.
 It is up to the programmer using our system
 to select training input for the profiling run in step 2.
 Obviously, programmers should pick input that is as representative as possible,
-but the recommended parallelization can be useful
+but the recommended parallelisation can be useful
 even for input data that is quite different from the training input.
 The main focus of this paper is on step 3;
 we give the main algorithms used by the feedback tool.
@@ -297,7 +297,7 @@ to allow us to figure it out for \emph{all} program points.
 }
 As we will see in section~\ref{sec:overlap},
 we need this information
-to calculate the likely speedup from parallelizing a conjunction.
+to calculate the likely speedup from parallelising a conjunction.
 
 % \paul{This is not yet implemented and will not be for this version of the paper.}
 % \peter{Then you need to say that.}
@@ -332,20 +332,20 @@ to calculate the likely speedup from parallelizing a conjunction.
 % GREEDY_SEARCH \item
 % GREEDY_SEARCH we process this clique
 % GREEDY_SEARCH by looking at the conjunctions in the clique's procedures
-% GREEDY_SEARCH to see whether they should be parallelized; and then
+% GREEDY_SEARCH to see whether they should be parallelised; and then
 % GREEDY_SEARCH \item
 % GREEDY_SEARCH we insert the child cliques (if any) of this clique into the candidates list.
 % GREEDY_SEARCH \end{itemize}
 % GREEDY_SEARCH We stop when either even the highest cost candidate
-% GREEDY_SEARCH is too cheap to be worth parallelizing,
-% GREEDY_SEARCH or we have achieved our target CPU utilization
+% GREEDY_SEARCH is too cheap to be worth parallelising,
+% GREEDY_SEARCH or we have achieved our target CPU utilisation
 % GREEDY_SEARCH for all phases of the program's execution.
 
 % GREEDY_SEARCH This is only an outline of our traversal algorithm.
 % GREEDY_SEARCH In section \ref{sec:pragmatic}, we will describe it in detail,
 % GREEDY_SEARCH together with our solutions to several issues that come up in practice.
 
-Our feedback tool looks for parallelization opportunities
+Our feedback tool looks for parallelisation opportunities
 by doing a depth-first search
 of the call tree recorded in the profiling data file.
 It explores the subtree below a node in the call tree
@@ -361,11 +361,11 @@ more parallel work than the target machine can handle.
 For each procedure in the call tree,
 we search its body for conjunctions that contain
 two or more calls with execution times above a configurable threshold.
-To parallelize the conjunction,
+To parallelise the conjunction,
 its conjuncts have to be partitioned,
 each partition being one conjunct in the parallel conjunction.
 In most cases, this can be done in several different ways.
-% Parallelizing a conjunction
+% Parallelising a conjunction
 % requires partitioning the set of the original conjuncts
 % into two or more groups,
 % with the conjuncts in each group being executed sequentially
@@ -376,23 +376,23 @@ to compute the expected parallel execution time of each partition;
 these algorithms take into account the runtime overheads of parallel execution.
 We use the algorithms of section \ref{sec:howto} to generate
 the set of partitions whose performance we want to evaluate.
-If the best-performing parallelization we find
+If the best-performing parallelisation we find
 shows a nontrivial speedup over sequential execution,
-we remember that we want to perform that parallelization on this conjunction.
+we remember that we want to perform that parallelisation on this conjunction.
 % TODO: This feature is not yet implemented.
 If the depth first search later finds
-some of the conjuncts to have parallelizable code inside them,
+some of the conjuncts to have parallelisable code inside them,
 we revisit this conjunction,
 this time using updated data about the cost of those conjuncts.
 Otherwise,
-we add a recommendation to perform the selected parallelization
+we add a recommendation to perform the selected parallelisation
 to the feedback advice we generate for the compiler.
 
-An important benefit of profile-directed parallelization is that
+An important benefit of profile-directed parallelisation is that
 since programmers do not annotate the source program,
-it can be re-parallelized easily after a change to the program
-obsoletes some old parallelization opportunities and creates others.
-Nevertheless, if programmers want to parallelize some conjunctions manually,
+it can be re-parallelised easily after a change to the program
+obsoletes some old parallelisation opportunities and creates others.
+Nevertheless, if programmers want to parallelise some conjunctions manually,
 they can do so: our system will not override the programmer.
 
 % \zoltan{this is wrong: the overheads should be PART OF the parallel time}
@@ -476,7 +476,7 @@ when that variable is generated by the first conjunct and
 when it is first consumed by the second conjunct.
 Our algorithms for computing these times are considerably simplified
 by the Mercury mode system
-and by the fact that we only parallelize deterministic goals.
+and by the fact that we only parallelise deterministic goals.
 
 The profiling data gives us both
 the total execution time of each conjunct
@@ -524,7 +524,7 @@ If we denote the execution times of the conjuncts
 in the parallel conjunction $p~\&~q$
 as ${ParTime}_p$ and ${ParTime}_q$,
 then the expected speedup
-from parallelizing the original sequential conjunction
+from parallelising the original sequential conjunction
 is ${Speedup} = {SeqTime} / {ParTime}$,
 where ${SeqTime} = {SeqTime}_p + {SeqTime}_q$,
 and ${ParTime} = {SpawnOverhead} + {max}({ParTime}_p, {ParTime}_q)$.
@@ -590,7 +590,7 @@ The execution time of \verb|Conj_i|
 has one chunk (\verb|Duration_ij|) for each of \verb|Conj_i|'s shared variables
 that ends at the time at which that variable is produced or first consumed,
 and there is one chunk (\verb|DurationRest_i|) at the end,
-during which the call may produce nonshared variables.
+during which the call may produce non-shared variables.
 Figure~\ref{fig:dep_conj_overlap1} shows that
 the production of $A$ divides $p$ into two chunks, ${pA}$ and ${pR}$,
 while the consumption of $A$ divides $q$ into ${qA}$ and ${qR}$.
@@ -649,7 +649,7 @@ The signal and wait operations have a cost.
 \item
 It takes some time to wake up a context when its wait operation succeeds.
 \item
-It takes time for each conjunct to synchronize on the barrier
+It takes time for each conjunct to synchronise on the barrier
 when it has finished its job.
 \end{itemize}
 
@@ -664,7 +664,7 @@ will contain a recursive call.
 In such cases, the speedup computed by the algorithm
 reflects the speedup we can expect to get when the recursive call
 calls the \emph{original, sequential} version of the predicate.
-When the recursive call calls the parallelized version,
+When the recursive call calls the parallelised version,
 we can expect a similar saving (absolute time, not ratio)
 on \emph{every} recursive invocation.
 How this affects the expected speedup of the top level call
@@ -685,7 +685,7 @@ However, an automated survey of the programs handled by our feedback tool
 shows that such predicates are rare;
 our system can compute
 the expected recursion depth and therefore the expected speedup
-for virtually all candidates for parallelization.
+for virtually all candidates for parallelisation.
 
 So far, we have assumed an unlimited number of CPUs,
 which is of course unrealistic.
@@ -711,14 +711,14 @@ but these overheads do not buy us anything if all CPUs are already busy.
 % hundreds of iterations for parallel execution,
 % since parallel execution actually has several forms of overhead:
 That is why our system supports \emph{throttling}.
-If a conjunction being parallelized contains a recursive call,
+If a conjunction being parallelised contains a recursive call,
 then the compiler can be asked to replace the original sequential conjunction
 not with the parallel form of the conjunction,
 but with an if-then-else.
 The condition of this if-then-else
 will test at runtime
 whether spawning off a new job is a good idea or not.
-If it is, we execute the parallelized conjunction, but
+If it is, we execute the parallelised conjunction, but
 if it is not, we execute the original sequential conjunction.
 The condition is obviously a heuristic.
 If the heuristic allows the list of runnable jobs to become empty,
@@ -730,14 +730,14 @@ then we incur the overheads of spawning off some jobs unnecessarily.
 Currently, on machines with $N$ CPUs,
 we prefer to have a total of $M$ running and runnable jobs where $M > N$,
 so our heuristic stops spawning attempts
-iff the queue already has $M$ entries.
+if and only if the queue already has $M$ entries.
 Our current system by default sets $M$ to be $32$ for $N = 4$,
 though users can easily override this.
 
 % The overheads of parallel execution can also affect conjunctions
 % that do not contain recursive calls:
-% a conjunction that looks worth parallelizing if you ignore overheads
-% may look not worth parallelizing if you take them into account.
+% a conjunction that looks worth parallelising if you ignore overheads
+% may look not worth parallelising if you take them into account.
 % This is why our system actually uses
 % a version of algorithm~\ref{alg:dep_par_conj_overlap_middle}
 % that accounts for overheads.
@@ -759,12 +759,12 @@ though users can easily override this.
 % \code{ProdConsList\_i}:
 % the list of shared variables that \code{Conj\_i} either produces or consumes,
 % together with their times of production and first consumption respectively.
-% This is a generalization of \code{ConsList\_q} in
+% This is a generalisation of \code{ConsList\_q} in
 % algorithm~\ref{alg:dep_par_conj_overlap_simple}.
-% We also need to generalize \code{Prod\_pi},
+% We also need to generalise \code{Prod\_pi},
 % because the time at which a non-first conjunct produces a variable
 % can and usually will be affected
-% by the overheads and/or synchronization delays suffered by that conjunct.
+% by the overheads and/or synchronisation delays suffered by that conjunct.
 % This is why we use \code{ProdTimeMap},
 % which maps each shared variable to its time of production.
 
@@ -785,7 +785,7 @@ though users can easily override this.
 % Just as our previous algorithm did,
 % this loop updates the simulated current time
 % in both the original sequential execution of the conjunct (\code{CurSeqTime})
-% and in its modified parallelized execution (\code{CurParTime}).
+% and in its modified parallelised execution (\code{CurParTime}).
 % For time components that end in the consumption of a variable,
 % we do what we did before,
 % but also reflect the cost of the wait operation needed for the consumption.
@@ -921,9 +921,9 @@ and when the recursive call consumes ${Acc1}$.
 The costs were collected from a real execution using Mercury's deep profiler
 and then rounded to make mental arithmetic easier.
 
-Figure~\ref{fig:map_foldl_par} shows the best parallelization of
+Figure~\ref{fig:map_foldl_par} shows the best parallelisation of
 \mapfoldl.
-When evaluating the speedup for this parallelization,
+When evaluating the speedup for this parallelisation,
 ${Cons}_{{F} {Acc1}} = 1,625,000 + 2 = 1,625,002$, and
 ${Cons}_{{map\_foldl} {Acc1}} = 1,625,000 + 2 + 1,620,000 = 3,245,002$.
 \zoltan{Show the rest of the algorithm's execution when this question is answered.}
@@ -949,7 +949,7 @@ Maybe I am confused by notation}
 The speedup computed by algorithm~\ref{alg:dep_par_conj_overlap_simple}
 applies only when the recursive call
 calls the original sequential version of the predicate.
-When the recursive call calls the parallelized version,
+When the recursive call calls the parallelised version,
 the maximum speedup available (assuming an unlimited number of CPUs)
 depends on the structure of the recursion.
 The profiling data gives us \tr{$E$,}
@@ -966,12 +966,12 @@ then the average call sequence to the procedure
 has one entry call followed by the recursive calls.
 It also means that the average call sequence
 has ten calls that cause the procedure to execute its recursive clause,
-the clause containing the conjunction being parallelized,
+the clause containing the conjunction being parallelised,
 followed by one call that executes the base clause.
 From this, we can deduce that if ${SeqSaving} = {SeqTime} - {ParTime}$
-is the time saving we get from parallelizing the top conjunction
+is the time saving we get from parallelising the top conjunction
 if the recursive call calls the original sequential version of the procedure,
-then making the recursive call call the parallelized version of the procedure
+then making the recursive call call the parallelised version of the procedure
 would yield a time saving of ${ParSaving} = {SeqSaving} * R_1/E$
 if we have enough CPUs to execute all the $R_1/E$ iterations in parallel.
 \peter{I think this needs more explanation.  It does not look right to me.
@@ -990,10 +990,10 @@ would vary systematically based on the value of $k$.
 Some singly recursive predicates have more than one recursive clause,
 each with one recursive call site.
 Suppose there are $n$ call sites, with execution counts $R_1 \ldots R_n$.
-The overall time saving from parallelizing the conjunct
+The overall time saving from parallelising the conjunct
 that contains the call site associated $R_i$
 has to be multiplied by the fraction of recursive calls
-that execute the conjunction being parallelized:
+that execute the conjunction being parallelised:
 ${ParSaving} = {SeqSaving} * R_i/E * R_i/\sum_{j=1}^n R_j$.
 
 For doubly recursive predicates like \code{quicksort}, $R_1 = R_2$,
@@ -1001,7 +1001,7 @@ and just under half of their calls invoke the recursive clause,
 so for them, ${ParSaving} = {SeqSaving} * R_1/(2 * E)$.
 \zoltan{check the math}
 \peter{I think it is a bit confusing to use $R_1$ and $R_2$ to name the
-recursive calls to quicksort, when above they ave named the sole recursive
+recursive calls to quicksort, when above they have named the sole recursive
 call from different clauses.  Maybe use $R^i_j$ to indicate the $i^{th}$
 recursive call from the $j^{th}$ clause.  Then you can use $R^1_i$ in the
 previous paragraph, and $R_1^1$ and $R_1^2$ in this one.}
@@ -1025,7 +1025,7 @@ and the beginning of its execution on another engine.
 Every parallel conjunct that is not the first incurs this delay
 before it starts running.
 \item[SignalCost]
-is the cost of signaling a future.
+is the cost of signalling a future.
 \item[WaitCost]
 is the cost of waiting on a future.
 \item[ContextWakeupDelay]
@@ -1034,19 +1034,19 @@ after being placed on the runnable queue,
 assuming that the queue is empty and there is an idle engine.
 \item[BarrierCost]
 is the cost of executing the operation
-that synchronizes all the conjuncts at the barrier
+that synchronises all the conjuncts at the barrier
 at the end of the conjunction.
 \end{description}
 
 Because of these overheads, our system uses \emph{throttling}.
-If a conjunction being parallelized contains a recursive call,
+If a conjunction being parallelised contains a recursive call,
 then the compiler will replace the original sequential conjunction
 not with the parallel form of the conjunction,
 but with an if-then-else.
 The condition of this if-then-else
 will test at runtime
 whether spawning off a new job is a good idea or not.
-If it is, we execute the parallelized conjunction,
+If it is, we execute the parallelised conjunction,
 if it is not, we execute the original sequential conjunction.
 The condition is obviously a heuristic.
 If the heuristic allows the list of runnable jobs to become empty,
@@ -1058,14 +1058,14 @@ then we incur the overheads of spawning off some jobs unnecessarily.
 Currently, on machines with $N$ CPUs,
 we prefer to have a total of $M$ running and runnable jobs where $M > N$,
 so our heuristic stops spawning attempts
-iff the queue already has $M$ entries.
+if and only if the queue already has $M$ entries.
 Our current system by default sets $M$ to be $32$ for $N = 4$,
 though users can easily override this.
 
 The overheads of parallel execution can also affect conjunctions
 that do not contain recursive calls:
-a conjunction that looks worth parallelizing if you ignore overheads
-may look not worth parallelizing if you take them into account.
+a conjunction that looks worth parallelising if you ignore overheads
+may look not worth parallelising if you take them into account.
 This is why our system actually uses
 algorithm~\ref{alg:dep_par_conj_overlap_complete},
 a version of algorithm~\ref{alg:dep_par_conj_overlap_simple}
@@ -1124,12 +1124,12 @@ This is why our algorithm associates with \code{Conj\_i}, the $i$th conjunct,
 \code{ProdConsList\_i}:
 the list of shared variables that \code{Conj\_i} either produces or consumes,
 together with their times of production and first consumption respectively.
-This is a generalization of \code{ConsList\_q} in
+This is a generalisation of \code{ConsList\_q} in
 algorithm~\ref{alg:dep_par_conj_overlap_simple}.
-We also need to generalize \code{Prod\_pi},
+We also need to generalise \code{Prod\_pi},
 because the time at which a non-first conjunct produces a variable
 can and usually will be affected
-by the overheads and/or synchronization delays suffered by that conjunct.
+by the overheads and/or synchronisation delays suffered by that conjunct.
 This is why we use \code{ProdTimeMap},
 which maps each shared variable to its time of production.
 
@@ -1150,7 +1150,7 @@ from figure~\ref{fig:dep_conj_overlap1}.
 Just as our previous algorithm did,
 this loop updates the simulated current time
 in both the original sequential execution of the conjunct (\code{CurSeqTime})
-and in its modified parallelized execution (\code{CurParTime}).
+and in its modified parallelised execution (\code{CurParTime}).
 For time components that end in the consumption of a variable,
 we do what we did before,
 but also reflect the cost of the wait operation needed for the consumption.
@@ -1191,10 +1191,10 @@ The last two lines reflect this cost.
 % % then of $((G_1 \& G_2) \& G_3) \& G_4$,
 % and so on.
 
-% \zoltan{Discuss how the synchronization at the end of the algorithm is
-% similar to the synchronization while waiting for another variable.}
+% \zoltan{Discuss how the synchronisation at the end of the algorithm is
+% similar to the synchronisation while waiting for another variable.}
 
-\section{Choosing how to parallelize a conjunction}
+\section{Choosing how to parallelise a conjunction}
 \label{sec:howto}
 
 A conjunction with $n > 2$ conjuncts
@@ -1246,12 +1246,12 @@ find_best_partition(InitPartition, InitTime, LaterConjs)
       <symmetric with the then case>
 \end{verbatim}
 \end{center}
-\caption{Search for the best parallelization}
+\caption{Search for the best parallelisation}
 \label{fig:best_par_search}
 %\vspace{-2\baselineskip}
 \end{figure}
 
-For any conjunction to be worth parallelizing,
+For any conjunction to be worth parallelising,
 it should contain two or more expensive goals.
 Our main algorithm (figure \ref{fig:best_par_search} works on the list
 of conjuncts
@@ -1271,7 +1271,7 @@ A post-processing step then removes that assumption.
 
 % In the usual case where $n >> 2$,
 % there will be a huge number ways to do this.
-% Our parallelization algorithm,
+% Our parallelisation algorithm,
 % algorithm~\ref{alg:best_par_search},
 % therefore tries to find the partition
 % that yields the lowest overall execution time.
@@ -1301,7 +1301,7 @@ A post-processing step then removes that assumption.
 % effectively partitioning the original conjuncts into groups.
 % % In the usual case where $n >> 2$,
 % % there will be a huge number ways to do this.
-% % Our parallelization algorithm,
+% % Our parallelisation algorithm,
 % % algorithm~\ref{alg:best_par_search},
 % % therefore tries to find the partition
 % % that yields the lowest overall execution time.
@@ -1315,8 +1315,8 @@ If the middle sequence has $n$ conjuncts,
 then there are $n-1$ AND operations between them,
 each of which can be either sequential or parallel.
 There are then $2^{n-1}$ combinations,
-all but one of which are parallelizations.
-That is a large space to search for the \emph{best} parallelization,
+all but one of which are parallelisations.
+That is a large space to search for the \emph{best} parallelisation,
 and it would be larger still if we allowed code reordering,
 that is, parallel conjuncts consisting of
 a \emph{non}contiguous sequence of the original conjuncts.
@@ -1339,7 +1339,7 @@ it switches to a linear search;
 we explore the more promising partition first
 to make this search more effective.
 (This limit ensures that the algorithm runs in reasonable time.)
-The algorithm returns a set of equal best parallelizations so far,
+The algorithm returns a set of equal best parallelisations so far,
 ``best'' being measured by
 \iclp{a version of the algorithm in figure~\ref{fig:dep_par_conj_overlap_middle} that
 computes the estimated parallel execution time \emph{including} overheads.}
@@ -1372,7 +1372,7 @@ The algorithm should treat these as a single conjunct.
 \item
 graph of dependencies
 \item
-take total CPU utilization into account,
+take total CPU utilisation into account,
 at least by using it to break ties on overall CPU time
 }
 \end{itemize}
@@ -1380,7 +1380,7 @@ at least by using it to break ties on overall CPU time
 
 \noindent
 At the completion of the search,
-we select one of the equal best parallelizations,
+we select one of the equal best parallelisations,
 and post-process it to adjust both edges.
 Suppose the best parallel form of the middle goals is $P_1~\&~\ldots~\&~P_p$,
 where each $P_i$ is a sequential conjunction.
@@ -1400,7 +1400,7 @@ This process can shrink the middle part.
 In cases where we do not shrink an edge, we can consider expanding that edge.
 Normally, we want to keep cheap goals out of parallel conjunctions,
 since more conjuncts tends to mean
-more shared variables and thus more synchronization overhead,
+more shared variables and thus more synchronisation overhead,
 but sometimes this consideration is overruled by others.
 Suppose the goals before the conjuncts in $P_1~\&~\ldots~\&~P_p$
 in the original conjunction were $B_1,~\ldots,~B_b$
@@ -1435,7 +1435,7 @@ A_{j+1},$ $\ldots,$ $A_a$.
 % $B_1, \ldots, B_{i-1},
 % ((B_i, \ldots, B_b, P_1) \& P_2, \ldots \& P_{p-1} \& (P_p, A_1, \ldots, A_j)),
 % A_{j+1}, \ldots, A_a$.
-If this preferred parallelization is better than
+If this preferred parallelisation is better than
 the original sequential version of the conjunction by at least 1% (a configurable threshold),
 then we include a recommendation for its conversion to this form
 in the feedback file we create for the compiler.
@@ -1447,7 +1447,7 @@ in the feedback file we create for the compiler.
 % not just the conjuncts from the first costly goal to the last.
 % Normally, we want to keep cheap goals out of parallel conjunctions,
 % since more conjuncts usually means more shared variables,
-% which means more synchronization overhead.
+% which means more synchronisation overhead.
 % The reason why we expanding the scope of the parallel conjunction
 % is that sometimes this consideration is overruled by others.
 % Consider $A_1$ after $P_p$.
@@ -1499,23 +1499,23 @@ in the feedback file we create for the compiler.
 
 \emph{Dynamic context}
 The algorithms in sections~\ref{sec:overlap} and~\ref{sec:howto}
-work on profiling data that shows the behavior of a procedure
+work on profiling data that shows the behaviour of a procedure
 in the context given by a particular chain of ancestors.
 Many procedures are of course called from multiple ancestor contexts.
-What happens when our analysis of the behavior of the same procedure
+What happens when our analysis of the behaviour of the same procedure
 yields different results for different ancestor contexts?
 
 At the moment, for any procedure
-that our analysis indicates is worth parallelizing in any context,
-we pick one particular parallelization (usually there is only one anyway),
+that our analysis indicates is worth parallelising in any context,
+we pick one particular parallelisation (usually there is only one anyway),
 and transform the procedure accordingly.
-This gets the benefit of parallelization when it is worthwhile,
+This gets the benefit of parallelisation when it is worthwhile,
 but incurs its costs even in contexts when it is not.
-In the future, we plan to fix this using multi-version specialization.
-For every procedure with different parallelization recommendations,
-we intend to create a specialized version for each recommendation,
+In the future, we plan to fix this using multi-version specialisation.
+For every procedure with different parallelisation recommendations,
+we intend to create a specialised version for each recommendation,
 leaving the original sequential version.
-This will of course require the creation of specialized versions
+This will of course require the creation of specialised versions
 of its parent, grandparent etc procedures,
 until we get to an ancestor procedure
 which occurs in the common prefix of all the conflicting ancestor contexts.
@@ -1545,22 +1545,22 @@ which occurs in the common prefix of all the conflicting ancestor contexts.
 % again, we expect that this way,
 % our traversal will stop before it gets to the cheapest conjunctions.
 
-% \subsection{Parallelizing children vs ancestors}
+% \subsection{Parallelising children vs ancestors}
 % \label{sec:pragmachildancestor}
 
-\emph{Parallelizing children vs ancestors}
-What happens when we decide that a conjunction that should be parallelized
-has an ancestor that we decided should also be parallelized?
+\emph{Parallelising children vs ancestors}
+What happens when we decide that a conjunction that should be parallelised
+has an ancestor that we decided should also be parallelised?
 We can
-(1) parallelize only the ancestor,
-(2) parallelize only this conjunction, or
-(3) parallelize both
+(1) parallelise only the ancestor,
+(2) parallelise only this conjunction, or
+(3) parallelise both
 
-% The first alternative (parallelize neither) has already been rejected twice,
+% The first alternative (parallelise neither) has already been rejected twice,
 % since we concluded that (2) was better (1)
-% when we decided to parallelize the ancestor,
+% when we decided to parallelise the ancestor,
 % and we concluded that (3) was better (1)
-% when we decided to parallelize this conjunction.
+% when we decided to parallelise this conjunction.
 
 \zoltan{Does the implementation actually do this now?}
 We choose among the other three alternatives
@@ -1569,18 +1569,18 @@ This reevaluation must take into account
 the fact that for each invocation of the ancestor conjunction,
 we will invoke the current conjunction many times,
 and that therefore we will incur both the overheads and the benefits
-of parallelizing the current conjunction many times.
+of parallelising the current conjunction many times.
 The profile will give the actual number.
 
 % \subsection{Disagreement among children}
 % \label{sec:pragmachildchild}
 
 % what if for some ``current'' clique,
-% you want to parallelize the ancestor,
+% you want to parallelise the ancestor,
 % but for some other current clique,
-% you do not want to parallelize the same ancestor?
+% you do not want to parallelise the same ancestor?
 
-\emph{Parallelizing branched goals}
+\emph{Parallelising branched goals}
 Many programs have code that looks like this:
 \begin{verbatim}
 ( if ... then
@@ -1594,12 +1594,12 @@ If the condition of the if-then-else succeeds only rarely,
 then the average cost of the if-then-else
 may be below the threshold of what we consider to be an expensive goal.
 We therefore would not even consider
-parallelizing the top-level conjunction,
-rightly considering that its overheads would probably outweight its benefits.
+parallelising the top-level conjunction,
+rightly considering that its overheads would probably outweigh its benefits.
 
 What we want to do in such cases
 is execute just the two expensive calls in parallel,
-which would be equivalent to parallelizing the conjunction
+which would be equivalent to parallelising the conjunction
 in the then part of this transformed goal:
 \begin{verbatim}
 ( if ... then
@@ -1613,7 +1613,7 @@ else
 We intend to change our feedback tool to detect such situations,
 and if found, to recommend
 some equivalence-preserving transformations for the compiler to apply
-before parallelizing some of the resulting conjunctions.
+before parallelising some of the resulting conjunctions.
 
 % \subsection{Garbage collector issues}
 % \label{sec:pragmagc}
@@ -1626,7 +1626,7 @@ for parallel programs than for sequential programs.
 First, even though this collector uses
 a separate memory pool for each mutator thread
 (and hence, in our system, for each Mercury engine),
-you still need synchronization to access the global pool
+you still need synchronisation to access the global pool
 when a local pool runs out.
 Second, this collector
 does not support incremental collection for parallel programs,
@@ -1640,7 +1640,7 @@ the performance of the sequential programs as well.
 
 % GC In our case, the worry is that
 % GC the Boehm collector may scale significantly worse than
-% GC the Mercury code that we choose to parallelize.
+% GC the Mercury code that we choose to parallelise.
 
 % GC From the perspective of a GC implementor,
 % GC a program's runtime has two components:
@@ -1672,14 +1672,14 @@ the performance of the sequential programs as well.
 % GC because the performance of the mutator and the collector may scale differently.
 % GC In our case, the worry is that
 % GC the Boehm collector may scale significantly worse than
-% GC the Mercury code that we choose to parallelize.
+% GC the Mercury code that we choose to parallelise.
 % GC
 % GC For Mercury code,
 % GC the limits on speedups from parallelism fall into two categories:
 % GC those that our analysis takes into account, and those it does not.
 % GC The former include the cost of spawning new contexts,
-% GC the cost of the barrier synchronization at the end of the conjunction,
-% GC the cost of creating the synchronization terms,
+% GC the cost of the barrier synchronisation at the end of the conjunction,
+% GC the cost of creating the synchronisation terms,
 % GC the cost of the wait and signal operations on those terms,
 % GC and idle time of the consumer while waiting on the producer.
 % GC The latter include interference
@@ -1698,7 +1698,7 @@ the performance of the sequential programs as well.
 % the time cost of the collector from the cost of the mutator.
 % On
 %
-% When parallelizing the program, there is unfortunately
+% When parallelising the program, there is unfortunately
 % a natural way to separate
 %
 % and CSCs can be considered to measure both parts of the program.
@@ -1880,10 +1880,10 @@ Each group of three rows reports the results for one benchmark.
 The first column shows the benchmark name,
 the runtime of the program when compiled for sequential execution, and
 its runtime when compiled for parallel execution
-but without enabling auto-parallelization.
+but without enabling auto-parallelisation.
 This shows the overhead of support for parallel execution
 when it does not buy any benefits.
-We auto-parallelized each program three different ways:
+We auto-parallelised each program three different ways:
 executing expensive goals in parallel
 only when they are independent (``indep'');
 even if they are dependent, regardless of overlap (``naive'');  and
@@ -1901,14 +1901,14 @@ On x86s, this leaves only one real register for the Mercury abstract machine,
 so compiling for parallelism but not using it
 yields a slowdown ranging from 5\% on mandelbrot to 25\% on matrixmult.
 (We observe such slowdowns for other programs as well.)
-On one CPU, autoparallelization gets only this slowdown,
+On one CPU, autoparallelisation gets only this slowdown,
 plus the (small) additional overheads of all the parallel conjunctions
 that cannot get any parallelism.
 % However, when we move to 2, 3 or 4 CPUs,
-% some of the autoparallelized programs do get speedups.
+% some of the autoparallelised programs do get speedups.
 
 The parallelism in the main predicate of matrixmult is independent,
-Overlap parallelizes the program the same way as indep,
+Overlap parallelises the program the same way as indep,
 so it gets the same speedup.
 The numbers look different for 3 CPUs,
 but all the runs for both versions actually took either 5.2 or 7.5 seconds,
@@ -1916,7 +1916,7 @@ depending (we think) on which way
 the OS arranged the engines across the two CPU die of the Q6600;
 the indep version just happened to get the 7.5s arrangement fewer times.
 For naive, all the runs just happened to take 5.2 seconds,
-even though naive creates a worse parallelization than either indep or overlap:
+even though naive creates a worse parallelisation than either indep or overlap:
 during the expansion phase we described in section~\ref{sec:howto},
 it includes an extra goal in the first of the parallel conjuncts;
 this makes the conjunction dependent, which adds some overhead.
@@ -1979,9 +1979,9 @@ are likely to be a promising area for future work.
 Most small programs like these benchmarks
 have only one loop that dominates their runtime.
 In all three of these benchmarks, and in many others,
-the naive and overlap methods will parallelize the same loops,
+the naive and overlap methods will parallelise the same loops,
 and usually the same way;
-they tend to differ only in how they parallelize code
+they tend to differ only in how they parallelise code
 that executes much less often (typically only once)
 whose effect is lost in the noise.
 The raw timings show a great deal of variability:
@@ -2004,13 +2004,13 @@ and only 31 have an overlap
 that leads to a predicted local speedup of more than 1\%,
 our default threshold.
 Our algorithms can thus prevent
-the unproductive parallelization of $53-31=22$ of these conjunctions.
+the unproductive parallelisation of $53-31=22$ of these conjunctions.
 Unfortunately, programs that are large and complex enough
 to show a performance effect from this saving
 also tend to have large components
-that cannot be profitably parallelized with existing techniques,
+that cannot be profitably parallelised with existing techniques,
 which means that (due to Amdahl's law)
-our autoparallelization system cannot yield overall speedups for them yet.
+our autoparallelisation system cannot yield overall speedups for them yet.
 
 On the bright side,
 our feedback tool generates feedback files
@@ -2029,7 +2029,7 @@ is so small that it is not noticeable.
 % severely degrade the program's performance.
 % Right now, for most programs,
 % this effect yields a slowdown significantly bigger
-% than the speedups yielded by automatic parallelization.
+% than the speedups yielded by automatic parallelisation.
 % Once this defect is fixed, we hope to report significantly better results
 % for more and bigger programs.
 
@@ -2088,7 +2088,7 @@ is so small that it is not noticeable.
 % 
 % We used different inputs for the profiling and benchmarking
 % executions to ensure that the profile analysis would not over-fit the
-% parallelization to a particular input.
+% parallelisation to a particular input.
 
 % Other programs tested included the Mercury compiler and pic, a program
 % ported to Mercury from the nofib~\cite{nofib} benchmark suite.
@@ -2154,9 +2154,9 @@ has focused on trying to solve these problems
 of getting parallel execution to \emph{work} well,
 with only a small fraction trying to find
 when parallel execution would actually be \emph{worthwhile}.
-Almost all previous work on automatic parallelization 
+Almost all previous work on automatic parallelisation 
 has focused on granularity control:
-parallelizing only computations that are expensive enough
+parallelising only computations that are expensive enough
 to make parallel execution
 worthwhile \cite{harris_07_feedback_imp_par,lopez96:distance_granularity},
 and properly accounting for the overheads
@@ -2172,7 +2172,7 @@ For most programs,
 it finds enough conjunctions with two or more expensive conjuncts,
 but almost all are dependent,
 and, as we mention in section~\ref{sec:perf},
-many of these have too little overlap to be worth parallelizing.
+many of these have too little overlap to be worth parallelising.
 % For example, the Mercury compiler contains
 % 50 conjunctions with two or more expensive goals.
 % 49 of these are dependent.
@@ -2196,7 +2196,7 @@ This works if instructions take a bounded time to execute,
 but in the presence of call instructions
 this heuristic will not be at all accurate.
 
-Another attempt was a previous auto-parallelization project for
+Another attempt was a previous auto-parallelisation project for
 Mercury \cite{tannier:2007:parallel_mercury}.
 % This did not use profiling data,
 % and instead used the number of shared variables between conjuncts
@@ -2218,17 +2218,17 @@ This can work for small programs,
 where the call trees of the relevant calls can be quite small and regular.
 In large programs, the call trees of the expensive calls
 are almost certain to be both tall and wide,
-with a huge gulf between best-case and worst-case behavior.
+with a huge gulf between best-case and worst-case behaviour.
 Using profiling data is the only way
-for an automatic parallelization system to find out
-what the \emph{typical} behavior of such calls is.
+for an automatic parallelisation system to find out
+what the \emph{typical} behaviour of such calls is.
 
 % There is a risk that the program could have changed between the
-% profiling build and the parallelized build,
+% profiling build and the parallelised build,
 % this makes it more difficult for the compiler to apply the profiling
 % advice.
 % To reduce this risk the profiling build should be built with the same
-% optimizations that the parallelized build will be built with.
+% optimizations that the parallelised build will be built with.
 % In usual circumstances inlining should be disabled during profiling so
 % that a programmer can more easily understand their program's profile.
 % Our implementation re-enables inlining in profiling builds if a
@@ -2238,7 +2238,7 @@ what the \emph{typical} behavior of such calls is.
 % % compiler option,  But this is (for now) an easy way to describe
 % % this.
 
-Our system's predictions of the likely speedup from parallelizing a conjunction
+Our system's predictions of the likely speedup from parallelising a conjunction
 are also fallible, since they currently ignore several relevant issues,
 including cache effects
 and the effects of bottlenecks
@@ -2258,12 +2258,12 @@ However, our system seems to be a sound basis for such further refinements.
 % \zoltan{I haven't covered any technical details about the feedback framework.
 % I guess there's not much to say.}
 % \end{itemize}
-In the future, we plan to support parallelization as a specialization:
-applying a specific parallelization only when a predicate is called
+In the future, we plan to support parallelisation as a specialisation:
+applying a specific parallelisation only when a predicate is called
 from a specific parent, grandparent or other ancestor.
 % we will look at how best to resolve cases
-% where our tool gives different parallelization advice for the same conjunction
-% due to the different behavior of that conjunction in different contexts.
+% where our tool gives different parallelisation advice for the same conjunction
+% due to the different behaviour of that conjunction in different contexts.
 We also plan to modify our feedback tool
 to accept several profiling data files,
 with a priority scheme to resolve any conflicts.
@@ -2295,9 +2295,9 @@ example: by\_phases in the front end.
 
 \todoitem{
 fix the report generated by mdprof\_feedback:
-it says it reports the number of parallelized conjunctions,
+it says it reports the number of parallelised conjunctions,
 when what it reports is the number of procedures
-that CONTAIN parallelized conjunctions.
+that CONTAIN parallelised conjunctions.
 If some procedures contain more than once,
 the report is misleading.}{pbone}{done} \\
 
@@ -2322,7 +2322,7 @@ then peel off conjuncts at start and end}{zs and pbone}{DONE} \\
 consider keeping a non-first parallel conjunct on the original
 engine}{all}{Different paper} \\
 
-\todoitem{specialization: parallel for some ancestors, not others}{zs, with
+\todoitem{specialisation: parallel for some ancestors, not others}{zs, with
 feedback work by pbone}{Different paper} \\
 
 \todoitem{
@@ -2379,7 +2379,7 @@ Mission Critical benchmark}{pbone and probably zs}{} \\
 divide and conquer limit:
 same seq vs parallel for double recursive procs}{all}{} \\
 
-\todoitem{consider how recursive calls in parallelized conjunctions
+\todoitem{consider how recursive calls in parallelised conjunctions
   affect the speedup}{pbone with help}{} \\
 
 \todoitem{throttle only looping/D'n'C code}{pbone}{} \\
@@ -2448,7 +2448,7 @@ same seq vs parallel for double recursive procs}{all}{} \\
 %                     BestTime := Time
 %                     BestGoal := OverallGoal
 % \end{verbatim}
-% \caption{Search for best parallelization}
+% \caption{Search for best parallelisation}
 % \label{alg:branch_and_bound_search}
 % \end{algorithm}
 
