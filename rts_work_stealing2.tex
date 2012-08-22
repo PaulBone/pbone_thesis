@@ -617,16 +617,39 @@ have a empty context;
 this case could check for work in a different order and and if it does not
 find any work it could jump to \sleep the way \idle currently does.
 
+\input{tab_work_stealing_revised}
+
 \plan{Benchmark}
+Table \ref{tab:work_stealing_revised} shows a comparison of the previous
+work stealing implementation with this one.
+There are four row groups with two rows each.
+Each row group gives the results for a single program,
+while the rows in each group give the results for the previous work stealing
+system and the current one.
+The right recursive mandelbrot program was compiled with the conjunct
+reordering transformation from Section \ref{sec:rts_reorder} disabled,
+otherwise it would have had the same results as the left recursive version
+of the same program.
+It is still important to test right recursion,
+such as in this example as the conjunct reordering transformation cannot
+reorder dependent parallel conjunctions.
+
+Programmers are encouraged to avoid embarrassing parallelism,
+so that the overheads of parallelisation have a small enough effect on the
+program's performance while still exposing enough parallelism to the
+language and runtime system so that the program can run efficiently.
+The mandelbrot program is written with this in mind:
+the loop over the rows of the image is parallelised,
+but the inner loop over the pixels in each row is not.
+This makes it difficult to benchmark changes to the runtime system such as
+the changes to the work stealing implementation above.
 
 \begin{figure}
 \begin{verbatim}
 :- func fibs(int, int) = int.
 
 fibs(N, Depth) = F :-
-    (
-        N < 2
-    ->
+    ( N < 2 ->
         F = 1
     ;
         ( Depth > 0 ->
@@ -646,39 +669,62 @@ fibs(N, Depth) = F :-
 \label{fig:fibs}
 \end{figure}
 
-We used four programs to test the new work stealing implementation against
-the previous one.
-These are:
-the left and right versions of mandelbrot from previous sections,
-and two different versions of the recursive (na\"ve) definition of the 43rd
-Fibonacci number (named fibs).
-The parallel \fibs function is shown in Figure \ref{fig:fibs}.
-The recursive definition of fibs has two independent recursive calls in its
-recursive which have been parallelised against one another.
-An extra augment is used to describe at what depth in the call tree
-sequential execution should be used instead of parallel execution.
-At each recursive call this value (\code{Depth}) is decremented.
-If \code{Depth} reaches zero, then the implementation will call a sequential
+In order to benchmark these changes easily,
+we added a micro-benchmark named fibs which calculates the 43rd Fibonacci
+number.
+Fibs uses a naive algorithm which is a direct translation of the recursive
+definition of the $N$th Fibonacci number.
+The parallel \fibs\footnote{
+    The arity of a Mercury function is written as \code{N+1}.
+    The \code{+1} refers the return value while \code{N} refers to the
+    function's input arguments.}
+function is shown in Figure \ref{fig:fibs}.
+The recursive definition of fibs has two independent recursive calls in
+the same branch;
+they are parallelised against one another.
+Parallelism is introduced in this way at each level of the recursion
+creating many very small parallel tasks,
+since the remainder of the computation consists of comparsion and addition.
+When an algorithm such as this is parallelised it creates embarrassing
+parallelism.
+This behaviour makes it easy for us to measure the effects of things such as
+work stealing.
+
+The easiest way to avoid this is to introduce \emph{granularity control}.
+We have added granularity control by adding a new parameter to \fibs called
+\code{Depth}.
+We use \code{Depth} to control the sizes and number of parallel tasks
+created by \fibs.
+At each recursive call \code{Depth} is decremented;
+if it becomes zero, then the implementation will call a sequential
 version of the \fibs function.
-We have shown results where the initial depth is 30,
+
+Table \ref{tab:work_stealing_revised} shows results for fibs with several
+different initial values for \code{Depth}.
+Fibs has better parallel performance when \code{Deoth}'s initial value is
+smaller,
+demonstrating how granularity control effects performance.
+\paul{XXX: Re-do benchmarks so I can explain them.}
+
+We have shown results where the initial value for Depth is 30,
 meaning that the top 30 levels of the call graph are executed in parallel
 and any work beneath that is executed sequentially.
-Granularity control avoids embarrassing parallelism by
-turning a computation with 
-many small parallel tasks into one with fewer larger parallel tasks,
-this means that the overheads of parallel execution affect the computation
-less.
-However since we are including fibs because it is a micro benchmark then
+This is just one type of granularity control.
+Granularity control is any method used to avoid
+embarrassing parallelism by turning a computation with 
+many small parallel tasks into one with fewer larger parallel tasks.
+
+% XXX
+However,
+we are using unusually high values of \code{Depth} (such as 30) to allow us
+to compare the two work stealing implementations.
+
+since we are including fibs because it is a micro benchmark then
 observing how these overheads affect its performance is desirable,
 which is why we use a high initial value for \code{Depth} such as 30,
-and why we've shown a version without granularity control.
+and why we've shown a version without granularity control at all.
 
 
-\input{tab_work_stealing_revised}
-
-
-the first of these uses some granularity control (GC) and the second does
-not.
 
 
 \plan{Evaluation}
