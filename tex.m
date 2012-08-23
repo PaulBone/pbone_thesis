@@ -28,6 +28,7 @@ macro_info("cite", macro_is_reference, macro_does_not_break_flow).
 macro_info("citep", macro_is_reference, macro_does_not_break_flow).
 macro_info("citet", macro_is_reference, macro_does_not_break_flow).
 macro_info("ref", macro_is_reference, macro_does_not_break_flow).
+macro_info("pageref", macro_is_reference, macro_does_not_break_flow).
 macro_info("label", macro_is_anchor, macro_does_not_break_flow).
 macro_info("chapter", macro_is_not_reference, macro_breaks_flow).
 macro_info("section", macro_is_not_reference, macro_breaks_flow).
