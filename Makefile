@@ -4,6 +4,8 @@
 
 PIC =		$(wildcard pics/*.pic)
 PIC_TEX =	$(PIC:%.pic=%.tex)
+DOT =       $(wildcard pics/*.dot)
+DOT_EPS =   $(DOT:%.dot=%.eps)
 LS =		lecture_support/Makefile.lectures
 TALK_PICS =	$(wildcard pics/*.pic)
 TALK_PSS =	$(wildcard raw_ps/*.ps)
@@ -57,7 +59,7 @@ all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling
 wc :
 	wc -w $(TEX_PROSE)
 
-thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib \
+thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) bib.bib \
 		checked
 	latex thesis
 	bibtex thesis
@@ -72,6 +74,9 @@ thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(TABLES_TEX) bib.bib \
 
 %.tex:		%.pic
 	gpic -t < $< > $@
+
+%.eps: %.dot
+	dot -Teps < $< > $@
 
 times_table.tex: $(TIMING_RESULTS) $(BENCH_ALL)
 	./$(BENCH_ALL) -n0 -w -f times_table.tex -p $(TIMING_RESULTS)

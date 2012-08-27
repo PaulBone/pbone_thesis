@@ -1,0 +1,69 @@
+digraph G {
+    /* rankdir=LR; */
+
+/*
+    { rank=same; working; }
+    { rank=same; idle; stealing; };
+    { rank=same; sleeping; }
+    { rank=same; shutdown; soft; hard; };
+*/
+    subgraph cluster_idle {
+        stealing;
+        sleeping;
+        label = "counted as idle";
+    };
+
+    subgraph cluster_working {
+        { rank=source; startup };
+        { rank=same; soft; hard; };
+        /*
+        { rank=same; working; idle; };
+        */
+        soft;
+        hard;
+        working;
+        idle;
+        label = "counted as working";
+    }
+
+    { rank=sink; do_shutdown };
+
+    /* Write ordered transitions */
+    soft -> working;
+    hard -> working;
+
+    soft -> idle;
+
+    working -> idle [style=bold];
+    idle -> working [style=bold];
+    stealing -> working [style=bold];
+
+    startup -> idle;
+    startup -> working;
+
+    shutdown -> do_shutdown;
+
+    /* CAS Transitions */
+    edge [color=blue];
+    idle -> stealing [style=bold];
+    stealing -> sleeping;
+
+    /* Locked transitions from other engines */
+    edge [color=red];
+    sleeping -> hard;
+    sleeping -> soft;
+    sleeping -> shutdown;
+
+    /* CAS transitions from other engines */
+    edge [color=green];
+    idle -> soft;
+    stealing -> soft;
+    
+    /* safe because there will be no other work */
+    idle -> shutdown;
+    stealing -> shutdown;
+
+    /* Unused */
+    // working -> notified_soft [style=dashed]; /* Unused */
+}
+
