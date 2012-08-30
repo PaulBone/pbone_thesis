@@ -1,47 +1,80 @@
 digraph G {
-    /* rankdir=LR; */
+//    rankdir=LR;
+
+    { rank=source; startup };
+    { rank=same; context; context_advice; worksteal_advice };
+    //{ rank=same; stealing; sleeping; };
+    { rank=sink; do_shutdown };
+    { rank=same; working; idle; stealing; };
+
+    // { rank=same; working; idle; sleeping; };
 
 /*
-    { rank=same; working; }
-    { rank=same; idle; stealing; };
-    { rank=same; sleeping; }
-    { rank=same; shutdown; soft; hard; };
+    //subgraph cluster_working {
+
+        //working;
+        //idle;
+        context_advice [label="context or worksteal advice" shape=rectangle];
+        context_advice2 [label="context_advice" shape=rectangle];
+        context [shape=rectangle];
+        //worksteal [shape=rectangle];
+    //    label = "counted as working";
+    //}
 */
+
+/*
     subgraph cluster_idle {
+
         stealing;
         sleeping;
+        soft_was_stealing [label="context or worksteal advice" shape=rectangle];
         label = "counted as idle";
     };
+*/
 
-    subgraph cluster_working {
-        { rank=source; startup };
-        { rank=same; soft; hard; };
-        /*
-        { rank=same; working; idle; };
-        */
-        soft;
-        hard;
-        working;
-        idle;
-        label = "counted as working";
-    }
+    // Styles for 'idle' states.
+    sleeping [style=filled fillcolor=lightgrey];
+    stealing [style=filled fillcolor=lightgrey];
 
-    { rank=sink; do_shutdown };
+    // Shapes for notifications
+    shutdown [shape=rectangle];
+    context [shape=rectangle];
+    context_advice [shape=rectangle];
+    worksteal_advice [shape=rectangle];
 
-    /* Write ordered transitions */
-    soft -> working;
-    hard -> working;
+    // Illistrative only.
+    worksteal_once [style=dashed];
 
-    soft -> idle;
+    /*
+     * Normal operation.
+     */
+    
+    // Primordial engine.
+    startup -> working;
+    
+    // Worker engines.
+    startup -> idle;
 
+    // Finished work.
     working -> idle [style=bold];
+
+    // Looking for work.
     idle -> working [style=bold];
     stealing -> working [style=bold];
+    // Other transitions use CAS below.
 
-    startup -> idle;
-    startup -> working;
-
+    // Respond to notifications.
     shutdown -> do_shutdown;
+
+    // We do the same action as idle does anyway.
+    context_advice -> idle;
+
+    worksteal_advice -> worksteal_once;
+
+    worksteal_once -> working;
+    worksteal_once -> stealing;
+
+    context -> working;
 
     /* CAS Transitions */
     edge [color=blue];
@@ -50,20 +83,21 @@ digraph G {
 
     /* Locked transitions from other engines */
     edge [color=red];
-    sleeping -> hard;
-    sleeping -> soft;
+    sleeping -> context;
+    sleeping -> context_advice;
+    sleeping -> worksteal_advice;
     sleeping -> shutdown;
 
     /* CAS transitions from other engines */
     edge [color=green];
-    idle -> soft;
-    stealing -> soft;
-    
-    /* safe because there will be no other work */
+    idle -> context_advice;
+    idle -> worksteal_advice;
+    stealing -> context_advice;
+    stealing -> worksteal_advice;
+
+    // safe because there will be no other work
     idle -> shutdown;
     stealing -> shutdown;
 
-    /* Unused */
-    // working -> notified_soft [style=dashed]; /* Unused */
 }
 
