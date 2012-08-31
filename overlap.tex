@@ -84,8 +84,6 @@ than representative input data for the profiling run.
 \section{Introduction}
 \label{sec:intro}
 
-\picfigure{small_overlap}{Ample vs smaller parallel overlap between \code{p} and \code{q}}
-
 % Multicore is ubiquitous.
 
 % Parallel programming is hard.
@@ -93,7 +91,7 @@ than representative input data for the profiling run.
 % Pure Declarative languages make it safe, and Automatic
 % parallelisation makes it easier.
 
-When parallelising Mercury~\cite{mercury_jlp} programs,
+When parallelising Mercury programs,
 the best parallelisation opportunities occur
 where two goals take a significant and roughly similar time to execute.
 Their execution time should be as large as possible
@@ -104,32 +102,31 @@ are rarely independent.
 For example, in the Mercury compiler itself,
 there are 53 conjunctions containing two or more expensive goals,
 but in only one of those conjunctions are the expensive goals independent.
-This is why Mercury supports the parallel execution of dependent conjunctions.
-The Mercury compiler wraps shared variables within a
-\emph{future}~\cite{wang:2011:dep-par,wang:2006:hons}, to
-ensure that the \emph{consumer} of the variable is blocked
-until the \emph{producer} makes the variable available.
+This is why Mercury supports the parallel execution of dependent conjunctions
+through the use of futures and a compiler transformation
+\citep{wang:2011:dep-par,wang:2006:hons} (Section \ref{sec:backgnd_deppar}).
+If the \emph{consumer} of the variable attempts to retrive the variable's value 
+before it has been produced, then its execution is blocked
+until until the \emph{producer} makes the variable available.
+
+\picfigure{overlap_compare}{Ample vs smaller parallel overlap between \code{p} and \code{q}}
 
 Dependent parallel conjunctions may differ
 in the amount of parallelism they have available.
 Consider a parallel conjunction with two similarly-sized conjuncts,
 \code{p} and \code{q}, that share a single variable \code{A}.
 If \code{p} produces \code{A} late but \code{q} consumes it early,
-as shown on the right side of figure \ref{fig:dep_conj_overlap1},
+as shown on the right side of figure \ref{fig:overlap_compare},
 there will be little parallelism,
 since \code{q} will be blocked soon after it starts,
 and will be unblocked only when \code{p} is about to finish.
 Alternatively, if \code{p} produces \code{A} early
 and \code{q} consumes it late,
-as shown on the left side of in figure~\ref{fig:dep_conj_overlap1},
+as shown on the left side of in figure \ref{fig:overlap_compare},
 we would get much more parallelism.
 The top part of each scenario
 shows the execution of the sequential form of the conjunction.
 
-% \paul{It would be nice to have some data to backup this argument,
-% although the argument is easy to believe so it will not be necessary.}
-% \peter{Data would be good.  Or you could drop the claim.}
-% \zoltan{Everyone who has written real programs knows the claim to be true.}
 Unfortunately, in real Mercury programs,
 almost all conjunctions are dependent conjunctions,
 and in most of them,
@@ -139,7 +136,7 @@ because the overheads of parallel execution would far outweigh the benefits.
 We want to parallelise only conjunctions
 in which any shared variables are produced early, consumed late,
 or (preferably) both.
-The first purpose of this paper is to show how one can find these conjunctions.
+The first purpose of this chapter is to show how one can find these conjunctions.
 
 \begin{figure}[b]
 \begin{verbatim}
@@ -161,10 +158,11 @@ Consider the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
 The body of the recursive clause has three conjuncts.
 We could make each conjunct execute in parallel,
 or we could execute two conjuncts in sequence
-(either the first and second, or the second and the third),
+(either the first and second, or the second and third),
 and execute that sequential conjunction in parallel with the remaining conjunct.
 In this case, there is little point in executing
-the higher order calls to the map and fold predicates
+the higher order calls to the \M and \F predicates
+(herein map and fold respectivly)
 in parallel with one another,
 since in virtually all cases,
 the map predicate will generate \code{Y} very late and
@@ -181,51 +179,36 @@ even if (as is typical) the fold predicate generates \code{Acc1} very late.
 (This is the kind of computation that
 Reform Prolog \cite{bevemyr:reform} was designed to parallelise.)
 
-The structure of this paper is as follows.
-Section~\ref{sec:background} gives
-the background needed for the rest of the paper.
-Section~\ref{sec:approach} outlines our general approach,
+The structure of this chapter is as follows.
+Section~\ref{sec:overlap_approach} outlines our general approach,
 which the later sections fill in.
-Section~\ref{sec:overlap} describes our algorithm for calculating
-the execution overlap between two or more dependent conjuncts.
+Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
+calculating the execution overlap between two or more dependent conjuncts.
 A conjunction with more than two conjuncts can be parallelised
 in several different ways;
-section~\ref{sec:howto} shows how we choose the best way.
-\tr{Section~\ref{sec:pragmatic} discusses some pragmatic issues.}
-Section~\ref{sec:perf} evaluates
+section~\ref{sec:overlap_howto} shows how we choose the best way.
+Section~\ref{sec:overlap_pragmatic} discusses some pragmatic issues.
+Section~\ref{sec:overlap_perf} evaluates
 how our system works in practice on some example programs, and
-section~\ref{sec:conc} concludes
+section~\ref{sec:overlap_conc} concludes
 with comparisons to related work.
 
-% \paul{Reference the conclusion and other final sections}
-
-\section{Background}
-\label{sec:background}
-
-
 \section{Our general approach}
-\label{sec:approach}
+\label{sec:overlap_approach}
 
-% \begin{figure}
-% \begin{center}
-% \include{prof_fb}
-% \centerline{\raise 1em\box\graph}
-% \end{center}
-% \caption{Automatic parallelisation workflow}
-% \label{fig:profiler_feedback_workflow}
-% \end{figure}
-
-% During automatic parallelisation,
-% a compiler may be able to estimate some cost information from static
-% analysis.
-% However, this will not be accurate;
-% static analysis cannot take into account sizes of data terms or other
-% values that are only available at runtime.
-% Therefore, we use profiler feedback information in our implementation.
-% Figure \ref{fig:profiler_feedback_workflow} shows a workflow where the
-% program is first compiled for profiling, executed, the profile is then
-% analyzed by an analysis tool before the results are fed back into the
-% compiler to build the parallel version of the program.
+During automatic parallelisation,
+a compiler may be able to estimate some cost information from static
+analysis.
+However, this will not be accurate;
+static analysis cannot take into account sizes of data terms or other
+values that are only available at runtime.
+Therefore, we use profiler feedback information in our implementation.
+This is described in more detail in section \ref{sec:backgnd:autopar}.
+Also described in this section \ref{sec:backgnd_autopar} are:
+Mercury's deep profiler,
+coverage profiling,
+and variable use analysis.
+We will refer to all of these in this chapter.
 
 We want to find the conjunctions in the program
 whose parallelisation would be the most profitable.
