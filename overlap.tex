@@ -16,24 +16,25 @@ of it to place elsewhere, for example, in the background section.}
 \item \paul{Coverage (and var use) now work on deep profiling data.}
 \end{itemize}
 
-Introducing parallelism into a Mercury program is easy.
+Introducing parallelism into a Mercury program seems easy.
 A programmer can use the parallel conjunction operator (an ampersand)
 instead of the plain conjunction operator (a comma) to tell the compiler
-that conjuncts of the conjunction should be executed in parallel with one
-another.
-This simple change can also be done automatically.
-However creating too much parallelism (by parallelising too many
-conjunctions can actually slow the program down.
-Since making a task available to another CPU
+that the conjuncts of the conjunction should be executed in parallel with
+one another.
+However,
+introducing parallelism efficiently is much more difficult.
+It is easy to make common mistakes.
+One such mistake is creating too much parallelism: 
+making a task available to another CPU 
 may take thousands of instructions,
 spawning off a task that takes only a hundred instructions is clearly a loss.
-and even spawning off a tack of a few thousand instructions is not a win;
+Even spawning off a tack of a few thousand instructions is not a win;
 it should only be done for computations
 that take long enough to benefit from parallelism.
-Autoparallelising compilers have therefore
-long tried to use granularity analysis
-to ensure that they only spawn off computations
-whose cost will probably exceed the spawn-off cost by a comfortable margin.
+Researchers have therefore worked towards automatic parallelisation.
+Autoparallelising compilers have long tried to use granularity analysis to
+ensure that they only spawn off computations whose cost will probably exceed
+the spawn-off cost by a comfortable margin.
 However, this is not enough to yield good results,
 because data dependencies may \emph{also} limit
 the usefulness of running computations in parallel.
@@ -41,7 +42,17 @@ If one computation blocks almost immediately
 and can resume only after another has completed its work,
 then the cost of parallelisation again exceeds the benefit.
 
-We present a set of algorithms for recognising places in a program
+This chapter is based on and extends our paper:
+
+\begin{quote}
+\pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
+\pubtitle{Estimating the overlap between dependent computations for automatic
+parallelization}
+\pubhow{Theory and Practice of Logic Programming,}{11(4--5):575--591, 2011.}
+\end{quote}
+
+\noindent
+It presents a set of algorithms for recognising places in a program
 where it is worthwhile to execute two or more computations in parallel
 that pay attention to the second of these issues as well as the first.
 Our system uses profiling information to compute
@@ -50,12 +61,19 @@ and the times at which it produces the values of its output arguments.
 Given two calls that may be executed in parallel,
 our system uses the times of production and consumption
 of the variables they share
-to determine how much their executions would overlap
-if they were run in parallel,
+to determine how much their executions are likly to overlap
+when run in parallel,
 and therefore whether executing them in parallel is a good idea or not.
 
 We have implemented this technique for Mercury
-in the form of a tool that uses profiling data
+in the form of a tool\footnote{
+    This tool was derrived from the initial implementation described in
+    Section \ref{honours_autopar}, Page \pageref{honours_autopar} and by
+    \citet{bone:2008:hons}.
+    However many parts of the tool have changed and it has only very few
+    parts in common with the original version.
+    Everything described in this chapter is new unless otherwise specified.}
+that uses profiling data
 to generate recommendations about what to parallelise,
 for the Mercury compiler to apply on the next compilation of the program.
 We present preliminary results that show that
