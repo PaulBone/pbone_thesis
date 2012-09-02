@@ -113,7 +113,8 @@ conjunctions.
 
 The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
-but are transformed into combinations of negations and existential quantification
+but are transformed into a combination of two negations and an existential
+quantification
 (Equation \ref{eqn:expand_univ_quant}).
 Universal quantifications do not appear in the compiler's internal goal
 representation.
@@ -122,7 +123,7 @@ a negation can be simplified using the constants $true$ and $false$ and an
 if-then-else (Equation \ref{eqn:expand_neg}).
 However the compiler does not make this transformation and
 negations may appear in the compiler's goal representation.
-Nevertheless, We will not discuss negations in this dissertation,
+Nevertheless, we will not discuss negations in this dissertation,
 since our algorithms' handling of negations is equivalent
 to their handling of the below if-then-else.
 \paul{Bring back negation.}
@@ -223,7 +224,8 @@ append([X | Xs], Ys, [X | Zs]) :-
 \code{append/3}'s type signature and definition are shown in Figure
 \ref{fig:append_type_and_defn}.
 Mercury also has a strong mode system.
-At any given time a variable has an \emph{instantiation state},
+At any given point in the program a variable has an \emph{instantiation
+state},
 this is one of free, ground or clobbered.
 Free variables have no value,
 ground variables have a fixed value,
