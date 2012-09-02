@@ -91,7 +91,7 @@ The atomic goals are unifications
 at most one function symbol),
 plain first-order calls,
 higher-order calls,
-method calls,
+typeclass method calls (similar to higher-order calls),
 and calls to predicates defined by code in a foreign language (usually C).
 % \peter{You only need to cover enough about Mercury for the purposes of
 %   your thesis.  I do not think how inlining of foreign code works is important.}
@@ -143,6 +143,9 @@ Switches in Mercury are thus analogous to switches in languages like C.
 If the switch contains a case for each function symbol in the
 switched-on value's type, then the switch is said to be \emph{complete}.
 Otherwise the switch is \emph{incomplete}.
+Note that the representation of switches in figure \ref{fig:abstractsyntax}
+is not the same as their source code representation;
+Their source code syntax is the same as a disjunction.
 See page \pageref{page:purity} for a description of the purity promises.
 
 \label{superhomogeneous}
@@ -173,10 +176,10 @@ variable and a function symbol representing the constant.
 Goals flatterned in this way are said to be in
 \emph{super homogeneous form}.
 
-Mercury has a strong Hindley-Milner~\citep{hindley69:types,milner78:types} type
-system.
-It was inspired by the type system of Hope~\citep{hope}
-and is similar to Haskell's type system~\citep{haskell98}.
+Mercury has a type system inspired by the type system of Hope~\citep{hope}
+and is similar to Haskell's type system~\citep{haskell98};
+it uses Hindley-Milner~\citep{hindley69:types,milner78:types} type
+inference.
 Mercury programs are statically typed; the compiler knows the type of every
 argument of every predicate (from declarations or inference) and every local
 variable (from inference).
