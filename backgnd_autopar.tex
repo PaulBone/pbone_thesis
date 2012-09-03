@@ -61,9 +61,10 @@ similar to the compiler's representation.
 The analysis tool reads this file,
 and writes out a description of how to parallelise the program as a feedback
 file.
-The program is compiled for a second time,
+The programmer then re-compiles their program,
 this time with auto-parallelism enabled.
-The compiler reads the feedback file and introduces parallelism into the
+During compilation,
+the compiler reads the feedback file and introduces parallelism into the
 resulting program at the places indicated by the feedback file.
 Figure \ref{fig:prof_fb} shows this workflow.
 
@@ -387,6 +388,9 @@ and therefore we introduced coverage profiling.
 
 \subsection{Coverage Profiling}
 \label{sec:backgnd_coverage}
+
+\paul{Explain how the algorithms work in tandem, this seems to be a point
+that readers have trouble with.}
 
 Code \emph{coverage} is a term often used in the context of debugging and
 testing:
