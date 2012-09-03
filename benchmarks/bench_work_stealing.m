@@ -35,8 +35,8 @@ config = Data :-
     ),
     Compilers = [
         compiler("orig-ws",     BaseDir ++ "/old_2011-04.install"),
-        compiler("revised-ws",  BaseDir ++ "/old_2011-06.install"),
-        compiler("current",     BaseDir ++ "/par_rts.install")
+        compiler("revised-ws",  BaseDir ++ "/old_2011-06.install")
+        %compiler("current",     BaseDir ++ "/par_rts.install")
     ],
     BaseDir = "/srv/scratch/dev",
     Groups = [
