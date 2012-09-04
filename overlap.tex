@@ -88,19 +88,18 @@ Section \ref{sec:overlap_aims} states our two aims for this chapter.
 Then Section \ref{sec:overlap_approach} outlines our general approach,
 in addressing these aims
 which the later sections fill in.
-We start with traversing the call graph in section \ref{sec:overlap_dfs}.
-Then in section \ref{sec:overlap_reccalls}
-we describe how to calculate information about recursive calls missing from
+Section \ref{sec:overlap_reccalls}
+describes how to calculate information about recursive calls missing from
 the profiling data.
-Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
+Section \ref{sec:overlap_overlap_alg} describes our algorithm for
 calculating the execution overlap between two or more dependent conjuncts.
 A conjunction with more than two conjuncts can be parallelised
 in several different ways;
-section~\ref{sec:overlap_howto} shows how we choose the best way.
-Section~\ref{sec:overlap_pragmatic} discusses some pragmatic issues.
-Section~\ref{sec:overlap_perf} evaluates
+section \ref{sec:overlap_howto} shows how we choose the best way.
+Section \ref{sec:overlap_pragmatic} discusses some pragmatic issues.
+Section \ref{sec:overlap_perf} evaluates
 how our system works in practice on some example programs, and
-section~\ref{sec:overlap_conc} concludes
+section \ref{sec:overlap_conc} concludes
 with comparisons to related work.
 
 \section{Aims}
@@ -329,6 +328,12 @@ Together these tests dramatically reduce the portions of a program that need
 analysis,
 reducing the time required to search for parallelisation opportunities.
 
+The previous version of the tool did not use the call graph.
+Instead it looked at the most expensive procedures,
+considering only those whose cost was above its own threashold.
+The callgraph traversal is better because it allows us to avoid parallelising
+a callee when the caller already provides enough parallelism.
+
 For each procedure in the call tree,
 we search its body for conjunctions that contain
 two or more calls with execution times above a configurable threshold.
@@ -398,52 +403,9 @@ obsoletes some old parallelisation opportunities and creates others.
 Nevertheless, if programmers want to parallelise some conjunctions manually,
 they can do so: our system will not override the programmer.
 
-\section{Traversing the callgraph}
-\label{sec:overlap_dfs}
-
-The previous version of the parallelisation feedback tool analysed the the
-procedures that contributed the most to the program's execution time.
-When considering each procedure it used profiling data gathered from every use
-of that procedure.
-Our new version makes a depth-first search over the call tree,
-which was described as a tree of SCCs (strongly connected components)
-in section \ref{sec:backgnd_deep}.
-The same procedure can belong to multiple SCCs depending on its ancestor
-calls and call sites.
-Each SCC has one entry procedure and one or more other procedures.
-The other procedures are mutually recursive with the entry procedure,
-either directly or indirectly,
-and thus part of the SCC.
-The profiling data for the procedures in each SCC is specific to the uses of
-the procedures when called from the SCC's ancestors.
-Therefore,
-the depth first search can visit the same procedure more than once,
-each time with different call cost data.
-This can cause the analyses described below to generate different answers
-regarding the parallelisation of any procedure.
-
-
-This means that as we analyse each procedure
-(SCCs are made up of one or more procedures)
-that the data to analyse each procedure is gathered from the calls made to
-that procedure when it is called from that \emph{ancestor context}.
-An ancestor context is the chain of call sites and callees that lead to the
-execution of a SCC.
-
-This is explained in more detail in section \ref{sec:overlap_dfs}.
-
-The previous version of the parallelisation feedback tool analysed the the
-procedures that contributed the most to the program's execution time.
-When considering each procedure it used profiling data gathered from every use
-of that procedure.
-We limited the number of procedures examined by only examining those whose
-total per-call cost was above a particular threshold.
-
-
-However, unlike the previous version of the feedback tool
-
-This means that the same 
-
+% \section{Traversing the callgraph}
+% \label{sec:overlap_dfs}
+% 
 % % XXX Further work.
 % \paul{TODO: This feature is not yet implemented.}
 % If the depth first search later finds
@@ -511,67 +473,136 @@ This means that the same
 \section{The cost of recursive calls}
 \label{sec:overlap_reccalls}
 
-\paul{Describe the costs of recursive calls}
+% leave discussion of granularity estimation by static analysis
+% for the related work section;
+% mention that this work has not extended to large programs.
 
-% % leave discussion of granularity estimation by static analysis
-% % for the related work section;
-% % mention that this work has not extended to large programs.
-%
-% The Mercury deep profiler gives us directly
-% the costs of all non-recursive call sites in a clique.
-% For recursive calls,
-% the costs of the callee are mingled together
-% with the costs of the caller,
-% which is either the same procedure as the callee,
-% or is mutually recursive with it.
-% Therefore if we want to know the cost of a recursive call site (and we do),
-% we have to infer this
-% from the cost of the clique as a whole,
-% the cost of each call site within the procedures of the clique,
-% the structures of the bodies of those procedures,
-% and the frequency of execution of each path through those bodies.
-%
-% For now, we will restrict our attention to cliques
-% that contain only a single procedure,
-% since this inference process is much simpler for them.
-% Later, we will discuss how this restriction can be lifted at least partially.
-% We will further restrict our attention to procedures
-% whose bodies match one of a small set of patterns.
-%
-% {\bf Pattern 1: simply recursive procedures.}
-% The first pattern consists of procedures whose bodies
-% that have just two execution paths through them:
-% a base case, and a recursive case containing a single recursive call site.
-% Our example for this category is \code{map\_foldl},
-% a predicate in the Mercury standard library
-% that does first a map and then a fold over a list,
-% whose code is shown in figure~\ref{fig:map_foldl}.
-%
-% Let us say that of the 100 calls to the procedure,
-% 90 were from the recursive call site
-% and 10 were from a call site in the parent clique.
-% Then we would calculate
-% that each non-recursive call
-% would on average yield nine recursive calls.
-% The last of these would take the nonrecursive path, and incur only its costs.
-% The second last would take the recursive path,
-% and incur one copy of the costs of the nonrecursive calls along that path,
-% plus the cost of the last call.
-% The third last would incur two copies of the costs
-% of the nonrecursive calls along the recursive path,
-% plus the cost of the last call.
-%
-% XXX should we discuss conditionals?
-%
-% more than once base case can be folded into one;
-% more than once recursive case can be folded into one.
-%
-% {\bf Pattern 2: Divide-and-conquer procedures.}
-% The second pattern consists of procedures whose bodies
-% that also have just two execution paths through them:
-% a base case, and a recursive case containing \emph{two} recursive call sites.
-% Our example for this category is an accumulator version of \code{quicksort},
-% whose code is shown in figure~\ref{fig:quicksort_acc}.
+The Mercury deep profiler gives us directly
+the costs of all non-recursive call sites in a clique.
+For recursive calls,
+the costs of the callee are mingled together
+with the costs of the caller,
+which is either the same procedure as the callee,
+or is mutually recursive with it.
+Therefore if we want to know the cost of a recursive call site (and we do),
+we have to infer this
+from the cost of the clique as a whole,
+the cost of each call site within the procedures of the clique,
+the structures of the bodies of those procedures,
+and the frequency of execution of each path through those bodies.
+
+For now, we will restrict our attention to cliques
+that contain only a single procedure,
+since this inference process is much simpler for them.
+Later, we will discuss how this restriction can be lifted at least partially.
+We will further restrict our attention to procedures
+whose bodies match one of a small set of patterns.
+
+{\bf Pattern 1: simply recursive procedures.}
+The first pattern consists of procedures whose bodies
+that have just two types execution paths through them:
+base cases, and recursive cases containing a single recursive call site.
+Our example for this category is \code{map\_foldl},
+whose code is shown in figure \ref{fig:map_foldl}.
+
+Let us say that of the 100 calls to the procedure,
+90 were from the recursive call site
+and 10 were from a call site in the parent SCC.
+Then we would calculate
+that each non-recursive call
+would on average yield nine recursive calls.
+We call this the average depest recursion:
+
+\begin{equation*}
+Depth = Calls_{RecCallSites} / Calls_{ParentCallSite}
+\end{equation*}
+
+\noindent
+The deepest call executes only the non-recursive path,
+and incur only its costs.
+The next deepest would take the recursive path,
+and incur one copy of the costs of the nonrecursive calls along that path,
+plus the cost of the last call.
+The third last would incur two copies of the costs
+of the nonrecursive calls along the recursive path,
+plus the cost of the last call.
+By induction,
+the cost cost of a recursive call at depth $D$ (0 being the deepest)
+is:
+
+\begin{equation*}
+cost(D) = CostNonRec + D(CostRec + 1)
+\end{equation*}
+
+We can now calculate the average cost of a call at any level of the
+recursion.
+Simply recursive procedures have a uniform number of calls at each depth of
+the recursion.
+The depth representing the typical use of such a procedure is half of $Depth$
+calculated above.
+This allows us to calculate the typical cost of a recursive call from this
+call site.
+For example, if \mapfoldl's non-recursive path cost is 10 call sequences
+counts (a unit defined in section \ref{sec:backgnd_deep}),
+its recursive path cost is 100csc,
+and its typical depth is $9/2 = 4.5$.
+Then its typical cost is $10 + 4.5(100 + 1) = 464.5$ call sequence counts.
+
+\begin{figure}[tb]
+\begin{verbatim}
+quicksort([], Acc, Acc).
+quicksort([Pivot | Xs], Acc0, Acc) :-
+    partition(Pivot, Xs, Lows, Highs),
+    quicksort(Lows, Acc0, Acc1),
+    quicksort(Highs, [Pivot | Acc1], Acc).
+\end{verbatim}
+\caption{Accumulator quicksort}
+% the two recursive calls are highly dependent.
+\label{fig:quicksort_acc}
+\end{figure}
+
+{\bf Pattern 2: Divide-and-conquer procedures.}
+The second pattern consists of procedures whose bodies
+that also have just two types of execution path through them:
+base cases, and recursive cases containing \emph{two} recursive call sites.
+Our example for this category is an accumulator version of \quicksortacc,
+whose code is shown in figure~\ref{fig:quicksort_acc}.
+
+Calculating the recursion depth depth of \quicksortacc can be more
+problematic.
+We know that if a good value for \code{Pivot} is choosen \quicksortacc runs
+optimally,
+dividing the list in half with each recursion.
+Therefore there are a minimum of
+$\log_2 (Calls_{RecCallSites} / Calls_{ParentCallSites})$ recursions.
+However,
+if consistently worst-case pivots are choosen then \quicksortacc fails to
+divide the list at each recursion passing an empty list to one recursive call
+and a list whose length is one less than the input list to the other call.
+We do not consider this to be a problem,
+such a case is an error in the programmer's choice of algorithm or use of the
+algorithm.
+It would create poor performance in sequential code and therefore we're not
+interested in such cases when parallelising code.
+We say that the average deepest recursion of divide and conquer code code is:
+
+\begin{equation*}
+Depth = \log_2 (Calls_{RecCallSites} / Calls_{ParentCallSite})
+\end{equation*}
+
+
+
+\mapfoldl is one of the simplist procedures that fits this simple recursion
+pattern.
+We are able to handle procedures with any number of base cases, and any number
+of recursive cases provided that the recursive cases contain eactly one
+recursive call.
+An algorithm 
+
+XXX should we discuss conditionals?
+
+more than once base case can be folded into one;
+more than once recursive case can be folded into one.
 
 \paul{Describe 'deep' coverage}
 
@@ -1041,19 +1072,6 @@ ${Cons}_{{map\_foldl} {Acc1}} = 1,625,000 + 2 + 1,620,000 = 3,245,002$.
 \paul{I would have fixed this but I do not know what these formulas mean,
 Maybe I am confused by notation}
 
-% \begin{figure}[tb]
-% \begin{verbatim}
-% quicksort([], Acc, Acc).
-% quicksort([Pivot | Xs], Acc0, Acc) :-
-%     partition(Pivot, Xs, Lows, Highs),
-%     quicksort(Lows, Acc0, Acc1),
-%     quicksort(Highs, [Pivot | Acc1], Acc).
-% \end{verbatim}
-% \caption{Accumulator quicksort \peter{This is not referenced anywhere; drop it?}}
-% % the two recursive calls are highly dependent.
-% \label{fig:quicksort_acc}
-% \end{figure}
-%
 % \zoltan{Show real data, if we can,
 % that shows that quicksort has very little overlap.}
 
