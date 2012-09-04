@@ -24,8 +24,8 @@ one another.
 However,
 introducing parallelism efficiently is much more difficult.
 It is easy to make common mistakes.
-One such mistake is creating too much parallelism: 
-making a task available to another CPU 
+One such mistake is creating too much parallelism:
+making a task available to another CPU
 may take thousands of instructions,
 spawning off a task that takes only a hundred instructions is clearly a loss.
 Even spawning off a tack of a few thousand instructions is not a win;
@@ -46,6 +46,7 @@ This chapter is based on and extends our paper:
 
 \begin{quote}
 \pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
+% This spelling of parallelisation is okay.
 \pubtitle{Estimating the overlap between dependent computations for automatic
 parallelization}
 \pubhow{Theory and Practice of Logic Programming,}{11(4--5):575--591, 2011.}
@@ -61,35 +62,49 @@ and the times at which it produces the values of its output arguments.
 Given two calls that may be executed in parallel,
 our system uses the times of production and consumption
 of the variables they share
-to determine how much their executions are likly to overlap
+to determine how much their executions are likely to overlap
 when run in parallel,
 and therefore whether executing them in parallel is a good idea or not.
 
 We have implemented this technique for Mercury
 in the form of a tool\footnote{
-    This tool was derrived from the initial implementation described in
+    This tool was derived from the initial implementation described in
     Section \ref{honours_autopar}, Page \pageref{honours_autopar} and by
     \citet{bone:2008:hons}.
     However many parts of the tool have changed and it has only very few
     parts in common with the original version.
     Everything described in this chapter is new unless otherwise specified.}
-that uses profiling data
-to generate recommendations about what to parallelise,
-for the Mercury compiler to apply on the next compilation of the program.
+that uses data from Mercury's deep profiler
+to generate recommendations about what to parallelise.
+The compiler applies these recommendations the next time the program is
+compiled.
 We present preliminary results that show that
 this technique can yield useful parallelisation speedups,
 while requiring nothing more from the programmer
 than representative input data for the profiling run.
 
-\section{Introduction}
-\label{sec:intro}
+The structure of this chapter is as follows.
+Section \ref{sec:overlap_aims} states our two aims for this chapter.
+Then Section \ref{sec:overlap_approach} outlines our general approach,
+in addressing these aims
+which the later sections fill in.
+We start with traversing the call graph in section \ref{sec:overlap_dfs}.
+Then in section \ref{sec:overlap_reccalls}
+we describe how to calculate information about recursive calls missing from
+the profiling data.
+Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
+calculating the execution overlap between two or more dependent conjuncts.
+A conjunction with more than two conjuncts can be parallelised
+in several different ways;
+section~\ref{sec:overlap_howto} shows how we choose the best way.
+Section~\ref{sec:overlap_pragmatic} discusses some pragmatic issues.
+Section~\ref{sec:overlap_perf} evaluates
+how our system works in practice on some example programs, and
+section~\ref{sec:overlap_conc} concludes
+with comparisons to related work.
 
-% Multicore is ubiquitous.
-
-% Parallel programming is hard.
-
-% Pure Declarative languages make it safe, and Automatic
-% parallelisation makes it easier.
+\section{Aims}
+\label{sec:overlap_aims}
 
 When parallelising Mercury programs,
 the best parallelisation opportunities occur
@@ -105,13 +120,13 @@ but in only one of those conjunctions are the expensive goals independent.
 This is why Mercury supports the parallel execution of dependent conjunctions
 through the use of futures and a compiler transformation
 \citep{wang:2011:dep-par,wang:2006:hons} (Section \ref{sec:backgnd_deppar}).
-If the \emph{consumer} of the variable attempts to retrive the variable's value 
+If the \emph{consumer} of the variable attempts to retrieve the variable's value
 before it has been produced, then its execution is blocked
-until until the \emph{producer} makes the variable available.
+until the \emph{producer} makes the variable available.
 
 \picfigure{overlap_compare}{Ample vs smaller parallel overlap between \code{p} and \code{q}}
 
-Dependent parallel conjunctions may differ
+Dependent parallel conjunctions differ widely
 in the amount of parallelism they have available.
 Consider a parallel conjunction with two similarly-sized conjuncts,
 \code{p} and \code{q}, that share a single variable \code{A}.
@@ -132,29 +147,60 @@ almost all conjunctions are dependent conjunctions,
 and in most of them,
 shared variables are produced very late and consumed very early.
 Parallelising them would therefore yield slowdowns instead of speedups,
-because the overheads of parallel execution would far outweigh the benefits.
+because the overheads of parallel execution would far outweigh the
+benefit of the small amount of parallelism that is available.
 We want to parallelise only conjunctions
 in which any shared variables are produced early, consumed late,
-or (preferably) both.
+or (preferably) both;
+such computations expose more parallelism.
 The first purpose of this chapter is to show how one can find these conjunctions.
 
-\begin{figure}[b]
-\begin{verbatim}
-map_foldl(_, _, [], Acc, Acc).
-map_foldl(M, F, [X | Xs], Acc0, Acc) :-
-    M(X, Y),
-    F(Y, Acc0, Acc1),
-    map_foldl(M, F, Xs, Acc1, Acc).
-\end{verbatim}
-\caption{\mapfoldl}
+\begin{figure}
+\begin{center}
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[Sequential \mapfoldl]{%
+\label{fig:map_foldl_seq}
+{\small
+\begin{tabular}{l}
+\code{map\_foldl(\_, \_, [], Acc, Acc).} \\
+\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~M(X, Y),} \\
+\code{~~~~F(Y, Acc0, Acc1),} \\
+\code{~~~~map\_foldl(M, F, Xs, Acc1, Acc).} \\
+\end{tabular}}
+}
+\end{minipage}
+%
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[Parallel \mapfoldl with overlap]{%
+\label{fig:map_foldl_par}
+{\small
+\begin{tabular}{l}
+\code{map\_foldl(\_, \_, [], Acc, Acc).} \\
+\code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~(} \\
+\code{~~~~~~~~M(X, Y),} \\
+\code{~~~~~~~~F(Y, Acc0, Acc1)} \\
+\code{~~~~) \&} \\
+\code{~~~~map\_foldl(M, F, Xs, Acc1, Acc).} \\
+\end{tabular}}
+}
+\end{minipage}
+
+\end{center}
+\caption{Sequential and parallel \mapfoldl}
 % the recursive call is less dependent
 % on the conjunction of the first two calls.
 \label{fig:map_foldl}
 %\vspace{-2\baselineskip}
 \end{figure}
 
-The second purpose is to find the best way to parallelise these conjunctions.
-Consider the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
+\picfigure{mapfoldl-overlap}{Overlap of \mapfoldl (figure
+\ref{fig:map_foldl_par})}
+
+The second purpose of this chapter is to find the best way to parallelise
+these conjunctions.
+Consider the \mapfoldl predicate in figure~\ref{fig:map_foldl_seq}.
 The body of the recursive clause has three conjuncts.
 We could make each conjunct execute in parallel,
 or we could execute two conjuncts in sequence
@@ -162,99 +208,87 @@ or we could execute two conjuncts in sequence
 and execute that sequential conjunction in parallel with the remaining conjunct.
 In this case, there is little point in executing
 the higher order calls to the \M and \F predicates
-(herein map and fold respectivly)
+%(herein map and fold respectivly)
 in parallel with one another,
 since in virtually all cases,
-the map predicate will generate \code{Y} very late and
-the fold predicate will consume \code{Y} very early.
-However, executing the sequential conjunction of the map and fold predicates
+\M will generate \code{Y} very late and
+\F will consume \code{Y} very early.
+However, executing the sequential conjunction of the calls to \M and \F
 in parallel with the recursive call \emph{will} be worthwhile
-if the map predicate is time-consuming,
+if \M is time-consuming,
 because this implies that
-a typical recursive call will consume its fourth argument late;
-the recursive call processing the second element of the list
-will have significant execution overlap
+a typical recursive call will consume its fourth argument late.
+The recursive call processing the second element of the list
+will have significant execution overlap (mainly the cost of \M)
 with its parent processing the first element of the list
 even if (as is typical) the fold predicate generates \code{Acc1} very late.
+This parallel version of \mapfoldl is shown in figure
+\ref{fig:map_foldl_par}.
+A representation of the first three iterations of it 
+is shown in figure \ref{fig:mapfoldl-overlap}.
 (This is the kind of computation that
 Reform Prolog \cite{bevemyr:reform} was designed to parallelise.)
 
-The structure of this chapter is as follows.
-Section~\ref{sec:overlap_approach} outlines our general approach,
-which the later sections fill in.
-Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
-calculating the execution overlap between two or more dependent conjuncts.
-A conjunction with more than two conjuncts can be parallelised
-in several different ways;
-section~\ref{sec:overlap_howto} shows how we choose the best way.
-Section~\ref{sec:overlap_pragmatic} discusses some pragmatic issues.
-Section~\ref{sec:overlap_perf} evaluates
-how our system works in practice on some example programs, and
-section~\ref{sec:overlap_conc} concludes
-with comparisons to related work.
 
 \section{Our general approach}
 \label{sec:overlap_approach}
 
-During automatic parallelisation,
-a compiler may be able to estimate some cost information from static
-analysis.
-However, this will not be accurate;
-static analysis cannot take into account sizes of data terms or other
-values that are only available at runtime.
-Therefore, we use profiler feedback information in our implementation.
-This is described in more detail in section \ref{sec:backgnd:autopar}.
-Also described in this section \ref{sec:backgnd_autopar} are:
-Mercury's deep profiler,
-coverage profiling,
-and variable use analysis.
-We will refer to all of these in this chapter.
-
+\plan{Goal}
 We want to find the conjunctions in the program
 whose parallelisation would be the most profitable.
 This means finding the conjunctions with conjuncts
 whose execution cost exceeds the spawning-off cost by the highest margin,
 and whose interdependencies, if any,
 allow their executions to overlap the most.
-% \paul{Is the next sentence needed?}
-% \peter{No, but does not hurt, either.}
-% It is better to spawn off a medium-sized computation
-% whose execution can overlap almost completely
-% with the execution of another medium-sized computation,
-% than it is to spawn off a big computation
-% whose execution can overlap only slightly
-% with the execution of another big computation,
-% but it is better still to spawn off a big computation
-% whose execution can overlap almost completely
-% with the execution of another big computation.
-Essentially, the greater the margin by which
+It is better to spawn off a medium-sized computation
+whose execution can overlap almost completely
+with the execution of another medium-sized computation,
+than it is to spawn off a big computation
+whose execution can overlap only slightly
+with the execution of another big computation,
+but it is better still to spawn off a big computation
+whose execution can overlap almost completely
+with the execution of another big computation.
+Essentially, the more the tasks' executions can overlap with one another,
+the greater the margin by which
 the likely runtime of the parallel version of a conjunction beats
-the likely runtime of the sequential version,
-the more beneficial parallelising that conjunction will be.
+the likely runtime of the sequential version (speedup),
+and the more beneficial parallelising that conjunction will be.
 
+\plan{Profiler feedback}
 To compute this likely benefit,
 we need information
 both about the likely cost of calls
 and the execution overlap allowed by their dependencies.
-Our system therefore asks programmers
-to follow this sequence of actions
-after they have tested and debugged the program.
+A compiler may be able to estimate some cost information from static
+analysis.
+However, this will not be accurate;
+static analysis cannot take into account sizes of data terms or other
+values that are only available at runtime.
+Therefore, we use profiler feedback information in our implementation.
+This was introduced above in section \ref{sec:backgnd_autopar}.
+Section \ref{sec:backgnd_autopar} also includes a description of
+Mercury's deep profiler.
+To generate the profiler feedback data we require programmers to follow this
+sequence of actions after they have tested and debugged the program.
+A visual representation of such a workflow is shown in figure
+\ref{fig:prof_fb} on page \pageref{fig:prof_fb}.
 
 \begin{enumerate}
 \item
 Compile the program
-with options asking for profiling.
-% for automatic parallelisation.
+with options asking for profiling
+for automatic parallelisation.
 \item
 Run the program on a representative set of input data.
 This will generate a profiling data file.
 \item
 Invoke our feedback tool on the profiling data file.
-This will generate a parallelisation advice file.
+This will generate a parallelisation feedback file.
 \item
 Compile the program for parallel execution,
-specifying the parallelisation advice file.
-The advice file tells the compiler
+specifying the feedback file.
+The file tells the compiler
 \emph{which} sequential conjunctions to convert to parallel conjunctions,
 and exactly \emph{how}.
 For example, \code{c1, c2, c3} can be converted
@@ -271,34 +305,156 @@ to select training input for the profiling run in step 2.
 Obviously, programmers should pick input that is as representative as possible,
 but the recommended parallelisation can be useful
 even for input data that is quite different from the training input.
-The main focus of this paper is on step 3;
+The main focus of this chapter is on step 3;
 we give the main algorithms used by the feedback tool.
-\tr{
 However, we will also touch on steps 1 and 4.
-}
+We believe that step 2 can only be solved by the programmer,
+as they understand what input is representative for their program.
 
-% \paul{The coverage work should really be published separately.
-% For this paper we should just say 'we have a way of obtaining
-% coverage data'.  This is probably acceptable for the workshop.}
+\plan{DFS \& limits}
+Our feedback tool looks for parallelisation opportunities
+by doing a depth-first search of this call tree.
+which was described as a tree of SCCs (strongly connected components)
+in section \ref{sec:backgnd_deep}.
+It explores the subtree below a node in the tree
+only if the overall cost of the call leading to the subtree
+is greater than a configurable threshold,
+and if the amount of parallelism it has found at and above that node
+is below another configurable threshold.
+The first test lets us avoid looking at code
+that would take more work to spawn off than to execute,
+while the second test lets us avoid creating
+more parallel work than the target machine can handle.
+Together these tests dramatically reduce the portions of a program that need
+analysis,
+reducing the time required to search for parallelisation opportunities.
+
+For each procedure in the call tree,
+we search its body for conjunctions that contain
+two or more calls with execution times above a configurable threshold.
+This test also reduces the parts of the program that will be analysed
+further;
+it trivially rejects procedures that cannot contain any profitable
+parallelism.
+Parallelising a conjunction
+requires partitioning the original conjuncts into two or more groups,
+with the conjuncts in each group being executed sequentially
+but different groups being executed in parallel.
+each group represents a hypothetical sequential conjunction,
+and the set of groups represents a hypothetical parallel conjunction.
+As this parallel conjunction represents a possible parallelisation of the
+original conjunction, we call it a \emph{candidate parallelisation}.
+Most conjunctions can be partitioned into several alternative candidate
+parallelisation.
+For example, we showed above that \mapfoldl has three alternative
+parallelisations of its recursive branch.
+We use the algorithms of section \ref{sec:overlap_overlap_alg}
+to compute the expected parallel execution time of the parallelisations.
+These algorithms take into account the runtime overheads of parallel execution.
+However,
+large conjunctions can have a very large ($2^{n-1}$) number of
+parallelisations,
+Therefore,
+we use the algorithms of section \ref{sec:overlap_howto} to generate
+only the parallelisations whose performance we want to evaluate.
+If the best-performing parallelisation we find
+shows a nontrivial speedup over sequential execution,
+we remember that we want to perform that parallelisation on this conjunction.
+A procedure can contain several conjunctions with two or more goals that we
+consider parallelising,
+therefore multiple candidate parallelisations may be generated for different
+conjunctions in a procedure.
+The same procedure may also appear more than once in the call graph,
+and therefore multiple parallelisations may be generated for the same
+conjunctions within a procedure,
+we discuss how we resolve these in section \ref{sec:overlap_pragmatic}.
+
+\paul{Move this later when we need to talk about program representation and
+coverage}
 Our feedback tool is an extension of the Mercury deep profiler.
-% \paul{make the rest of this paragraph an itemize?}
-% \peter{I wouldn't.}
-One of our modifications gives the deep profiler access
-to the relevant parts of the compiler's representation of the program.
+The profiler is able to access the relevant parts of the compiler's
+representation of the program.
 This includes a representation of each procedure body,
 and for each atomic subgoal (call or unification) within each body,
-the set of variables bound by that subgoal.
-Another modification records
-how many times execution reaches each point in the program.
-\tr{
-Since even the unmodified deep profiler could figure this out
-for \emph{most} program points from the call counts associated with call sites,
-we need to gather execution counts at only a few additional sites
-to allow us to figure it out for \emph{all} program points.
-}
-As we will see in section~\ref{sec:overlap},
-we need this information
+the set of variables bound or referenced by that subgoal.
+We also use coverage profiling (Section \ref{sec:backgnd_coverage})
+which records how many times execution reaches each point in the program,
+this number is the \emph{coverage} of that point in the program.
+It is possible to figure this out for \emph{most} program points using
+only the call counts associated with call sites.
+However, we require complete coverage information;
+coverage profiling provides this using a minimum of extra profiling
+instrumentation.
+As we will see in section~\ref{sec:overlap_overlap_alg},
+we need the complete coverage information
 to calculate the likely speedup from parallelising a conjunction.
+
+
+\paul{Move this paragraph elsewhere, conclusion or introduction?}
+An important benefit of profile-directed parallelisation is that
+since programmers do not annotate the source program,
+it can be re-parallelised easily after a change to the program
+obsoletes some old parallelisation opportunities and creates others.
+Nevertheless, if programmers want to parallelise some conjunctions manually,
+they can do so: our system will not override the programmer.
+
+\section{Traversing the callgraph}
+\label{sec:overlap_dfs}
+
+The previous version of the parallelisation feedback tool analysed the the
+procedures that contributed the most to the program's execution time.
+When considering each procedure it used profiling data gathered from every use
+of that procedure.
+Our new version makes a depth-first search over the call tree,
+which was described as a tree of SCCs (strongly connected components)
+in section \ref{sec:backgnd_deep}.
+The same procedure can belong to multiple SCCs depending on its ancestor
+calls and call sites.
+Each SCC has one entry procedure and one or more other procedures.
+The other procedures are mutually recursive with the entry procedure,
+either directly or indirectly,
+and thus part of the SCC.
+The profiling data for the procedures in each SCC is specific to the uses of
+the procedures when called from the SCC's ancestors.
+Therefore,
+the depth first search can visit the same procedure more than once,
+each time with different call cost data.
+This can cause the analyses described below to generate different answers
+regarding the parallelisation of any procedure.
+
+
+This means that as we analyse each procedure
+(SCCs are made up of one or more procedures)
+that the data to analyse each procedure is gathered from the calls made to
+that procedure when it is called from that \emph{ancestor context}.
+An ancestor context is the chain of call sites and callees that lead to the
+execution of a SCC.
+
+This is explained in more detail in section \ref{sec:overlap_dfs}.
+
+The previous version of the parallelisation feedback tool analysed the the
+procedures that contributed the most to the program's execution time.
+When considering each procedure it used profiling data gathered from every use
+of that procedure.
+We limited the number of procedures examined by only examining those whose
+total per-call cost was above a particular threshold.
+
+
+However, unlike the previous version of the feedback tool
+
+This means that the same 
+
+% % XXX Further work.
+% \paul{TODO: This feature is not yet implemented.}
+% If the depth first search later finds
+% some of the conjuncts to have parallelisable code inside them,
+% we revisit this conjunction,
+% this time using updated data about the cost of those conjuncts.
+% Otherwise,
+% we add a recommendation to perform the selected parallelisation
+% to the feedback advice we generate for the compiler.
+
+
 
 % \paul{This is not yet implemented and will not be for this version of the paper.}
 % \peter{Then you need to say that.}
@@ -346,65 +502,17 @@ to calculate the likely speedup from parallelising a conjunction.
 % GREEDY_SEARCH In section \ref{sec:pragmatic}, we will describe it in detail,
 % GREEDY_SEARCH together with our solutions to several issues that come up in practice.
 
-Our feedback tool looks for parallelisation opportunities
-by doing a depth-first search
-of the call tree recorded in the profiling data file.
-It explores the subtree below a node in the call tree
-only if the overall cost of the call
-is greater than a configurable threshold,
-and if the amount of parallelism it has found at and above that node
-is below another configurable threshold.
-The first test lets us avoid looking at code
-that would take more work to spawn off than to execute,
-while the second test lets us avoid creating
-more parallel work than the target machine can handle.
-
-For each procedure in the call tree,
-we search its body for conjunctions that contain
-two or more calls with execution times above a configurable threshold.
-To parallelise the conjunction,
-its conjuncts have to be partitioned,
-each partition being one conjunct in the parallel conjunction.
-In most cases, this can be done in several different ways.
-% Parallelising a conjunction
-% requires partitioning the set of the original conjuncts
-% into two or more groups,
-% with the conjuncts in each group being executed sequentially
-% but different groups being executed in parallel.
-% This can usually be done in several different ways.
-We can use the algorithms of section \ref{sec:overlap}
-to compute the expected parallel execution time of each partition;
-these algorithms take into account the runtime overheads of parallel execution.
-We use the algorithms of section \ref{sec:howto} to generate
-the set of partitions whose performance we want to evaluate.
-If the best-performing parallelisation we find
-shows a nontrivial speedup over sequential execution,
-we remember that we want to perform that parallelisation on this conjunction.
-% TODO: This feature is not yet implemented.
-If the depth first search later finds
-some of the conjuncts to have parallelisable code inside them,
-we revisit this conjunction,
-this time using updated data about the cost of those conjuncts.
-Otherwise,
-we add a recommendation to perform the selected parallelisation
-to the feedback advice we generate for the compiler.
-
-An important benefit of profile-directed parallelisation is that
-since programmers do not annotate the source program,
-it can be re-parallelised easily after a change to the program
-obsoletes some old parallelisation opportunities and creates others.
-Nevertheless, if programmers want to parallelise some conjunctions manually,
-they can do so: our system will not override the programmer.
 
 % \zoltan{this is wrong: the overheads should be PART OF the parallel time}
 % \begin{equation*}
 % Speedup = \frac{Time_{Seq}}{Time_{Par} + ParOverheads}
 % \end{equation*}
 
-% For journal version
-% \section{The cost of recursive calls}
-% \label{sec:reccalls}
-%
+\section{The cost of recursive calls}
+\label{sec:overlap_reccalls}
+
+\paul{Describe the costs of recursive calls}
+
 % % leave discussion of granularity estimation by static analysis
 % % for the related work section;
 % % mention that this work has not extended to large programs.
@@ -465,8 +573,10 @@ they can do so: our system will not override the programmer.
 % Our example for this category is an accumulator version of \code{quicksort},
 % whose code is shown in figure~\ref{fig:quicksort_acc}.
 
+\paul{Describe 'deep' coverage}
+
 \section{Calculating the overlap between dependent conjuncts}
-\label{sec:overlap}
+\label{sec:overlap_overlap_alg}
 
 As we can see from the difference between the two sides of
 figure~\ref{fig:dep_conj_overlap1},
@@ -631,7 +741,7 @@ to put the producer of each variable before all its consumers.
 % the list of shared variables that \code{Conj\_i} either produces or consumes,
 % together with their times of production and first consumption respectively.
 
-The version of this algorithm we have actually implemented is 
+The version of this algorithm we have actually implemented is
 a bit longer than the one in figure~\ref{fig:dep_par_conj_overlap_middle},
 because it also accounts for several forms of overhead:
 
@@ -893,21 +1003,21 @@ and the second sets it to $4+3 = 7$, so ${ParTime}_q$ is 7.
 \label{tab:prof_data_map_foldl}
 \end{table}
 
-\begin{figure}[tb]
-\begin{verbatim}
-map_foldl_par(_, _, [], Acc, Acc).
-map_foldl_par(M, F, [X | Xs], Acc0, Acc) :-
-    (
-        M(X, Y),
-        F(Y, Acc0, Acc1)
-    ) &
-    map_foldl_par(M, Xs, Acc1, Acc).
-\end{verbatim}
-\caption{Parallel \mapfoldl}
-% the recursive call is less dependent
-% on the conjunction of the first two calls.
-\label{fig:map_foldl_par}
-\end{figure}
+% \begin{figure}[tb]
+% \begin{verbatim}
+% map_foldl_par(_, _, [], Acc, Acc).
+% map_foldl_par(M, F, [X | Xs], Acc0, Acc) :-
+%     (
+%         M(X, Y),
+%         F(Y, Acc0, Acc1)
+%     ) &
+%     map_foldl_par(M, Xs, Acc1, Acc).
+% \end{verbatim}
+% \caption{Parallel \mapfoldl}
+% % the recursive call is less dependent
+% % on the conjunction of the first two calls.
+% \label{fig:map_foldl_par}
+% \end{figure}
 
 To see how the algorithm works on realistic data,
 consider the \mapfoldl example in figure~\ref{fig:map_foldl}.
@@ -1196,7 +1306,7 @@ The last two lines reflect this cost.
 % similar to the synchronisation while waiting for another variable.}
 
 \section{Choosing how to parallelise a conjunction}
-\label{sec:howto}
+\label{sec:overlap_howto}
 
 A conjunction with $n > 2$ conjuncts
 can be converted into several different parallel conjunctions.
@@ -1335,7 +1445,7 @@ It explores extensions of the better of the resulting partitions first.
 If the search is still under the limit on the number of evaluations,
 it explores the worse partition as well,
 which is an exponential search.
-When it hits the limit, 
+When it hits the limit,
 it switches to a linear search;
 we explore the more promising partition first
 to make this search more effective.
@@ -1488,7 +1598,7 @@ in the feedback file we create for the compiler.
 %     loop on After, find the best and commit to it.
 
 \section{Pragmatic issues}
-\label{sec:pragmatic}
+\label{sec:overlap_pragmatic}
 
 % \subsection{The effects of module boundaries}
 % \label{sec:pragmamoduleboundary}
@@ -1499,7 +1609,8 @@ in the feedback file we create for the compiler.
 % \label{sec:pragmacliqueproc}
 
 \emph{Dynamic context}
-The algorithms in sections~\ref{sec:overlap} and~\ref{sec:howto}
+The algorithms in sections \ref{sec:overlap_overlap_alg}
+and \ref{sec:overlap_howto}
 work on profiling data that shows the behaviour of a procedure
 in the context given by a particular chain of ancestors.
 Many procedures are of course called from multiple ancestor contexts.
@@ -1724,7 +1835,7 @@ the performance of the sequential programs as well.
 % such as having to refill the cache after the collector trashes it.
 
 \section{Performance results}
-\label{sec:perf}
+\label{sec:overlap_perf}
 
 % \begin{table*}
 % \begin{center}
@@ -1811,10 +1922,10 @@ we discarded the highest and lowest times, and averaged the rest.
 % %\hhline{|-|-||-|-|-|-|-|}
 % \hline
 % \multicolumn{1}{|c|}{\textbf{Program}} &
-% \multicolumn{1}{ c||}{\textbf{Par}}    & 
-% \multicolumn{1}{ c|}{\textbf{1 CPU}}   & 
-% \multicolumn{1}{ c|}{\textbf{2 CPUs}}  & 
-% \multicolumn{1}{ c|}{\textbf{3 CPUs}}  & 
+% \multicolumn{1}{ c||}{\textbf{Par}}    &
+% \multicolumn{1}{ c|}{\textbf{1 CPU}}   &
+% \multicolumn{1}{ c|}{\textbf{2 CPUs}}  &
+% \multicolumn{1}{ c|}{\textbf{3 CPUs}}  &
 % \multicolumn{1}{ c|}{\textbf{4 CPUs}}  \\
 % %\hhline{|-|-||-|-|-|-|-|}
 % \hline
@@ -1846,10 +1957,10 @@ we discarded the highest and lowest times, and averaged the rest.
 \begin{tabular}{llrrrrr}
 \hline \hline
 \multicolumn{1}{c}{\textbf{Program}} &
-\multicolumn{1}{c}{\textbf{Par}}    & 
-\multicolumn{1}{c}{\textbf{1 CPU}}   & 
-\multicolumn{1}{c}{\textbf{2 CPUs}}  & 
-\multicolumn{1}{c}{\textbf{3 CPUs}}  & 
+\multicolumn{1}{c}{\textbf{Par}}    &
+\multicolumn{1}{c}{\textbf{1 CPU}}   &
+\multicolumn{1}{c}{\textbf{2 CPUs}}  &
+\multicolumn{1}{c}{\textbf{3 CPUs}}  &
 \multicolumn{1}{c}{\textbf{4 CPUs}}  \\
 \hline
 %\hhline{|-|-||-|-|-|-|-|}
@@ -1918,7 +2029,7 @@ the OS arranged the engines across the two CPU die of the Q6600;
 the indep version just happened to get the 7.5s arrangement fewer times.
 For naive, all the runs just happened to take 5.2 seconds,
 even though naive creates a worse parallelisation than either indep or overlap:
-during the expansion phase we described in section~\ref{sec:howto},
+during the expansion phase we described in section~\ref{sec:overlap_howto},
 it includes an extra goal in the first of the parallel conjuncts;
 this makes the conjunction dependent, which adds some overhead.
 Naive also executes the code that does the matrix multiplication
@@ -1931,7 +2042,7 @@ which is why indep gets no speedup for them.
 For mandelbrot, naive and overlap get speedups
 that are as good as one can reasonably expect:
 $35.2/9.1 = 3.87$ on four CPUs over the one CPU case.
-% (Perfect speedups of 4.0 on 4 CPUs are not attainable in practice 
+% (Perfect speedups of 4.0 on 4 CPUs are not attainable in practice
 % due to bottlenecks such as CPU-memory buses and stop-the-world garbage
 % collection.)
 For matrixmult and raytracer, the speedups they get,
@@ -2061,13 +2172,13 @@ is so small that it is not noticeable.
 % \item
 % SWRL --- An inference engine provided by Mission Critical.
 % % The mission critical benchmark is at:
-% % 
+% %
 % %     taura:/home/taura/pbone/mcdemo/swrl-snapshot.tar.gz
-% % 
+% %
 % % SWRL is an inference engine.  Building and running it is covered by:
-% % 
+% %
 % %     taura:/home/taura/pbone/mcdemo/swrl.txt
-% % 
+% %
 % % These files are owned by a new group, mcdemo, since they are MC's
 % % closed source project.  Peter Ross is easy going and has let us use
 % % them without any formal non-disclosure agreement.  That said, I am
@@ -2086,7 +2197,7 @@ is so small that it is not noticeable.
 % in their loops to ensure that the loop is tail-recursive.
 % The mandelbrot program's loop uses \mapfoldl example above.
 % \paul{Should I include a back-reference for the mapfoldl figure?}
-% 
+%
 % We used different inputs for the profiling and benchmarking
 % executions to ensure that the profile analysis would not over-fit the
 % parallelisation to a particular input.
@@ -2105,7 +2216,7 @@ is so small that it is not noticeable.
 % \label{sec:related_work}
 
 \section{Related work and conclusion}
-\label{sec:conc}
+\label{sec:overlap_conc}
 
 % Mercury's strong mode system
 % greatly simplifies the parallel execution of logic programs,
@@ -2155,7 +2266,7 @@ has focused on trying to solve these problems
 of getting parallel execution to \emph{work} well,
 with only a small fraction trying to find
 when parallel execution would actually be \emph{worthwhile}.
-Almost all previous work on automatic parallelisation 
+Almost all previous work on automatic parallelisation
 has focused on granularity control:
 parallelising only computations that are expensive enough
 to make parallel execution
