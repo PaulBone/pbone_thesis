@@ -72,7 +72,7 @@ mercury_engines = 1..4.
     %
 :- func num_max_contexts_per_thread = list(int).
 
-num_max_contexts_per_thread = [32].
+num_max_contexts_per_thread = [1024].
 
 % XXX: this was unused in my testing so far.
 :- func base_mcflags = string.
