@@ -517,9 +517,8 @@ We call this the average depest recursion:
 Depth = Calls_{RecCallSites} / Calls_{ParentCallSite}
 \end{equation*}
 
-\noindent
 The deepest call executes only the non-recursive path,
-and incur only its costs.
+and incurs only its costs.
 The next deepest would take the recursive path,
 and incur one copy of the costs of the nonrecursive calls along that path,
 plus the cost of the last call.
@@ -574,7 +573,10 @@ We know that if a good value for \code{Pivot} is choosen \quicksortacc runs
 optimally,
 dividing the list in half with each recursion.
 Therefore there are a minimum of
-$\log_2 (Calls_{RecCallSites} / Calls_{ParentCallSites})$ recursions.
+$\log_2 (Calls_{RecCallSites} / (2 \times Calls_{ParentCallSites}))$ recursions.
+We must divide $Calls_{RecCallSites}$ by two as there are two recursive call
+sites.
+
 However,
 if consistently worst-case pivots are choosen then \quicksortacc fails to
 divide the list at each recursion passing an empty list to one recursive call
@@ -587,22 +589,73 @@ interested in such cases when parallelising code.
 We say that the average deepest recursion of divide and conquer code code is:
 
 \begin{equation*}
-Depth = \log_2 (Calls_{RecCallSites} / Calls_{ParentCallSite})
+Depth = \log_2 \frac{Calls_{RecCallSites}}{2 \times Calls_{ParentCallSite}}
 \end{equation*}
 
+As before, the deepest call executes only the non-recursive path,
+and incurs only its costs.
+The next deepest takes the recursive path,
+it incurs the costs of the goals along that path,
+plus twice the base case's cost, plus the costs of calls to the base case.
+By induction,
+the cost of a recursive call in a divide and conquer procedure at depth $D$ is:
 
+\begin{equation*}
+cost(D) = 2^D{CostNonRec} + 2^{D-1}(CostRec + 1)
+\end{equation*}
 
-\mapfoldl is one of the simplist procedures that fits this simple recursion
-pattern.
-We are able to handle procedures with any number of base cases, and any number
-of recursive cases provided that the recursive cases contain eactly one
-recursive call.
-An algorithm 
+\plan{interesting depth of d\&c}
+Most of the execution of a divide and conquer algorithm occurs at deep
+recursion levels as there are many more calls made at these levels than higher
+levels.
+However, for parallelism the high recursion levels are more interesting:
+we know that parallelising the top of the algorithm's call graph can provide
+ample corse-grained parallelism.
+\plan{quicksort example}
+For example, lets compute the costs of the recursive calls at the top of
+\quicksortacc's call graph.
+In this example, we gathered data using Mercury's deep profiler on 10
+executions of \quicksortacc sorting a list of 32,768 elements.
+the profiler reports that there are 655,370 calls into this SCC,
+10 of which come from the parent SCC, leaving 655,360 from the two call sites
+within \quicksortacc's SCC.
+With each recursive call the size of the list is roughly halved,
+thus on average there are $\log_{2}(655,360/10) = 16$ levels of recursion.
+This is not quite accurate for the case of \quicksortacc;
+there are two reasons why:
+it is possible to choose a bad value for \code{Pivot} and,
+at each level \code{Pivot} is removed from the list before partitioning it.
+It is more accurate for mergesort for example.
+The total per-call cost of the call site to partition reported by the profiler
+is approximatly 35.5csc,
+it is the only other goal in either the base case or recursive case with a
+non-zero cost.
+The call at the 16\textsuperscript{th} level of recursion is the call from the
+parent SCC into \quicksortacc.
+We want to calculate the cost of the calls next deepest level, the
+15\textsuperscript{th} level, which is:
+$0 + 2^{15 - 1}(35.5 + 1) \approx 591,462$.
+This is the average cost of both of the two recursive calls;
+depending on how the list was partitioned,
+either sub-list could be larger, making the other one
+smaller and affecting the costs of the recursive calls similarly.
+However the deep profiler does not provide this type of information and we
+believe that on average the costs computed here will be good enough.
+Since the deep profiler reports that the total per-call cost of the
+\quicksortacc SCC is 1,229,106csc, we can see that the above figure makes
+sense.
 
-XXX should we discuss conditionals?
+\plan{How we classify recursion type}
 
-more than once base case can be folded into one;
-more than once recursive case can be folded into one.
+\plan{Recursion type survey}
+
+\plan{Mutual recursion}
+
+\plan{What is unimplemented}
+Our current implementation does not attempt to parallelise divide and conquer
+code.
+
+\section{Deep coverage information}
 
 \paul{Describe 'deep' coverage}
 
