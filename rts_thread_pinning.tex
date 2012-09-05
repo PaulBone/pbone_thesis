@@ -1,7 +1,7 @@
 
 \status{Mostly written}
 
-As explained in Chapter \ref{chap:background} Page \pageref{page:engine},
+As explained in chapter \ref{chap:background},
 Mercury manages its parallel work with userspace scheduling.
 Engines execute context and switching contexts is done in userspace.
 Each Mercury engine corresponds to an operating system thread such as a
@@ -71,7 +71,7 @@ On systems that use SMP and SMT
     SMT is sometimes called ``hyperthreading'' especially for marketing.}
 (symmetric multithreading) as well as SMP this causes problems.
 Consider the memory hierarchy of the Intel i7-2600K processor
-(Figure \ref{fig:i7_hierarchy}).
+(figure \ref{fig:i7_hierarchy}).
 The i7-2600K has four cores, each with two hardware threads,
 program units (PUs) in the figure.
 If Mercury successfully detects that the system has eight logical processors
@@ -92,7 +92,7 @@ Unfortunately there is no method provided by all operating systems to
 determine the system's memory hierarchy.
 Therefore we use a third party library
 named Portable Hardware Locality (hwloc) \citep{broquedis:2010:hwloc}.
-Hwloc provides some tools such as the one that drew Figure
+Hwloc provides some tools such as the one that drew figure
 \ref{fig:i7_hierarchy},
 but more importantly it provides an API for querying the memory hierarchy of
 the system and methods for pinning threads to (sets of) cores or hardware

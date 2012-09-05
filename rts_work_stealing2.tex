@@ -2,7 +2,7 @@
 \status{Currently acting on feedback}
 
 In this section we take the opportunity to improve on our work stealing
-implementation from Section \ref{sec:rts_work_stealing}.
+implementation from section \ref{sec:rts_work_stealing}.
 While we made these improvements,
 we also found it useful to change how idle engines behave.
 Although these too changes are conceptually distinct,
@@ -39,7 +39,7 @@ at least $M-N$ contexts suspended (blocked and waiting to run).
 A context can become suspended in one of two ways:
 by blocking on a future's value in a call to \wait,
 or by blocking on an incomplete conjunct in a call to \joinandcontinue.
-We attempt to minimise the former case (see Chapter \ref{chap:overlap})
+We attempt to minimise the former case (see chapter \ref{chap:overlap})
 and the latter case cannot occur
 if the context has a spark on its local spark deque (it would run the
 spark rather than block).
@@ -57,7 +57,7 @@ a spark may be placed on a deque after the engine has already attempted
 to steal from it.
 Upon exhausting all its attempts or all the deques,
 the engine will sleep before making another round of attempts
-(see \trystealspark in Algorithm \ref{alg:try_steal_spark_initial} on
+(see \trystealspark in algorithm \ref{alg:try_steal_spark_initial} on
 page \pageref{alg:try_steal_spark_initial}).
 Each round of attempts (regardless of success or failure) has a
 complexity of $O(M)$.
@@ -74,7 +74,7 @@ This makes context creation and destruction much simpler.
 It also removes the need for the lock protecting the global array of spark
 deques.
 We can also remove the locking code in \trystealspark
-(whose original version was shown in Algorithm
+(whose original version was shown in algorithm
 \ref{alg:try_steal_spark_initial})
 which was used to
 ensure that the array is not changed while a thief is trying to steal a
@@ -132,14 +132,14 @@ rather than the number of contexts.
 
 \plan{Show new \trystealspark}
 We have made some other changes to \trystealspark,
-whose new code is shown in Algorithm \ref{alg:try_steal_spark_revised}.
+whose new code is shown in algorithm \ref{alg:try_steal_spark_revised}.
 Previously \trystealspark required its caller to check that stealing a spark
 would not exceed the context limit;
 this check has been moved into \trystealspark (line 2).
 Another change is that \trystealspark
 will now call \prepareengineforspark (line 7)
 which will load a context into the engine if it doesn't already have one.
-(Algorithm \ref{alg:prepare_engine_for_spark}).
+(algorithm \ref{alg:prepare_engine_for_spark}).
 Finally \trystealspark will return the address of the spark's code;
 the caller will jump to this address,
 if it is not NULL.
@@ -233,7 +233,7 @@ We have also made changes to the code that \idle engines execute.
 An idle engine with a context that is free (it can be used for any spark) or
 without a context will call \idle to acquire new work.
 \idle has changed significantly;
-the new version is shown in Algorithm \ref{alg:idle_entry_point}.
+the new version is shown in algorithm \ref{alg:idle_entry_point}.
 Three new C functions are now used to implement the details of \idle, these
 are:
 \tryruncontext, \tryrunlocalspark and \trystealspark.
@@ -297,7 +297,7 @@ Therefore, each of the functions \tryrunlocalspark, \tryruncontext and
 \trystealspark must return the address of the next thing to execute and
 allow \idle to jump to this code or jump to \sleep.
 
-\tryruncontext is shown in Algorithm \ref{alg:try_run_context};
+\tryruncontext is shown in algorithm \ref{alg:try_run_context};
 it attempts to take a context from the context runqueue while holding the
 context runqueue lock.
 Previously this lock protected all of \idle.
@@ -307,7 +307,7 @@ and then loads the new context.
 It clears the contexts resume field and then returns the field's previous
 value, which \idle will jump to.
 
-\tryrunlocalspark is shown in Algorithm \ref{alg:try_run_local_spark};
+\tryrunlocalspark is shown in algorithm \ref{alg:try_run_local_spark};
 It attempts to pop a spark of the engine's deque.
 If the spark deque is empty then \tryrunlocalspark
 will return NULL.
@@ -320,7 +320,7 @@ compatible;
 we will return to this point later.
 We then prepare the engine for to execute the spark using
 \prepareengineforspark
-(Algorithm \ref{alg:prepare_engine_for_spark}),
+(algorithm \ref{alg:prepare_engine_for_spark}),
 all this entails is making sure that the engine has a context, the context
 is loaded and has the correct parent stack pointer in its parent stack
 pointer register.
@@ -455,7 +455,7 @@ attempting to steal a spark.
 \end{algorithm}
 
 Engines may be woken with a call to \wakeengine,
-whose code is shown in Algorithm \ref{alg:wake_engine}.
+whose code is shown in algorithm \ref{alg:wake_engine}.
 \wakeengine takes as parameters the id of the engine to awaken,
 the action and its data that the engine should perform upon awakening,
 and the set of states from which we may awaken the engine from (usually
@@ -516,7 +516,7 @@ processor.
 Moving spark deques from contexts to engines made it necessary to change
 \idle.
 Similarly we must also change the \joinandcontinue barrier.
-The new version of \joinandcontinue is shown in Algorithm
+The new version of \joinandcontinue is shown in algorithm
 \ref{alg:join_and_continue_ws2}.
 The most significant change is on line 15,
 \joinandcontinue no longer attempts to run a spark from the local deque,
@@ -569,11 +569,11 @@ in turn uses the run queue's lock less.
 \label{alg:idle_orig_context}
 \end{algorithm}
 
-The new entry point \idleorigcontext is shown in Algorithm
+The new entry point \idleorigcontext is shown in algorithm
 \ref{alg:idle_orig_context}.
 This entry point expects to be called from \joinandcontinue while the engine
 is holding a context that is needed to complete a parallel conjunction.
-Using \tryrunlocalspark (Algorithm \ref{alg:try_run_local_spark},
+Using \tryrunlocalspark (algorithm \ref{alg:try_run_local_spark},
 it tries to run a spark from the engine's local spark deque first.
 When we introduced \tryrunlocalspark above,
 we said that it checked whether the spark at the top of the spark deque was
@@ -627,7 +627,7 @@ Each row group gives the results for a single program,
 while the rows in each group give the results for the previous work stealing
 system and the current one.
 The right recursive mandelbrot program was compiled with the conjunct
-reordering transformation from Section \ref{sec:rts_reorder} disabled,
+reordering transformation from section \ref{sec:rts_reorder} disabled,
 otherwise it would have had the same results as the left recursive version
 of the same program.
 It is still important to test right recursion,
@@ -678,7 +678,7 @@ The parallel \fibs\footnote{
     The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers the return value while \code{N} refers to the
     function's input arguments.}
-function is shown in Figure \ref{fig:fibs}.
+function is shown in figure \ref{fig:fibs}.
 The recursive definition of fibs has two independent recursive calls in
 the same branch;
 they are parallelised against one another.
@@ -762,7 +762,7 @@ by stealing half the work from a victim's deque,
 whilst the CL Deque differs by structuring each deque as
 dynamically resizable circular buffer.
 We have chosen to use the CL Deque because it is resizable,
-a feature that we identified as important (Section \ref{sec:rts_work_stealing}).
+a feature that we identified as important (section \ref{sec:rts_work_stealing}).
 Furthermore,
 if we ever adopt a steal half deque (or any work stealing deque that allows
 us to steal more than one item in a single operation) we will have to

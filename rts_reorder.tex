@@ -20,8 +20,8 @@ mandelbrot when using four Mercury engines).
 When the conjunction is independent,
 Mercury's purity allows us to reorder the conjuncts of the computation and
 transform right recursion into left recursion.
-For example it would transform the procedure in Figure
-\ref{fig:map_right_recursive} into the one in Figure
+For example it would transform the procedure in figure
+\ref{fig:map_right_recursive} into the one in figure
 \ref{fig:map_left_recursive} (page \pageref{fig:map_right_recursive}).
 
 \begin{algorithm}
@@ -63,7 +63,7 @@ It may be possible to find independent sections of dependent conjunctions
 and reorder them,
 but we have not needed to.
 \reorder is invoked on parallel conjunctions without shared variables,
-its code is shown in Algorithm \ref{alg:reorder_conjunction}.
+its code is shown in algorithm \ref{alg:reorder_conjunction}.
 Its arguments are a reference to the current SCC and a list of the parallel
 conjunction's conjuncts.
 \reorder iterates over these goals in reverse order by means of the

@@ -81,7 +81,7 @@ These types of costs prevent us from achieving the theoretical maximum
 speedups that Amdahl's law predicts.
 The first of these is that
 one less CPU register is available to GCC's code generator when compiling
-parallel Mercury programs (Section \ref{sec:backgnd_merpar}).
+parallel Mercury programs (section \ref{sec:backgnd_merpar}).
 The second is that
 memory allocation routines must use locking to protect shared data
 structures,
@@ -143,7 +143,7 @@ Therefore it has a lower rate of memory allocation.
 \plan{Benchmark data.}
 We benchmarked these three programs with different numbers of Mercury
 engines and garbage collector threads.
-We show the results in Table \ref{tab:gc}.
+We show the results in table \ref{tab:gc}.
 All benchmarks have an initial heap size of 16MB.
 Each result is measured in seconds and represents the mean of eight samples.
 The first column is the number of garbage collector threads used.
@@ -167,7 +167,7 @@ Mercury (rotd-2012-04-29).
 This version does not have the performance problems described in the
 rest of this chapter,
 and it does have the loop control transformation described
-in Chapter \ref{chap:loop_control}.
+in chapter \ref{chap:loop_control}.
 Therefore we can observe the effects of garbage collection without
 interference from any other performance problems.
 
@@ -210,10 +210,10 @@ We can see that mandelbrot\_highalloc benefits from parallelism in Mercury
 more than raytracer does,
 conversely mandelbrot\_highalloc benefits from parallelism in the garbage
 collector less than raytracer does.
-Using \tscope (Chapter \ref{chap:tscope}),
+Using \tscope (chapter \ref{chap:tscope}),
 we analysed how much time these programs spend running the garbage collector
 or the mutator.
-These results are shown in Table \ref{tab:gc_amdahl}.
+These results are shown in table \ref{tab:gc_amdahl}.
 The table shows the elapsed time, collector time, mutator time and the
 number of collections for each program using one to four engines, and one
 to four collector threads.
@@ -221,7 +221,7 @@ The times are averages taken from eight samples,
 using an initial heap size of 16MB.
 To use \tscope we had to compile the runtime system differently.
 Therefore,
-these results differ slightly from those in Table \ref{tab:gc}.
+these results differ slightly from those in table \ref{tab:gc}.
 Next to both the collector time and mutator time
 we show the percentage of elapsed time taken by the collector or mutator
 respectively.
@@ -280,8 +280,8 @@ number of Mercury engines
 (a diagonal path through the table)
 both the collector and mutator time decrease.
 This shows that parallelism in Mercury and in Boehm GC both contribute to
-the elapsed time speedup we saw in the diagonal path in Table \ref{tab:gc}.
-As Table \ref{tab:gc_amdahl} give us more detail,
+the elapsed time speedup we saw in the diagonal path in table \ref{tab:gc}.
+As table \ref{tab:gc_amdahl} give us more detail,
 we can also see that collector time as a percentage of elapsed time
 increases as we add threads and engines to the collector and Mercury.
 This occurs for both the raytracer and mandelbrot\_highalloc.
@@ -316,9 +316,9 @@ mandelbrot\_lowalloc
 \end{table}
 
 \plan{Allocation intensity}
-Table \ref{tab:gc_amdahl} also shows that raytracer spends more of its
+table \ref{tab:gc_amdahl} also shows that raytracer spends more of its
 elapsed time doing garbage collection than mandelbrot\_highalloc does.
-This matches the results in Table \ref{tab:gc},
+This matches the results in table \ref{tab:gc},
 where mandelbrot\_highalloc has better speedups because of parallelism in
 Mercury than raytracer does.
 Likewise,
@@ -329,11 +329,11 @@ raytracer,
 but this is not true.
 Using Mercury's deep profiler we measured the number and total size of memory
 allocations.
-This is shown in Table \ref{tab:mem_alloc_rate}.
+This is shown in table \ref{tab:mem_alloc_rate}.
 The rightmost column in this table gives the allocation rate
 measured in million allocations per second.
 It is calculated by dividing the number of allocations in the second column
-by the average mutator time reported in Table \ref{tab:gc_amdahl}.
+by the average mutator time reported in table \ref{tab:gc_amdahl}.
 Therefore, it represents the allocation rate during mutation time.
 This is deliberate because,
 by definition,
@@ -379,7 +379,7 @@ Better speedups can be achieved by using the parallel marking feature in the
 garbage collector.
 We also attempted to improve performance further by modifying the initial
 heap size of the program.
-Table \ref{tab:gc_heapsize} shows the performance of the raytracer and
+table \ref{tab:gc_heapsize} shows the performance of the raytracer and
 mandelbrot\_highalloc programs with various initial heap sizes.
 The first column shows the heap size used;
 we picked a number of sizes from 1MB to 512MB.

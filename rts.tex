@@ -15,23 +15,23 @@ we chose to address the performance problems
 before we worked on automatic parallelism.
 
 In this chapter we investigate and correct these performance problems.
-We start with the garbage collector in Section \ref{sec:gc};
+We start with the garbage collector in section \ref{sec:gc};
 we analyse the collector's effects on performance and tune its parameters
 to improve performance.
-In Section \ref{sec:original_scheduling} we describe how the existing runtime
+In section \ref{sec:original_scheduling} we describe how the existing runtime
 system schedules sparks.
-The section provides background material for Section
+The section provides background material for section
 \ref{sec:original_scheduling_performance}
 which benchmarks the runtime system and describes two significant problems with
 spark scheduling.
-We address one of these problems by introducing work stealing in Section
+We address one of these problems by introducing work stealing in section
 \ref{sec:rts_work_stealing}.
-Then in Section \ref{sec:rts_reorder} we reorder conjuncts in independent
+Then in section \ref{sec:rts_reorder} we reorder conjuncts in independent
 parallel conjunctions to work around the other spark scheduling problem.
-In Section \ref{sec:rts_work_stealing2} we make further improvments to
+In section \ref{sec:rts_work_stealing2} we make further improvments to
 work stealing and change how idle engines look for work, sleep and are
 woken up.
-Finally, Section \ref{sec:rts_thread_pinning} describes how we pin Mercury
+Finally, section \ref{sec:rts_thread_pinning} describes how we pin Mercury
 engines to CPU cores and SMT threads evenly.
 
 \section{Garbage Collector Tweaks}

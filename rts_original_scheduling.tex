@@ -1,6 +1,6 @@
 
 \plan{Introduction}
-We introduced parallelism in Mercury in Sections \ref{sec:backgnd_merpar} and
+We introduced parallelism in Mercury in sections \ref{sec:backgnd_merpar} and
 \ref{sec:backgnd_deppar};
 we described how the runtime system in generic terms.
 In this section we will explain how sparks were originally managed
@@ -44,7 +44,7 @@ as contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts,
 so they are also included in this limit.
 We explain this limit on the number of context in more detail
-in Section \ref{sec:original_scheduling_performance},
+in section \ref{sec:original_scheduling_performance},
 after covering the background information in the current section.
 Note that sparks placed on the global queue are executed in a
 first-in-first-out manner;
@@ -108,10 +108,10 @@ last-in-first-out manner.
 \end{algorithm}
 
 \plan{barrier code, this is used to explain the right recursion problem.}
-In Section \ref{sec:backgnd_merpar} we described how parallel
+In section \ref{sec:backgnd_merpar} we described how parallel
 conjunctions are compiled
-(Figure \ref{fig:par_conj} shows an example).
-Consider the compiled parallel conjunction in Figure
+(figure \ref{fig:par_conj} shows an example).
+Consider the compiled parallel conjunction in figure
 \ref{fig:par_conj_impl_only}.
 The context that executes the parallel conjunction,
 lets call it $C_{Orig}$,
@@ -121,7 +121,7 @@ spawning off $G_2$,
 and executing $G_1$ (lines 1--4).
 Then it executes the barrier \joinandcontinue,
 whose is shown in
-Algorithm \ref{alg:join_and_continue_peterw}.
+algorithm \ref{alg:join_and_continue_peterw}.
 Depending on how full the global run queue is,
 and how parallel tasks are interleaved,
 there are three important scenarios:
@@ -310,7 +310,7 @@ we mention it only for completeness.
 When an engine cannot get any local work it must search for global work.
 Newly created engines, except for the first, also search for global work.
 They do this by calling \idle,
-whose code is shown in Algorithm \ref{alg:MR_idle_initial}.
+whose code is shown in algorithm \ref{alg:MR_idle_initial}.
 Only one of the idle engines can execute \idle at a time.
 The \var{MR\_runqueue\_lock} lock protects the context run queue and the
 global context queue from concurrent access.
