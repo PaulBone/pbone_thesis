@@ -20,10 +20,12 @@
 main(!IO) :-
     bench(config, !IO).
 
-/* ###  In definition of function `bench_gc_ts.config'/2: */
-/* ###    error: undefined type `config_data'/0. */
 :- type group
     --->    test.
+
+:- instance group(group) where [
+        func(grp_string/1) is string
+    ].
 
 :- func config = config_data(group).
 

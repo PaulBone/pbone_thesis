@@ -23,6 +23,10 @@ main(!IO) :-
 :- type group
     --->    control2.
 
+:- instance group(group) where [
+        func(grp_string/1) is string
+    ].
+
 :- func config = config_data(group).
 
 config = Data :-

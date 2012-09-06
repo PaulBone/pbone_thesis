@@ -1,4 +1,4 @@
-:- module bench_work_stealing.
+:- module bench_thread_pinning.
 
 :- interface.
 
@@ -20,11 +20,23 @@ main(!IO) :-
     bench(config, !IO).
 
 :- type group
-    --->    control
-    ;       test.
+    --->    group(par, pinning).
+
+:- type par
+    --->    seq
+    ;       par.
+
+:- type pinning
+    --->    no_pinning 
+    ;       pinning.
+
+:- func group_string(group) = string.
+
+group_string(group(Par, Pinning)) =
+    format("%s-%s", [s(string(Par)), s(string(Pinning))]).
 
 :- instance group(group) where [
-        func(grp_string/1) is string
+        func(grp_string/1) is group_string
     ].
 
 :- func config = config_data(group).
@@ -38,23 +50,19 @@ config = Data :-
         programs
     ),
     Compilers = [
-        compiler("orig-ws",     BaseDir ++ "/old_2011-04.install"),
-        compiler("revised-ws",  BaseDir ++ "/old_2011-06.install")
-        %compiler("current",     BaseDir ++ "/par_rts.install")
+        compiler("cpuaffinity", BaseDir ++ "/current.install-nohwloc"),
+        compiler("hwloc",       BaseDir ++ "/current.install-hwloc")
     ],
     BaseDir = "/srv/scratch/dev",
-    Groups = [
-        test_group(control,
-            control_group_grades,
-            control_group_rtopts,
-            [gc_initial_heap_size],
-            [1]),
-        test_group(test,
+    Groups = map((func(G) =
+        test_group(G,
             test_group_grades,
-            test_group_rtopts,
+            test_group_rtopts(G),
             [gc_initial_heap_size],
-            [1])
-    ].
+            [1])),
+        [ group(seq, no_pinning),
+          group(par, no_pinning),
+          group(par, pinning) ]).
 
     % The GC's initial heap size, in bytes.  (512MB)
     %
@@ -68,9 +76,10 @@ gc_initial_heap_size = 512*1024*1024.
 
 mem_limit = 1024*1024.
 
-:- func mercury_engines = list(int).
+:- func mercury_engines(group) = list(int).
 
-mercury_engines = 1..4.
+mercury_engines(group(seq, _)) = [1].
+mercury_engines(group(par, _)) = 1..8.
 
     % Values for --max-contexts-per-thread
     %
@@ -82,15 +91,6 @@ num_max_contexts_per_thread = [1024].
 :- func base_mcflags = string.
 
 base_mcflags="-O2 --intermodule-optimization".
-
-:- func control_group_grades = list(grade_spec).
-
-control_group_grades=[asmfast,
-                      asmfastpar].
-
-:- func control_group_rtopts = list(rtopts_spec).
-
-control_group_rtopts=[rtopts("P1", "-P 1")].
 
 :- func test_group_grades = list(grade_spec).
 
@@ -105,33 +105,33 @@ asmfast = grade("asmfast", "asm_fast.gc.stseg").
 
     % Test group options.
     %
-:- func test_group_rtopts = list(rtopts_spec).
+:- func test_group_rtopts(group) = list(rtopts_spec).
 
-test_group_rtopts =
-    condense(map(
-        (func(P) =
-            map(
-                (func(C) = rtopts(format("P%d-c%d", [i(P), i(C)]),
-                    format("-P %d --max-contexts-per-thread %d", [i(P), i(C/P)]))),
-                num_max_contexts_per_thread)),
-        mercury_engines)).
+test_group_rtopts(Group) = Opts :-
+    C = 1024,
+    Opts = map((func(P) = rtopts(format("P%d-c%d", [i(P), i(C)]),
+            format("-P %d --max-contexts-per-thread %d %s",
+                [i(P), i(C/P), s(pinning_rtsopts(Group))]))),
+        mercury_engines(Group)).
+
+:- func pinning_rtsopts(group) = string.
+
+pinning_rtsopts(group(_, no_pinning)) = "".
+pinning_rtsopts(group(_, pinning)) = "--thread-pinning".
 
     % The programs to test.
 :- func programs = list(program(group)).
 
 programs = [
+    program("raytracer", "raytracer", "main",
+        " < raytracer/snowgoon_1200.gml",
+        no_args),
     program("mandelbrot_indep", "mandelbrot", "mandelbrot",
         "-x 600 -y 600",
         mandelbrot_args),
     program("mandelbrot_indep_left", "mandelbrot", "mandelbrot",
         "-l -x 600 -y 600",
         mandelbrot_args),
-    program("fibs_43_gc40", "fibs", "fibs",
-        "-d 43 43", fibs_args),
-    program("fibs_43_gc30", "fibs", "fibs",
-        "-d 30 43", fibs_args),
-    program("fibs_43_gc20", "fibs", "fibs",
-        "-d 20 43", fibs_args),
     program("fibs_43_gc10", "fibs", "fibs",
         "-d 10 43", fibs_args),
     program("fibs_43_gc0", "fibs", "fibs",
@@ -140,11 +140,11 @@ programs = [
 
 :- func mandelbrot_args(group) = string.
 
-mandelbrot_args(test) = "".
-mandelbrot_args(control) = "-s".
+mandelbrot_args(group(seq, _)) = "-s".
+mandelbrot_args(group(par, _)) = "".
 
 :- func fibs_args(group) = string.
 
-fibs_args(test) = "--parallel".
-fibs_args(control) = "--no-parallel".
+fibs_args(group(seq, _)) = "".
+fibs_args(group(par, _)) = "--parallel".
 

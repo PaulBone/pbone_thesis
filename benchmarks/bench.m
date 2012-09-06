@@ -9,6 +9,10 @@
 :- import_module list.
 :- import_module string.
 
+:- typeclass group(G) where [
+        func grp_string(G) = string
+    ].
+
 :- type config_data(G)
     --->    config_data(
                 cd_compilers                    :: list(compiler),
@@ -54,7 +58,8 @@
                 p_extra_args    :: func(G) = string
             ).
 
-:- pred bench(config_data(G)::in, io::di, io::uo) is det.
+:- pred bench(config_data(G)::in, io::di, io::uo) is det
+    <= group(G).
 
     % Do not provide any extra args and accept all grades.
     %
@@ -139,7 +144,7 @@ usage(!IO) :-
     write_string("./bench [-r -n N -o results.txt] \n", !IO).
 
 :- pred run(option_table(option)::in, config_data(G)::in, io::di, io::uo)
-    is det.
+    is det <= group(G).
 
 run(Options, ConfigData, !IO) :-
     lookup_bool_option(Options, print_config, PrintConfig),
@@ -304,7 +309,8 @@ rebuild_prog(OrigPath, Build, !IO) :-
     %
     % Generate all the above test objects for all the programs.
     %
-:- pred make_tests(config(G)::in, list(test)::out) is det.
+:- pred make_tests(config(G)::in, list(test)::out) is det
+    <= group(G).
 
 make_tests(config(_, ConfigData, _, Configs), Tests) :-
     Programs = ConfigData ^ cd_programs,
@@ -315,12 +321,13 @@ make_tests(config(_, ConfigData, _, Configs), Tests) :-
 
     % Generate a single test.
     %
-:- func make_test(program(G), test_config(G)) = test.
+:- func make_test(program(G), test_config(G)) = test
+    <= group(G).
 
 make_test(Program, Config) =
         test(Name, Cmd, Eventlog, Envs) :-
     Config = test_config(Group, Compiler, Grade, Envs),
-    Target = get_target(string(Group), Compiler, Grade, Program),
+    Target = get_target(grp_string(Group), Compiler, Grade, Program),
     EnvOptsName = Envs ^ evs_name,
     Name = format("%s_%s", [s(Target), s(EnvOptsName)]),
     ProgArgs = Program ^ p_args,
@@ -335,7 +342,7 @@ make_test(Program, Config) =
     % Results are also returned.
     %
 :- pred run_tests(config(G)::in, output_stream::in, cord(result.result)::out,
-    io::di, io::uo) is det.
+    io::di, io::uo) is det <= group(G).
 
 run_tests(Config, Stream, Results, !IO) :-
     write_string("Running tests...\n", !IO),
@@ -435,7 +442,8 @@ run_test_samples(Name, Samples, Cmd, Eventlog, Times, !IO) :-
     %
     % This generates the build and test data structures.
     %
-:- pred configure(int::in, config_data(G)::in, config(G)::out) is det.
+:- pred configure(int::in, config_data(G)::in, config(G)::out) is det
+    <= group(G).
 
 configure(Samples, ConfigData, config(Samples, ConfigData, Builds, Tests)) :-
     Groups = ConfigData ^ cd_test_groups,
@@ -447,13 +455,14 @@ configure(Samples, ConfigData, config(Samples, ConfigData, Builds, Tests)) :-
     Tests = condense(GroupTests).
 
 :- pred configure_group(string::in, list(compiler)::in, test_group(G)::in,
-    list(build_config)::out, list(test_config(G))::out) is det.
+    list(build_config)::out, list(test_config(G))::out) is det
+    <= group(G).
 
-configure_group(BaseMCFlags, Compilers, Group, Builds, Tests) :-
-    Group = test_group(Name, Grades, Rtsopts, GCInitialHeapSizes,
+configure_group(BaseMCFlags, Compilers, TestGroup, Builds, Tests) :-
+    TestGroup = test_group(Group, Grades, Rtsopts, GCInitialHeapSizes,
         GCMarkerss),
-    config_builds(string(Name), Compilers, Grades, BaseMCFlags, Builds),
-    config_tests(Name, Compilers, Grades, GCMarkerss, GCInitialHeapSizes,
+    config_builds(grp_string(Group), Compilers, Grades, BaseMCFlags, Builds),
+    config_tests(Group, Compilers, Grades, GCMarkerss, GCInitialHeapSizes,
         Rtsopts, Tests).
 
 :- pred config_builds(string::in, list(compiler)::in, list(grade_spec)::in,
@@ -503,7 +512,8 @@ config_tests(Group, Compilers, Grades, GCMarkerss, GCInitialHeapSizes, RTOpts,
         ),
         Compilers)).
 
-:- pred print_config(config(G)::in, cord(string)::out) is det.
+:- pred print_config(config(G)::in, cord(string)::out) is det
+    <= group(G).
 
 print_config(config(Samples, ConfigData, Builds, Tests), Result) :-
     map(print_build, Builds, BuildsRes),
@@ -532,12 +542,13 @@ print_build(build_config(Group, Compiler, Grade, _), Result) :-
         format("%s, Compiler: %s Grade: %s",
             [s(Group), s(Compiler ^ c_name), s(Grade ^ g_name)])).
 
-:- pred print_test(test_config(G)::in, cord(string)::out) is det.
+:- pred print_test(test_config(G)::in, cord(string)::out) is det
+    <= group(G).
 
 print_test(test_config(Group, Compiler, Grade, Env), Result) :-
     Result = singleton(
         format("%s, Compiler %s Grade: %s Env: %s",
-            [s(string(Group)), s(Compiler ^ c_name), s(Grade ^ g_name),
+            [s(grp_string(Group)), s(Compiler ^ c_name), s(Grade ^ g_name),
              s(Env ^ evs_name)])).
 
 :- func indent(int, cord(string)) = cord(string).

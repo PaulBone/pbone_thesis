@@ -26,6 +26,10 @@ main(!IO) :-
 
 :- func config = config_data(group).
 
+:- instance group(group) where [
+        func(grp_string/1) is string
+    ].
+
 config = Data :-
     Data = config_data(
         [compiler("current", "/usr/local/mercury/bin")],
