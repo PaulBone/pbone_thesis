@@ -75,14 +75,17 @@
 :- import_module maybe.
 :- import_module require.
 
+:- import_module checkpoint.
 :- import_module result.
+:- import_module foreign.
 
 :- type option
     --->    samples
     ;       help
     ;       rebuild
     ;       print_config
-    ;       output.
+    ;       output
+    ;       checkpoint_file.
 
 bench(ConfigData, !IO) :-
     io.command_line_arguments(Args0, !IO),
@@ -127,21 +130,24 @@ long("help",            help).
 long("samples",         samples).
 long("rebuild",         rebuild).
 long("print-config",    print_config).
+long("checkpoint-file", checkpoint_file).
 
 :- pred defaults(option::out, option_data::out) is multi.
 
-defaults(help,          bool(no)).
-defaults(samples,       int(20)).
-defaults(rebuild,       bool(no)).
-defaults(print_config,  bool(no)).
-defaults(output,        string("results.txt")).
+defaults(help,              bool(no)).
+defaults(samples,           int(20)).
+defaults(rebuild,           bool(no)).
+defaults(print_config,      bool(no)).
+defaults(output,            string("results.txt")).
+defaults(checkpoint_file,   string("checkpoint")).
 
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
     write_string("./bench <-h | --help>\n", !IO),
     write_string("./bench <-c | --print-config>\n", !IO),
-    write_string("./bench [-r -n N -o results.txt] \n", !IO).
+    write_string("./bench [-r -n N -o results.txt]\n", !IO),
+    write_string("\t[--checkpoint-file <checkpoint>]\n", !IO).
 
 :- pred run(option_table(option)::in, config_data(G)::in, io::di, io::uo)
     is det <= group(G).
@@ -151,6 +157,7 @@ run(Options, ConfigData, !IO) :-
     lookup_bool_option(Options, rebuild, Rebuild),
     lookup_int_option(Options, samples, Samples),
     lookup_string_option(Options, output, Output),
+    lookup_string_option(Options, checkpoint_file, CheckpointFile),
 
     configure(Samples, ConfigData, Config),
 
@@ -168,17 +175,7 @@ run(Options, ConfigData, !IO) :-
         Rebuild = no
     ),
     ( Samples > 0 ->
-        open_output(Output, MaybeStream, !IO),
-        (
-            MaybeStream = ok(Stream),
-            run_tests(Config, Stream, _Results, !IO),
-            close_output(Stream, !IO)
-            %print_results(Results, ResultsCord),
-            %write_string(append_list(list(ResultsCord)), !IO)
-        ;
-            MaybeStream = error(Error),
-            error(format("%s: %s", [s(Output), s(error_message(Error))]))
-        )
+        run_tests(Output, CheckpointFile, Config, _Results, !IO)
     ;
         true
     ).
@@ -336,22 +333,79 @@ make_test(Program, Config) =
     Cmd = format("./%s %s %s", [s(Target), s(TestProgArgs), s(ProgArgs)]),
     Eventlog = format("%s.eventlog", [s(Target)]).
 
+:- type tests_state
+    --->    tests_state(
+                ts_tests_not_ran    :: list(test),
+                ts_results_so_far   :: cord(result.result)
+            ).
+
     % Run all the tests,
     %
     % A log is written to the stream given in the second argument,
     % Results are also returned.
     %
-:- pred run_tests(config(G)::in, output_stream::in, cord(result.result)::out,
-    io::di, io::uo) is det <= group(G).
+:- pred run_tests(string::in, string::in, config(G)::in,
+    cord(result.result)::out, io::di, io::uo) is det <= group(G).
 
-run_tests(Config, Stream, Results, !IO) :-
-    write_string("Running tests...\n", !IO),
-    flush_output(!IO),
-    make_tests(Config, Tests),
-    list.map_foldl(run_test(Config, Stream), Tests, Results0, !IO),
-    Results = cord_list_to_cord(Results0),
-    write_string("Finished running tests\n", !IO),
-    flush_output(!IO).
+run_tests(OutputFile, CheckpointFile, Config, Results, !IO) :-
+    checkpoint.open_log(CheckpointFile, MaybeCheckpoint, !IO),
+    (
+        (
+            MaybeCheckpoint = open_new_log(ChkLog),
+            make_tests(Config, Tests),
+            Results0 = cord.empty,
+            format("Running %d tests...\n", [i(length(Tests))], !IO),
+            flush_output(!IO)
+        ;
+            MaybeCheckpoint = open_existing_log(ChkLog, State),
+            State = tests_state(Tests, Results0),
+            format("Resuming benchmarks using checkpoint, %d tests to finish\n",
+                [i(length(Tests))], !IO)
+        ),
+
+        open_output(OutputFile, MaybeStream, !IO),
+        (
+            MaybeStream = ok(Stream),
+
+            ( not is_empty(Results0) ->
+                print_results(Results0, ResultsCord0),
+                ResultsStr = append_list(list(ResultsCord0)),
+                write_string(Stream, ResultsStr, !IO),
+                flush_output(Stream, !IO)
+            ;
+                true
+            ),
+
+            run_tests_loop(Config, Stream, Tests, ChkLog, Results0, Results,
+                !IO),
+            close_output(Stream, !IO),
+            close_and_delete_log(ChkLog, !IO),
+            write_string("Finished running tests\n", !IO),
+            flush_output(!IO)
+        ;
+            MaybeStream = error(Error),
+            error(format("%s: %s", [s(OutputFile), s(error_message(Error))]))
+        )
+    ;
+        MaybeCheckpoint = open_error(Error),
+        error(format("Checkpoint error: %s\n", [s(Error)]))
+    ;
+        MaybeCheckpoint = open_io_error(Error),
+        error(format("%s: %s",
+            [s(CheckpointFile), s(error_message(Error))]))
+    ).
+
+:- pred run_tests_loop(config(C)::in, output_stream::in, list(test)::in,
+    checkpoint_log(tests_state)::in, 
+    cord(result.result)::in, cord(result.result)::out, io::di, io::uo)
+    is det.
+
+run_tests_loop(_, _, [], _, !Results, !IO).
+run_tests_loop(Config, Stream, [Test | Tests], ChkLog, !Results, !IO) :-
+    run_test(Config, Stream, Test, ResultsTest, !IO),
+    !:Results = !.Results ++ ResultsTest,
+    checkpoint(tests_state(Tests, !.Results), ChkLog, !IO),
+    run_tests_loop(Config, Stream, Tests, ChkLog, !Results, !IO).
 
     % run_test(Samples, Stream, Test, Results, !IO)
     %
@@ -579,168 +633,4 @@ print_program(Program, singleton(Name)) :-
     Name = Program ^ p_name.
 
 no_args(_) = "".
-
-% Foreign code.
-%------------------------------------------------------------------------%
-
-:- pred system(string::in, io::di, io::uo) is det.
-
-system(Cmd, !IO) :-
-    call_system(Cmd, Res, !IO),
-    ( Res = ok(0) ->
-        true
-    ;
-        unexpected($module, $pred, "Command failed " ++ Cmd)
-    ).
-
-:- pred write_file(string::in, string::in, io::di, io::uo) is det.
-
-write_file(Name, Contents, !IO) :-
-    open_output(Name, Result, !IO),
-    (
-        Result = ok(Stream),
-        write_string(Stream, Contents, !IO),
-        close_output(Stream, !IO)
-    ;
-        Result = error(Error),
-        unexpected($module, $pred, Name ++ ": " ++ error_message(Error))
-    ).
-
-:- pred cd(string::in, io::di, io::uo) is det.
-
-cd(Dir, !IO) :-
-    cd(Dir, Return, Errno, !IO),
-    ( Return = 0 ->
-        true
-    ;
-        decode_errno(Errno, Message),
-        unexpected($module, $pred, "chdir: " ++ Message)
-    ).
-
-:- pred decode_errno(int::in, string::out) is det.
-
-:- pragma foreign_proc("C",
-    decode_errno(Errno::in, Message::out),
-    [will_not_call_mercury, promise_pure],
-    "
-        int length;
-        char *buff;
-
-        buff = strerror(Errno);
-
-        length = strlen(buff);
-        Message = GC_MALLOC(length + 1);
-        strcpy(Message, buff);
-    ").
-
-:- pred cd(string::in, int::out, int::out, io::di, io::uo) is det.
-
-:- pragma foreign_proc("C",
-    cd(Dir::in, Return::out, Errno::out, IO0::di, IO::uo),
-    [will_not_call_mercury, promise_pure],
-    "
-        Return = chdir(Dir);
-        Errno = errno;
-        IO = IO0;
-    ").
-
-:- pred rename(string::in, string::in, maybe_error::out, io::di, io::uo)
-    is det.
-
-rename(Src, Dest, Res, !IO) :-
-    rename_file(Src, Dest, Res0, !IO),
-    (
-        Res0 = ok,
-        Res = ok
-    ;
-        Res0 = error(Error),
-        Res = error(error_message(Error))
-    ).
-
-:- pred getenv(string::in, string::out, io::di, io::uo) is det.
-
-getenv(Key, Value, !IO) :-
-    getenv(Key, Res, Value, !IO),
-    (
-        Res = yes
-    ;
-        Res = no,
-        unexpected($pred, $module, "getenv returned NULL for " ++ Key)
-    ).
-
-:- pred getenv(string::in, bool::out, string::out, io::di, io::uo) is det.
-
-:- pragma foreign_proc("C",
-    getenv(Key::in, Res::out, Value::out, IO0::di, IO::uo),
-    [will_not_call_mercury, promise_pure],
-    "
-        Value = getenv(Key);
-        if (Value == NULL)
-            Res = MR_FALSE;
-        else
-            Res = MR_TRUE;
-        IO = IO0;
-    ").
-
-:- pred setenv(string::in, string::in, io::di, io::uo) is det.
-
-setenv(Key, Value, !IO) :-
-    setenv(Key, Value, Res, Errno, !IO),
-    ( Res = 0 ->
-        true
-    ;
-        decode_errno(Errno, Message),
-        unexpected($module, $pred, "setenv: " ++ Message)
-    ).
-
-:- pred setenv(string::in, string::in, int::out, int::out, io::di, io::uo)
-    is det.
-
-:- pragma foreign_proc("C",
-    setenv(Key::in, Value::in, Res::out, Errno::out, IO0::di, IO::uo),
-    [will_not_call_mercury, promise_pure],
-    "
-        Res = setenv(Key, Value, 1);
-        Errno = errno;
-        IO = IO0;
-    ").
-
-:- pred time(pred(io, io), float, io, io).
-:- mode time(pred(di, uo) is det, out, di, uo) is cc_multi.
-
-time(P, Time, !IO) :-
-    gettimeofday(Start, !IO),
-    P(!IO),
-    gettimeofday(End, !IO),
-    Time = End - Start.
-
-:- pred gettimeofday(float::out, io::di, io::uo) is cc_multi.
-
-gettimeofday(Time, !IO) :-
-    gettimeofday(Secs, USecs, Return, !IO),
-    ( Return = 0 ->
-        Time = float(Secs) + float(USecs)/1000000.0
-    ;
-        error("gettimeofday failed")
-    ).
-
-:- pred gettimeofday(int::out, int::out, int::out, io::di, io::uo) is cc_multi.
-
-:- pragma foreign_proc("C",
-    gettimeofday(Secs::out, USecs::out, Return::out, IO0::di, IO::uo),
-    [will_not_call_mercury, promise_pure],
-    "
-        struct timeval t;
-        Return = gettimeofday(&t, NULL);
-        Secs = t.tv_sec;
-        USecs = t.tv_usec;
-        IO = IO0;
-    ").
-
-:- pred check_error(string::in, string::in, maybe_error::in,
-    io::di, io::uo) is det.
-
-check_error(_, _, ok, !IO).
-check_error(Module, Pred, error(Error), !IO) :-
-    unexpected(Module, Pred, Error).
 
