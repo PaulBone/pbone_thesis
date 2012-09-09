@@ -173,6 +173,12 @@
 \algtext*{EndSwitch}%
 \algtext*{EndCase}%
 
+% Macros for algorithm values
+\newcommand{\reccallres}[3]{(\text{rec call num:~}#1, 
+                             \text{prob:~}#2,
+                             \text{cost:~}#3)}
+\newcommand{\cost}[1]{\operatorname{cost}(#1)}
+
 % Custom float.
 \floatstyle{plain}
 \newfloat{float}{tbp}{lofloats}
