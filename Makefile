@@ -14,6 +14,7 @@ TEX_PROSE = \
 		thesis.tex \
 		intro.tex \
 		literature_review.tex \
+		backgnd.tex \
 		backgnd_mercury.tex \
 		backgnd_merpar.tex \
 		backgnd_deppar.tex \
@@ -28,7 +29,8 @@ TEX_PROSE = \
 		rts_work_stealing2.tex \
 		overlap.tex \
 		loop_control.tex \
-		tscope.tex
+		tscope.tex \
+		conc.tex
 
 TEXFILES = 	$(TEX_PROSE) macros.tex
 TABLES_TEX = $(GEN_TABLES_TEX) \
