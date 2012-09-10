@@ -97,32 +97,31 @@ than processors.
 When the user requests more engines than processors,
 only the first $P$ thread are pinned (where there are $P$ processors).
 
-\begin{table}
-\begin{center}
-\begin{tabular}{rr|r|rrrrrrrr}
-\multicolumn{1}{c|}{Method} &
-\multicolumn{1}{c|}{Pinning} &
-\multicolumn{1}{c|}{Sequmential} &
-\multicolumn{8}{c}{Parallel w/ $N$ Engines} \\
-\Cbr{}& \Cbr{}& \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}& \C{5}& \C{6}&
-    \C{7}& \C{8}\\
-\hline
-\hline
-\multicolumn{11}{c}{Right recursive mandelbrot (max.\ 1024 contexts)} \\
-\hline
-setcpuaffinity() & no
-        & 15.1 & 15.2 & 7.6 & 5.1 & 3.8 & 3.7 & 3.5 & 3.4 & 3.3 \\
-hwloc & no
-        & 15.2 & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.5 &  3.4 &  3.3 \\
-setcpuaffinity() & yes
-        & -    & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.6 &  3.4 &  3.3 \\
-hwloc & yes
-        & -    & 15.4 &  7.7 &  5.1 &  3.9 &  3.7 &  3.6 &  3.5 &  3.3 \\
-\end{tabular}
-\end{center}
-\end{table}
-
-\plan{Benchmarks}
+% Benchmarks are inconclusive.
+%\begin{table}
+%\begin{center}
+%\begin{tabular}{rr|r|rrrrrrrr}
+%\multicolumn{1}{c|}{Method} &
+%\multicolumn{1}{c|}{Pinning} &
+%\multicolumn{1}{c|}{Sequmential} &
+%\multicolumn{8}{c}{Parallel w/ $N$ Engines} \\
+%\Cbr{}& \Cbr{}& \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}& \C{5}& \C{6}&
+%    \C{7}& \C{8}\\
+%\hline
+%\hline
+%\multicolumn{11}{c}{Right recursive mandelbrot (max.\ 1024 contexts)} \\
+%\hline
+%setcpuaffinity() & no
+%        & 15.1 & 15.2 & 7.6 & 5.1 & 3.8 & 3.7 & 3.5 & 3.4 & 3.3 \\
+%hwloc & no
+%        & 15.2 & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.5 &  3.4 &  3.3 \\
+%setcpuaffinity() & yes
+%        & -    & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.6 &  3.4 &  3.3 \\
+%hwloc & yes
+%        & -    & 15.4 &  7.7 &  5.1 &  3.9 &  3.7 &  3.6 &  3.5 &  3.3 \\
+%\end{tabular}
+%\end{center}
+%\end{table}
 
 \plan{Problem with SMT}
 
