@@ -20,28 +20,28 @@ memory}
 \end{figure}
 
 \plan{Introduce SMT}
-The multiprocessor (and multicore) systems we have been targeting our work
-towards have been SMP (symmetric multi-processor) systems.
-This means that they have more than one, equivilent processors,
-and that the memory is approximatly the same distance from each of the
-processors (the system is not a NUMA (Non-uniform memory architecture)
-system.
-Many current SMP systems are also SMT\footnote{
+The multi-processor (and multi-core) systems we have been targeting our work
+towards have been symmetric multi-processor (SMP) systems.
+This means that they have two or more, equivalent processors,
+and that the memory is approximately the same distance from each of the
+processors (the system is not a non-uniform memory architecture (NUMA)
+system).
+Many current SMP systems are also symmetric multi-threading (SMT)\footnote{
     Intel commonly calls SMT ``hyper-threading''}
-(symmetric multi-threading) systems.
+systems.
 As an example, figure \ref{fig:i7_hierarchy} shows the memory hierarchy of
 an Intel i7-2600K based system with 16GB of memory;
 each of the four cores has two hardware threads,
-labeled PU (Processing Unit) in the figure.
+labelled PU (Processing Unit) in the figure.
 Each of the four physical processor cores can execute two hardware threads
 \emph{concurrently}.
-It is important to recognize that hardware threads on the same core are not
+It is important to recognise that hardware threads on the same core are not
 executed in parallel;
 which is how we are used to thinking of multi-processing.
 Instead, each core is able to execute more than one instruction stream at a
 time.
 If the execution of one instruction stream must wait for something such as a
-value to be retrived from memory,
+value to be retrieved from memory,
 then the core is able to execute the other instruction stream.
 This improves performance by allowing the processor to make use the time
 when it would otherwise be stalled.
@@ -73,7 +73,7 @@ On the Intel i7-2600K (figure \ref{fig:i7-hierarchy}
 returns 8.
 This is supported on several but not all platforms.
 If Mercury cannot detect the number of processors in the system it defaults 
-to useing a single engine.
+to using a single engine.
 
 \plan{Explain why we want thread pinning.}
 We have been relying on the operating system to assign threads onto
@@ -85,7 +85,7 @@ processors.
 %larger numbers of cores and therefore more complex memory hierarchies.
 \plan{Explain how we get thread pinning.}
 We can \emph{pin} a thread to a specific processor using the
-\code{setcpuaffiny()} system call,
+\code{setcpuaffinity()} system call,
 which is available on many Unix-like OSs.
 Our initial thread pinning implementation pinned each of Mercury's engines
 to a separate processor.
@@ -131,8 +131,8 @@ hwloc & yes
 This works well on SMP systems that do not use SMT.
 On systems that use SMP and SMT
 \footnote{
-    SMT is sometimes called ``hyperthreading'' especially for marketing.}
-(symmetric multithreading) as well as SMP this causes problems.
+    SMT is sometimes called ``hyper-threading'' especially for marketing.}
+(symmetric multi-threading) as well as SMP this causes problems.
 Consider the memory hierarchy of the Intel i7-2600K processor
 (figure \ref{fig:i7_hierarchy}).
 The i7-2600K has four cores, each with two hardware threads,
