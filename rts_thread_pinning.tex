@@ -5,24 +5,72 @@ As explained in chapter \ref{chap:background},
 Mercury manages its parallel work with userspace scheduling.
 Engines execute context and switching contexts is done in userspace.
 Each Mercury engine corresponds to an operating system thread such as a
-POSIX thread\cite{butenhof1997:pthreads}.
+POSIX thread.
+%\cite{butenhof1997:pthreads}
 The operating system manages these threads including their mapping onto
 processors.
 
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.75\textwidth]{i7-hierarchy}
+\end{center}
+\caption{Memory hierarchy of the Intel i7-2600K processor and 16GB of main
+memory}
+\label{fig:i7_hierarchy}
+\end{figure}
+
 \plan{Introduce SMT}
+The multiprocessor (and multicore) systems we have been targeting our work
+towards have been SMP (symmetric multi-processor) systems.
+This means that they have more than one, equivilent processors,
+and that the memory is approximatly the same distance from each of the
+processors (the system is not a NUMA (Non-uniform memory architecture)
+system.
+Many current SMP systems are also SMT\footnote{
+    Intel commonly calls SMT ``hyper-threading''}
+(symmetric multi-threading) systems.
+As an example, figure \ref{fig:i7_hierarchy} shows the memory hierarchy of
+an Intel i7-2600K based system with 16GB of memory;
+each of the four cores has two hardware threads,
+labeled PU (Processing Unit) in the figure.
+Each of the four physical processor cores can execute two hardware threads
+\emph{concurrently}.
+It is important to recognize that hardware threads on the same core are not
+executed in parallel;
+which is how we are used to thinking of multi-processing.
+Instead, each core is able to execute more than one instruction stream at a
+time.
+If the execution of one instruction stream must wait for something such as a
+value to be retrived from memory,
+then the core is able to execute the other instruction stream.
+This improves performance by allowing the processor to make use the time
+when it would otherwise be stalled.
+To allow programs to use SMT systems the the operating system makes the
+extra hardware threads available to applications by making it appear as if
+the system has more processors than it actually does.
+% Allowing each core to run a second thread can increase performance,
+% but it will not double it.
+When talking about an SMT thread we will say ``hardware thread'',
+allowing the term ``thread'' to refer to a software thread managed by the
+operating system.
 
 \plan{Explain why we want $P$ engines when there are $P$ processors}
-In order to make use of each of the system's processors we should create at
-least one thread for each processor.
-Creating more than one thread per processor consumes more resources
-than necessary,
+In order to make use of each of the system's processor cores and hardware
+threads (``processors'' for brevity)
+we should create at least one thread for each processor.
+Creating more than this consumes more resources than necessary,
 and when more than one thread is actively using the same processor the
 operating system must perform context switches between these threads.
 Therefore it is best to use exactly one thread per processor,
 which is the default.
 \plan{Explain briefly how we detect how many processors there are,}
-We have been using the \code{sysconf} system call to detect the number of
+We have been using the
+\code{sysconf(\_SC\_NPROCESSORS\_ONLN)}
+system call to detect the number of
 processors in the system.
+On the Intel i7-2600K (figure \ref{fig:i7-hierarchy}
+\code{sysconf(\_SC\_NPROCESSORS\_ONLN)}
+returns 8.
 This is supported on several but not all platforms.
 If Mercury cannot detect the number of processors in the system it defaults 
 to useing a single engine.
@@ -49,20 +97,35 @@ than processors.
 When the user requests more engines than processors,
 only the first $P$ thread are pinned (where there are $P$ processors).
 
-\paul{Initial results here}
+\begin{table}
+\begin{center}
+\begin{tabular}{rr|r|rrrrrrrr}
+\multicolumn{1}{c|}{Method} &
+\multicolumn{1}{c|}{Pinning} &
+\multicolumn{1}{c|}{Sequmential} &
+\multicolumn{8}{c}{Parallel w/ $N$ Engines} \\
+\Cbr{}& \Cbr{}& \Cbr{TS} & \C{1}& \C{2}& \C{3}& \C{4}& \C{5}& \C{6}&
+    \C{7}& \C{8}\\
+\hline
+\hline
+\multicolumn{11}{c}{Right recursive mandelbrot (max.\ 1024 contexts)} \\
+\hline
+setcpuaffinity() & no
+        & 15.1 & 15.2 & 7.6 & 5.1 & 3.8 & 3.7 & 3.5 & 3.4 & 3.3 \\
+hwloc & no
+        & 15.2 & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.5 &  3.4 &  3.3 \\
+setcpuaffinity() & yes
+        & -    & 15.2 &  7.6 &  5.1 &  3.8 &  3.7 &  3.6 &  3.4 &  3.3 \\
+hwloc & yes
+        & -    & 15.4 &  7.7 &  5.1 &  3.9 &  3.7 &  3.6 &  3.5 &  3.3 \\
+\end{tabular}
+\end{center}
+\end{table}
 
 \plan{Benchmarks}
 
 \plan{Problem with SMT}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=0.75\textwidth]{i7-hierarchy}
-\end{center}
-\caption{Memory hierarchy of the Intel i7-2600K processor and 16GB of main
-memory}
-\label{fig:i7_hierarchy}
-\end{figure}
 
 \plan{What about SMT, not all processors are equal.}
 This works well on SMP systems that do not use SMT.
