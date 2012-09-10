@@ -31,45 +31,16 @@ We address one of these problems by introducing work stealing in section
 \ref{sec:rts_work_stealing}.
 Then in section \ref{sec:rts_reorder} we reorder conjuncts in independent
 parallel conjunctions to work around the other spark scheduling problem.
-In section \ref{sec:rts_work_stealing2} we make further improvments to
+Finally, in section \ref{sec:rts_work_stealing2} we make further improvments to
 work stealing and change how idle engines look for work, sleep and are
 woken up.
-Finally, section \ref{sec:rts_thread_pinning} describes how we pin Mercury
-engines to CPU cores and SMT threads evenly.
-
-\section{Garbage Collector Tweaks}
-\label{sec:gc}
 
 \input{rts_gc}
-
-\section{Original Spark Scheduling Algorithm}
-\label{sec:original_scheduling}
-
 \input{rts_original_scheduling}
-
-\section{Original Spark Scheduling Performance}
-\label{sec:original_scheduling_performance}
-
 \input{rts_original_scheduling_performance}
-
-\section{Initial Work Stealing Implementation}
-\label{sec:rts_work_stealing}
-
 \input{rts_work_stealing}
-
-\section{Independent Conjunction Reordering}
-\label{sec:rts_reorder}
-
 \input{rts_reorder}
-
-%\section{Thread Pinning}
-%\label{sec:rts_thread_pinning}
-%
 %\input{rts_thread_pinning}
-
-\section{Improved Work Stealing Implementation}
-\label{sec:rts_work_stealing2}
-
 \input{rts_work_stealing2}
 
 %\section{Proposed scheduling tweaks}
