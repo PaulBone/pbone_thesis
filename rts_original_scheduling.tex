@@ -228,7 +228,7 @@ there are three important scenarios:
     it finds that $ST.num\_outstanding$ is non-zero,
     causing it to execute the else branch on line 14 of \joinandcontinue.
     $C_{Orig}$ will try to pop a spark of its local spark stack.
-    However the the spark for $G_2$ was placed on the global
+    However the spark for $G_2$ was placed on the global
     spark queue,
     the only spark it might find is one created by an outer conjunction.
     If a spark is found, the spark's parent stack pointer will not match the
@@ -315,7 +315,7 @@ Newly created engines, except for the first, also search for global work.
 They do this by calling \idle,
 whose code is shown in algorithm \ref{alg:MR_idle_initial}.
 Only one of the idle engines can execute \idle at a time.
-The \var{MR\_runqueue\_lock} lock protects the context run queue and the
+\var{MR\_runqueue\_lock} protects the context run queue and the
 global context queue from concurrent access.
 After acquiring the lock,
 engines execute a loop.

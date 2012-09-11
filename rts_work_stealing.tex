@@ -50,7 +50,7 @@ Work stealing's other benefits can be summarised as follows.
     It is quicker to schedule sparks because
     a context can place sparks on its local spark stack more quickly
     than it can place sparks on the global spark queue.
-    This is because there there is less contention on a context's
+    This is because there is less contention on a context's
     local spark stack.
     The only source of contention is work stealing which is balanced all of
     the contexts.
@@ -568,7 +568,7 @@ array.
 When the runtime system destroys a context it writes \NULL to that context's
 index in the deque array.
 To prevent concurrent access from corrupting the array these operations are
-protected by the \code{MR\_spark\_deques\_lock} lock.
+protected by \code{MR\_spark\_deques\_lock}.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
@@ -700,7 +700,7 @@ it would often find that there was no free engine,
 and place the spark on its local queue.
 After completing the first conjunct of the parallel conjunction it would
 execute \joinandcontinue.
-\joinandcontinue would would find that the context had a spark on its local
+\joinandcontinue would find that the context had a spark on its local
 stack and would execute this spark directly.
 When a spark is executed directly the existing context is re-used and so the
 context limit does not increase as quickly.
