@@ -22,6 +22,8 @@
 
 :- pred environment_does_not_contain_prose(string::in) is semidet.
 
+:- pred environment_breaks_flow(string::in) is semidet.
+
 :- implementation.
 
 macro_info("cite", macro_is_reference, macro_does_not_break_flow).
@@ -47,4 +49,9 @@ conservative_macro_info(Ident, IsRef, BreaksFlow) :-
 environment_does_not_contain_prose("array").
 environment_does_not_contain_prose("verbatim").
 environment_does_not_contain_prose("algorithmic").
+environment_does_not_contain_prose("$$").
+
+environment_breaks_flow("algorithm").
+environment_breaks_flow("table").
+environment_breaks_flow("figure").
 

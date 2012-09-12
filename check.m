@@ -33,6 +33,7 @@
 :- import_module list.
 :- import_module maybe.
 :- import_module parsing_utils.
+:- import_module pretty_printer.
 :- import_module require.
 :- import_module string.
 :- import_module unit.
@@ -86,6 +87,9 @@ check_file_string(Name, Contents, Errors) :-
     ),
     (
         Result = ok(Tokens),
+        %trace [io(!IO)] (
+        %    write_doc(pretty_tokens(Tokens), !IO)
+        %),
         check_tokens(Tokens, Errors)
     ;
         Result = error(MaybeMessage, Line, Col),
@@ -385,7 +389,11 @@ token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups) :-
         ( Name = "\\" ->
             % Linebreak, this is whitespace and is ignored.
             true
-        ; Name = " " ->
+        ;
+            ( Name = " "
+            ; Name = "~"
+            )
+        ->
             % A tex whitespace hint, this is also ignored.
             true
         ;
@@ -410,6 +418,12 @@ token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups) :-
     ).
 token_to_consecutive_words(environment(Name, _Args, Tokens, _), !LastGroup,
         !Groups) :-
+    ( environment_breaks_flow(Name) ->
+        BreaksFlow = yes,
+        end_group(!LastGroup, !Groups)
+    ;
+        BreaksFlow = no
+    ),
     ( not environment_does_not_contain_prose(Name) ->
         % Note that we don't check the environments args, I don't know of
         % any that have prose to check.
@@ -417,6 +431,12 @@ token_to_consecutive_words(environment(Name, _Args, Tokens, _), !LastGroup,
             !LastGroup, !Groups)
     ;
         true
+    ),
+    (
+        BreaksFlow = yes,
+        end_group(!LastGroup, !Groups)
+    ;
+        BreaksFlow = no
     ).
 
 :- pred macro_arg_to_consecutive_words(macro_breaks_flow::in, macro_arg::in,

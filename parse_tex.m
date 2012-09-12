@@ -9,6 +9,7 @@
 :- import_module cord.
 :- import_module int.
 :- import_module parsing_utils.
+:- import_module pretty_printer.
 :- import_module string.
 
 %----------------------------------------------------------------------------%
@@ -63,6 +64,10 @@
     ps::in, ps::out) is semidet.
 
 %----------------------------------------------------------------------------%
+
+:- func pretty_tokens(cord(token)) = doc.
+
+%----------------------------------------------------------------------------%
 %----------------------------------------------------------------------------%
 
 :- implementation.
@@ -70,6 +75,7 @@
 :- import_module bool.
 :- import_module char.
 :- import_module list.
+:- import_module maybe.
 :- import_module require.
 :- import_module unit.
 
@@ -126,13 +132,8 @@ parse_texfile(File, Src, Tokens, !PS) :-
 parse_tex(Lines, File, Src, Tokens, !PS) :-
     whitespace(Src, _, !PS),
     (
-        promise_equivalent_solutions [PS0] (
-            ( parse_comment(Src, _, !.PS, PS0)
-            ; char(symbol, Src, _, !.PS, PS0)
-            )
-        )
+        parse_comment(Src, _, !PS)
     ->
-        !:PS = PS0,
         parse_tex(Lines, File, Src, Tokens, !PS)
     ;
         ( parse_punct(Lines, File, Src, Token, !.PS, PS0) ->
@@ -220,23 +221,31 @@ parse_word2(Src, Word, !PS) :-
 
 parse_macro(Lines, File, Src, Token, !PS) :-
     offset_to_locn(Lines, File, Src, Locn, !.PS),
-    next_char(Src, '\\', !PS),
-    (
-        % Short macros are things like escapes spacing and \" for umlouts.
-        next_char(Src, C, !.PS, PS0),
-        macro_char_short(C)
-    ->
-        !:PS = PS0,
+    ( next_char(Src, '$', !PS) ->
+        ( next_char(Src, '$', !PS) ->
+            Token = macro("$$", cord.empty, Locn)
+        ;
+            Token = macro("$", cord.empty, Locn)
+        )
+    ; char(symbol, Src, C, !PS) ->
         Token = macro(char_to_string(C), cord.empty, Locn)
     ;
-        identifier(macro_chars, macro_chars, Src, Ident, !.PS, PS0)
-    ->
-        !:PS = PS0,
-        zero_or_more(parse_macro_arg(Lines, File), Src, ArgTokens, !PS),
-        Token = macro(Ident, cord.from_list(ArgTokens), Locn)
-    ;
-        whitespace(Src, _, !PS),
-        Token = macro(" ", cord.empty, Locn)
+        next_char(Src, '\\', !PS),
+        (
+            % Short macros are things like escapes spacing and \" for umlouts.
+            next_char(Src, C, !PS),
+            macro_char_short(C)
+        ->
+            Token = macro(char_to_string(C), cord.empty, Locn)
+        ;
+            identifier(macro_chars, macro_chars, Src, Ident, !PS)
+        ->
+            zero_or_more(parse_macro_arg(Lines, File), Src, ArgTokens, !PS),
+            Token = macro(Ident, cord.from_list(ArgTokens), Locn)
+        ;
+            whitespace(Src, _, !PS),
+            Token = macro(" ", cord.empty, Locn)
+        )
     ).
 
 :- pred parse_group(line_numbers::in, string::in, src::in,
@@ -314,87 +323,88 @@ char(P, Src, Char, !PS) :-
 
 :- pred detect_environments(cord(token)::in, cord(token)::out) is det.
 
-detect_environments(Tokens, TokenEnvironments) :-
-    ( parse_to_environments(cord.init, TokenEnvironmentsPrime, Tokens, _) ->
-        TokenEnvironments = TokenEnvironmentsPrime
-    ;
-        unexpected($module, $pred, "Couldn't parse into environment tree.")
-    ).
+detect_environments(Tokens, Environments) :-
+    parse_to_environments(no, cord.init, Environments, Tokens, _).
 
-:- pred parse_to_environments(cord(token)::in, cord(token)::out,
-    cord(token)::in, cord(token)::out) is semidet.
-
-parse_to_environments(!Envs, !Tokens) :-
-    ( parse_to_environment(Env, !Tokens) ->
-        !:Envs = snoc(!.Envs, Env),
-        parse_to_environments(!Envs, !Tokens)
-    ;
-        true
-    ).
-
-:- pred parse_to_environment(token::out, cord(token)::in, cord(token)::out)
-    is semidet.
-
-parse_to_environment(Env, !Tokens) :-
-    next_token(Token0, !Tokens),
-    make_nested_environments(Token0, Token),
-    require_complete_switch [Token]
-    (
-        ( Token = word(_, _)
-        ; Token = punct(_, _)
-        ; Token = environment(_, _, _, _)
-        ),
-        Env = Token
-    ;
-        Token = macro(Name, Args0, Locn),
-        Name \= "end",
-        (
-            Name = "begin",
-            cord.head_tail(Args0, EnvNameArg, Args),
-            arg_to_string(EnvNameArg, EnvName) 
-        ->
-            parse_until_end_environment(EnvName, cord.empty, Contents,
-                !Tokens),
-            next_token(Token, !Tokens),
-            token_is_end_env(EnvName, Token),
-            Env = environment(EnvName, Args, Contents, Locn) 
-        ;
-            Env = Token
-        )
-    ).
-
-:- pred make_nested_environments(token::in, token::out) is det.
-
-make_nested_environments(word(Word, Locn), word(Word, Locn)).
-make_nested_environments(punct(Punct, Locn), punct(Punct, Locn)).
-make_nested_environments(macro(Ident, Args0, Locn),
-        macro(Ident, Args, Locn)) :-
-    cord.map_pred(macro_arg_make_environments, Args0, Args).
-make_nested_environments(environment(_, _, _, _), _) :-
-    unexpected($module, $pred,
-        "Environment conversion is bottom up, this shouldn't happen").
-
-:- pred macro_arg_make_environments(macro_arg::in, macro_arg::out) is det.
-
-macro_arg_make_environments(macro_arg(Tokens0, Locn),
-        macro_arg(Tokens, Locn)) :-
-   detect_environments(Tokens0, Tokens). 
-
-:- pred parse_until_end_environment(string::in,
+:- pred parse_to_environments(maybe(string)::in, 
     cord(token)::in, cord(token)::out,
     cord(token)::in, cord(token)::out) is det.
 
-parse_until_end_environment(EnvName, !Contents, !Tokens) :-
-    ( next_token(Token0, !Tokens) ->
-        make_nested_environments(Token0, Token), 
-        ( token_is_end_env(EnvName, Token) ->
+parse_to_environments(MaybeCurEnv, !Envs, !Tokens) :-
+    ( next_token(Token, !.Tokens, NextTokens) ->
+        ( ends_cur_env(MaybeCurEnv, Token) ->
             true
         ;
-            !:Contents = snoc(!.Contents, Token),
-            parse_until_end_environment(EnvName, !Contents, !Tokens)
+            ( is_start_environment(Token, _, _, _) ->
+                ( parse_to_environment(EnvPrime, !Tokens) ->
+                    Env = EnvPrime
+                ;
+                    !:Tokens = NextTokens,
+                    parse_token_to_environments(Token, Env)
+                )
+            ;
+                !:Tokens = NextTokens,
+                parse_token_to_environments(Token, Env)
+            ),
+            !:Envs = snoc(!.Envs, Env),
+            parse_to_environments(MaybeCurEnv, !Envs, !Tokens)
         )
     ;
         true
+    ).
+
+:- pred parse_to_environment(token::out,
+    cord(token)::in, cord(token)::out) is semidet.
+
+parse_to_environment(Env, !Tokens) :-
+    next_token(StartToken, !Tokens),
+    is_start_environment(StartToken, Name, Args, Locn),
+    parse_to_environments(yes(Name), cord.init, Contents, !Tokens),
+    next_token(EndToken, !Tokens),
+    is_end_environment(EndToken, Name),
+    Env = environment(Name, Args, Contents, Locn).
+
+:- pred parse_token_to_environments(token::in, token::out) is det.
+
+parse_token_to_environments(T@word(_, _), T).
+parse_token_to_environments(T@punct(_, _), T).
+parse_token_to_environments(T@macro(_, _, _), T).
+parse_token_to_environments(environment(Name, Args, Tokens0, Locn),
+        environment(Name, Args, Tokens, Locn)) :-
+    detect_environments(Tokens0, Tokens).
+
+:- pred is_start_environment(token::in, string::out, cord(macro_arg)::out,
+    locn::out) is semidet.
+
+is_start_environment(macro(MName, Args0, Locn), Name, Args, Locn) :-
+    ( MName = "begin" ->
+        head_tail(Args0, Arg, Args),
+        arg_to_string(Arg, Name)
+    ;
+        ( MName = "$"
+        ; MName = "$$"
+        ),
+        Name = MName,
+        Args = Args0
+    ).
+
+:- pred ends_cur_env(maybe(string)::in, token::in) is semidet.
+
+ends_cur_env(yes(Name), Token) :-
+    is_end_environment(Token, Name).
+
+:- pred is_end_environment(token::in, string::in) is semidet.
+
+is_end_environment(macro(MName, Args, _), Name) :-
+    (
+        MName = "end",
+        head_tail(Args, Arg, _),
+        arg_to_string(Arg, Name)
+    ;
+        ( MName = "$"
+        ; MName = "$$"
+        ),
+        Name = MName
     ).
 
 :- pred next_token(T::out, cord(T)::in, cord(T)::out)
@@ -406,10 +416,16 @@ next_token(Token, !Tokens) :-
 :- pred token_is_end_env(string::in, token::in) is semidet.
 
 token_is_end_env(Name, Token) :-
-    Token = macro("end", EndArgs, _),
-    cord.head_tail(EndArgs, Arg, _),
-    Arg = macro_arg(Tokens, _),
-    cord.head_tail(Tokens, word(Name, _), _).
+    ( Token = macro("end", EndArgs, _) ->
+        cord.head_tail(EndArgs, Arg, _),
+        Arg = macro_arg(Tokens, _),
+        cord.head_tail(Tokens, word(Name, _), _)
+    ;
+        Token = macro(Name, _, _),
+        ( Name = "$"
+        ; Name = "$$"
+        )
+    ).
 
 :- pred arg_to_string(macro_arg::in, string::out) is semidet.
 
@@ -441,10 +457,10 @@ quote('\'').
 :- pred symbol(char::in) is semidet.
 
 symbol(C) :- quote(C).
-symbol('-').
 symbol('[').
 symbol(']').
 symbol('&').
+symbol('~').
 
 :- pred not_word_char(char::in) is semidet.
 
@@ -458,6 +474,8 @@ not_word_char('(').
 not_word_char(')').
 not_word_char('\\').
 not_word_char('%').
+not_word_char('$').
+not_word_char('~').
 
 :- pred macro_char_short(char::in) is semidet.
 
@@ -473,6 +491,56 @@ macro_char_short(':').
 macro_char_short(';').
 macro_char_short('_').
 macro_char_short('-').
+macro_char_short('~').
+
+%----------------------------------------------------------------------------%
+% Pretty printing.
+
+pretty_tokens(Tokens) = Doc :-
+    Docs0 = map(pretty_token, Tokens), 
+    Doc = docs(intersperse(docs([str(" "), nl]), list(Docs0))).
+
+:- func pretty_token(token) = doc.
+
+pretty_token(word(Word, _)) = str(Word).
+pretty_token(punct(Punct, _)) = str(Punct).
+pretty_token(macro(Name, Args, _)) = Doc :-
+    ArgsDocs = pretty_macro_args(Args),
+    Docs = [str("\\"), str(Name), indent(ArgsDocs)], 
+    Doc = group(Docs).
+pretty_token(environment(Name, Args, Tokens, _)) = Doc :-
+    ArgsDocs = pretty_macro_args(Args),
+    TokenDocs = [pretty_tokens(Tokens)],
+    Docs = [hard_nl, 
+        str("\\begin{"), str(Name), str("}"), nl, indent(ArgsDocs), hard_nl,
+        indent(TokenDocs), hard_nl,
+        str("\\end{"), str(Name), str("}"), hard_nl],
+    Doc = group(Docs).
+
+:- func pretty_macro_args(cord(macro_arg)) = docs.
+
+pretty_macro_args(Args) = Docs :-
+    ArgsDocs0 = map(pretty_macro_arg, list(Args)),
+    Docs = intersperse(nl, ArgsDocs0).
+
+:- func pretty_macro_arg(macro_arg) = doc.
+
+pretty_macro_arg(macro_arg(Tokens, _)) = Doc :-
+    TokenDocs = pretty_tokens(Tokens),
+    Doc = docs([str("{"), indent([TokenDocs]), str("}")]).
+
+:- func intersperse(doc, docs) = docs.
+
+intersperse(_, []) = [].
+intersperse(Delim, [X | Xs0]) = Result :-
+    Xs = intersperse(Delim, Xs0),
+    (
+        Xs = [],
+        Result = [X | Xs]
+    ;
+        Xs = [_ | _],
+        Result = [X, Delim | Xs]
+    ).
 
 %----------------------------------------------------------------------------%
 %----------------------------------------------------------------------------%
