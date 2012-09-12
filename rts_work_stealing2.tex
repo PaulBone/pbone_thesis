@@ -142,7 +142,7 @@ would not exceed the context limit;
 this check has been moved into \trystealspark (line 2).
 Another change is that \trystealspark
 will now call \prepareengineforspark (line 7)
-which will load a context into the engine if it doesn't already have one.
+which will load a context into the engine if it does not already have one.
 (algorithm \ref{alg:prepare_engine_for_spark}).
 Finally \trystealspark will return the address of the spark's code;
 the caller will jump to this address,
@@ -150,8 +150,8 @@ if it is not NULL.
 
 In the previous version the lock was also used to protect the victim
 counter;
-it ensured that round robin selection of the victim was maintained.
-Now each engine independently performs its own round robin selection of the
+it ensured that round-robin selection of the victim was maintained.
+Now each engine independently performs its own round-robin selection of the
 victim using a new field \code{victim\_counter} in the engine structure.
 We have not evaluated if this policy is an improvement.
 However when compared with the improvement due to removing the lock and
@@ -291,7 +291,7 @@ By reducing the number of contexts we can improve memory and time usage.
 its caller.
 Instead it continues execution by jumping to the code address of the next
 thing to execute.
-such as the
+such as
 the resume address of a context,
 or the entry point of a spark.
 if one of its callees such as \trystealspark where to make this jump rather
@@ -426,7 +426,7 @@ it will be passed the context directly
 using the \code{action\_data} field.
 Similarly, if it instructed to steal a spark,
 then \code{action\_data} will tell
-it whose spark stack it should begin its round robin search from.
+it whose spark stack it should begin its round-robin search from.
 If thread stealing fails,
 the engine will check the global context queue for
 a runnable context;
@@ -528,7 +528,7 @@ it relies on \idle to do this.
 The second change is that \joinandcontinue no longer suspends the original
 context, it executes \idle while holding the original context.
 This would invalidate \idle's precondition that if an engine has a context,
-that that context is otherwise free to execute \emph{any} spark,
+that the context is otherwise free to execute \emph{any} spark,
 but an original context may only execute sparks that were created by the
 parallel conjunction that it is currently executing.
 The new \idle code allows us to create any number of entry points,
@@ -618,7 +618,7 @@ and they do not have to jump to \idle when they finish.
 For example,
 it may be useful to create a special case for when an engine is known to
 have a empty context;
-this case could check for work in a different order and and if it does not
+this case could check for work in a different order and if it does not
 find any work it could jump to \sleep the way \idle currently does.
 
 \input{tab_work_stealing_revised}
@@ -750,7 +750,7 @@ However,
 in the fine grained fibs tests we can clearly see that the new work stealing
 system has much higher overheads.
 This is not what we expected but it makes sense.
-The new work stealing system no-longer uses a timeout to wake up sleeping
+The new work stealing system no longer uses a timeout to wake up sleeping
 engines, allowing them to check for work.
 As an alternative it allows the creation of a spark to notify a sleeping
 engine.
@@ -824,7 +824,7 @@ take work from the hot end of its own deque.
 Executing more work from one's own deque, and decreasing the amount of stealing
 should both improve the efficiency of the program as a whole.
 
-We are currently using the the deque data structure and algorithms described by
+We are currently using the deque data structure and algorithms described by
 \citet{Chase_2005_wsdeque} (CL Deque).
 \citet{hendler:2002:stealhalf} (HS Deque) describes a similar data structure
 and set of algorithms that allow half the work to be stolen in a single lock

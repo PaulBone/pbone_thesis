@@ -231,7 +231,6 @@ is shown in figure \ref{fig:mapfoldl-overlap}.
 (This is the kind of computation that
 Reform Prolog \cite{bevemyr:reform} was designed to parallelise.)
 
-
 \section{Our general approach}
 \label{sec:overlap_approach}
 
@@ -537,7 +536,7 @@ The third last would incur two copies of the costs
 of the non-recursive calls along the recursive path,
 plus the cost of the last call.
 By induction,
-the cost cost of a recursive call at depth $D$ (0 being the deepest)
+the cost of a recursive call at depth $D$ (0 being the deepest)
 is:
 
 \begin{equation*}
@@ -578,7 +577,7 @@ base cases, and recursive cases containing \emph{two} recursive call sites.
 Our example for this category is an accumulator version of \quicksortacc,
 whose code is shown in figure~\ref{fig:quicksort_acc}.
 
-Calculating the recursion depth depth of \quicksortacc can be more
+Calculating the recursion depth of \quicksortacc can be more
 problematic.
 We know that if a good value for \code{Pivot} is chosen \quicksortacc runs
 optimally,
@@ -595,9 +594,9 @@ and a list whose length is one less than the input list to the other call.
 We do not consider this to be a problem,
 such a case is an error in the programmer's choice of algorithm or use of the
 algorithm.
-It would create poor performance in sequential code and therefore we're not
+It would create poor performance in sequential code and therefore we are not
 interested in such cases when parallelising code.
-We say that the average deepest recursion of divide and conquer code code is:
+We say that the average deepest recursion of divide and conquer code is:
 
 \begin{equation*}
 Depth = \log_2 \frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}}
@@ -722,7 +721,7 @@ This means that the result of traversing a goal must include data for
 several different types of recursion counts.
 Consider the example in figure \ref{fig:2_reccalls_4_paths},
 The example code has been annotated with coverage information (in the
-third column) and with cost information where is is available (forth
+third column) and with cost information where it is available (forth
 column). 
 The conjunction on lines five and six does not contain a recursive call.
 The result of processing it is a list containing a single tuple:
@@ -911,8 +910,8 @@ such as those with 2 or 3 recursive calls on a path,
 these may be due to the same algorithms running on a tree without any
 4-nodes.
 The table row labelled ``Unknown (error)'' refers to cases that our algorithm
-couldn't handle.
-This is primarily procedures that may backtrack because they're either
+could not handle.
+These are primarily procedures that may backtrack because they are either
 \dnondet or \dmulti.
 
 \plan{Mutual recursion}
@@ -1419,7 +1418,7 @@ followed by one call that executes the base clause.
 From this, we can deduce that if ${SeqSaving} = {SeqTime} - {ParTime}$
 is the time saving we get from parallelising the top conjunction
 if the recursive call calls the original sequential version of the procedure,
-then making the recursive call call the parallelised version of the procedure
+then making it call the parallelised version of the procedure
 would yield a time saving of ${ParSaving} = {SeqSaving} * R_1/E$
 if we have enough CPUs to execute all the $R_1/E$ iterations in parallel.
 \peter{I think this needs more explanation.  It does not look right to me.

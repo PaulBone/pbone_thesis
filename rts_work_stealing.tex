@@ -612,7 +612,7 @@ has made \var{max\_attempts}.
 We use a global variable, \var{MR\_victim\_counter},
 to implement round-robin selection of the victim.
 On line 8 we attempt to steal work from a deque,
-provided that its deque pointer in the array array is non-null.
+provided that its deque pointer in the array is non-null.
 If the call to \steal succeeded,
 it will have written spark data into the memory pointed to by
 \var{spark\_ptr},
