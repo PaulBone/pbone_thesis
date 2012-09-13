@@ -44,6 +44,7 @@ GEN_TABLES_TEX = \
 
 SPELL_FILES = $(TEX_PROSE:%.tex=%.spell)
 STYLE_FILES = $(TEX_PROSE:%.tex=%.style)
+CHECK_FILES = $(TEX_PROSE:%.tex=%.check)
 
 # Results from Loop control.
 TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
@@ -54,14 +55,13 @@ BENCH_ALL=          lc_bench_all
 DETEX=detex -l -n
 
 .PHONY : all
-all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling
+all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling checking
 
 .PHONY : wc
 wc :
 	wc -w $(TEX_PROSE)
 
-thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) bib.bib \
-		checked
+thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) bib.bib
 	latex thesis
 	bibtex thesis
 	latex thesis
@@ -88,15 +88,17 @@ mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
 undefined.txt: thesis.log
 	cat $< | grep undefined | sort -u > undefined.txt
 
-checked : $(TEX_PROSE) check
+.PHONY : checking 
+checking : $(CHECK_FILES)
+
+%.check : %.tex check
 	if [ -e .use_mercury ]; then \
-		./check $(TEX_PROSE); \
+		./check $< && touch $@; \
 	fi
-	touch checked
 
 check : check.m parse_tex.m tex.m util.m
 	if [ -e .use_mercury ]; then \
-		mmc --make check; \
+		mmc -O2 --intermod-opt --make check; \
 	else \
 		touch check; \
 	fi
@@ -139,15 +141,16 @@ clean :
 		thesis.pdf \
 		thesis.ps \
 		thesis.toc \
+		thesis.loa \
 		talk.pdf \
 		.teacher_beamer \
 		teacher_beamer \
 		undefined.txt \
-		checked \
 		Mercury \
 		check \
 		check.err \
 		check.mh \
 		*.style \
-		*.spell
+		*.spell \
+		*.check
 
