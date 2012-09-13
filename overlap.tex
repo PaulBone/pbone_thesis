@@ -232,7 +232,7 @@ This parallel version of \mapfoldl is shown in figure
 A representation of the first three iterations of it 
 is shown in figure \ref{fig:mapfoldl-overlap}.
 (This is the kind of computation that
-Reform Prolog \cite{bevemyr:reform} was designed to parallelise.)
+Reform Prolog \citep{bevemyr:reform} was designed to parallelise.)
 
 \section{Our general approach}
 \label{sec:overlap_approach}
@@ -270,13 +270,11 @@ However, this will not be accurate;
 static analysis cannot take into account sizes of data terms or other
 values that are only available at runtime.
 Therefore, we use profiler feedback information in our implementation.
-This was introduced above in section \ref{sec:backgnd_autopar}.
-Section \ref{sec:backgnd_autopar} also includes a description of
-Mercury's deep profiler.
-To generate the profiler feedback data we require programmers to follow this
-sequence of actions after they have tested and debugged the program.
-A visual representation of such a workflow is shown in figure
-\ref{fig:prof_fb} on page \pageref{fig:prof_fb}.
+This was introduced in section \ref{sec:backgnd_autopar}
+which also includes a description of Mercury's deep profiler.
+To generate the profiler feedback data,
+we require programmers to follow this sequence of actions after they have
+tested and debugged the program.
 
 \begin{enumerate}
 \item
@@ -304,6 +302,8 @@ the speedups you get from them can be strikingly different.
 \end{enumerate}
 
 \noindent
+A visual representation of such a workflow is shown in figure
+\ref{fig:prof_fb} on page \pageref{fig:prof_fb}.
 It is up to the programmer using our system
 to select training input for the profiling run in step 2.
 Obviously, programmers should pick input that is as representative as possible,
@@ -312,17 +312,16 @@ even for input data that is quite different from the training input.
 The main focus of this chapter is on step 3;
 we give the main algorithms used by the feedback tool.
 However, we will also touch on steps 1 and 4.
-We believe that step 2 can only be solved by the programmer,
+We believe that step 2 can only be addressed by the programmer,
 as they understand what input is representative for their program.
 
 \plan{DFS \& limits}
 Our feedback tool looks for parallelisation opportunities
-by doing a depth-first search of this call tree.
-which was described as a tree of SCCs (strongly connected components)
-in section \ref{sec:backgnd_deep}.
+by doing a depth-first search of the call tree of the profling run,
+each node of which is an SCC (strongly connected component) of procedures.
 It explores the subtree below a node in the tree
-only if the overall cost of the call leading to the subtree
-is greater than a configurable threshold,
+only if the per-call cost of the subtree is greater than a configurable
+threshold,
 and if the amount of parallelism it has found at and above that node
 is below another configurable threshold.
 The first test lets us avoid looking at code
