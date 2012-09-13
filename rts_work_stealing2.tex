@@ -315,7 +315,7 @@ E2 then begins the execution of \code{q}.
 A third engine, E3,
 wakes up and steals the spark for \code{t} spark from E2.
 Next,
-E2 attempts to read the value of \code{X} in \cope{q} but it has not yet
+E2 attempts to read the value of \code{X} in \code{q} but it has not yet
 been produced,
 therefore E2 suspends its context and calls \idle, it cannot find a context
 ot execute and calls \tryrunlocalspark,
@@ -333,62 +333,87 @@ this can never create more than a handful of extra contexts:
 while the limit is exceeded engines will not steal work and will therefore
 execute sparks in a left-to-right order only where dependencies and barriers
 cannot cause more contexts to become blocked.
-The two choices we've made,
+The two choices we have made,
 executing local sparks without checking the context limit and
 attempting to resume contexts before attempting to execute sparks,
 work together to prevent deadlocks that could be caused by
 the context limit and dependencies.
-Even though the context limit is a work-around to prevent a type of worst
-case behaviour,
+Even though the context limit is a work-around to prevent some kinds of
+worst case behaviour,
 it is still important to use scheduling policies such as these that keep the
 number of contexts low:
 contexts consume significant amounts of memory and
 the garbage collector spends time scanning that memory.
 By reducing the number of contexts we can improve memory and time usage.
 
-\idle is a hand written Mercury procedure and it does not return control to
-its caller.
+\idle is C code that uses the Mercury calling convention,
+this convention passes all its arguments and results in the Mercury abstract
+machine registers, including the return address.
+Therefore, it does not need to create a stack frame on any of the C or
+Mercury stacks;
+any local C variables are stored on the stack frame shared between all
+Mercury procedures (and must be saved by the caller).
+Unlike other Mercury procedures, \idle never returns control to its caller.
 Instead it continues execution by jumping to the code address of the next
-thing to execute.
-such as
-the resume address of a context,
+thing to execute,
+such as the resume address of a context,
 or the entry point of a spark.
-if one of its callees such as \trystealspark where to make this jump rather
+If one of its callees such as \trystealspark where to make this jump rather
 than returning and then letting \idle jump,
 then this would leak the stack frames created for \trystealspark.
 Therefore, each of the functions \tryrunlocalspark, \tryruncontext and
 \trystealspark must return the address of the next thing to execute and
 allow \idle to jump to this code or jump to \sleep.
 
-\tryruncontext is shown in algorithm \ref{alg:try_run_context};
-it attempts to take a context from the context runqueue while holding the
+\tryruncontext is shown in algorithm \ref{alg:try_run_context}.
+It attempts to take a context from the context runqueue while holding the
 context runqueue lock.
-Previously this lock protected all of \idle.
 If \tryruncontext finds a context,
 it first checks for and unloads the engine's current context,
 and then loads the new context.
-It clears the contexts resume field and then returns the field's previous
+It clears the context's resume field and then returns the field's previous
 value, which \idle will jump to.
+The context's resume field must be cleared here as it may later be
+synchronized on by \joinandcontinue.
+Previously the runqueue's lock protected all of \idle,
+this critical section has been made smaller which might be more efficient.
 
 \tryrunlocalspark is shown in algorithm \ref{alg:try_run_local_spark};
 It attempts to pop a spark of the engine's deque.
 If the spark deque is empty then \tryrunlocalspark
 will return NULL.
-If it successfully popped a spark it will
-check that the engine's current context is compatible with the spark.
-If incompatible \tryrunlocalspark will put the spark back on the engines
-spark deque return NULL.
-However when \idle calls \tryrunlocalspark the spark will always be
-compatible;
-we will return to this point later.
-We then prepare the engine for to execute the spark using
+If it was not empty then
+we prepare the engine to execute the popped spark using
 \prepareengineforspark
-(algorithm \ref{alg:prepare_engine_for_spark}),
-all this entails is making sure that the engine has a context, the context
-is loaded and has the correct parent stack pointer in its parent stack
-pointer register.
+(algorithm \ref{alg:prepare_engine_for_spark}).
+All this entails is making sure that the engine has a context,
+the context is loaded and
+the engine has the correct value in its parent stack pointer register.
 After this \tryrunlocalspark returns the spark's entry point to \idle which
-will jump to the code address.
+will jump to it.
+
+Before executing a spark,
+\tryrunlocalspark
+will check if the engine's current context is incompatible with the spark,
+if so it puts the spark back on the deque and returns NULL.
+However when \idle calls \tryrunlocalspark the spark will always be
+compatible.
+\tryrunlocalspark can also be called by \joinandcontinue,
+in this case the engine's context may be incompatbile with the spark.
+We will discuss this later including the test for incompatibliity and why we
+place the spark back onto the deque.
+
+\paul{Move later}
+A context is incompatible if it contains stack frames of a computation that
+is not a parent of the computation the spark represents.
+We test this using three conditions:
+first, is that there is a current context, a non-existent context cannot
+be incompatble;
+second, resume\_label is non-NULL if a current context represents an
+existing computation;
+third, if the current context does have a computation, then that computation
+may be incompatible if the spark's conjunction's original context is not the
+current context.
 
 \begin{algorithm}[tbp]
 \begin{minipage}{\textwidth}
