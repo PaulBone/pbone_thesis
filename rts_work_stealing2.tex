@@ -14,18 +14,22 @@ they were made together and their implementations are interlinked.
 Therefore we will present and benchmark them together as one set of changes.
 
 \plan{Describe problems with associating stacks with contexts}
-Sparks were originally stored on context local deques,
-which has several significant problems.
+Sparks were originally stored on context local deques.
+This has the following significant problems.
 
-\textbf{There is a dynamic number of spark deques.}
-The number of contexts changes during a programs execution,
+\begin{description}
+
+\item[There is a dynamic number of spark deques.]
+
+The number of contexts changes during a program's execution,
 therefore the number of spark deques also changes.
 This means that we must have code to manage this changing number of
 deques.
 This code makes the runtime system more complicated than necessary,
 both when stealing a spark and when creating or destroying a context.
 
-\textbf{Locking is required.}
+\item[Locking is required.]
+
 The management of contexts must be thread safe so that the set of
 spark deques is not corrupted.
 We store spark deques in a global array protected by a lock.
@@ -33,7 +37,8 @@ It may be possible to replace the array with a lock free data structure.
 However it is better to remove the need for thread safety by using a
 constant set of deques.
 
-\textbf{A large number of contexts makes work stealing slower.}
+\item[A large number of contexts makes work stealing slower.]
+
 In prior sections
 we have shown that the number of contexts in use can often be very high,
 much higher than the number of Mercury engines.
@@ -50,8 +55,7 @@ spark rather than block).
 Therefore the large majority of the suspended contexts will not have
 sparks on their deques,
 and the probability of selecting a deque at random with a spark on its
-stack is only a little bit higher than $M \choose N$ at best and
-$M \choose 1$ at worst.
+stack is low.
 Furthermore the value of $M$ can be very high in pathological cases.
 If an engine does not successfully steal a spark from a deque,
 it will continue by trying to steal a spark from a different deque.
@@ -66,14 +70,14 @@ page \pageref{alg:try_steal_spark_initial}).
 Each round of attempts (regardless of success or failure) has a
 complexity of $O(M)$.
 
+\end{description}
+
 \plan{We associate stacks with engines}
 The approach we have taken to solving these problems is based on associating
 spark deques with engines rather than with contexts.
 A running Mercury program has a constant number of engines,
 and therefore the number of spark deques will not vary.
-This allows us to remove the code used to resize the deque array,
-the array is filled in when the engines are created during startup,
-after which it is never modified.
+This allows us to remove the code used to resize the deque array.
 This makes context creation and destruction much simpler.
 It also removes the need for the lock protecting the global array of spark
 deques.
@@ -100,8 +104,7 @@ rather than the number of contexts.
           (MR\_engine.victim\_counter + attempt) \bmod MR\_num\_engines$
       \If{MR\_steal\_spark($MR\_spark\_deques$[$victim\_index$],
           \text{\code{\&}}$spark$)}
-        \State $MR\_engine.victim\_counter \gets
-          MR\_engine.victim\_counter + attempt$
+        \State $MR\_engine.victim\_counter \gets victim\_index$
         \State MR\_prepare\_engine\_for\_spark($spark$, NULL)
         \State \Return $spark.resume$
       \EndIf
@@ -110,7 +113,7 @@ rather than the number of contexts.
   \State \Return NULL
 \EndProcedure
 \end{algorithmic}
-\caption{try\_steal\_spark}
+\caption{MR\_try\_steal\_spark}
 \label{alg:try_steal_spark_revised}
 \end{algorithm}
 
@@ -142,17 +145,21 @@ would not exceed the context limit;
 this check has been moved into \trystealspark (line 2).
 Another change is that \trystealspark
 will now call \prepareengineforspark (line 7)
-which will load a context into the engine if it does not already have one.
+which will load a context into the engine if it does not already have one
 (algorithm \ref{alg:prepare_engine_for_spark}).
 Finally \trystealspark will return the address of the spark's code;
-the caller will jump to this address,
-if it is not NULL.
+the caller will jump to this address.
+If \trystealspark could not find a spark it will return NULL,
+in this case its caller will look for other work.
 
-In the previous version the lock was also used to protect the victim
-counter;
+In the previous version,
+the lock was also used to protect the victim counter;
 it ensured that round-robin selection of the victim was maintained.
 Now each engine independently performs its own round-robin selection of the
 victim using a new field \code{victim\_counter} in the engine structure.
+If a spark is found, \trystealspark will save the current victim index to
+this field, as this deque may contain more sparks which it can try to
+steal later.
 We have not evaluated if this policy is an improvement.
 However when compared with the improvement due to removing the lock and
 potentially large number of spark deques,
@@ -161,7 +168,7 @@ negligible.
 The two other changes are minor:
 we have removed the configurable limit of the number of work stealing
 attempts per round,
-and the test for null array slots has been removed;
+and the test for null array slots;
 both are now unnecessary.
 
 \begin{algorithm}[tbp]
@@ -243,46 +250,98 @@ are:
 \tryruncontext, \tryrunlocalspark and \trystealspark.
 They are separate C functions so that we can use them from procedures other
 than \idle, such as \joinandcontinue below.
-\idle always tries to find a runnable context before a local spark;
-we believe that executing a context is optimal
-as a context whose execution has already begun,
+\idle always tries to find a runnable context before a local spark.
+A context that has already been created usually represents work that is
+\emph{to the left of}
+any work that is still a spark (section \ref{sec:rts_work_stealing}).
+Therefore, we attempt to resume the execution of a context first
+as a context whose execution has already begun
 may make more parallel work available by creating sparks or signalling
 futures.
-Also if the context does not block then when it finishes its work it can be
-used to execute a spark from the engine's local spark queue.
+Also if the context does not block, then when it finishes its work,
+it can be used to execute a spark from the engine's local spark queue.
 Checking for runnable contexts first also helps to avoid the creation of new
-contexts before existing context's computations are finished.
+contexts before existing contexts' computations are finished.
 This partially avoids deadlocks that can occur when the context limit is
 exceeded:
 executing a waiting context rather than attempting to create a new context
 for a spark does not increase the number of contexts that exist.
 
+\begin{figure}
+\begin{center}
+\begin{verbatim}
+nested_par(...) ;-
+    (
+        p(..., X),
+    &
+        (
+            q(X, ...)
+        & 
+            r(..., Y)
+        ),
+        s(...)
+    &
+        t(Y, ...)
+    ).
+\end{verbatim}
+\end{center}
+\caption{Nested dependent parallelism.}
+\label{fig:nested_dep_par}
+\end{figure}
+
 If \idle cannot find a context to resume then it
 will call \tryrunlocalspark.
 If there is a spark to execute and the engine does not have a context,
-a new one will be created.
-We do this without checking the context limit;
-this, combined with attempting to run contexts before sparks (above)
-avoids deadlocks.
-We ensure that the system can still make progress when the context limit is
-exceeded by not checking the limit when executing a local spark.
-For example,
-a situation can occur when a context may block on
-a future that can only be signalled by another computation that is currently
-represented by a spark, and therefore the creation of a new context may be
-necessary.
-If we did not allow contexts to be created for local sparks then deadlocks
-would be possible.
-Not checking the context limit in \tryrunlocalspark does not usually cause
-the number of contexts to rise:
-local spark execution tends to be in depth first left to right order
-(sequential order) and is unlikely to block contexts and create new
-contexts.
-As described above \trystealspark does check the context limit.
-While the context limit is a work-around to prevent some worst case
-behaviour,
-it is still important to use scheduling policies that keep the number of
-contexts low:
+a new one needs to be created.
+We considered only creating a context and executing the spark only if the
+context limit had not been reached,
+however this can create a problem, which we explain using an example.
+Consider figure \ref{fig:nested_dep_par} which shows two nested
+parallel conjunctions.
+There are also two futures that create dependencies between the parallel
+computations:
+\code{X} creates a dependency between \code{p} and \code{q},
+and \code{Y} creates a dependency between \code{r} and \code{t}.
+When an engine, called E1,
+executes this procedure it pushes the spark for the second and third
+conjuncts of the outer conjunction onto its local spark deque.
+E1 then begins the execution of \code{p}.
+A second engine, called E2,
+steals the spark from E1's spark deque and immediatly creates two new
+sparks, the first is for \code{t} and the second for \code{r}.
+It pushes the sparks onto its deque,
+therefore the spark for \code{t} is on the bottom (cold end).
+E2 then begins the execution of \code{q}.
+A third engine, E3,
+wakes up and steals the spark for \code{t} spark from E2.
+Next,
+E2 attempts to read the value of \code{X} in \cope{q} but it has not yet
+been produced,
+therefore E2 suspends its context and calls \idle, it cannot find a context
+ot execute and calls \tryrunlocalspark,
+which finds the spark for \code{r}.
+E2 needs a new context to execute \code{r}, if the context limit is exceeded
+it E2 cannot do any work.
+And if E2 does not execute \code{r} then E3 cannot complete the execution of
+\code{t} and free up its context.
+The system will not deadlock, as the execution of \code{p} by E1 can still
+continue, and will eventually allow the execution of \code{q} to continue.
+However, we still wish to avoid such situations,
+therefore \tryrunlocalspark does not check the context limit.
+By doing this E2 is able to create a context and execute \code{r},
+this can never create more than a handful of extra contexts:
+while the limit is exceeded engines will not steal work and will therefore
+execute sparks in a left-to-right order only where dependencies and barriers
+cannot cause more contexts to become blocked.
+The two choices we've made,
+executing local sparks without checking the context limit and
+attempting to resume contexts before attempting to execute sparks,
+work together to prevent deadlocks that could be caused by
+the context limit and dependencies.
+Even though the context limit is a work-around to prevent a type of worst
+case behaviour,
+it is still important to use scheduling policies such as these that keep the
+number of contexts low:
 contexts consume significant amounts of memory and
 the garbage collector spends time scanning that memory.
 By reducing the number of contexts we can improve memory and time usage.
