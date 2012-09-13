@@ -19,21 +19,22 @@ of it to place elsewhere, for example, in the background section.}
 \item \paul{Coverage (and var use) now work on deep profiling data.}
 \end{itemize}
 
-Introducing parallelism into a Mercury program seems easy.
+Introducing parallelism into a Mercury program is easy.
 A programmer can use the parallel conjunction operator (an ampersand)
 instead of the plain conjunction operator (a comma) to tell the compiler
 that the conjuncts of the conjunction should be executed in parallel with
 one another.
 However,
-introducing parallelism efficiently is much more difficult.
-It is easy to make common mistakes.
-One such mistake is creating too much parallelism:
-making a task available to another CPU
+in many places where parallelism can be introduced it will not be
+profitable as it is not worth while parallelising small computations.
+Making a task available to another CPU
 may take thousands of instructions,
 spawning off a task that takes only a hundred instructions is clearly a loss.
-Even spawning off a tack of a few thousand instructions is not a win;
+Even spawning off a task of a few thousand instructions is not a win;
 it should only be done for computations
 that take long enough to benefit from parallelism.
+It is difficult for a programmer to determine if parallelisation of any
+particular computation is worth while.
 Researchers have therefore worked towards automatic parallelisation.
 Autoparallelising compilers have long tried to use granularity analysis to
 ensure that they only spawn off computations whose cost will probably exceed
@@ -41,27 +42,31 @@ the spawn-off cost by a comfortable margin.
 However, this is not enough to yield good results,
 because data dependencies may \emph{also} limit
 the usefulness of running computations in parallel.
-If one computation blocks almost immediately
+If a spawned off computation blocks almost immediately
 and can resume only after another has completed its work,
 then the cost of parallelisation again exceeds the benefit.
 
-This chapter is based on and extends our paper:
+%This chapter is based on and extends our paper:
+%
+%\begin{quote}
+%\pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
+%% This spelling of parallelisation is okay.
+%\pubtitle{Estimating the overlap between dependent computations for automatic
+%parallelization}
+%\pubhow{Theory and Practice of Logic Programming,}{11(4--5):575--591, 2011.}
+%\end{quote}
 
-\begin{quote}
-\pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
-% This spelling of parallelisation is okay.
-\pubtitle{Estimating the overlap between dependent computations for automatic
-parallelization}
-\pubhow{Theory and Practice of Logic Programming,}{11(4--5):575--591, 2011.}
-\end{quote}
-
-\noindent
-It presents a set of algorithms for recognising places in a program
-where it is worthwhile to execute two or more computations in parallel
-that pay attention to the second of these issues as well as the first.
+%\noindent
+This chapter presents a set of algorithms for recognising places in a
+program where it is worthwhile to execute two or more computations in
+parallel,
+algorithms that pay attention to the second of these issues as well as the
+first.
 Our system uses profiling information to compute
-the times at which a procedure call consumes the values of its input arguments
-and the times at which it produces the values of its output arguments.
+times at which a procedure call is expected to consume the values of its
+input arguments
+and the times at which it is expected to produce the values of its output
+arguments.
 Given two calls that may be executed in parallel,
 our system uses the times of production and consumption
 of the variables they share
@@ -70,13 +75,7 @@ when run in parallel,
 and therefore whether executing them in parallel is a good idea or not.
 
 We have implemented this technique for Mercury
-in the form of a tool\footnote{
-    This tool was derived from the initial implementation described in
-    Section \ref{honours_autopar}, Page \pageref{honours_autopar} and by
-    \citet{bone:2008:hons}.
-    However many parts of the tool have changed and it has only very few
-    parts in common with the original version.
-    Everything described in this chapter is new unless otherwise specified.}
+in the form of a tool
 that uses data from Mercury's deep profiler
 to generate recommendations about what to parallelise.
 The compiler applies these recommendations the next time the program is
@@ -88,12 +87,16 @@ than representative input data for the profiling run.
 
 The structure of this chapter is as follows.
 Section \ref{sec:overlap_aims} states our two aims for this chapter.
-Then Section \ref{sec:overlap_approach} outlines our general approach,
-in addressing these aims
-which the later sections fill in.
+Then Section \ref{sec:overlap_approach} outlines our general approach
+including information about the callgraph search for parallelisation
+opportunities.
 Section \ref{sec:overlap_reccalls}
-describes how to calculate information about recursive calls missing from
+describes how we calculate information about recursive calls missing from
 the profiling data.
+Section \ref{sec:overlap_coverage}
+describes our change to coverage profiling which provides more accurate
+coverage data for the new callgraph based search for parallelisation
+opportunities.
 Section \ref{sec:overlap_overlap_alg} describes our algorithm for
 calculating the execution overlap between two or more dependent conjuncts.
 A conjunction with more than two conjuncts can be parallelised
@@ -2723,122 +2726,12 @@ and Tom Conway and Peter Wang in particular,
 for creating the infrastructure we build upon,
 and the anonymous referees for their suggestions.
 
-% \vspace{-5mm}
+\section{Related work}
+
+\paul{Say how this work differes from my honours work.}
 
 
 % TODO Items.
-\newpage
-
-\begin{table*}
-\begin{tabular}{lll}
-Item & Owner & Status \\
-\hline
-
-\todoitem{
-when calculating the average time of consumption of a variable
-in a branched structure,
-try giving ZERO weight to arms that themselves are trivial in cost.
-example: by\_phases in the front end.
-}{n/a}{later} \\
-
-\todoitem{
-fix the report generated by mdprof\_feedback:
-it says it reports the number of parallelised conjunctions,
-when what it reports is the number of procedures
-that CONTAIN parallelised conjunctions.
-If some procedures contain more than once,
-the report is misleading.}{pbone}{done} \\
-
-\todoitem{
-implement option (default on) to respect boundaries
-when calculating variable signal and wait times:}{pbone}{DONE} \\
-
-\todoitem{
-detecting parallelism opportunities involving nonatomic
-conjuncts}{pbone}{DONE} \\
-
-\todoitem{
-implementation of throttling by default}{zs and pbone}{DONE} \\
-
-\todoitem{
-branch-and-bound on all conjuncts,
-then peel off conjuncts at start and end}{zs and pbone}{DONE} \\
-
-\todoitem{post message about Boehm parameters}{pbone}{DONE} \\
-
-\todoitem{
-consider keeping a non-first parallel conjunct on the original
-engine}{all}{Different paper} \\
-
-\todoitem{specialisation: parallel for some ancestors, not others}{zs, with
-feedback work by pbone}{Different paper} \\
-
-\todoitem{
-grouping conjuncts that together do one thing, reduces $N$ for
-B'n'B}{pbone}{low priority} \\
-
-\todoitem{best-first, not depth-first search}{all}{low priority} \\
-
-\todoitem{gzip Deep.data}{zs}{low priority} \\
-
-\todoitem{include Deep.procrep in Deep.data}{zs}{low priority} \\
-
-\todoitem{
-Push costly calls into branching code, analysis part}{pbone}{DONE} \\
-
-\todoitem{
-Push costly calls into branching code, compiler part}{zs}{DONE} \\
-
-\todoitem{
-  Investigate Haskell's nofib benchmark for useful
-  programs.}{peters}{DONE} \\
-
-\todoitem{
-  Investigate the Mars compiler as a benchmark.}{peters}{} \\
-
-\todoitem{
-  Introduce goal IDs to replace goal paths in many places}{zs}{DONE} \\
-
-\todoitem{
-  Fix --max-contexts-per-thread}{pbone}{} \\
-
-\todoitem{
-  Put workstealing deques in engines, not contexts}{pbone}{DONE} \\
-
-\todoitem{
-enhance work stealing and stack segment caching algorithms}{zs
-  and pbone and maybe wangp}{} \\
-
-\todoitem{
-finish deep profiler paper}{zs}{} \\
-
-\todoitem{
-finish dep and parallel paper}{zs}{WIP} \\
-
-\todoitem{
-Mission Critical benchmark}{pbone and probably zs}{} \\
-
-\todoitem{compiler as benchmark}{all}{} \\
-
-\todoitem{description of the cost of recursive calls algorithm}{all}{}
-\\
-
-\todoitem{
-divide and conquer limit:
-same seq vs parallel for double recursive procs}{all}{} \\
-
-\todoitem{consider how recursive calls in parallelised conjunctions
-  affect the speedup}{pbone with help}{} \\
-
-\todoitem{throttle only looping/D'n'C code}{pbone}{} \\
-
-\todoitem{Commit various things, benchmarks, stats program to some
-  repository}{pbone}{DONE} \\
-
-\todoitem{promise that you do not care what random number sequence you get}{}{}
-
-\end{tabular}
-\end{table*}
 
 
 % \begin{algorithm}
