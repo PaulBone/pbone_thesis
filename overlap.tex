@@ -332,40 +332,35 @@ Together these tests dramatically reduce the portions of a program that need
 analysis,
 reducing the time required to search for parallelisation opportunities.
 
-The previous version of the tool did not use the call graph.
-Instead it looked at the most expensive procedures,
-considering only those whose cost was above its own threshold.
-The callgraph traversal is better because it allows us to avoid parallelising
-a callee when the caller already provides enough parallelism.
-
 For each procedure in the call tree,
-we search its body for conjunctions that contain
-two or more calls with execution times above a configurable threshold.
+we search its body for conjunctions that contain two or more calls with
+execution times above yet another configurable threshold.
 This test also reduces the parts of the program that will be analysed
 further;
-it trivially rejects procedures that cannot contain any profitable
+it quickly rejects procedures that cannot contain any profitable
 parallelism.
 Parallelising a conjunction
 requires partitioning the original conjuncts into two or more groups,
 with the conjuncts in each group being executed sequentially
 but different groups being executed in parallel.
-each group represents a hypothetical sequential conjunction,
+Each group represents a hypothetical sequential conjunction,
 and the set of groups represents a hypothetical parallel conjunction.
 As this parallel conjunction represents a possible parallelisation of the
 original conjunction, we call it a \emph{candidate parallelisation}.
 Most conjunctions can be partitioned into several alternative candidate
-parallelisation.
-For example, we showed above that \mapfoldl has three alternative
+parallelisations,
+for example, we showed above that \mapfoldl has three alternative
 parallelisations of its recursive branch.
 We use the algorithms of section \ref{sec:overlap_overlap_alg}
-to compute the expected parallel execution time of the parallelisations.
+to compute the expected parallel execution time of each parallelisation.
 These algorithms take into account the runtime overheads of parallel execution.
 However,
-large conjunctions can have a very large ($2^{n-1}$) number of
-parallelisations,
+large conjunctions can have a very large number of
+parallelisations ($2^{n-1}$ for $n$ conjuncts).
 Therefore,
-we use the algorithms of section \ref{sec:overlap_howto} to generate
-only the parallelisations whose performance we want to evaluate.
+we use the algorithms of section \ref{sec:overlap_howto}
+to heuristically reduce the number of parallelisations whose expected
+execution time we calculate.
 If the best-performing parallelisation we find
 shows a nontrivial speedup over sequential execution,
 we remember that we want to perform that parallelisation on this conjunction.
@@ -375,8 +370,9 @@ therefore multiple candidate parallelisations may be generated for different
 conjunctions in a procedure.
 The same procedure may also appear more than once in the call graph,
 and therefore multiple parallelisations may be generated for the same
-conjunctions within a procedure,
-we discuss how we resolve these in section \ref{sec:overlap_pragmatic}.
+conjunctions within the procedure.
+We discuss how we resolve conflicting recomentations for the same procedure
+in section \ref{sec:overlap_pragmatic}.
 
 \paul{Move this later when we need to talk about program representation and
 coverage}
@@ -590,7 +586,7 @@ We must divide $Calls_{RecCallSites}$ by two as there are two recursive call
 sites.
 
 However,
-if consistently worst-case pivots are choosen then \quicksortacc fails to
+if consistently worst-case pivots are chosen then \quicksortacc fails to
 divide the list at each recursion passing an empty list to one recursive call
 and a list whose length is one less than the input list to the other call.
 We do not consider this to be a problem,
@@ -2727,7 +2723,13 @@ and the anonymous referees for their suggestions.
 
 \section{Related work}
 
-\paul{Say how this work differes from my honours work.}
+\paul{Say how this work differs from my honours work.}
+
+The previous version of the tool did not use the call graph.
+Instead it looked at the most expensive procedures,
+considering only those whose cost was above its own threshold.
+The callgraph traversal is better because it allows us to avoid parallelising
+a callee when the caller already provides enough parallelism.
 
 
 % TODO Items.
