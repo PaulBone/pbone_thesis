@@ -307,7 +307,7 @@ executes this procedure it pushes the spark for the second and third
 conjuncts of the outer conjunction onto its local spark deque.
 E1 then begins the execution of \code{p}.
 A second engine, called E2,
-steals the spark from E1's spark deque and immediatly creates two new
+steals the spark from E1's spark deque and immediately creates two new
 sparks, the first is for \code{t} and the second for \code{r}.
 It pushes the sparks onto its deque,
 therefore the spark for \code{t} is on the bottom (cold end).
@@ -318,7 +318,7 @@ Next,
 E2 attempts to read the value of \code{X} in \code{q} but it has not yet
 been produced,
 therefore E2 suspends its context and calls \idle, it cannot find a context
-ot execute and calls \tryrunlocalspark,
+to execute and calls \tryrunlocalspark,
 which finds the spark for \code{r}.
 E2 needs a new context to execute \code{r}, if the context limit is exceeded
 it E2 cannot do any work.
@@ -374,7 +374,7 @@ and then loads the new context.
 It clears the context's resume field and then returns the field's previous
 value, which \idle will jump to.
 The context's resume field must be cleared here as it may later be
-synchronized on by \joinandcontinue.
+synchronised on by \joinandcontinue.
 Previously the runqueue's lock protected all of \idle,
 this critical section has been made smaller which might be more efficient.
 
@@ -399,8 +399,8 @@ if so it puts the spark back on the deque and returns NULL.
 However when \idle calls \tryrunlocalspark the spark will always be
 compatible.
 \tryrunlocalspark can also be called by \joinandcontinue,
-in this case the engine's context may be incompatbile with the spark.
-We will discuss this later including the test for incompatibliity and why we
+in this case the engine's context may be incompatible with the spark.
+We will discuss this later including the test for incompatibility and why we
 place the spark back onto the deque.
 
 \paul{Move later}
@@ -408,7 +408,7 @@ A context is incompatible if it contains stack frames of a computation that
 is not a parent of the computation the spark represents.
 We test this using three conditions:
 first, is that there is a current context, a non-existent context cannot
-be incompatble;
+be incompatible;
 second, resume\_label is non-NULL if a current context represents an
 existing computation;
 third, if the current context does have a computation, then that computation
