@@ -492,20 +492,18 @@ the structures of the bodies of those procedures,
 and the frequency of execution of each path through those bodies.
 
 For now, we will restrict our attention to SCCs
-that contain only a single procedure,
-since this inference process is much simpler for them.
-Later, we will discuss how this restriction can be lifted at least partially.
-We will further restrict our attention to procedures
-whose bodies match one of a three patterns.
-There are several more patterns, we discuss them later but do not currently
-handle them.
+that contain only a single procedure and where that procdure matches one of
+the three recursion patterns below.
+These are among the most commonly used recursion patterns and the
+inference processes for them are also among the simplest.
+Later, we will discuss how partial support could be added for mutually
+recursive procedures.
 
 {\bf Pattern 1: no recursion at all.}
 This is not a very interesting pattern, but we support it completely.
 We do not need to compute the costs of recursive calls if a procedure is not
 recursive.
 
-\paul{Rename to singly recursive, I think this is more descriptive}
 {\bf Pattern 2: simply recursive procedures.}
 The first pattern consists of procedures whose bodies
 have just two types of execution path through them:
@@ -518,11 +516,13 @@ Let us say that of the 100 calls to the procedure,
 and 10 were from a call site in the parent SCC.
 Then we would calculate
 that each non-recursive call
-would on average yield nine recursive calls.
+(from the parent SCC)
+would on average yield nine recursive calls
+(from within the SCC).
 We call this the average deepest recursion:
 
 \begin{equation*}
-Depth = Calls_{RecCallSites} / Calls_{ParentCallSite}
+AvgMaxDepth = Calls_{RecCallSites} / Calls_{ParentCallSite}
 \end{equation*}
 
 The deepest call executes only the non-recursive path,
@@ -545,8 +545,8 @@ We can now calculate the average cost of a call at any level of the
 recursion.
 Simply recursive procedures have a uniform number of calls at each depth of
 the recursion.
-The depth representing the typical use of such a procedure is half of $Depth$
-calculated above.
+The depth representing the typical use of such a procedure is half of
+$AvgMaxDepth$.
 This allows us to calculate the typical cost of a recursive call from this
 call site.
 For example, if \mapfoldl's non-recursive path cost is 10 call sequences
@@ -556,20 +556,38 @@ and its typical depth is $9/2 = 4.5$.
 Then its typical cost is $10 + 4.5(100 + 1) = 464.5$ call sequence counts.
 
 \begin{figure}[tb]
-\begin{verbatim}
-quicksort([], Acc, Acc).
-quicksort([Pivot | Xs], Acc0, Acc) :-
-    partition(Pivot, Xs, Lows, Highs),
-    quicksort(Lows, Acc0, Acc1),
-    quicksort(Highs, [Pivot | Acc1], Acc).
-\end{verbatim}
-\caption{Accumulator quicksort}
-% the two recursive calls are highly dependent.
+\begin{center}
+\begin{minipage}[b][1.9in]{0.49\textwidth}
+\subfigure[Accumulator quicksort]{%
 \label{fig:quicksort_acc}
+\begin{tabular}{l}
+\code{quicksort([], Acc, Acc).} \\
+\code{quicksort([Pivot $|$ Xs], Acc0, Acc) :-} \\
+\code{~~~~partition(Pivot, Xs, Lows, Highs),} \\
+\code{~~~~quicksort(Lows, Acc0, Acc1),} \\
+\code{~~~~quicksort(Highs, [Pivot $|$ Acc1], Acc).} \\
+% Add whitespace to shift the table upwards without also moving the caption.
+\\
+\\
+\\
+\end{tabular}
+}
+\hfill
+\end{minipage}
+\begin{minipage}[b][1.9in]{0.49\textwidth}
+\subfigure[Callgraph]{%
+\includegraphics[width=0.98\textwidth]{pics/call_tree_dc}
+\label{fig:quicksort_acc_callgraph}
+}
+\hfill
+\end{minipage}
+\end{center}
+\vspace{-2ex}
+\caption{Accumulator quicksort, definition and callgraph}
 \end{figure}
 
 {\bf Pattern 3: Divide-and-conquer procedures.}
-The second pattern consists of procedures whose bodies
+The third pattern consists of procedures whose bodies
 that also have just two types of execution path through them:
 base cases, and recursive cases containing \emph{two} recursive call sites.
 Our example for this category is an accumulator version of \quicksortacc,
@@ -580,25 +598,52 @@ problematic.
 We know that if a good value for \code{Pivot} is chosen \quicksortacc runs
 optimally,
 dividing the list in half with each recursion.
-Therefore there are a minimum of
-$\log_2 (Calls_{RecCallSites} / (2 \times Calls_{ParentCallSites}))$ recursions.
-We must divide $Calls_{RecCallSites}$ by two as there are two recursive call
-sites.
-
-However,
-if consistently worst-case pivots are chosen then \quicksortacc fails to
-divide the list at each recursion passing an empty list to one recursive call
-and a list whose length is one less than the input list to the other call.
-We do not consider this to be a problem,
-such a case is an error in the programmer's choice of algorithm or use of the
-algorithm.
-It would create poor performance in sequential code and therefore we are not
-interested in such cases when parallelising code.
-We say that the average deepest recursion of divide and conquer code is:
+Figure \ref{fig:quicksort_acc_callgraph} shows the callgraph for such an
+invocation of \quicksortacc.
+This graph has 15 nodes excluding ``main'',
+each node has exactly one call leading to it;
+therefore there is one call from outside \quicksortacc's SCC
+(the call from ``main''),
+and 14 calls within the SCC
+(the calls from ``qs'' nodes).
+By inspection, there are four complete levels of recursion.
+There are always $\log_2(N+1)$ levels in a divide and conqure call graph
+with $N$ nodes,
+and since there are always $N-1$ calls from within the SCC for a graph with
+$N$ nodes then
+it follows that,
+there are $\log_2(C+2)$ levels for a divide and conqure call graph with $C$
+recursive calls.
+In this exaple $C = 14$ and therefore there are four levels of recursion
+as we noded above by inspection.
+If there were two invocations of \quicksortacc from \code{main/2} then there
+would be two calls from outside the SCC and 28 calls from within,
+in this case the depth is still four.
+The average maximum recursion depth in terms of call counts for divide and
+conqure code is therefore:
 
 \begin{equation*}
-Depth = \log_2 \frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}}
+AvgMaxDepth = \log_2 
+	\left(\frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}} + 2\right)
 \end{equation*}
+
+If consistently worst-case pivots are chosen then \quicksortacc fails to
+divide the list at each recursion passing an empty list to one recursive call
+and a list whose length is one item shorter than the input list to the other
+call.
+Pathologically bad cases are rare and are considered bugs;
+programmers will usually want to remove such bugs in order to improve
+sequential execution performance.
+Slight imbalance in a callgraph is a more common occurance,
+such situtations fall into the same class as those where the profiling data
+is not quite representative of the optimised program's future use,
+or our estimates of parallel execution overheads do not match the hardware's
+actual performance.
+Such variations in our calcuations inputs rarely change a ``should
+parallelise'' decision into a ``should not parallelise'' decision and
+\emph{vice-versa}.
+Therefore, we assume that all divide and conqure code is, on average,
+evenlly balanced.
 
 As before, the deepest call executes only the non-recursive path,
 and incurs only its costs.
@@ -640,8 +685,9 @@ it is the only other goal in either the base case or recursive case with a
 non-zero cost.
 The call at the 16\textsuperscript{th} level of recursion is the call from the
 parent SCC into \quicksortacc.
-We want to calculate the cost of the calls next deepest level, the
-15\textsuperscript{th} level, which is:
+We want to calculate the cost of the calls in the next level down from the
+parent,
+the 15\textsuperscript{th} level, which is:
 $0 + 2^{15 - 1}(35.5 + 1) \approx 591,462$.
 This is the average cost of both of the two recursive calls;
 depending on how the list was partitioned,
@@ -706,8 +752,9 @@ sense.
 \plan{How we classify recursion type}
 We classify recursion types with an algorithm that walks over the structure
 of a procedure.
-As it traverses the procedure it counts the number of recursive calls along
-each path, the path's cost and the number of times the path is executed.
+As it traverses the procedure,
+it counts the number of recursive calls along each path,
+the path's cost and the number of times the path is executed.
 When a branching structure like an if-then-else or switch is found,
 the algorithm processes each branch independently and then merges its
 results at the end of the branch.
@@ -715,19 +762,19 @@ If several branches have the same number of recursive calls (including zero)
 they can be merged.
 If several branches have different numbers of recursive calls they are all
 added to the result set.
-This means that the result of traversing a goal must include data for
-several different types of recursion counts.
-Consider the example in figure \ref{fig:2_reccalls_4_paths},
+This means that the result of traversing a goal might include data for
+several different recursion counts.
+Consider the example in figure \ref{fig:2_reccalls_4_paths}.
 The example code has been annotated with coverage information (in the
 third column) and with cost information where it is available (forth
 column). 
-The conjunction on lines five and six does not contain a recursive call.
+The conjunction on lines six and seven does not contain a recursive call.
 The result of processing it is a list containing a single tuple:
-\code{(reccalls: 0, coverage: 60\%, cost: 1,000)}.
+\code{[(reccalls: 0, coverage: 60\%, cost: 1,000)]}.
 The other conjunction in the same switch (lines three and four) does contain
 a recursive call.
 The result of processing it is a list containing the tuple:
-\code{(reccalls: 1, coverage: 20\%, cost: 0)}.
+\code{[(reccalls: 1, coverage: 20\%, cost: 0)]}.
 The result for the remaining switch arm (lines 9 and 10) is:
 \code{[(reccalls: 0, coverage: 20\%, cost: 2,000)]}.
 When the algorithm is finished processing all the cases in the switch it
@@ -735,8 +782,8 @@ adds them together;
 When adding tuples, we can add tuples together with the same number of
 recursive calls by adding their coverage and adding their costs weighted by
 coverage (these are per-call costs).
-This simplifies multiple branches with the same number of recursive calls
-into a single branch.
+This simplifies multiple code paths with the same number of recursive calls
+into a single ``code path''.
 The result of processing the switch from line 2--11 is:
 
 \noindent
@@ -827,8 +874,8 @@ However, we can represent all six paths using just three tuples,
 one for each path type.
 This allows us to conveniently handle procedures of different forms as
 rather simple recursion types such as ``simply recursion'' we saw above:
-a procedure with two recursive branches with one call each can be handled as
-if it has just one recursive branch and one base case.
+a procedure with two recursive paths with one call each can be handled as
+if it has just one recursive path and one base case.
 
 We can determine the type of recursion for any list of recursion path
 information.
@@ -846,7 +893,10 @@ Then the recursion pattern is similar to divide and conquer except that the
 base in the formulas shown above is $N$ rather than 2.
 We have not found it necessary to handle these cases.
 
+\paul{Clarify if the table shows static or dynamic (deep) procedure counts.}
+
 \begin{table}
+\begin{center}
 \begin{tabular}{l|rrr}
 Recursion Type & No.\ of Procedures & Percent & Total cost \\
 \hline
@@ -867,9 +917,11 @@ Other recursion with rec-branches: 2, 3, 4
                            &    564 &  0.15\% &     3,902,188 \\
 Other multi recursive-branch:
                            &    200 &  0.05\% &         5,908 \\
-Unknown (built-in code)    & 10,623 &  2.83\% &           364 \\
+Unknown (built-in \& foreign language code) 
+						   & 10,623 &  2.83\% &           364 \\
 Unknown (error)            &  1,180 &  0.32\% &     8,838,291 \\
 \end{tabular}
+\end{center}
 \caption{Survey of recursion types in an execution of the Mercury compiler}
 \label{tab:recursion_types}
 \end{table}
@@ -896,13 +948,13 @@ than divide and conquer.
 The ``Other'' recursion types refer to cases where there are multiple
 recursive paths through the procedure with different numbers of recursive
 calls plus a base case,
-however these cases have not been classified further.
+however we have not classified these cases further.
 Some of these ``Other'' cases are due to the implementation of the
 \code{map} ADT and library module,
 which uses a 2--3--4 tree implementation, and hence many of the
 mutli-recursive path cases with 2, 3 or 4 recursive calls on a path
 are often 2--3--4 tree algorithms.
-These algorithms also account for some of the other mutli recursive path
+These algorithms also account for some of the other multi recursive path
 cases,
 such as those with 2 or 3 recursive calls on a path,
 these may be due to the same algorithms running on a tree without any
