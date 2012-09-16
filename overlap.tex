@@ -317,7 +317,7 @@ as they understand what input is representative for their program.
 
 \plan{DFS \& limits}
 Our feedback tool looks for parallelisation opportunities
-by doing a depth-first search of the call tree of the profling run,
+by doing a depth-first search of the call tree of the profiling run,
 each node of which is an SCC (strongly connected component) of procedures.
 It explores the subtree below a node in the tree
 only if the per-call cost of the subtree is greater than a configurable
@@ -371,7 +371,7 @@ conjunctions in a procedure.
 The same procedure may also appear more than once in the call graph,
 and therefore multiple parallelisations may be generated for the same
 conjunctions within the procedure.
-We discuss how we resolve conflicting recomentations for the same procedure
+We discuss how we resolve conflicting recommendations for the same procedure
 in section \ref{sec:overlap_pragmatic}.
 
 \paul{Move this later when we need to talk about program representation and
@@ -492,7 +492,7 @@ the structures of the bodies of those procedures,
 and the frequency of execution of each path through those bodies.
 
 For now, we will restrict our attention to SCCs
-that contain only a single procedure and where that procdure matches one of
+that contain only a single procedure and where that procedure matches one of
 the three recursion patterns below.
 These are among the most commonly used recursion patterns and the
 inference processes for them are also among the simplest.
@@ -607,20 +607,20 @@ therefore there is one call from outside \quicksortacc's SCC
 and 14 calls within the SCC
 (the calls from ``qs'' nodes).
 By inspection, there are four complete levels of recursion.
-There are always $\log_2(N+1)$ levels in a divide and conqure call graph
+There are always $\log_2(N+1)$ levels in a divide and conquer call graph
 with $N$ nodes,
 and since there are always $N-1$ calls from within the SCC for a graph with
 $N$ nodes then
 it follows that,
-there are $\log_2(C+2)$ levels for a divide and conqure call graph with $C$
+there are $\log_2(C+2)$ levels for a divide and conquer call graph with $C$
 recursive calls.
-In this exaple $C = 14$ and therefore there are four levels of recursion
-as we noded above by inspection.
+In this example, $C$ is 14 and therefore there are four levels of recursion
+as we noted above by inspection.
 If there were two invocations of \quicksortacc from \code{main/2} then there
 would be two calls from outside the SCC and 28 calls from within,
 in this case the depth is still four.
 The average maximum recursion depth in terms of call counts for divide and
-conqure code is therefore:
+conquer code is therefore:
 
 \begin{equation*}
 AvgMaxDepth = \log_2 
@@ -634,16 +634,16 @@ call.
 Pathologically bad cases are rare and are considered bugs;
 programmers will usually want to remove such bugs in order to improve
 sequential execution performance.
-Slight imbalance in a callgraph is a more common occurance,
+Slight imbalance in a callgraph is a more common occurrence,
 such situtations fall into the same class as those where the profiling data
 is not quite representative of the optimised program's future use,
 or our estimates of parallel execution overheads do not match the hardware's
 actual performance.
-Such variations in our calcuations inputs rarely change a ``should
+Such variations in our calculations' inputs rarely change a ``should
 parallelise'' decision into a ``should not parallelise'' decision and
 \emph{vice-versa}.
-Therefore, we assume that all divide and conqure code is, on average,
-evenlly balanced.
+Therefore, we assume that all divide and conquer code is, on average,
+evenly balanced.
 
 As before, the deepest call executes only the non-recursive path,
 and incurs only its costs.
@@ -952,7 +952,7 @@ however we have not classified these cases further.
 Some of these ``Other'' cases are due to the implementation of the
 \code{map} ADT and library module,
 which uses a 2--3--4 tree implementation, and hence many of the
-mutli-recursive path cases with 2, 3 or 4 recursive calls on a path
+multi-recursive path cases with 2, 3 or 4 recursive calls on a path
 are often 2--3--4 tree algorithms.
 These algorithms also account for some of the other multi recursive path
 cases,
