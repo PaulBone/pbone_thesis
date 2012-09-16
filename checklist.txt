@@ -11,4 +11,5 @@ Overlong/underlong lines
 Line numbers for algorithms.
 Acknoledgment of comtributors (in front matter)
 Positioning of floats
+Horizontal Centering of floats.
 
