@@ -1,0 +1,32 @@
+digraph G {
+	// rankdir = LR;
+
+	node [label="qs"];
+	main [label="main"];
+
+	main -> qs;
+
+	qs -> qs1;
+	qs -> qs2;
+
+	qs1 -> qs1_1;
+	qs1 -> qs1_2;
+
+	qs2 -> qs2_1;
+	qs2 -> qs2_2;
+
+	qs1_1 -> qs1_1_1;
+	qs1_1 -> qs1_1_2;
+
+	qs1_2 -> qs1_2_1;
+	qs1_2 -> qs1_2_2;
+	
+	qs2_1 -> qs2_1_1;
+	qs2_1 -> qs2_1_2;
+
+	qs2_2 -> qs2_2_1;
+	qs2_2 -> qs2_2_2;
+
+}
+
+
