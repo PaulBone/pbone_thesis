@@ -964,11 +964,77 @@ could not handle.
 These are primarily procedures that may backtrack because they are either
 \dnondet or \dmulti.
 
+\begin{figure}
+\begin{center}
+\subfigure[One loop]{%
+\label{fig:mutrec1}
+\includegraphics[scale=0.75]{pics/mutrec1}
+}
+%
+\hspace{0.09\textwidth}
+%
+\subfigure[Two loops]{%
+\label{fig:mutrec2}
+\includegraphics[scale=0.75]{pics/mutrec2}
+}
+%
+\hspace{0.09\textwidth}
+%
+\subfigure[Three loops]{%
+\label{fig:mutrec2}
+\includegraphics[scale=0.75]{pics/mutrec3}
+}
+\end{center}
+\caption{Mutual recursion}
+\label{fig:mutrec}
+\end{figure}
+
 \plan{Mutual recursion}
+We can handle simple cases of mutual recursion by a process of hypothetical
+inlining.
+Consider the call graph in figure \ref{fig:mutrec1}.
+In this example $f$, $g$ and $h$ represent an SCC,
+$f$ calls $g$, which calls $h$, which calls $f$.
+These calls are recursive, they create a loop between all three procedures.
+Prior to doing the recursion path analysis we could inline each of these
+procedure's representations inside one another as follows:
+inline $h$ into $g$ and then inline $g$ into $f$.
+This creates a new pseudo-procedure that is equivalent to the loop between the
+three procedures.
+We can then run the recursion path analysis on this procedure and apply the
+results to the three original procedures.
+We have not yet needed to implement call site cost analysis for mutually
+recursive procedures;
+therefore this discussion is a thought experiment and not part of our
+analysis tool.
+
+We believe that we can handle some other forms of mutually recursive code.
+One example of this is  the graph in figure \ref{fig:mutrec2},
+which has two loops, one mutually recursive loop and one loop within $g$.
+We cannot inline $g$ into $f$ because $g$ has a recursive call whose
+entry point would disappear after inlining.
+But we can duplicate $f$, creating a new $f\prime$, and re-write $g$'s call
+to $f$ as a call to $f\prime$.
+This allows us to inline $f\prime$ into $g$ without an issue, and $f$'s call
+to $g$ is no longer recursive.
+
+The graph in figure \ref{fig:mutrec3} is more complicated,
+it has three loops.
+In this case we cannot inline $g$ into $f$ because of the loop within $g$,
+and we cannot inline $f$ into $g$ because of the loop within $f$.
+Simple duplication of either $f$ or $g$ does not help us.
 
 \plan{What is unimplemented}
-Our current implementation does not attempt to parallelise divide and conquer
-code.
+Our current implementation handles non-recursive and simply recursive
+loops within a single procedure.
+We have shown how to calculate the cost of recursive calls in divide and
+conquer code.
+However, generating efficient parallel code is slightly more complicated,
+as Granularity Control is needed to prevent embarrassingly parallel
+workloads (Section \ref{sec:rts_work_stealing2}).
+This is less true with simply recursive code as a non-recursive call that is
+parallelised against will usually have a non-trivial cost in all levels of
+the recursion.
 
 \section{Deep coverage information}
 \label{sec:overlap_coverage}
