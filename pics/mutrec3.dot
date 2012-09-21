@@ -1,0 +1,14 @@
+digraph G {
+	// rankdir = LR;
+
+	main [label="main"];
+
+	main -> f;
+
+	f -> g;
+	f -> f;
+	g -> f;
+	g -> g;
+}
+
+
