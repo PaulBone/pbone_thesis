@@ -36,6 +36,7 @@ macro_info("chapter", macro_is_not_reference, macro_breaks_flow).
 macro_info("section", macro_is_not_reference, macro_breaks_flow).
 macro_info("subsection", macro_is_not_reference, macro_breaks_flow).
 macro_info("subsubsection", macro_is_not_reference, macro_breaks_flow).
+macro_info("footnote", macro_is_not_reference, macro_breaks_flow).
 
 conservative_macro_info(Ident, IsRef, BreaksFlow) :-
     ( macro_info(Ident, IsRefPrime, BreaksFlowPrime) ->

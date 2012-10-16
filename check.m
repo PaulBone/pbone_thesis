@@ -322,6 +322,8 @@ invalid_hypenations = [
     "one-another",
     "no-longer",
     "re-order",
+    "re-ordering",
+    "re-ordered",
     "shut-down"
     ].
 
