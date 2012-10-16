@@ -2,6 +2,8 @@
 \section{Initial Work Stealing Implementation}
 \label{sec:rts_work_stealing}
 
+\status{I'm updating this after fixing some RTS bugs.}
+
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
 Work stealing addresses the premature spark scheduling problem that we
 described in the previous section.
@@ -465,7 +467,7 @@ Consequently,
 when a context creates a spark that spark is always placed on the
 context's local spark deque.
 
-\status{Is this bit clear?  This paragraph is new.}
+\paul{Is this bit clear?  This paragraph is new.}
 \citet{Chase_2005_wsdeque}'s paper uses Java to describe the deque structure
 and algorithms.
 Java has a strong memory model compared to C (the implementation language of
