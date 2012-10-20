@@ -354,9 +354,8 @@ parallelisations of its recursive branch.
 We use the algorithms of section \ref{sec:overlap_overlap_alg}
 to compute the expected parallel execution time of each parallelisation.
 These algorithms take into account the runtime overheads of parallel execution.
-However,
-large conjunctions can have a very large number of
-parallelisations ($2^{n-1}$ for $n$ conjuncts).
+Large conjunctions can have a very large number of
+candidate parallelisations ($2^{n-1}$ for $n$ conjuncts).
 Therefore,
 we use the algorithms of section \ref{sec:overlap_howto}
 to heuristically reduce the number of parallelisations whose expected
@@ -373,27 +372,6 @@ and therefore multiple parallelisations may be generated for the same
 conjunctions within the procedure.
 We discuss how we resolve conflicting recommendations for the same procedure
 in section \ref{sec:overlap_pragmatic}.
-
-\paul{Move this later when we need to talk about program representation and
-coverage}
-Our feedback tool is an extension of the Mercury deep profiler.
-The profiler is able to access the relevant parts of the compiler's
-representation of the program.
-This includes a representation of each procedure body,
-and for each atomic subgoal (call or unification) within each body,
-the set of variables bound or referenced by that subgoal.
-We also use coverage profiling (Section \ref{sec:backgnd_coverage})
-which records how many times execution reaches each point in the program,
-this number is the \emph{coverage} of that point in the program.
-It is possible to figure this out for \emph{most} program points using
-only the call counts associated with call sites.
-However, we require complete coverage information;
-coverage profiling provides this using a minimum of extra profiling
-instrumentation.
-As we will see in section~\ref{sec:overlap_overlap_alg},
-we need the complete coverage information
-to calculate the likely speedup from parallelising a conjunction.
-
 
 \paul{Move this paragraph elsewhere, conclusion or introduction?}
 An important benefit of profile-directed parallelisation is that
@@ -893,12 +871,10 @@ Then the recursion pattern is similar to divide and conquer except that the
 base in the formulas shown above is $N$ rather than 2.
 We have not found it necessary to handle these cases.
 
-\paul{Clarify if the table shows static or dynamic (deep) procedure counts.}
-
 \begin{table}
 \begin{center}
 \begin{tabular}{l|rrr}
-Recursion Type & No.\ of Procedures & Percent & Total cost \\
+Recursion Type & No.\ of SCCs       & Percent & Total cost \\
 \hline
 Not recursive  &            292,893 & 78.07\% & 2,320,270,385 \\
 Simple recursion&            48,458 & 12.92\% &   402,430,967 \\
@@ -931,38 +907,47 @@ There are many possible types of recursion,
 and we wanted to limit our development effort to just those recursion types
 that would occur often enough to be important.
 Therefore,
-we ran our analysis across all the procedures in the Mercury compiler,
+we ran our analysis across all the SCCs in the Mercury compiler,
 the largest open source Mercury program,
 to determine which types of recursion are most common.
 Table \ref{tab:recursion_types} summarises the results.
-We can see that most procedures are not recursive,
-and the next biggest group is the simply recursive procedures,
-having nearly 13\% of the execution.
+We can see that most SCCs are not recursive,
+and the next biggest group is the simply recursive SCCs,
+accounting for nearly 13\% of the profile's SCCs.
 If our analysis finds an SCC with more than one procedure,
-it counts the number of procedures and marks the SCC's procedures as
+it counts the number of procedures and marks the whole SCC as
 mutually recursive and does no further analysis.
-It may be possible to resolve some of these SCCs into simple recursion,
+It may be possible to perform further analysis on mutually recursive SCCs,
 but we have not found it important to do this yet.
 Mutual recursion as a whole accounts for a larger proportion of procedures
 than divide and conquer.
 The ``Other'' recursion types refer to cases where there are multiple
-recursive paths through the procedure with different numbers of recursive
-calls plus a base case,
-however we have not classified these cases further.
-Some of these ``Other'' cases are due to the implementation of the
-\code{map} ADT and library module,
-which uses a 2--3--4 tree implementation, and hence many of the
-multi-recursive path cases with 2, 3 or 4 recursive calls on a path
-are often 2--3--4 tree algorithms.
-These algorithms also account for some of the other multi recursive path
-cases,
-such as those with 2 or 3 recursive calls on a path,
-these may be due to the same algorithms running on a tree without any
-4-nodes.
+recursive paths through the SCC's procedure with different numbers of
+recursive calls plus a base case,
+we have not classified these cases further.
 The table row labelled ``Unknown (error)'' refers to cases that our algorithm
 could not handle.
 These are primarily procedures that may backtrack because they are either
 \dnondet or \dmulti.
+
+The profiler represents each procedure in the program's source code as a \PS
+structure (section \ref{sec:backgnd_deep}).
+Each procedure may be used multiple times and therefore have multiple \PD
+structures appearing in different SCCs.
+Each SCC may have a different recursion type depending on how it was called.
+For example, calling \code{length/2} on an empty list will not execute the base
+case and therefore this \emph{use} of \code{length/2} is non-recursive.
+
+Some of the ``Other'' recursion type cases are due to the implementation of the
+\code{map} ADT and code in Mercury's standard library,
+which uses a 2--3--4 tree implementation, and hence many of the
+multi-recursive path cases with 2, 3 or 4 recursive calls on a path
+are often 2--3--4 tree traversals.
+These traversals also account for some of the other multi recursive path
+cases,
+such as those with 2 or 3 recursive calls on a path.
+these may be due to the same code running on a tree without any
+4-nodes.
 
 \begin{figure}
 \begin{center}
@@ -1039,7 +1024,108 @@ the recursion.
 \section{Deep coverage information}
 \label{sec:overlap_coverage}
 
-\paul{Describe 'deep' coverage}
+\paul{This section and the previous one have a circular dependency.
+However it is useful to put this section after the previous one as the
+previous one provides motivation for this section and this section has an
+example that relies on understanding the previous section.}
+    
+Our auto-parallelism feedback tool is an extension of the Mercury deep
+profiler,
+which is able to provide ancestor call chain specific (\emph{deep})
+profiling data that is extreamly valulable if not necessary for declarative
+langauges.
+We want to make the best use of this data when auto-parallelising programs.
+This means that our algorithms should compute results specific to ancestor
+call chains;
+this includes the variable use time algorithm (section
+\ref{sec:backgnd_var_use_analysis})
+and the recursive call cost calculation (above).
+The deep profiler provides deep cost data, but it does not provide deep
+coverage data.
+Coverage data is collected once per source procedure in the \PS structure as
+follows.
+
+%The profiler is able to access the relevant parts of the compiler's
+%representation of the program.
+%This includes a representation of each procedure body,
+%and for each atomic subgoal (call or unification) within each body,
+%the set of variables bound or referenced by that subgoal.
+%We also use coverage profiling (Section \ref{sec:backgnd_coverage})
+%which records how many times execution reaches each point in the program,
+%this number is the \emph{coverage} of that point in the program.
+%It is possible to figure this out for \emph{most} program points using
+%only the call counts associated with call sites.
+%Coverage profiling introduces some extra profiling instrumentation and
+%allows coverage to be infered for all program points.
+%As we will see in section~\ref{sec:overlap_overlap_alg},
+%we need the complete coverage information
+%to calculate the likely speedup from parallelising a conjunction.
+
+\plan{Explain the shallow coverage information.}
+In section \ref{sec:backgnd_coverage} we described the prior implementation
+of coverage profiling.
+In summary,
+coverage data is stored in the \PS structure using two arrays and an integer
+describing the arrays' lengths.
+Each corresponding pair of slots in the arrays refers to a single coverage
+point in the procedure.
+The first array gives static information such as the type of coverage point and
+its location in the compiler's representation of the procedure.
+The second array contains the current value of the coverage point,
+each time execution reaches the coverage point this slot is incremented.
+This design was initially adiqute, simple and would increase memory usege
+(for the coverage points) by a constant factor.
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{rr|rr|l}
+\multicolumn{2}{c|}{\textbf{Static}} & \multicolumn{2}{c|}{\textbf{Deep}} &
+    \C{\textbf{Code}} \\
+\Cbr{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & 
+\Cbr{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & \\ 
+\hline
+ 7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
+     - &     - &     - &         - & \code{~~~~(} \\
+ 2,142 &     0 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
+     - &     - &     - &         - & \code{~~~~;} \\
+ 5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
+ 5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
+ 5,709 & 2,097 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
+     - &     0 &     - &         - & \code{~~~~).} \\
+\end{tabular}
+\end{center}
+\caption{Static and Deep coverage and cost data for \code{list.foldl3}}
+\label{fig:static_and_deep_coverage}
+\end{figure}
+
+%Cost of recursive call:
+%Depth = 276,723 / 615,539
+%Depth = 0.44956209111039269
+%CostRec = 
+%
+%Cost of recursive call:
+%Depth = 5,709 / 2,142
+%Depth = 2.6652661064425769
+%
+%916.16
+
+\paul{Currently here.}
+
+\plan{Show a problem, use an example.}
+Throughout the automatic parallelisation analysis
+we use coverage and cost data together to calculate the costs of recursive
+goals and variable production and consumption times 
+
+
+
+Because we now traverse the call graph 
+
+
+
+\plan{Explain how we gather deep coverage info, and why it fixes the
+problem.}
+
+\plan{Benchmark coverage profiling.}
 
 \section{Calculating the overlap between dependent conjuncts}
 \label{sec:overlap_overlap_alg}
