@@ -2,7 +2,9 @@
 \section{Initial Work Stealing Implementation}
 \label{sec:rts_work_stealing}
 
-\status{I'm updating this after fixing some RTS bugs.}
+\status{I am updating this after fixing some RTS bugs.
+I now have to re-run the tests and then double check the prose.
+After which I will continue with the next section.}
 
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
 Work stealing addresses the premature spark scheduling problem that we
@@ -517,7 +519,7 @@ This means that the \push and \pop functions are not as efficient as they
 appear to be.
 The deque algorithms are still efficient enough;
 we have not needed to improve them further.
-For more information about C's week memory ordering see
+For more information about C's weak memory ordering see
 \citet{Boehm:2005:threads-as-a-library}.
 See also \citet{Adve:2010:memory-models} which discusses the Java memory
 model and the new C++0x\footnote{C++0x is also known as C++11} memory model.
@@ -605,13 +607,13 @@ memory traffic and allow the loop to exit without a pipeline stall
 Lines 18--19 must also include memory write ordering.
 
 The other change is around line 17,
-when the context pops a spark of its stack, it does not check if the spark
+when the context pops a spark off its stack, it does not check if the spark
 was created by a callee's parallel conjunction.
 Because all sparks are placed on the context local spark deques and
-sparks are stolen from the cold end of the deque,
-if there is an outstanding conjunct then its spark will be on the top of the
-deque,
-otherwise the deque will be empty.
+theives never steal work from the hot end of the deque,
+then if there is an outstanding conjunct then either
+its spark will be at the hot end of the deque
+or the deque will be empty and the spark will have been stolen.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
