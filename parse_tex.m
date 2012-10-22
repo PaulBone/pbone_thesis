@@ -198,6 +198,8 @@ parse_tex_arg(Lines, File, Src, Tokens, !PS) :-
 parse_word(Lines, File, Src, Token, !PS) :-
     offset_to_locn(Lines, File, Src, Locn, !.PS),
     parse_word2(Src, WordChars, !PS),
+    WordChars = [FirstChar | _],
+    not not_first_word_char(FirstChar),
     Word = string.from_char_list(WordChars),
     Token = word(Word, Locn).
 
@@ -260,7 +262,11 @@ parse_group(Lines, File, Src, Tokens, !PS) :-
 
 parse_punct(Lines, File, Src, Token, !PS) :-
     offset_to_locn(Lines, File, Src, Locn, !.PS),
-    one_or_more(char(punctuation), Src, Chars, !PS),
+    ( one_or_more(char(punctuation), Src, CharsP, !PS) ->
+        Chars = CharsP
+    ;
+        n(3, char(unify('-')), Src, Chars, !PS)
+    ),
     Token = punct(string.from_char_list(Chars), Locn).
 
 :- pred parse_macro_arg(line_numbers::in, string::in, src::in,
@@ -318,6 +324,18 @@ brackets(L, R, P, Src, Out, !PS) :-
 char(P, Src, Char, !PS) :-
     next_char(Src, Char, !PS),
     P(Char).
+
+:- pred n(int, pred(src, T, ps, ps), src, list(T), ps, ps).
+:- mode n(in, pred(in, out, in, out) is semidet, in, out, in, out) is semidet.
+
+n(N, P, Src, L, !PS) :-
+    ( N = 0 ->
+        L = []
+    ;
+        P(Src, X, !PS),
+        n(N-1, P, Src, Xs, !PS),
+        L = [X | Xs]
+    ).
 
 %----------------------------------------------------------------------------%
 
@@ -461,6 +479,7 @@ symbol('[').
 symbol(']').
 symbol('&').
 symbol('~').
+symbol('-').
 
 :- pred not_word_char(char::in) is semidet.
 
@@ -476,6 +495,11 @@ not_word_char('\\').
 not_word_char('%').
 not_word_char('$').
 not_word_char('~').
+
+:- pred not_first_word_char(char::in) is semidet.
+
+not_first_word_char(C) :- not_word_char(C).
+not_first_word_char('-').
 
 :- pred macro_char_short(char::in) is semidet.
 
