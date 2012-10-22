@@ -15,8 +15,8 @@ of it to place elsewhere, for example, in the background section.}
       for example, that levels within recursive code do not have separate
       data recorded for them.}
 \item \paul{Describe Callgraph search}
-\item \paul{Minor changes to var use algorithm.}
-\item \paul{Coverage (and var use) now work on deep profiling data.}
+\item \paul{Minor changes to variable use algorithm.}
+\item \paul{Coverage (and variable use) now work on deep profiling data.}
 \end{itemize}
 
 Introducing parallelism into a Mercury program is easy.
@@ -613,7 +613,7 @@ Pathologically bad cases are rare and are considered bugs;
 programmers will usually want to remove such bugs in order to improve
 sequential execution performance.
 Slight imbalance in a callgraph is a more common occurrence,
-such situtations fall into the same class as those where the profiling data
+such situations fall into the same class as those where the profiling data
 is not quite representative of the optimised program's future use,
 or our estimates of parallel execution overheads do not match the hardware's
 actual performance.
@@ -1032,8 +1032,8 @@ example that relies on understanding the previous section.}
 Our auto-parallelism feedback tool is an extension of the Mercury deep
 profiler,
 which is able to provide ancestor call chain specific (\emph{deep})
-profiling data that is extreamly valulable if not necessary for declarative
-langauges.
+profiling data that is extremely valuable if not necessary for declarative
+languages.
 We want to make the best use of this data when auto-parallelising programs.
 This means that our algorithms should compute results specific to ancestor
 call chains;
@@ -1047,7 +1047,7 @@ this number is the \emph{coverage} of that point in the program.
 It is possible to figure this out for \emph{most} program points using
 only the call counts associated with call sites.
 Coverage profiling introduces some extra profiling instrumentation and
-allows coverage to be infered for \emph{all} program points.
+allows coverage to be inferred for \emph{all} program points.
 While the profiler provides deep cost data,
 it provides only \emph{static} coverage data,
 data not associated with any specific \PD structure and therefore not
@@ -1062,30 +1062,30 @@ Each corresponding pair of slots in the arrays refers to a single coverage
 point in the procedure.
 The first array gives static information such as the type of coverage point and
 its location in the compiler's representation of the procedure.
-The second array contains the current value of the coverage point,
-each time execution reaches the coverage point this slot is incremented.
-This design was initially adequate, simple and would increase memory usage
-(for the coverage points) by a constant factor.
+The second array contains the current value of the coverage point.
+Each time execution reaches the coverage point this value is incremented.
 
 \begin{figure}
 \begin{center}
-\begin{tabular}{rr|rr|l}
+\begin{tabular}{r|rr|rr|l}
+\C{\textbf{Line}} &
 \multicolumn{2}{c|}{\textbf{Static}} & \multicolumn{2}{c|}{\textbf{Deep}} &
     \C{\textbf{Code}} \\
+&
 \C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & 
 \C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & \\ 
 \hline
- 7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
-     - &     - &     - &         - & \code{~~~~(} \\
- 2,142 &     0 &     0 &         0 & \code{~~~~~~~~Xs0 = []} \\
-     - &     - &     - &         - & \code{~~~~;} \\
- 5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
- 5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
- 5,709 & 2,097 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
-     - &     0 &     - &         - & \code{~~~~).} \\
+ 1 & 7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
+ 2 &     - &     - &     - &         - & \code{~~~~(} \\
+ 3 & 2,142 &     0 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
+ 4 &     - &     - &     - &         - & \code{~~~~;} \\
+ 5 & 5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
+ 6 & 5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
+ 7 & 5,709 & 2,097 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
+ 8 &     - &     - &     - &         - & \code{~~~~).} \\
 \end{tabular}
 \end{center}
-\caption{Static and Deep coverage and cost data for \code{list.foldl3}}
+\caption{Static and Deep coverage and cost data for \foldlthree}
 \label{fig:static_and_deep_coverage}
 \end{figure}
 
@@ -1100,23 +1100,81 @@ This design was initially adequate, simple and would increase memory usage
 %
 %916.16
 
-\paul{Currently here.}
-
 \plan{Show a problem, use an example.}
-Throughout the automatic parallelisation analysis
-we use coverage and cost data together to calculate the costs of recursive
-goals and variable production and consumption times 
+At the time when coverage profiling was implemented static coverage data was
+adequate.
+Now that we are using deep cost data throughout the auto parallelisation
+tool this can cause problems.
+Figure \ref{fig:static_and_deep_coverage} shows \foldlthree from
+Mercury's standard library,
+annotated with data collected from a profiling run of the Mercury compiler.
+Each line of code is shown with static and deep profiling data to its left.
+The static data is shown in the first two columns and the dynamic data in
+the next two.
+Within each group
+the first of column shows the code coverage, the number of times this code was
+executed,
+and the second shows the average per-call cost of executing this code
+measured in call sequence counts.
+Using the static coverage data we can see that \foldlthree is called 7,851 times
+(line one)
+throughout the execution of the compiler,
+this includes recursive calls.
+There are 5,709 directly recursive calls (the coverage on line seven).
+Using these figures we can calculate that the average deepest recursion is 
+2.66 levels.
+The static cost data provided by the profiler includes the average per-call
+cost for the procedure as a whole on line 1,
+and the average per-call cost for the recursive call to P on line 6.
+The average cost of the recursive call (line 7) is calculated using the
+methods in the previous section for the depth of 1.66,
+which is the first level down from the top of \foldlthree's call tree
+(the first recursive call).
+We can conclude that across the whole program,
+on average \foldlthree does not make very deep recursions
+(it is called on short lists) and the cost of the higher order call is
+cheap.
 
-
-
-Because we now traverse the call graph 
-
-
+When we consider the deep profiling information specific to a particular
+ancestor call chain,
+indecently a use of \foldlthree in the compiler's mode-checker,
+we see a case where there is only a single non-recursive call and 2,688
+recursive calls.
+This recursion is rather deep having a maximum depth of 2,689.
+Here is where deep coverage information becomes necessary,
+without the deep coverage information in the third column of the table we
+would not be able to compute this recursion depth accurately.
+Using only static information we would have computed the depth of 2.66
+above.
+Furthermore, the coverage data is necessary to accurately compute the cost of
+the recursive call when called from the second level of recursion.
+In this case the cost is 3,897,182;
+but had we computed this using the erroneous depth the result would be
+4,464.
+It is easy to understand how this discrepancy could affect a later analysis
+such as the variable use time analysis.
 
 \plan{Explain how we gather deep coverage info, and why it fixes the
 problem.}
+Each procedure in the program is associated with a single \PS structure
+and any number of \PD structures.
+Each \PD structure links the procedure to its uses in the program's call
+graph (with the exception of recursive calls).
+Therefore we can move the array containing the coverage points' execution
+counts into the \PD structure.
+Because there are more \PD structures than \PS structures in a program's
+profile this will make the profile larger, consuming more memory.
+It is important to avoid affecting the performance impact of profiling,
+for both the user's experience and the risk of distorting the program's
+profile.
+However we do not have to worry about distortion as our unit of time,
+call sequence counts,
+cannot be distorted.
+
+\paul{Currently here.}
 
 \plan{Benchmark coverage profiling.}
+
 
 \section{Calculating the overlap between dependent conjuncts}
 \label{sec:overlap_overlap_alg}
