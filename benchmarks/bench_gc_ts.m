@@ -32,7 +32,7 @@ main(!IO) :-
 config = Data :-
     Data = config_data(
         [compiler("ts",
-            "/srv/scratch/dev/threadscope.install/bin")],
+            "/srv/scratch/dev/threadscope.install")],
         mem_limit,
         base_mcflags,
         Groups,

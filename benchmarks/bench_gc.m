@@ -32,7 +32,7 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        [compiler("current", "/usr/local/mercury/bin")],
+        [compiler("current", "/usr/local/mercury")],
         mem_limit,
         base_mcflags,
         Groups,

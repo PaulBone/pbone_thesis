@@ -33,7 +33,7 @@ main(!IO) :-
 config = Data :-
     Data = config_data(
         [compiler("2009_nolimit", 
-            "/srv/scratch/dev/old_2009_nolimit.install/bin")],
+            "/srv/scratch/dev/old_2009_nolimit.install")],
         mem_limit,
         base_mcflags,
         Groups,

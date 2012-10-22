@@ -31,7 +31,7 @@ main(!IO) :-
 
 config = Data :-
     Data = config_data(
-        [compiler("2009", "/srv/scratch/dev/old_2009.install/bin")],
+        [compiler("2009", "/srv/scratch/dev/old_2009.install")],
         mem_limit,
         base_mcflags,
         Groups,
