@@ -1040,40 +1040,31 @@ call chains;
 this includes the variable use time algorithm (section
 \ref{sec:backgnd_var_use_analysis})
 and the recursive call cost calculation (above).
-The deep profiler provides deep cost data, but it does not provide deep
-coverage data.
-Coverage data is collected once per source procedure in the \PS structure as
-follows.
-
-%The profiler is able to access the relevant parts of the compiler's
-%representation of the program.
-%This includes a representation of each procedure body,
-%and for each atomic subgoal (call or unification) within each body,
-%the set of variables bound or referenced by that subgoal.
-%We also use coverage profiling (Section \ref{sec:backgnd_coverage})
-%which records how many times execution reaches each point in the program,
-%this number is the \emph{coverage} of that point in the program.
-%It is possible to figure this out for \emph{most} program points using
-%only the call counts associated with call sites.
-%Coverage profiling introduces some extra profiling instrumentation and
-%allows coverage to be infered for all program points.
-%As we will see in section~\ref{sec:overlap_overlap_alg},
-%we need the complete coverage information
-%to calculate the likely speedup from parallelising a conjunction.
+These two analyses use the profiler's coverage profiling feature (section
+\ref{sec:backgnd_coverage}),
+which records how many times execution reaches each point in the program,
+this number is the \emph{coverage} of that point in the program.
+It is possible to figure this out for \emph{most} program points using
+only the call counts associated with call sites.
+Coverage profiling introduces some extra profiling instrumentation and
+allows coverage to be infered for \emph{all} program points.
+While the profiler provides deep cost data,
+it provides only \emph{static} coverage data,
+data not associated with any specific \PD structure and therefore not
+specific to an ancestor call chain.
 
 \plan{Explain the shallow coverage information.}
-In section \ref{sec:backgnd_coverage} we described the prior implementation
-of coverage profiling.
-In summary,
-coverage data is stored in the \PS structure using two arrays and an integer
-describing the arrays' lengths.
+By comparison, the instrumentation introduced by coverage profiling stores
+its data in the \PS structures.
+This data is represented by using two arrays and an integer describing the
+arrays' lengths.
 Each corresponding pair of slots in the arrays refers to a single coverage
 point in the procedure.
 The first array gives static information such as the type of coverage point and
 its location in the compiler's representation of the procedure.
 The second array contains the current value of the coverage point,
 each time execution reaches the coverage point this slot is incremented.
-This design was initially adiqute, simple and would increase memory usege
+This design was initially adequate, simple and would increase memory usage
 (for the coverage points) by a constant factor.
 
 \begin{figure}
@@ -1081,12 +1072,12 @@ This design was initially adiqute, simple and would increase memory usege
 \begin{tabular}{rr|rr|l}
 \multicolumn{2}{c|}{\textbf{Static}} & \multicolumn{2}{c|}{\textbf{Deep}} &
     \C{\textbf{Code}} \\
-\Cbr{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & 
-\Cbr{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & \\ 
+\C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & 
+\C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & \\ 
 \hline
  7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
      - &     - &     - &         - & \code{~~~~(} \\
- 2,142 &     0 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
+ 2,142 &     0 &     0 &         0 & \code{~~~~~~~~Xs0 = []} \\
      - &     - &     - &         - & \code{~~~~;} \\
  5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
  5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
