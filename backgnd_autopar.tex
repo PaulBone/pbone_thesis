@@ -928,6 +928,32 @@ such as when the algorithm finds a higher order call,
 the consumption time used is zero
 (it was the cost of the call when analysing for productions)
 
+For example
+suppose the first appearance of the variable (call it $X$)
+in a conjunction $G_1, \ldots, G_n$ is in $G_k$, and $G_k$ is a switch.
+If $X$ is consumed by some switch arms and not others,
+then on some execution paths,
+the first consumption of the variable may be in $G_k$ (a),
+on some others it may be in $G_{k_1}, \ldots, G_n$ (b),
+% XXX: We do not handle c - but we should.
+and on some others it may not be consumed at all (c).
+For case (a),
+we compute the average time of first consumption by the consuming arms,
+and then compute the weighted average of these times,
+with the weights being the probability of entry into each arm, as before.
+For case (b), we compute the probability of entry
+into arms which do \emph{not} consume the variable,
+and multiply the sum of those probabilities
+by the weighted average of those arms' execution time
+\emph{plus} the expected consumption time of the variable
+in $G_{k+1},~\ldots,~G_n$.
+For case (c)
+we pretend $X$ is consumed at the very end of the goal,
+and then handle it in the same way as (b).
+This is because for our overlap calculations,
+a goal that does not consume a variable is equivalent to
+a goal that consumes it at the end of its execution.
+
 \subsection{Feedback Framework}
 \label{sec:feedback}
 
