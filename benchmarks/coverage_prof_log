@@ -1,0 +1,161 @@
+EXTRA_MCFLAGS = 
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK
+GRADE = asm_fast.gc
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.028u 0.028s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 0.992u 0.056s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.016u 0.036s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.004u 0.048s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.020u 0.032s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.020u 0.036s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.020u 0.032s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.008u 0.044s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.008u 0.044s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.020u 0.032s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.012u 0.040s 0:01.05 100.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.008u 0.044s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.024u 0.028s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.008u 0.052s 0:01.06 99.0%	0+0k 0+1048io 0pf+0w
+mercury_compile.01 1.028u 0.024s 0:01.05 99.0%	0+0k 0+1048io 0pf+0w
+EXTRA_MCFLAGS = --no-coverage-profiling --no-profile-optimized
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK
+GRADE = asm_fast.gc.profdeep
+mercury_compile.02 6.180u 0.144s 0:06.34 99.6%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.208u 0.124s 0:06.34 99.6%	0+0k 0+78208io 0pf+0w
+mercury_compile.02 6.164u 0.152s 0:06.33 99.6%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.172u 0.144s 0:06.33 99.6%	0+0k 0+78184io 0pf+0w
+mercury_compile.02 6.204u 0.128s 0:06.34 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.152u 0.160s 0:06.32 99.8%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.196u 0.132s 0:06.34 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.192u 0.132s 0:06.34 99.6%	0+0k 0+78184io 0pf+0w
+mercury_compile.02 6.168u 0.140s 0:06.32 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.208u 0.136s 0:06.36 99.5%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.176u 0.156s 0:06.34 99.6%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.160u 0.156s 0:06.33 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.172u 0.136s 0:06.32 99.6%	0+0k 0+78184io 0pf+0w
+mercury_compile.02 6.180u 0.152s 0:06.34 99.8%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.188u 0.144s 0:06.35 99.5%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.196u 0.136s 0:06.34 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.204u 0.144s 0:06.36 99.6%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.184u 0.144s 0:06.34 99.6%	0+0k 0+78192io 0pf+0w
+mercury_compile.02 6.176u 0.160s 0:06.35 99.6%	0+0k 0+78200io 0pf+0w
+mercury_compile.02 6.168u 0.148s 0:06.33 99.5%	0+0k 0+78192io 0pf+0w
+EXTRA_MCFLAGS = --no-coverage-profiling --profile-optimized
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK
+GRADE = asm_fast.gc.profdeep
+mercury_compile.03 3.812u 0.076s 0:03.89 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.804u 0.092s 0:03.90 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.764u 0.116s 0:03.89 99.4%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.776u 0.104s 0:03.89 99.4%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.760u 0.120s 0:03.89 99.7%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.788u 0.100s 0:03.90 99.4%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.792u 0.096s 0:03.89 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.896u 0.100s 0:04.06 98.2%	0+0k 0+65840io 0pf+0w
+mercury_compile.03 3.764u 0.116s 0:03.88 99.7%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.760u 0.136s 0:03.90 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.780u 0.112s 0:03.90 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.752u 0.128s 0:03.95 97.9%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.776u 0.112s 0:03.89 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.772u 0.116s 0:03.90 99.4%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.772u 0.112s 0:03.89 99.7%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.784u 0.096s 0:03.88 99.7%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.780u 0.108s 0:03.89 99.7%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.792u 0.096s 0:03.90 99.4%	0+0k 0+65824io 0pf+0w
+mercury_compile.03 3.808u 0.092s 0:03.91 99.4%	0+0k 0+65832io 0pf+0w
+mercury_compile.03 3.784u 0.100s 0:03.95 98.2%	0+0k 0+65832io 0pf+0w
+EXTRA_MCFLAGS = --coverage-profiling --coverage-profiling-static --no-profile-optimised
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK -DMR_DEEP_PROFILING_COVERAGE_STATIC
+GRADE = asm_fast.gc.profdeep
+mercury_compile.04 6.328u 0.124s 0:06.46 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.296u 0.156s 0:06.47 99.5%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.332u 0.136s 0:06.48 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.324u 0.152s 0:06.49 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.296u 0.172s 0:06.48 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.304u 0.152s 0:06.47 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.312u 0.140s 0:06.47 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.288u 0.172s 0:06.47 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.300u 0.156s 0:06.47 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.340u 0.128s 0:06.48 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.312u 0.144s 0:06.47 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.344u 0.124s 0:06.48 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.340u 0.112s 0:06.47 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.308u 0.148s 0:06.47 99.5%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.340u 0.128s 0:06.48 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.360u 0.112s 0:06.48 99.8%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.320u 0.128s 0:06.46 99.6%	0+0k 0+79280io 0pf+0w
+mercury_compile.04 6.316u 0.172s 0:06.50 99.6%	0+0k 0+79272io 0pf+0w
+mercury_compile.04 6.304u 0.164s 0:06.48 99.6%	0+0k 0+79288io 0pf+0w
+mercury_compile.04 6.344u 0.120s 0:06.48 99.6%	0+0k 0+79272io 0pf+0w
+EXTRA_MCFLAGS = --coverage-profiling --coverage-profiling-static --profile-optimised
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK -DMR_DEEP_PROFILING_COVERAGE_STATIC
+GRADE = asm_fast.gc.profdeep
+mercury_compile.05 3.916u 0.112s 0:04.04 99.5%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.932u 0.104s 0:04.04 99.7%	0+0k 0+67576io 0pf+0w
+mercury_compile.05 3.932u 0.104s 0:04.04 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.888u 0.140s 0:04.03 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.896u 0.128s 0:04.03 99.5%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.956u 0.076s 0:04.04 99.5%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.912u 0.120s 0:04.04 99.7%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.932u 0.104s 0:04.09 98.5%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.912u 0.120s 0:04.04 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.916u 0.112s 0:04.03 99.7%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.888u 0.156s 0:04.05 99.5%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.948u 0.076s 0:04.18 95.9%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.912u 0.116s 0:04.03 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.936u 0.096s 0:04.04 99.5%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.924u 0.100s 0:04.03 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.924u 0.100s 0:04.03 99.7%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.908u 0.116s 0:04.03 99.5%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.900u 0.132s 0:04.04 99.7%	0+0k 0+67592io 0pf+0w
+mercury_compile.05 3.920u 0.108s 0:04.03 99.7%	0+0k 0+67600io 0pf+0w
+mercury_compile.05 3.916u 0.104s 0:04.03 99.5%	0+0k 0+67600io 0pf+0w
+EXTRA_MCFLAGS = --coverage-profiling --no-coverage-profiling-static --no-profile-optimised
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK
+GRADE = asm_fast.gc.profdeep
+mercury_compile.06 6.608u 0.144s 0:06.76 99.7%	0+0k 0+84984io 0pf+0w
+mercury_compile.06 6.536u 0.192s 0:06.74 99.7%	0+0k 0+84984io 0pf+0w
+mercury_compile.06 6.564u 0.160s 0:06.74 99.7%	0+0k 0+84984io 0pf+0w
+mercury_compile.06 6.572u 0.160s 0:06.74 99.8%	0+0k 0+84976io 0pf+0w
+mercury_compile.06 6.600u 0.172s 0:06.78 99.8%	0+0k 0+85000io 0pf+0w
+mercury_compile.06 6.560u 0.156s 0:06.73 99.7%	0+0k 0+84976io 0pf+0w
+mercury_compile.06 6.596u 0.132s 0:06.74 99.7%	0+0k 0+85000io 0pf+0w
+mercury_compile.06 6.608u 0.148s 0:06.77 99.5%	0+0k 0+84984io 0pf+0w
+mercury_compile.06 6.604u 0.152s 0:06.77 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.572u 0.164s 0:06.90 97.5%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.580u 0.164s 0:06.76 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.632u 0.144s 0:06.79 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.660u 0.080s 0:06.75 99.8%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.612u 0.156s 0:06.78 99.7%	0+0k 0+85000io 0pf+0w
+mercury_compile.06 6.652u 0.112s 0:06.78 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.604u 0.124s 0:06.74 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.672u 0.096s 0:06.78 99.7%	0+0k 0+84976io 0pf+0w
+mercury_compile.06 6.628u 0.140s 0:06.78 99.7%	0+0k 0+84992io 0pf+0w
+mercury_compile.06 6.584u 0.156s 0:06.75 99.7%	0+0k 0+84976io 0pf+0w
+mercury_compile.06 6.564u 0.168s 0:06.74 99.7%	0+0k 0+84984io 0pf+0w
+EXTRA_MCFLAGS = --coverage-profiling --no-coverage-profiling-static --profile-optimised
+EXTRA_MGNUCFLAGS = -DMR_PROFILE_SBRK
+GRADE = asm_fast.gc.profdeep
+mercury_compile.07 4.016u 0.120s 0:04.14 99.7%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 3.984u 0.140s 0:04.51 91.3%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.156u 0.116s 0:04.28 99.5%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.028u 0.104s 0:04.14 99.5%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 3.952u 0.168s 0:04.13 99.5%	0+0k 0+72848io 0pf+0w
+mercury_compile.07 4.036u 0.100s 0:04.14 99.7%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.012u 0.120s 0:04.62 89.3%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.012u 0.116s 0:04.14 99.5%	0+0k 0+72816io 0pf+0w
+mercury_compile.07 4.152u 0.108s 0:04.26 99.7%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.016u 0.112s 0:04.13 99.7%	0+0k 0+72824io 0pf+0w
+mercury_compile.07 4.012u 0.116s 0:04.13 99.7%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.012u 0.112s 0:04.59 89.7%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 3.972u 0.160s 0:04.14 99.7%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.012u 0.112s 0:04.13 99.7%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.032u 0.104s 0:04.21 98.0%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.000u 0.128s 0:04.13 99.7%	0+0k 0+72832io 0pf+0w
+mercury_compile.07 4.020u 0.100s 0:04.56 90.3%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.008u 0.124s 0:04.14 99.5%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.032u 0.092s 0:04.13 99.7%	0+0k 0+72840io 0pf+0w
+mercury_compile.07 4.012u 0.120s 0:04.14 99.7%	0+0k 0+72848io 0pf+0w
