@@ -1162,8 +1162,6 @@ However we do not have to worry about distortion as our unit of time,
 call sequence counts,
 cannot be distorted.
 
-\paul{Currently here.}
-
 \begin{table}
 \begin{center}
 \begin{tabular}{l|rrr|rrr}
@@ -1184,25 +1182,50 @@ dynamic coverage & 58.0s & 466MB & 42MB & 38.0s & 362MB & 31MB \\
 \end{table}
 
 \plan{Benchmark coverage profiling.}
-Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling a
-Mercury program, including coverage profiling.
+Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling 
+the Mercury compiler, including coverage profiling.
 We compiled the Mercury compiler with seven different sets of options for
 profiling.
 The rows of the table give results for no profiling support,
 profiling support without coverage profiling,
 static coverage profiling support,
 and dynamic coverage profiling support.
-The two groups of result columns give results using different optimisations.
-Certain optimisations, such as inlining,
-transform a program in ways that would make
-it hard for a programmer to use the profiler.
-Therefore we normally disable these optimisations during compilation.
-However automatic parallelisation is normally used with other optimisations,
-and therefore we should enable these optimisations when compiling the
-profiling version of a program that will be used for automatic
-parallelisation.
-We have shown results with these optimisations disabled, and with them
-enabled.
+The two groups of result columns show results with certain optimisations
+disabled and enabled.
+Although the non-profiling version of the compiler was not compiled with
+optimisations disabled.
+The three result columns in each of the two column groups show:
+the user time, an average of 20 executions while compiling the eight largest
+modules of the compiler itself;
+the \emph{heap growth}, the amount by which the program break
+(see the \code{sbrk(2)} unix system call) moved during the execution;
+and the size of the resulting profiling file.
+
+We tested with different optimisations because
+certain optimisations, such as inlining,
+transform a program in ways that would make it hard for a programmer to
+recognize their program's profile.
+Therefore we normally disable these optimisations when compiling with
+profiling support.
+However automatic parallelisation like other optimisations is used to
+speedup a program, and therefore normally used with other optimisations.
+The compiler performs parallelisation after most other optimisations,
+and therefore it operates on a version of the program that has already had
+these optimisations applied.
+The feedback tool must also operate on a similar version of the program;
+so that its feedback can be matched against the compiler's representation of
+the program.
+Therefore when compiling profiling versions of programs for the purpose of
+automatic parallelisation (or other types of profiler feedback) we enable
+optimisations that would normally confuse a programmer using the profiler.
+The result columns with optimisations disabled are the results that one
+should expect when profiling a program so that a developer can use the
+profiler.
+Conversly, the results with optimisations enabled are the results that one
+should expect when profiling a program for automatic parallelism or some
+other feedback-driven optimisation.
+
+\paul{Currently here.}
 
 
 
