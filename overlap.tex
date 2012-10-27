@@ -966,7 +966,7 @@ these may be due to the same code running on a tree without any
 \hspace{0.09\textwidth}
 %
 \subfigure[Three loops]{%
-\label{fig:mutrec2}
+\label{fig:mutrec3}
 \includegraphics[scale=0.75]{pics/mutrec3}
 }
 \end{center}
@@ -1024,7 +1024,8 @@ the recursion.
 \section{Deep coverage information}
 \label{sec:overlap_coverage}
 
-\status{This section is WIP,  Currently I'll setting up the benchmarks}
+\status{I have finished this section, but I will read it once more before I
+share it with anyone}
 
 \paul{This section and the previous one have a circular dependency.
 However it is useful to put this section after the previous one as the
@@ -1221,12 +1222,43 @@ optimisations that would normally confuse a programmer using the profiler.
 The result columns with optimisations disabled are the results that one
 should expect when profiling a program so that a developer can use the
 profiler.
-Conversly, the results with optimisations enabled are the results that one
+Conversely, the results with optimisations enabled are the results that one
 should expect when profiling a program for automatic parallelism or some
 other feedback-driven optimisation.
 
-\paul{Currently here.}
+We can see that enabling profiling slows the program down by at least a
+factor of three,
+or a factor of five if optimisations are disabled.
+While this is a considerable slow down we would like to remind the reader
+that the profile cannot be distorted by a slowdown as we use call sequence
+counts as our unit of time.
+The difference between with and without optimisations is unsurprising.
+It is well established that simple optimisations such as inlining can make a
+significant difference to performance.
+We can also see that optimisations affect how much memory the program uses
+and how large the resulting profile data file is.
+As optimisations make the program simpler, the call graph also becomes
+simpler.
+For example, inlining will reduce the number of procedures in the program,
+which means that fewer data structures are used to represent them in the
+program's memory and in the data file.
+Likewise, this will create a program with less instrumentation and therefore
+it will perform faster.
 
+Enabling static coverage profiling does not significantly impact the memory
+usage or profile size of the program.
+It does slightly affect the program's performance.
+Associating coverage data with \PD structures rather than \PS structures
+measurably affects memory usage,
+but the amount of memory usage (an additional 56MB or 50MB
+(without and with optimisations)
+is acceptable.
+Deep coverage information does have a slight performance impact over static
+coverage information,
+but the difference is minimal.
+The small cost of collecting deep coverage data is small compared to the
+benefit that this data provides,
+especially when optimisations are enabled during a profiling build.
 
 
 \section{Calculating the overlap between dependent conjuncts}
@@ -1377,7 +1409,7 @@ and the right conjunct,
 which must consume all the shared variables,
 will be handled by the second (and last) iteration.
 In the general case of longer conjunctions,
-conjuncts that are neiter the left and right most conjuncts
+conjuncts that are neither the left and right most conjuncts
 can both consume variables produced by conjuncts on their left
 and produce variables consumed by conjuncts on their right.
 This is why our algorithm must include both productions and consumptions
@@ -1427,7 +1459,7 @@ How this affects the expected speedup of the top level call
 depends on the structure of the recursion.
 We do not currently do any further analysis when parallelising recursive
 code.
-However, our current approch handles the 78\% majority of cases correctly,
+However, our current approach handles the 78\% majority of cases correctly,
 and a further 13\% of cases (single recursion) reasonably well.
 
 So far, we have assumed an unlimited number of CPUs,
@@ -1525,7 +1557,7 @@ that accounts for overheads.
 
 % The inner loop loops over all the components of the current conjunct,
 % such as \code{pA} and \code{pR}
-% from figure~\ref{fig:dep_conj_overlap1}.
+% from figure~\ref{fig:overlap_compare}.
 % Just as our previous algorithm did,
 % this loop updates the simulated current time
 % in both the original sequential execution of the conjunct (\code{CurSeqTime})
@@ -1592,7 +1624,7 @@ There is one chunk (${Duration}_{qi})$ for each shared variable
 that ends at the time at which that variable is first consumed,
 and there is one chunk ${DurationRest}$
 after the consumption of the last shared variable.
-(Figure~\ref{fig:dep_conj_overlap1}
+(Figure~\ref{fig:overlap_compare}
 shows the former as ${qA}$ and the latter as ${qR}$.)
 The algorithm keeps track of the sequential and parallel execution times of $q$
 up to the consumption of the current shared variable.
@@ -1603,14 +1635,14 @@ In the parallel version,
 $p$ is producing the shared variables while $q$ is running.
 If $p$ has produced the value of ${SV}_i$ by the time $q$ needs it,
 there $q$ does not need to wait for it;
-the left side of figure~\ref{fig:dep_conj_overlap1} shows this case.
+the left side of figure~\ref{fig:overlap_compare} shows this case.
 However, it is also possible that $p$ will produce ${SV}_i$
 only after the time at which $q$ would like to use it.
 In that case, $q$ will suspend on ${SV}_i$,
 and will resume only when $p$ signals that it is available;
-the right side of figure~\ref{fig:dep_conj_overlap1} shows this case.
+the right side of figure~\ref{fig:overlap_compare} shows this case.
 
-On both sides figure~\ref{fig:dep_conj_overlap1}
+On both sides figure~\ref{fig:overlap_compare}
 ${SeqTime}_p = 5$ and ${SeqTime}_q = 4$.
 On the left side, ${ConsTime}_{qA} = 2$,
 and therefore ${Duration}_{qA} = 2$ and ${DurationRest}_{qA} = 2$,
@@ -1892,7 +1924,7 @@ the time at which that conjunct can start execution.
 
 The inner loop loops over all the components of the current conjunct,
 such as \code{pA} and \code{pR}
-from figure~\ref{fig:dep_conj_overlap1}.
+from figure~\ref{fig:overlap_compare}.
 Just as our previous algorithm did,
 this loop updates the simulated current time
 in both the original sequential execution of the conjunct (\code{CurSeqTime})
@@ -3033,8 +3065,8 @@ considering only those whose cost was above its own threshold.
 The callgraph traversal is better because it allows us to avoid parallelising
 a callee when the caller already provides enough parallelism.
 
-\paul{Throttle recursive parallelism based on the cost of each interation.}
-\paul{Handle other recursion times inteligently.}
+\paul{Throttle recursive parallelism based on the cost of each iteration.}
+\paul{Handle other recursion times intelligently.}
 
 % TODO Items.
 
