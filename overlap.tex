@@ -1595,18 +1595,18 @@ that accounts for overheads.
 
 \begin{algorithm}
 \begin{algorithmic}
-\State $CurSeqTime_q \gets 0$
-\State $CurParTime_q \gets 0$
-\State sort $ConsList_q$ on $ConsTime_{q, i}$
-\For{$(Var_i, ConsTime_qi) \in ConsList_q$}
-    \State $Duration_{q, i} \gets ConsTime_{q, i} - CurSeqTime_q$
-    \State $CurSeqTime_q \gets CurSeqTime_q + Duration_{q, i}$
-    \State $ParWantTime_{q, i} \gets CurParTime_q + Duration_{q, i}$
-    \State $CurParTime_q \gets$ max($ParWantTime_q, Prod_{p, i}$)
+\State $CurSeqTime \gets 0$
+\State $CurParTime \gets 0$
+\State sort $VarUseList_q$ on $Time_{q, i}$
+\For{$(Var_i, Time_{q, i}) \in VarUseList_q$}
+    \State $Duration_{q, i} \gets ConsTime_{q, i} - CurSeqTime$
+    \State $CurSeqTime \gets CurSeqTime + Duration_{q, i}$
+    \State $ParWantTime_{q, i} \gets CurParTime + Duration_{q, i}$
+    \State $CurParTime \gets$ max($ParWantTime_q, ProdTime_{p, Var_i}$)
 \EndFor
-\State $DurationRest_q \gets SeqTime_q - CurSeqTime_q$
-\State $SeqTime_q \gets CurSeqTime_q + DurationRest_q$
-\State $ParTime_q \gets CurParTime_q + DurationRest_q$
+\State $DurationRest_q \gets SeqTime_q - CurSeqTime$
+%\State $SeqTime_q \gets CurSeqTime_q + DurationRest_q$
+\State $ParTime_q \gets CurParTime + DurationRest_q$
 \end{algorithmic}
 \caption{Dependent parallel conjunction overlap calculation}
 \label{alg:dep_par_conj_overlap_simple}
