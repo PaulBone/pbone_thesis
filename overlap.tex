@@ -3,21 +3,7 @@
 \chapter{Overlap Analysis for Dependent AND-parallelism}
 \label{chap:overlap}
 
-\status{This has not been revised since the paper. I have only removed parts
-of it to place elsewhere, for example, in the background section.}
-
-\begin{itemize}
-\item \paul{
-    Add discussion about how our data-flow analysis does not recognise loops
-    since they need to be treated specially.}
-
-\item \paul{Explain the limitations of deep profiling,
-      for example, that levels within recursive code do not have separate
-      data recorded for them.}
-\item \paul{Describe Callgraph search}
-\item \paul{Minor changes to variable use algorithm.}
-\item \paul{Coverage (and variable use) now work on deep profiling data.}
-\end{itemize}
+\status{This is work in progress, some sections are ready for review.}
 
 Introducing parallelism into a Mercury program is easy.
 A programmer can use the parallel conjunction operator (an ampersand)
@@ -1024,8 +1010,7 @@ the recursion.
 \section{Deep coverage information}
 \label{sec:overlap_coverage}
 
-\status{I have finished this section, but I will read it once more before I
-share it with anyone}
+\status{This section is ready for review.}
 
 \paul{This section and the previous one have a circular dependency.
 However it is useful to put this section after the previous one as the
@@ -1035,31 +1020,35 @@ example that relies on understanding the previous section.}
 Our auto-parallelism feedback tool is an extension of the Mercury deep
 profiler,
 which is able to provide ancestor call chain specific (\emph{deep})
-profiling data that is extremely valuable if not necessary for declarative
-languages.
-We want to make the best use of this data when auto-parallelising programs.
-This means that our algorithms should compute results specific to ancestor
-call chains;
+profiling data.
+Deep profiling data is extremely valuable if not necessary for profiling
+programs in declarative languages.
+This also applies to profiler directed optimisations such as
+auto-parallelisation.
+This means that our algorithms should therefore use deep profiling data to
+compute auto-parallelisation feedback specific to ancestor call chains;
 this includes the variable use time algorithm (section
 \ref{sec:backgnd_var_use_analysis})
 and the recursive call cost calculation (above).
-These two analyses use the profiler's coverage profiling feature (section
-\ref{sec:backgnd_coverage}),
+These two analyses use coverage data to compute how often different branches
+in procedures are taken.
+Coverage data is collected by the profiler's coverage profiling feature
+(section \ref{sec:backgnd_coverage}),
 which records how many times execution reaches each point in the program,
-this number is the \emph{coverage} of that point in the program.
-It is possible to figure this out for \emph{most} program points using
+the \emph{coverage} of that program point.
+It is possible to calculate the coverage of \emph{most} program points using
 only the call counts associated with call sites.
 Coverage profiling introduces some extra profiling instrumentation and
 allows coverage to be inferred for \emph{all} program points.
-While the profiler provides deep cost data,
-it provides only \emph{static} coverage data,
-data not associated with any specific \PD structure and therefore not
-specific to an ancestor call chain.
 
 \plan{Explain the shallow coverage information.}
-By comparison, the instrumentation introduced by coverage profiling stores
-its data in the \PS structures.
-This data is represented by using two arrays and an integer describing the
+Until now,
+the profiler provided deep cost data,
+but only \emph{static} coverage data.
+The static coverage data is collected and stored in the profiler's \PS
+structures where it cannot be associated with a specific ancestor context of
+a procedure.
+The data is represented by using two arrays and an integer describing the
 arrays' lengths.
 Each corresponding pair of slots in the arrays refers to a single coverage
 point in the procedure.
@@ -1093,13 +1082,13 @@ Each time execution reaches the coverage point this value is incremented.
 \end{figure}
 
 \plan{Show a problem, use an example.}
-At the time when coverage profiling was implemented static coverage data was
-adequate.
-Now that we are using deep cost data throughout the auto parallelisation
-tool this can cause problems.
+Our automatic parallelisation tool uses deep profiling data throughout.
+However, using deep profiling data and static coverage data creates
+inconsistencies that can result in erroneous results.
 Figure \ref{fig:static_and_deep_coverage} shows \foldlthree from
-Mercury's standard library,
-annotated with data collected from a profiling run of the Mercury compiler.
+Mercury's standard library;
+it is annotated with data collected from a profiling run of the Mercury
+compiler.
 Each line of code is shown with static and deep profiling data to its left.
 The static data is shown in the first two columns and the dynamic data in
 the next two.
@@ -1116,33 +1105,38 @@ There are 5,709 directly recursive calls (the coverage on line seven).
 Using these figures we can calculate that the average deepest recursion is 
 2.66 levels.
 The static cost data provided by the profiler includes the average per-call
-cost for the procedure as a whole on line 1,
-and the average per-call cost for the recursive call to P on line 6.
-The average cost of the recursive call (line 7) is calculated using the
+cost for the procedure as a whole on line one,
+and the average per-call cost for the call to P on line six.
+We calculated the average cost of the recursive call (line seven) using the
 methods in the previous section for the depth of 1.66,
 which is the first level down from the top of \foldlthree's call tree
 (the first recursive call).
-We can conclude that across the whole program,
-on average \foldlthree does not make very deep recursions
-(it is called on short lists) and the cost of the higher order call is
-cheap.
+We can conclude that on average across the whole program,
+\foldlthree does not make very deep recursions
+(it is called on short lists),
+and that the cost of the higher order call is cheap.
 
-When we consider the deep profiling information specific to a particular
-ancestor call chain,
+When we consider the \emph{deep} profiling information specific to a
+particular ancestor call chain,
 indecently a use of \foldlthree in the compiler's mode-checker,
 we see a case where there is only a single non-recursive call and 2,688
 recursive calls.
-This recursion is rather deep having a maximum depth of 2,689.
-Here is where deep coverage information becomes necessary,
-without the deep coverage information in the third column of the table we
+This recursion is rather deep having a maximum depth of 2,689 levels.
+Without the deep coverage information in the third column of the table we
 would not be able to compute this recursion depth accurately.
 Using only static information we would have computed the depth of 2.66
-above.
-Furthermore, the coverage data is necessary to accurately compute the cost of
-the recursive call when called from the second level of recursion.
-In this case the cost is 3,897,182;
-but had we computed this using the erroneous depth the result would be
-4,464.
+as above.
+This incorrect recursion depth could cause problems if we tried to analyse
+this loop.
+Additionally, coverage data is necessary to accurately compute the cost of
+the recursive call.
+For example,
+the true cost of the recursive call at the second level of the recursion is 
+3,897,182
+(calculated using the deep coverage data).
+Had we computed this using the erroneous depth from the static coverage
+data,
+the result would be 4,464.
 It is easy to understand how this discrepancy could affect a later analysis
 such as the variable use time analysis.
 
@@ -1150,16 +1144,18 @@ such as the variable use time analysis.
 problem.}
 Each procedure in the program is associated with a single \PS structure
 and any number of \PD structures.
-Each \PD structure links the procedure to its uses in the program's call
-graph (with the exception of recursive calls).
+Each \PD structure links the procedure to one of its uses in the program's
+call graph (modulo recursive calls).
 Therefore we can move the array containing the coverage points' execution
 counts into the \PD structure.
-Because there are more \PD structures than \PS structures in a program's
-profile this will make the profile larger, consuming more memory.
-It is important to avoid affecting the performance impact of profiling,
-for both the user's experience and the risk of distorting the program's
-profile.
-However we do not have to worry about distortion as our unit of time,
+There are more \PD structures than \PS structures in a program's
+profile;
+this will make the profile larger, consuming more memory and potentially
+affecting performance.
+It is important to minimise a profiler's impact on performance.
+Poor performance both affects the user's experience and 
+increases the risk of distorting the program's profile.
+However, we do not have to worry about distortion as our unit of time,
 call sequence counts,
 cannot be distorted.
 
@@ -1193,21 +1189,22 @@ static coverage profiling support,
 and dynamic coverage profiling support.
 The two groups of result columns show results with certain optimisations
 disabled and enabled.
-Although the non-profiling version of the compiler was not compiled with
+the non-profiling version of the compiler was not compiled or tested with
 optimisations disabled.
 The three result columns in each of the two column groups show:
 the user time, an average of 20 executions while compiling the eight largest
 modules of the compiler itself;
-the \emph{heap growth}, the amount by which the program break
-(see the \code{sbrk(2)} unix system call) moved during the execution;
+the \emph{heap growth}, the amount by which the program break\footnote{
+    The program break marks the end of the heap area.
+    See the \code{sbrk(2)} Unix system call}
+moved during the execution;
 and the size of the resulting profiling file.
 
-We tested with different optimisations because
-certain optimisations, such as inlining,
+Certain optimisations, such as inlining,
 transform a program in ways that would make it hard for a programmer to
-recognize their program's profile.
-Therefore we normally disable these optimisations when compiling with
-profiling support.
+recognise their program's profile.
+We normally disable such optimisations when compiling with profiling
+support.
 However automatic parallelisation like other optimisations is used to
 speedup a program, and therefore normally used with other optimisations.
 The compiler performs parallelisation after most other optimisations,
@@ -1216,34 +1213,34 @@ these optimisations applied.
 The feedback tool must also operate on a similar version of the program;
 so that its feedback can be matched against the compiler's representation of
 the program.
-Therefore when compiling profiling versions of programs for the purpose of
-automatic parallelisation (or other types of profiler feedback) we enable
-optimisations that would normally confuse a programmer using the profiler.
-The result columns with optimisations disabled are the results that one
-should expect when profiling a program so that a developer can use the
-profiler.
-Conversely, the results with optimisations enabled are the results that one
-should expect when profiling a program for automatic parallelism or some
-other feedback-driven optimisation.
+We must enable optimisations when compiling profiling versions of programs
+for the purpose of automatic parallelisation (or other types of profiler
+feedback)
+Therefore we have presented profiling results with optimsations both
+disabled (as one would do when using the profiler by hand)
+and enabled (as one would do when using profile feedback directed
+optimisations).
 
 We can see that enabling profiling slows the program down by at least a
 factor of three,
 or a factor of five if optimisations are disabled.
-While this is a considerable slow down we would like to remind the reader
-that the profile cannot be distorted by a slowdown as we use call sequence
-counts as our unit of time.
-The difference between with and without optimisations is unsurprising.
+While this is a considerable slow down,
+we would like to remind the reader that the profile cannot be distorted by
+such a slowdown as we use call sequence counts as our unit of time.
+The difference between the results with and without optimisations is
+unsurprising.
 It is well established that simple optimisations such as inlining can make a
 significant difference to performance.
-We can also see that optimisations affect how much memory the program uses
-and how large the resulting profile data file is.
 As optimisations make the program simpler, the call graph also becomes
 simpler.
 For example, inlining will reduce the number of procedures in the program,
 which means that fewer data structures are used to represent them in the
 program's memory and in the data file.
-Likewise, this will create a program with less instrumentation and therefore
-it will perform faster.
+This is why the results show that the optimised programs use less memory
+and generate smaller profiling data files.
+It can also have a secondary effect on performance, the fewer procedures
+there are the less instrumentation there will be which improves the
+program's performance.
 
 Enabling static coverage profiling does not significantly impact the memory
 usage or profile size of the program.
@@ -1251,10 +1248,10 @@ It does slightly affect the program's performance.
 Associating coverage data with \PD structures rather than \PS structures
 measurably affects memory usage,
 but the amount of memory usage (an additional 56MB or 50MB
-(without and with optimisations)
+(without and with optimisations respectivly)
 is acceptable.
-Deep coverage information does have a slight performance impact over static
-coverage information,
+Collecting deep coverage information does have a slight performance impact over
+collecting static coverage information,
 but the difference is minimal.
 The small cost of collecting deep coverage data is small compared to the
 benefit that this data provides,
@@ -1270,7 +1267,7 @@ The previous two sections provide us with the information necessary to
 estimate a candidate parallelisation's performance,
 which is the topic of this section.
 As stated earlier,
-our goal is to recognize how dependencies affect the amount of parallelism
+our goal is to recognise how dependencies affect the amount of parallelism
 in parallel conjunctions.
 The amount of elapsed time that can be saved by parallel execution is
 represented by the amount that the boxes overlap in diagrams such as
