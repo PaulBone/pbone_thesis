@@ -33,8 +33,6 @@
 \newcommand{\idleorigcontext}{\code{MR\_idle\_orig\_context}\xspace}
 \newcommand{\sleep}{\code{MR\_sleep}\xspace}
 \newcommand{\trystealspark}{\code{MR\_try\_steal\_spark()}\xspace}
-\newcommand{\tryruncontext}{\code{MR\_try\_run\_context()}\xspace}
-\newcommand{\tryrunlocalspark}{\code{MR\_try\_run\_local\_spark()}\xspace}
 \newcommand{\prepareengineforspark}{\code{MR\_prepare\_engine\_for\_spark()}\xspace}
 \newcommand{\enginesleepsync}{\code{MR\_engine\_sleep\_sync}\xspace}
 \newcommand{\wakeengine}{\code{MR\_wake\_engine}\xspace}
@@ -153,6 +151,7 @@
 
 % Extra control-flow code for algorithmic
 \algloopdefx[Goto]{Goto}[1]{\textbf{goto} #1}
+\algloopdefx[Continue]{Continue}[0]{\textbf{continue}}
 \newcommand{\Break}{\textbf{break}}
 
 % Don't print closing statments in algorithmic examples.
