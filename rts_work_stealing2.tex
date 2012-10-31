@@ -365,6 +365,21 @@ then this would leak the stack frame created for \trystealspark.
 Therefore, \trystealspark must return the address of the next thing to
 execute and allow \idle to jump to this code or jump to \sleep.
 
+\plan{Why we need notifications, their purpose}.
+Engines that go to sleep either need to wake occasionally to \emph{poll} for
+work,
+or need to be notified when new work becomes available.
+One of the problems with the previous work stealing implementation is
+that it required engines to poll for work.
+Polling reduces the complexity of the system however
+sleeping engines will often wake up needlessly to find that there is no
+work available.
+When work does become available engines are often slow to react,
+since without a notification, they must wait for their polling timer to
+expire.
+Therefore our new idle code allows engines to be notified when 
+sparks are created or contexts become available to execute.
+
 \begin{figure}
 \begin{verbatim}
 struct MR_engine_sleep_sync {
@@ -385,13 +400,8 @@ union MR_engine_wake_action_data {
 \end{figure}
 
 \paul{Normal state transitions and the \enginesleepsync structure.}
-The \idle code above manipulates the state field in a structure pointed to
-by \code{engine\_data},
-this is related to the managment of idle engines.
-As we said at the beginning of this section,
-we have modified how engines idle.
-We have introduced a new structure, named \enginesleepsync
-(figure \ref{fig:engine_sleep_sync}).
+Notifications are handled using the \enginesleepsync structure shown in
+figure \ref{fig:engine_sleep_sync}.
 A global array allows engines to access one-another's \enginesleepsync
 structures.
 Each structure contains the following fields:
@@ -399,7 +409,8 @@ its owner's state,
 an action it should perform,
 the action's optional data,
 a semaphore and a lock.
-An engine can be in one of the following states.
+The \idle code above manipulates the state field in its structure,
+which is pointed to by \code{engine\_data}.
 
 \begin{description}
     \item[\code{MR\_WORKING}:] The engine has work to do and is doing it.
@@ -444,30 +455,29 @@ blue denotes a transition that is done with a compare and swap on the
 The edges whose lines are thicker, are \emph{busier},
 these are the transitions that we think occur most often.
 
-\plan{Why we need notifications, their purpose}.
-
-
 \plan{Notification transitions}
-Engines can notify one another,
-an engine sending a notification uses the recipient's \enginesleepsync
-structure.
+When an engine creates a spark or makes a context runnable
+it can notify a recipient using the recipient's
+\enginesleepsync structure.
 The sender will update the \code{action}, \code{action\_data} and
 \code{state} fields.
-A receiver of a notification changes state,
-these transitions are shown with red and green edges in the graph.
+This is modeled as a state transition of the recipient,
+such transitions are shown with red and green edges in the graph.
 Red edges denote transitions from the sleeping state:
 the sender aquires the \code{lock} in the
-\enginesleepsync stucture while updating the structures contents and posting
-to the sleep semaphore. 
+\enginesleepsync stucture while updating the structures contents and
+signaling the sleep semaphore. 
 Green edges denote transitions from other states:
 the sender uses a compare and swap to write the \code{MR\_BUSY} value to the
 \code{state} field,
 it then updates the \code{action} and \code{action\_data} fields
 and finally writes \code{MR\_NOTIFIED} to the \code{state} field.
 A sender using this later method must not use the semaphore.
-We could use locks exclusively,
-however that would mean using the lock on the busy transitions
-from 
+Using compare and swap with the state field allows the recipient to also
+use compare and swap, and in some cases simply writing to the field,
+when changing states.
+This allows us to make the busy transitions more efficient.
+These are the transitions from 
 \code{MR\_LOOKING\_FOR\_WORK} to
 \code{MR\_STEALING} and 
 \code{MR\_WORKING}.
@@ -487,28 +497,11 @@ runtime were shutting down\footnote{
     as further work (section \ref{sec:further_work}).
 }
 
-An engine can be notified when a spark or context becomes available for
-execution.
-The different notifications  
+\plan{Behaviour of \idle WRT notifications.}
+We can see two transitions in \idle above,
+the transition from \code{MR\_WORKING} to \code{MR\_LOOKING\_FOR\_WORK},
+and the transition from 
 
-however the use of compare and swap allows
-us to keep many of the 
-
-\begin{description}
-    \item[\code{ACTION\_CONTEXT}:] 
-\end{description}
-
-An engine that creates a spark or makes a context runnable can
-send a message to another engine.
-The sender writes to the \code{action} and \code{action\_data} fields.
-This informs the reciepient that it should perform the action.
-A sender will use the lock for mutual exclusion if the recipient is
-sleeping.
-If the recipient is awake then a sender will synchronise using the state
-field using compare and swap operations.
-Such a sender will use a compare and swap operation to write \code{MR\_BUSY}
-into the state field before updating the \code{action} and
-\code{action\_data} fields.
 The recipient must therefore use compare and swap when it writes to the
 state field,
 this can be seen in \idle above.
