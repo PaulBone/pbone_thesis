@@ -678,7 +678,7 @@ This check is on line 14; it is true of either,
 the engine already has a context (which is guaranteed to be available for a
 new spark),
 or that the current number of contexts is lower than the limit.
-When sparks are placed on a contexts local stack the runqueue's condition
+When sparks are placed on a contexts local stack the run queue's condition
 variable is not signalled,
 doing so would be wasteful.
 Therefore engines must wake up periodically to check if there is any
