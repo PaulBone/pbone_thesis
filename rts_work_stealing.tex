@@ -538,7 +538,7 @@ used}
         \State CPU\_relax
       \EndWhile
       \State MR\_schedule($ST.parent$, $ContLabel$)
-      \Goto{MR\_get\_global\_work}
+      \Goto{MR\_idle}
     \EndIf
   \Else
     \State $got\_spark \gets$ MR\_pop\_spark($current\_context.spark\_deque$,
