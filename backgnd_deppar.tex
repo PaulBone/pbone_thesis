@@ -189,11 +189,11 @@ map_foldl(M, F, L, Acc0, Acc) :-
         Acc = Acc0
     ;
         L = [H | T],
-        new_future(FutureAcc1),
+        future_new(FutureAcc1),
         (
             M(H, MappedH),
             F(MappedH, Acc0, Acc1),
-            signal_future(FutureAcc1, Acc1)
+            future_signal(FutureAcc1, Acc1)
         &
             map_foldl_par(M, F, T, FutureAcc1, Acc)
         )
@@ -202,16 +202,16 @@ map_foldl(M, F, L, Acc0, Acc) :-
 map_foldl_par(M, F, L, FutureAcc0, Acc) :-
     (
         L = [],
-        wait_future(FutureAcc0, Acc0),
+        future_wait(FutureAcc0, Acc0),
         Acc = Acc0
     ;
         L = [H | T],
-        new_future(FutureAcc1),
+        future_new(FutureAcc1),
         (
             M(H, MappedH),
-            wait_future(FutureAcc0, Acc0),
+            future_wait(FutureAcc0, Acc0),
             F(MappedH, Acc0, Acc1),
-            signal_future(FutureAcc1, Acc1)
+            future_signal(FutureAcc1, Acc1)
         &
             map_foldl_par(M, F, T, FutureAcc1, Acc)
         )
