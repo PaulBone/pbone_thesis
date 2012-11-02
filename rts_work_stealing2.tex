@@ -391,11 +391,11 @@ sparks are created or contexts become available to execute.
 \begin{figure}
 \begin{verbatim}
 struct MR_engine_sleep_sync {
-    sem_t                               sleep_sem;
-    lock                                lock;
     volatile unsigned                   state;
     volatile unsigned                   action;
     union MR_engine_wake_action_data    action_data;
+    sem_t                               sleep_sem;
+    lock                                lock;
 };
 
 union MR_engine_wake_action_data {
@@ -413,10 +413,15 @@ figure \ref{fig:engine_sleep_sync}.
 A global array allows engines to access one-another's \enginesleepsync
 structures.
 Each structure contains the following fields:
-its owner's state,
-an action it should perform,
-the action's optional data,
-a semaphore and a lock.
+\code{state} represents the engine's current state,
+it is used by both the owner and other engines to read and write the state
+of the engine;
+\code{action} and \code{action\_data} are a closure describing
+the next action that the engine should perform;
+\code{sleep\_sem} is a semaphore that the ower will wait on when it should
+sleep and other engines will signal if they want the engine to wake up;
+\code{lock} is used to prevent multiple engines trying to wake the same
+engine at once.
 The \idle code above manipulates the state field in its structure,
 which is pointed to by \code{engine\_data}.
 
@@ -456,10 +461,11 @@ which are the rectangular nodes in the graph.
 The oval node with a dashed outline is illustrative only,
 it exists in the graph to make it easier to visualise how work stealing may
 fail.
-An engine can move between any of the states connected by a black or blue
-edge,
+An engine can move itself between any of the states connected by a black or
+blue edge,
 blue denotes a transition that is done with a compare and swap on the
-\code{state} field of the \enginesleepsync structure.
+\code{state} field of the \enginesleepsync structure,
+other transitions are made with an assignment.
 The edges whose lines are thicker, are \emph{busier},
 these are the transitions that we think occur most often.
 
@@ -467,7 +473,7 @@ these are the transitions that we think occur most often.
 When an engine creates a spark or makes a context runnable
 it can notify a recipient using the recipient's
 \enginesleepsync structure.
-The sender will update the \code{action}, \code{action\_data} and
+The sender will update the action closure and
 \code{state} fields.
 This is modelled as a state transition of the recipient,
 such transitions are shown with red and green edges in the graph.
@@ -478,7 +484,7 @@ signalling the sleep semaphore.
 Green edges denote transitions from other states:
 the sender uses a compare and swap to write the \code{MR\_BUSY} value to the
 \code{state} field,
-it then updates the \code{action} and \code{action\_data} fields
+it then updates the action closure
 and finally writes \code{MR\_NOTIFIED} to the \code{state} field.
 A sender using this later method must not use the semaphore.
 Using compare and swap with the state field allows the recipient to also
@@ -557,10 +563,9 @@ transitions.
 Including a the transition to the \code{MR\_STEALING} state on line 25.
 If this compare and swap fails it indicates that the current engine should 
 wait for \code{state} to become a value other than \code{MR\_BUSY} and then,
-depending on the value of the \code{action} field,
+depending on the action closure,
 either re-check the run queue or exit.
-We have not shown the code that inspects the \code{action} field and acts on
-its value.
+We have not shown the code that interprets and acts on the action closure.
 
 When an engine creates a spark it should attempt to notify other engines of
 the new spark.
@@ -642,12 +647,12 @@ it starts by attempting to put the engine into the sleeping state,
 checking for any notifications using a compare and swap as we saw in \idle.
 If there are no notifications it will wait on the sleep semaphore in the
 \enginesleepsync structure.
-When another engine signals \code{sleep\_sem} then the engine is woken up,
-and retrieves and acts on the value of the \code{action} field.
-We have shown the full switch/case statement for interpreting the value of
-\code{action} in \sleep.
-The implied switch/case statements in \idle are similar,
-except that they do not cover all possible values of action.
+When another engine signals \code{sleep\_sem} then the engine is woken up.
+The woken engine will retrieve and act on the action closure.
+We have shown the full switch/case statement for interpreting the values of
+\code{action} and \code{action\_data} in \sleep.
+The implied switch/case statement in \idle is similar,
+except that it does not need to cover some actions.
 
 When an engine receives a \code{ACTION\_WORKSTEAL} message it executes the
 code at lines 10--21,
@@ -671,58 +676,6 @@ recheck all the spark deques.
 The other actions performed when receiving a message are simple to
 understand from the figure and algorithm.
 
-%\begin{algorithm}[tbp]
-%\begin{algorithmic}
-%\Procedure{MR\_wake\_engine}{$engine\_id, action, action\_data, states$}
-%    \State MR\_acquire\_lock($MR\_engine\_sleep\_data$[$engine\_id$]$.lock$)
-%    \If{$eng\_data.state \in states$}
-%        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.action \gets action$
-%        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.action\_data \gets action\_data$
-%        \State $MR\_engine\_sleep\_data$[$engine\_id$]$.state \gets$ WOKEN
-%        \State MR\_sem\_post($MR\_engine\_sleep\_data$[$engine\_id$]$.sleep\_sem$)
-%        \State $result \gets$ true
-%    \Else
-%        \State $result \gets$ false
-%    \EndIf
-%    \State MR\_release\_lock($MR\_engine\_sleep\_data$[$engine\_id$]$.lock$)
-%    \State \Return $result$
-%\EndProcedure
-%\end{algorithmic}
-%\caption{\wakeengine}
-%\label{alg:wake_engine}
-%\end{algorithm}
-%
-%Engines may be woken with a call to \wakeengine,
-%whose code is shown in algorithm \ref{alg:wake_engine}.
-%\wakeengine takes as parameters the id of the engine to awaken,
-%the action and its data that the engine should perform upon awakening,
-%and the set of states from which we may awaken the engine from (usually
-%\code{MR\_SLEEPING}).
-%The implementation of \wakeengine is mostly straightforward,
-%one important detail is that we must only wake the engine if it has not
-%been woken already, this is done by checking the value of
-%\code{eng\_data.state} after acquiring the lock,
-%and setting the new state while holding the lock.
-%The action and action data must also be written to the
-%\enginesleepsync structure before posting to the target engine's sleep
-%semaphore.
-%The parameter \code{states} is a bit field, with each state represented by
-%its own bit.
-%This is flexible, it allows us to message an engine regardless of its
-%current state.
-%For example,
-%we shut down an engine by calling \wakeengine with the shut down action and
-%all bits set in the \code{states} bit field.
-%Compared to the previous system which used a lock and a condition variable,
-%this system allows us to wake engines selectively.
-%This is useful in the case when a context must be executed on a particular
-%engine because that engine's C stack contains a frame that made a call to
-%some Mercury code and now must be returned into.
-%In the future, this feature could be used to schedule computations on
-%\emph{nearby} processors,
-%processors that may share a second or third level cache with the current
-%processor.
-
 \begin{algorithm}[tbp]
 \begin{algorithmic}[1]
 \Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
@@ -730,7 +683,7 @@ understand from the figure and algorithm.
   \If{$finished$}
     \If{$ST.orig\_context \neq current\_context$}
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
-        \State CPU\_relax
+        \State CPU\_busy\_loop\_hint
       \EndWhile
       \State MR\_release\_context($current\_context$)
       \State $current\_context \gets$ NULL
@@ -780,9 +733,10 @@ when the parallel conjunction's original context is suspended
 and the engine's current context executes the last conjunct in the parallel
 conjunction,
 then the previous version of the algorithm would schedule the original
-context by placing it on the run queue and then execute \idle.
-The new algorithm avoids placing the context on the run queue only to (most
-likely) take it off again by switching to this new context directly.
+context by placing it on the run queue and then execute \idle as its current
+context had finished.
+Since we know that the current context is finished and the original one is
+runnable we now resume the original context's execution directly.
 
 The second change is on lines 15--21,
 the new if statement checks whether the context that the engine holds is

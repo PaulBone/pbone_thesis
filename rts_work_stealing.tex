@@ -535,7 +535,7 @@ used}
       \Goto{$ContLabel$}
     \Else
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
-        \State CPU\_relax
+        \State CPU\_busy\_loop\_hint
       \EndWhile
       \State MR\_schedule($ST.parent$, $ContLabel$)
       \Goto{MR\_idle}
@@ -599,7 +599,8 @@ Therefore lines 7--10 wait until $C_{Orig}$ has been suspended.
 The engine that is executing $C_{Orig}$ first suspends $C_{Orig}$ and then
 indicates that it has been suspended by setting $C_{Orig}$'s resume label
 (lines 18--19).
-The busy loop on lines 7--10 includes a \code{CPU\_relax} instruction,
+The busy loop on lines 7--10 includes a \code{CPU\_busy\_loop\_hint}
+instruction,
 This is the \instruction{pause} instruction on x86 and x86\_64,
 It instructs the CPU to pipeline the loop differently in order to reduce
 memory traffic and allow the loop to exit without a pipeline stall
