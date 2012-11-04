@@ -2,8 +2,10 @@
 \section{Improved Work Stealing Implementation}
 \label{sec:rts_work_stealing2}
 
-\status{The discussion of the benchmarks is new,
-other parts have had a round of reviewing already.}
+\status{
+    A few things to fix up before this section is ready, but it's mostly
+    done now.
+}
 
 In this section we take the opportunity to improve on our work stealing
 implementation from section \ref{sec:rts_work_stealing}.
@@ -407,7 +409,7 @@ union MR_engine_wake_action_data {
 \label{fig:engine_sleep_sync}
 \end{figure}
 
-\paul{Normal state transitions and the \enginesleepsync structure.}
+\plan{Normal state transitions and the \enginesleepsync structure.}
 Notifications are handled using the \enginesleepsync structure shown in
 figure \ref{fig:engine_sleep_sync}.
 A global array allows engines to access one-another's \enginesleepsync
@@ -637,8 +639,6 @@ Therefore sending such a message would be \emph{too} speculative
 \label{alg:sleep}
 \end{algorithm}
 
-\paul{Currently here, fixing due to RTS changes}
-
 An engine that executes \idle and cannot find any work will jump to the
 \sleep procedure,
 which is shown in algorithm \ref{alg:sleep}.
@@ -765,16 +765,6 @@ There are several row groups with two rows each.
 Each row group gives the results for a single program and configuration,
 while the rows in each group give the results for the previous work stealing
 system and the current one.
-The first row group provides the results for the
-right recursive mandelbrot program.
-We compiled this with the conjunct reordering transformation from section
-\ref{sec:rts_reorder} disabled,
-otherwise it would have had the same results as the left recursive version
-of the same program,
-which is shown in the second grow group.
-It is still important to test right recursion such as in this example,
-as the conjunct reordering transformation cannot reorder dependent parallel
-conjunctions so right recursion can still occur.
 
 \begin{figure}
 \begin{verbatim}
@@ -796,33 +786,33 @@ fibs(N) = F :-
 \label{fig:fibs}
 \end{figure}
 
+The first row group provides the results for the
+right recursive mandelbrot program.
+We compiled this with the conjunct reordering transformation from section
+\ref{sec:rts_reorder} disabled,
+otherwise it would have had the same results as the left recursive version
+of the same program,
+which is shown in the second grow group.
+It is still important to test right recursion such as in this example,
+as the conjunct reordering transformation cannot reorder dependent parallel
+conjunctions so right recursion can still occur.
 The following five row groups provide results for a new program named fibs.
-Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number.
-Fibs uses the naive definition of a Fibonacci number:  The
-$N$\textsuperscript{th} Fibonacci number is the sum of the previous two
-Fibonacci numbers unless $N$ is 0 or 1, in which case the result is 1.
-This calculation is shown as the function \fibs\footnote{
-    The arity of a Mercury function is written as \code{N+1}.
+Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
+using the naive algorithm of summing the previous two
+Fibonacci numbers where these are defined recursivly.
+This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
+    (The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers the return value while \code{N} refers to the
-    function's input arguments.}
-in figure \ref{fig:fibs},
-this version of \fibs is used in the ``without GC'' (seventh) row group of table
+    function's input arguments.)
+The naive fibs program is an excelent micro-benchmark for work stealing.
+It creates many small tasks whose overheads dominate the program's execution
+time which allows us easily measure the overheads of work stealing.
+Results for this version of \fibs (figure \ref{fig:fibs})
+are shown in the ``without GC'' (seventh) row group of table
 \ref{tab:work_stealing_revised}.
-but this is not the one used by the fibs program as we will now explain.
-This results in a program with poor performance,
-however it is a suitable micro-benchmark for testing work stealing.
-The recursive branch executes two recursive calls in parallel with one
-another and then sums their results,
-the cost of the arithmetic and if-then-else at each recursion level is very
-small compared to the parallel execution overheads.
-This results in \emph{embarrassing parallelism},
-a case where the there is more parallel work available than the machine can
-handle to such an excess that the overheads of parallel execution from
-dominate the execution time
-making the program slower than its sequential version;
-this can be seen in the table.
-We use this deliberately to allow us to measure the differences in the
-overheads due to work stealing.
+
+%making the program slower than its sequential version;
+%this can be seen in the table.
 
 \begin{figure}
 \begin{verbatim}
@@ -849,34 +839,39 @@ fibsgc(N, Depth) = F :-
 \label{fig:fibsgc}
 \end{figure}
 
-To avoid this we can use \emph{granularity control} to create fewer larger
-parallel tasks (more coarse-grained parallelism).
-This introduces a new function \fibsgc, which takes an extra argument,
-\Depth.
-\fibsgc is shown in figure \ref{fig:fibsgc}.
-\Depth is the number of recursion levels near the top of the call graph in
-which parallel execution should be used.
-\fibsgc now contains a conditional in place of the original parallel
-conjunction,
-depending on the value of depth we either call a parallel conjunction of two
-calls to \fibsgc,
-or a sequential conjunction of two calls to \fibsseq, a sequential version of
-\fibs.
-\fibsgc decrements \Depth before making the recursive calls to track how
-close the current level is to the level at which it should switch to
-sequential execution.
+To avoid embarassing parallelism and create a point for comparison,
+we have also shown results for fibs using \emph{granularity control} (GC) to
+create fewer but larger parallel tasks
+(parallelism with courser grains).
+We can acheive this by introducing a new function \fibsgc,
+which is shown in figure \ref{fig:fibsgc}.
+\fibsgc takes an additional argument named \Depth which is
+the number of recursion levels near the top of the call graph in
+which parallel execution should be used,
+below this depth sequential execution is used.
 The third through sixth row groups in table
-\ref{tab:work_stealing_revised} use \fibsgc, with varying values for
+\ref{tab:work_stealing_revised} use \fibsgc, with varying initial values for
 \Depth.
-This is just one type of granularity control.
-Granularity control is any method used to avoid
-embarrassing parallelism by turning a computation with 
-many small parallel tasks into one with fewer larger parallel tasks.
+%This is just one type of granularity control.
+%Granularity control is any method used to avoid
+%embarrassing parallelism by turning a computation with 
+%many small parallel tasks into one with fewer larger parallel tasks.
 
 \plan{Evaluation}
 Fibs has better parallel performance when \Depth's initial value is
 smaller,
-demonstrating how granularity control effects performance.
+demonstrating how granularity control improves performance,
+(row groups three to six in the table).
+In parallelised divide and conqure code such as Fibs the context limit does
+not affect performace as badly as it does with right
+single recursive code.
+The original context for each parallel conjunction is not blocked for as
+long as it is with right recursive code,
+because in the divide and conqure case both conjuncts have roughly
+equivilent costs.
+Recall that since introducing our initial work stealing implementation in
+section \ref{sec:rts_work_stealing} left recursion has not been effected by
+the context limit at all.
 In most tests,
 the mandelbrot tests and the coarse grained fibs tests,
 there is very little difference between the performance of the old and new
@@ -887,21 +882,27 @@ system has much higher overheads.
 This is not what we expected but it makes sense.
 The new work stealing system no longer uses a timeout to wake up sleeping
 engines, allowing them to check for work.
-As an alternative it allows the creation of a spark to notify a sleeping
-engine.
-We think that this contributes to part of the slow down in performance,
+Instead when an engine creates a spark must notify a sleeping engine (if an
+engine is sleeping).
+We think that the additional overhead of notification contributes to part of
+the slow down,
 but probably not all of it.
+Even if notifications are not required because all the engines are busy,
+the runtime system still needs to decide if it should make a notification.
+Whereas in a polling system polling is only used when there is an idle
+engine, which is rare in this benchmark.
 Further optimisation and tweaking could improve the situation in the future.
+
+\paul{TODO: switching between notification and polling}
 
 There are some other interesting trends in the results.
 Most obviously,
 as expected and explained above,
 parallel fibs program with fine granularity
 (high values for \Depth or disabled granularity control),
-perform more slowly than those with coarse granularity.
-There
-We expected that sequential version versions of fibs without granularity
-control to be faster than with it,
+run more slowly than those with coarse granularity.
+There we expected that sequential version of fibs without
+granularity control to be faster than with it,
 as granularity control will introduce its own overheads, this is only
 somewhat true.
 We also expected that the overheads of granularity control would affect the
@@ -909,16 +910,22 @@ sequential programs differently,
 that smaller values of \Depth would result in faster execution times,
 as less time is spent in the part of the call graph that includes the
 granularity control computation.
-This may be caused by some reason why the granularity controlled version of
-sequential \fibs is faster.
-Such a reason might be because the code generated for this procedure is
-faster as it aligns labels differently or interacts with the processor's
-branch prediction hardware more favourably.
+However, when the sequential execution times for fibs with a \Depth of 40
+are faster than those with a \Depth of 10,
+they are also faster than those without granulaity control.
+We are not sure of the cause,
+one hypothesis is that of the two procedures used in the granularity control
+code (\fibsseq and \fibsgc) that \fibsgc is faster due to
+some strange interaction of the processor's branch predictor and the code's
+allignment.
 This type of effect can be common with micro-benchmarks,
 which is one reason why their use is often discouraged.
+This could be tested by running several tests with randomised code layout
+\citep{curtsinger:2012:stabelizer}.
 
-In the left recursive mandelbrot tests the revised work stealing
-implementation is slightly slower than the original implementation.
+In the left recursive mandelbrot tests,
+the revised work stealing implementation is slightly slower than the
+original implementation.
 This could be due to the same reasons that make the revised implementation
 slower in the finer grained fibs tests.
 Compare this to the right recursive mandelbrot tests:
@@ -942,49 +949,47 @@ they can re-use their parent context.
 \plan{Further potential work}
 \plan{Steal half}
 We have noticed that in many workloads such as a left recursive parallel
-loop one engine creates all the sparks.
-In a situation like this,
-work stealing becomes more common than local work execution.
-One processor would execute work locally while $P - 1$ processors act as
+loop,
+one engine creates all the sparks.
+In situations like this,
+work stealing is more common than executing sparks from an engine's own
+deque.
+One processor would execute its own sparks while $P - 1$ processors act as
 thieves,
 and the original engine's work queue can become a bottleneck.
 To avoid this behaviour,
-a thief could steal more than one spark from a victim and put all but one of
-those sparks on its own deque.
-Each time this happens work becomes distributed among more of the engines,
-which improves the probability that a given victim has work on its deque.
-The numbers of sparks on each engine's deque should stabilise,
-and then work stealing will become less frequent as each engine will prefer to
-take work from the hot end of its own deque.
-Executing more work from one's own deque, and decreasing the amount of stealing
-should both improve the efficiency of the program as a whole.
+a thief could steal more than one spark from a victim and put all of
+the sparks on its own deque except one, which it executes immediatly.
+With each stealing operation, 
+sparks becomes distributed among more of the engines,
+which improves the probability that a given victim has work on its own deque.
+Work stealing will become less frequent as engines try to execute their own
+sparks before stealing other's,
+this should improve the efficiency of the program as a whole.
 
 We are currently using the deque data structure and algorithms described by
-\citet{Chase_2005_wsdeque} (CL Deque).
-\citet{hendler:2002:stealhalf} (HS Deque) describes a similar data structure
-and set of algorithms that allow half the work to be stolen in a single lock
-free operation.
-These data structures are similar:
-they are both based on \citet{arora:1998:work-stealing}.
-The HS Deque differs from 
-\citet{arora:1998:work-stealing}
-by stealing half the work from a victim's deque,
-whilst the CL Deque differs by structuring each deque as
-dynamically resizable circular buffer.
-We have chosen to use the CL Deque because it is resizable,
+\citet{Chase_2005_wsdeque} (C.L.\ Deque).
+It is a circular resizable array whose operations
+(section \ref{sec:rts_work_stealing})
+allow us to steal one item at a time.
+It is based on \citet{arora:1998:work-stealing}.
+We have considered useing the deque described by
+\citet{hendler:2002:stealhalf} (H.S.\ Deque),
+this is also a deque using a circular array 
+based on \citet{arora:1998:work-stealing}.
+It allows a thief to steal up to half the items on a victim's deque
+in a single operation.
+However, the H.S.\ Deque does not automatically resize,
 a feature that we identified as important (section \ref{sec:rts_work_stealing}).
-Furthermore,
-if we ever adopt a steal half deque (or any work stealing deque that allows
-us to steal more than one item in a single operation) we will have to
-consider spark execution order carefully.
-Therefore,
-these ideas may be interesting for further work.
+We should investigate using a deque similar to the H.S.\ Deque with resizing
+support in the future.
+At that time we will also have to carefully consider spark execution order.
 
 \plan{memory hierarchy awareness}
 Another potential improvement is in the selection of a thief's victim.
 A thief may wish to prefer victims that are nearby in terms of memory
 topology, so that communication of the data relevant to the spark is
 cheaper.
-This can also be used when selecting which engine to wake up in order to
-pass work to it.
+Likewise, selecting an engine to wake up when creating a spark could also
+consider memory topology.
 
