@@ -377,19 +377,63 @@ Therefore, \trystealspark must return the address of the next thing to
 execute and allow \idle to jump to this code or jump to \sleep.
 
 \plan{Why we need notifications, their purpose}.
-Engines that go to sleep either need to wake occasionally to \emph{poll} for
-work,
-or need to be notified when new work becomes available.
-One of the problems with the previous work stealing implementation is
-that it required engines to poll for work.
-Polling reduces the complexity of the system however
-sleeping engines will often wake up needlessly to find that there is no
-work available.
-When work does become available engines are often slow to react,
-since without a notification, they must wait for their polling timer to
-expire.
-Therefore our new idle code allows engines to be notified when 
-sparks are created or contexts become available to execute.
+A sleeping engine may need to wake up occasionally and handle new parallel
+work.
+There are two ways to do this:
+
+\begin{description}
+
+    \item[polling:] engines can wake up occasionally and \emph{poll} for new
+    work.
+
+    \item[notification:] engines can sleep indefinitly and be woken up by
+    some other engine when work becomes available.
+
+\end{description}
+
+\noindent
+Each of these options has its own drawbacks and benifits.
+Polling is very simple, but it has a number of drawbacks.
+An engine that wakes up will often find that there is no parallel work,
+and it will have to go to sleep again.
+In first impression this uses only a very small amount of CPU time which
+seems harmless,
+however many idle processes on a system behaving in this way can add up to a
+sagnificant amount of CPU time.
+%\paul{I know of an anecdote, I've asked my friend if he documented it so I can
+%produce a citation.}
+The other problem with polling is that a parallel task will not be executed
+immedatily as an engine's polling timer must first expire.
+These two problems trade off against one another,
+the more frequently an engine polls for work the quicker it can react but it
+will consume more CPU time.
+    
+Notification has neither of these problems, and has some additional
+benifits.
+An engine making a notification performs a deliberate action,
+we can take advantage of this by attaching additional information to the
+notification.
+We can also send the notification to a particular engine,
+allowing us to control which of several sleeping engines gets woken up and
+begins the parallel work.
+The major drawback of a notification system is that every time parallel work
+is created a notification may need to be made,
+and this adds to the overheads of creating parallel work.
+
+The previous version of the runtime system used polling for work
+stealing and notification for contexts.
+Engines waitied on a POSIX condition variable to be notified about free
+contexts and timed out every  two milliseconds and attempt to steal work.
+The system did not support selecting which engine would be woken when a
+context became runnable.
+The decision between polling and notification can be hard to make,
+and it may depend on the application and its work load. 
+We have choosen to support both methods in our new work stealing code;
+notification is used by default when a spark is created,
+but the user may elect to use polling.
+Notification is always used when a context becomes runnable. 
+We will describe notification and show the two changes necessary to use
+polling.
 
 \begin{figure}
 \begin{verbatim}
@@ -570,10 +614,8 @@ depending on the action closure,
 either re-check the run queue or exit.
 We have not shown the code that interprets and acts on the action closure.
 
-When an engine creates a spark it should attempt to notify other engines of
+When an engine creates a spark it attempts to notify other engines of
 the new spark.
-This was not needed in the previous version of the runtime system as the
-system used polling rather than notification.
 However, looking for and notifying an idle engine on every spark creation
 would be prohibitively expensive.
 Therefore we maintain a counter of the number of engines in an \emph{idle}
@@ -592,6 +634,9 @@ would be counter productive (and such a message would often be ignored).
 Therefore sending such a message would be \emph{too} speculative
 (and is still a little speculative when sent to an engine in the
 \code{MR\_STEALING} state).
+When the user selects polling for work stealing rather notification,
+then an engine will never attempt to notify another engine during spark
+creation.
 
 \begin{algorithm}
 \begin{algorithmic}[1]
@@ -654,6 +699,14 @@ We have shown the full switch/case statement for interpreting the values of
 \code{action} and \code{action\_data} in \sleep.
 The implied switch/case statement in \idle is similar,
 except that it does not need to cover some actions.
+When polling is enabled the call to \code{sem\_sleep} is used with a
+timeout.
+If the timout expires then the engine will aquire the lock and attempt to
+steal a spark from any other engine, if it finds a spark it moves to the
+\code{MR\_WORKING} state.
+It holds the lock until it either decides to sleep again or sets its state
+so that it a context notification is not lost in the meantime,
+as contexts always use notification rather than polling.
 
 When an engine receives a \code{ACTION\_WORKSTEAL} message it executes the
 code at lines 10--21,
