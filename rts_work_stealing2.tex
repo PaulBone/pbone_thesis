@@ -3,7 +3,7 @@
 \label{sec:rts_work_stealing2}
 
 \status{
-    A few things to fix up before this section is ready, but it's mostly
+    A few things to fix up before this section is ready, but it is mostly
     done now.
 }
 
@@ -223,14 +223,14 @@ both are now unnecessary.
     \EndProcedure
 \end{algorithmic}
 \caption{New \idle code}
-\label{alg:idle_entry_point}
+\label{alg:idle}
 \end{algorithm}
 
 We have also made changes to the code that idle engines execute.
 An idle engine with a context that is free (it can be used for any spark) or
 without a context will call \idle to acquire new work.
 \idle has changed significantly;
-the new version is shown in algorithm \ref{alg:idle_entry_point}.
+the new version is shown in algorithm \ref{alg:idle}.
 This algorithm users a structure pointed to by $eng\_data$ to receive
 notifications,
 this is discussed later.
@@ -341,8 +341,9 @@ work together to prevent deadlocks that could be caused by
 the context limit and dependencies.
 The context limit is a work-around to prevent some kinds of worst case
 behaviour and should not normally affect other algorithmic choices.
-These algorithmic choices are valid and desirable even if we did not need or
-use the context limit as they eep the number of contexts low.
+These algorithmic choices are valid and desirable,
+even if we did not need or use the context limit as they keep the number of
+contexts low.
 This is good for performance as contexts consume significant amounts of
 memory and the garbage collector spends time scanning that memory.
 
@@ -420,7 +421,7 @@ it is used by both the owner and other engines to read and write the state
 of the engine;
 \code{action} and \code{action\_data} are a closure describing
 the next action that the engine should perform;
-\code{sleep\_sem} is a semaphore that the ower will wait on when it should
+\code{sleep\_sem} is a semaphore that the owner will wait on in order to
 sleep and other engines will signal if they want the engine to wake up;
 \code{lock} is used to prevent multiple engines trying to wake the same
 engine at once.
@@ -580,7 +581,7 @@ state.
 When this counter is zero, an engine creating a spark will not attempt to
 notify any other engine.
 Idle states are \code{MR\_STEALING} and \code{MR\_SLEEPING}
-and are shown in figure \ref{fig:engine_state} as shaded ovals.
+and are shown in figure \ref{fig:engine_states} as shaded ovals.
 Only engines in these states are sent the \code{ACTION\_WORKSTEAL} message.
 We considered including the \code{MR\_LOOKING\_FOR\_WORK} state as an idle
 state and allowing engines in this state to receive the
@@ -799,12 +800,12 @@ conjunctions so right recursion can still occur.
 The following five row groups provide results for a new program named fibs.
 Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 using the naive algorithm of summing the previous two
-Fibonacci numbers where these are defined recursivly.
+Fibonacci numbers where these are defined recursively.
 This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
     (The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers the return value while \code{N} refers to the
     function's input arguments.)
-The naive fibs program is an excelent micro-benchmark for work stealing.
+The naive fibs program is an excellent micro-benchmark for work stealing.
 It creates many small tasks whose overheads dominate the program's execution
 time which allows us easily measure the overheads of work stealing.
 Results for this version of \fibs (figure \ref{fig:fibs})
@@ -839,11 +840,11 @@ fibsgc(N, Depth) = F :-
 \label{fig:fibsgc}
 \end{figure}
 
-To avoid embarassing parallelism and create a point for comparison,
+To avoid embarrassing parallelism and create a point for comparison,
 we have also shown results for fibs using \emph{granularity control} (GC) to
 create fewer but larger parallel tasks
 (parallelism with courser grains).
-We can acheive this by introducing a new function \fibsgc,
+We can achieve this by introducing a new function \fibsgc,
 which is shown in figure \ref{fig:fibsgc}.
 \fibsgc takes an additional argument named \Depth which is
 the number of recursion levels near the top of the call graph in
@@ -862,13 +863,13 @@ Fibs has better parallel performance when \Depth's initial value is
 smaller,
 demonstrating how granularity control improves performance,
 (row groups three to six in the table).
-In parallelised divide and conqure code such as Fibs the context limit does
-not affect performace as badly as it does with right
+In parallelised divide and conquer code such as Fibs the context limit does
+not affect performance as badly as it does with right
 single recursive code.
 The original context for each parallel conjunction is not blocked for as
 long as it is with right recursive code,
-because in the divide and conqure case both conjuncts have roughly
-equivilent costs.
+because in the divide and conquer case both conjuncts have roughly
+equivalent costs.
 Recall that since introducing our initial work stealing implementation in
 section \ref{sec:rts_work_stealing} left recursion has not been effected by
 the context limit at all.
@@ -912,12 +913,12 @@ as less time is spent in the part of the call graph that includes the
 granularity control computation.
 However, when the sequential execution times for fibs with a \Depth of 40
 are faster than those with a \Depth of 10,
-they are also faster than those without granulaity control.
+they are also faster than those without granularity control.
 We are not sure of the cause,
 one hypothesis is that of the two procedures used in the granularity control
 code (\fibsseq and \fibsgc) that \fibsgc is faster due to
 some strange interaction of the processor's branch predictor and the code's
-allignment.
+alignment.
 This type of effect can be common with micro-benchmarks,
 which is one reason why their use is often discouraged.
 This could be tested by running several tests with randomised code layout
@@ -959,7 +960,7 @@ thieves,
 and the original engine's work queue can become a bottleneck.
 To avoid this behaviour,
 a thief could steal more than one spark from a victim and put all of
-the sparks on its own deque except one, which it executes immediatly.
+the sparks on its own deque except one, which it executes immediately.
 With each stealing operation, 
 sparks becomes distributed among more of the engines,
 which improves the probability that a given victim has work on its own deque.
@@ -973,7 +974,7 @@ It is a circular resizable array whose operations
 (section \ref{sec:rts_work_stealing})
 allow us to steal one item at a time.
 It is based on \citet{arora:1998:work-stealing}.
-We have considered useing the deque described by
+We have considered using the deque described by
 \citet{hendler:2002:stealhalf} (H.S.\ Deque),
 this is also a deque using a circular array 
 based on \citet{arora:1998:work-stealing}.
