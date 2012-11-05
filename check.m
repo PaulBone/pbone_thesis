@@ -29,6 +29,7 @@
 :- import_module bool.
 :- import_module char.
 :- import_module cord.
+:- import_module counter.
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
@@ -177,7 +178,7 @@ check_bad_words(Word, Locn, BadWord, Message, MaybeError) :-
 :- pred check_ngrams(cord(token)::in, cord(prose_error)::out) is det.
 
 check_ngrams(Tokens, Errors) :-
-    tokens_to_consecutive_words(Tokens, Words),
+    tokens_to_consecutive_words(Tokens, Words, counter.init(0), _),
     cord.map_pred(check_ngrams_words, Words, Errorss),
     Errors = cord_concat(Errorss).
 
@@ -368,23 +369,26 @@ bad_ngrams = [
     % Words are consecutive when not seperated by a macro unless the macro
     % is something like \emph or \code.
     %
-:- pred tokens_to_consecutive_words(cord(token)::in, cord(cord(word))::out)
+:- pred tokens_to_consecutive_words(cord(token)::in, cord(cord(word))::out,
+    counter::in, counter::out)
     is det.
 
-tokens_to_consecutive_words(Tokens, Words) :-
-    list.foldl2(token_to_consecutive_words, list(Tokens), cord.empty, LastGroup,
-        cord.empty, Groups),
+tokens_to_consecutive_words(Tokens, Words, !IDs) :-
+    list.foldl3(token_to_consecutive_words, list(Tokens), cord.empty, LastGroup,
+        cord.empty, Groups, !IDs),
     Words = snoc(Groups, LastGroup).
 
 :- pred token_to_consecutive_words(token::in,
     cord(word)::in, cord(word)::out,
-    cord(cord(word))::in, cord(cord(word))::out) is det.
+    cord(cord(word))::in, cord(cord(word))::out,
+    counter::in, counter::out) is det.
 
-token_to_consecutive_words(word(Word, Locn), !LastGroup, !Groups) :- 
+token_to_consecutive_words(word(Word, Locn), !LastGroup, !Groups, !IDs) :- 
     !:LastGroup = snoc(!.LastGroup, word(Word, Locn)).
-token_to_consecutive_words(punct(_, _), !LastGroup, !Groups) :-
+token_to_consecutive_words(punct(_, _), !LastGroup, !Groups, !IDs) :-
     end_group(!LastGroup, !Groups).
-token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups) :-
+token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups,
+        !IDs) :-
     ( length(Name, 1) ->
         % Short macros usually just stand for a letter, or sometimes a line
         % break.
@@ -403,64 +407,86 @@ token_to_consecutive_words(macro(Name, Args, Locn), !LastGroup, !Groups) :-
             end_group(!LastGroup, !Groups)
         )
     ;
-        conservative_macro_info(Name, IsRef, BreaksFlow),
+        conservative_macro_info(Name, IsRef, BreaksFlow, ContainsProse),
         (
             IsRef = macro_is_reference,
             % Reference macros don't get checked, just pretend that they're a
             % proper noun.
-            !:LastGroup = snoc(!.LastGroup, word("RefNoun", Locn))
+            insert_noun("RefNoun", Locn, !LastGroup, !IDs)
         ;
-            IsRef = macro_is_anchor
-        ;
-            IsRef = macro_is_not_reference,
-            % The macro breaks the flow of text.
-            foldl2(macro_arg_to_consecutive_words(BreaksFlow),
-                list(Args), !LastGroup, !Groups)
+            ( IsRef = macro_is_anchor
+            ; IsRef = macro_is_not_reference
+            ),
+            (
+                ContainsProse = contains_prose,
+                % The macro breaks the flow of text.
+                foldl3(macro_arg_to_consecutive_words(BreaksFlow),
+                    list(Args), !LastGroup, !Groups, !IDs)
+            ;
+                ContainsProse = replace_with_noun,
+                maybe_end_group(BreaksFlow, !LastGroup, !Groups),
+                insert_noun("Noun", Locn, !LastGroup, !IDs),
+                maybe_end_group(BreaksFlow, !LastGroup, !Groups)
+            ;
+                ContainsProse = does_not_contain_prose,
+                maybe_end_group(BreaksFlow, !LastGroup, !Groups)
+            )
         )
     ).
 token_to_consecutive_words(environment(Name, _Args, Tokens, _), !LastGroup,
-        !Groups) :-
+        !Groups, !IDs) :-
     ( environment_breaks_flow(Name) ->
-        BreaksFlow = yes,
+        BreaksFlow = macro_breaks_flow,
         end_group(!LastGroup, !Groups)
     ;
-        BreaksFlow = no
+        BreaksFlow = macro_does_not_break_flow
     ),
     ( not environment_does_not_contain_prose(Name) ->
         % Note that we don't check the environments args, I don't know of
         % any that have prose to check.
-        list.foldl2(token_to_consecutive_words, list(Tokens),
-            !LastGroup, !Groups)
+        list.foldl3(token_to_consecutive_words, list(Tokens),
+            !LastGroup, !Groups, !IDs)
     ;
         true
     ),
-    (
-        BreaksFlow = yes,
-        end_group(!LastGroup, !Groups)
-    ;
-        BreaksFlow = no
-    ).
+    maybe_end_group(BreaksFlow, !LastGroup, !Groups).
+
+:- pred insert_noun(string::in, locn::in, cord(word)::in, cord(word)::out, 
+    counter::in, counter::out) is det.
+
+insert_noun(Name, Locn, !LastGroup, !IDs) :-
+    allocate(Num, !IDs),
+    !:LastGroup = snoc(!.LastGroup,
+        word(format("%s_%d", [s(Name), i(Num)]), Locn)).
 
 :- pred macro_arg_to_consecutive_words(macro_breaks_flow::in, macro_arg::in,
     cord(word)::in, cord(word)::out,
-    cord(cord(word))::in, cord(cord(word))::out) is det.
+    cord(cord(word))::in, cord(cord(word))::out, counter::in, counter::out)
+    is det.
 
 macro_arg_to_consecutive_words(BreaksFlow, macro_arg(Tokens, _),
-        !LastGroup, !Groups) :-
+        !LastGroup, !Groups, !IDs) :-
     (
         BreaksFlow = macro_breaks_flow,
         end_group(!LastGroup, !Groups)
     ;
         BreaksFlow = macro_does_not_break_flow
     ),
-    list.foldl2(token_to_consecutive_words, list(Tokens),
-        !LastGroup, !Groups),
+    list.foldl3(token_to_consecutive_words, list(Tokens),
+        !LastGroup, !Groups, !IDs),
     (
         BreaksFlow = macro_breaks_flow,
         end_group(!LastGroup, !Groups)
     ;
         BreaksFlow = macro_does_not_break_flow
     ).
+
+:- pred maybe_end_group(macro_breaks_flow::in,
+    cord(T)::in, cord(T)::out, cord(cord(T))::in, cord(cord(T))::out) is det.
+
+maybe_end_group(macro_breaks_flow, !LastGroup, !Groups) :-
+    end_group(!LastGroup, !Groups).
+maybe_end_group(macro_does_not_break_flow, !LastGroup, !Groups).
 
 :- pred end_group(cord(T)::in, cord(T)::out,
     cord(cord(T))::in, cord(cord(T))::out) is det.

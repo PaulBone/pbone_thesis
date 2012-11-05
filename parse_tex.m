@@ -96,15 +96,16 @@ words(Tokens) =
 
 token_words(word(Word, Locn)) = cord.singleton(word(Word, Locn)).
 token_words(punct(_, _)) = cord.empty.
-token_words(macro(Ident, Args, _)) = Words :-
-    conservative_macro_info(Ident, MacroIsRef, _),
+token_words(macro(Ident, Args, Locn)) = Words :-
+    conservative_macro_info(Ident, _, _, ContainsProse),
     (
-        ( MacroIsRef = macro_is_reference
-        ; MacroIsRef = macro_is_anchor
-        ),
+        ContainsProse = does_not_contain_prose,
         Words = cord.empty
     ;
-        MacroIsRef = macro_is_not_reference,
+        ContainsProse = replace_with_noun,
+        Words = cord.singleton(word("Noun", Locn))
+    ;
+        ContainsProse = contains_prose,
         Words = cord_concat(map(macro_arg_words, Args))
     ).
 token_words(environment(Ident, _, Tokens, _)) = Words :-
