@@ -386,30 +386,30 @@ There are two ways to do this:
     \item[polling:] engines can wake up occasionally and \emph{poll} for new
     work.
 
-    \item[notification:] engines can sleep indefinitly and be woken up by
+    \item[notification:] engines can sleep indefinitely and be woken up by
     some other engine when work becomes available.
 
 \end{description}
 
 \noindent
-Each of these options has its own drawbacks and benifits.
+Each of these options has its own drawbacks and benefits.
 Polling is very simple, but it has a number of drawbacks.
 An engine that wakes up will often find that there is no parallel work,
 and it will have to go to sleep again.
 In first impression this uses only a very small amount of CPU time which
 seems harmless,
 however many idle processes on a system behaving in this way can add up to a
-sagnificant amount of CPU time.
+significant amount of CPU time.
 %\paul{I know of an anecdote, I've asked my friend if he documented it so I can
 %produce a citation.}
 The other problem with polling is that a parallel task will not be executed
-immedatily as an engine's polling timer must first expire.
+immediately as an engine's polling timer must first expire.
 These two problems trade off against one another,
 the more frequently an engine polls for work the quicker it can react but it
 will consume more CPU time.
     
 Notification has neither of these problems, and has some additional
-benifits.
+benefits.
 An engine making a notification performs a deliberate action,
 we can take advantage of this by attaching additional information to the
 notification.
@@ -422,13 +422,13 @@ and this adds to the overheads of creating parallel work.
 
 The previous version of the runtime system used polling for work
 stealing and notification for contexts.
-Engines waitied on a POSIX condition variable to be notified about free
+Engines waiting on a POSIX condition variable to be notified about free
 contexts and timed out every  two milliseconds and attempt to steal work.
 The system did not support selecting which engine would be woken when a
 context became runnable.
 The decision between polling and notification can be hard to make,
 and it may depend on the application and its work load. 
-We have choosen to support both methods in our new work stealing code;
+We have chosen to support both methods in our new work stealing code;
 notification is used by default when a spark is created,
 but the user may elect to use polling.
 Notification is always used when a context becomes runnable. 
@@ -699,9 +699,9 @@ We have shown the full switch/case statement for interpreting the values of
 \code{action} and \code{action\_data} in \sleep.
 The implied switch/case statement in \idle is similar,
 except that it does not need to cover some actions.
-When polling is enabled the call to \code{sem\_sleep} is used with a
+When polling is enabled the call to \code{sem\_wait} is used with a
 timeout.
-If the timout expires then the engine will aquire the lock and attempt to
+If the timeout expires then the engine will acquire the lock and attempt to
 steal a spark from any other engine, if it finds a spark it moves to the
 \code{MR\_WORKING} state.
 It holds the lock until it either decides to sleep again or sets its state
@@ -810,50 +810,147 @@ so if the run queue is non-empty we put the spark back on the deque and jump
 to \idle (lines 19--21);
 otherwise we execute the spark.
 
-\input{tab_work_stealing_revised2}
+\input{tab_work_stealing_revised2pt1}
 
 \plan{Benchmark}
-Table \ref{tab:work_stealing_revised} shows a comparison of the previous
-work stealing implementation with this one.
-There are several row groups with two rows each.
-Each row group gives the results for a single program and configuration,
-while the rows in each group give the results for the previous work stealing
-system and the current one.
-
-\begin{figure}
-\begin{verbatim}
-:- func fibs(int) = int.
-
-fibs(N) = F :-
-    ( N < 2 ->
-        F = 1
-    ;
-        (
-            F1 = fibs(N-1)
-        &
-            F2 = fibs(N-2)
-        ),
-        F = F1 + F2
-    ).
-\end{verbatim}
-\caption{\fibs without granularity control}
-\label{fig:fibs}
-\end{figure}
-
-The first row group provides the results for the
-right recursive mandelbrot program.
-We compiled this with the conjunct reordering transformation from section
-\ref{sec:rts_reorder} disabled,
+Table \ref{tab:work_stealing_revised_mandelbrot} shows a comparison of the previous
+work stealing implementation with this one using mandelbrot.
+There are two row groups with three rows each.
+The first group shows the results for right recursive mandelbrot while the
+second shows the results for left recursive mandelbrot.
+The first row in each group give the results for the previous work stealing
+system and
+the second and third rows in each group show the results for the current
+system using notifications (second row) and polling (third row).
+Each result is presented with its standard deviation in parentheses.
+We compiled the right recursive mandelbrot program with the conjunct
+reordering transformation from section \ref{sec:rts_reorder} disabled,
 otherwise it would have had the same results as the left recursive version
-of the same program,
-which is shown in the second grow group.
+of the same program.
 It is still important to test right recursion such as in this example,
 as the conjunct reordering transformation cannot reorder dependent parallel
 conjunctions so right recursion can still occur.
-The following five row groups provide results for a new program named fibs.
+
+The differences between the old and new results are minimal,
+we have shown the standard deviation for each result to make it easier to
+see where comparisons are valid.
+In both left and right recursive mandelbrot programs using one Mercury
+engine,
+the new work stealing code with notifications appears to perform worse than
+the original work stealing code.
+The new implementation with polling improved on the speed of notifications,
+but not on the original implementation.
+The results with multiple engines are harder to draw any conclusions from,
+there are no strong trends and some results have high standard deviations.
+We are hesitant to draw any conclusions from these results.
+
+%Using only one engine means that work stealing will not occur but spark
+%creation does, the engine will also execute \joinandcontinue often.
+%We believe that this slow down is due to the notification code executed
+%during each spark's creation.
+%While no notifications are ever made, a check is performed to see if a
+%notification should be made.
+%This makes sense since the new implementation with notifications was slowest
+%than the other two versions.
+%The new implementation's changes to \joinandcontinue may also be having a
+%performance impact;
+%now \joinandcontinue must check that the current context is compatible with
+%a spark before executing the spark.
+%When we look at the cases for two or more Mercury engines making meaningful
+%comparisons is still very difficult.
+%The result of 8.1 seconds for right recursive mandelbrot with
+%the new runtime system using notifications is an outlier:
+%it has an unusually large standard deviation of 1.3s and we cannot use it
+%for comparison.
+%The right recursive results with four Mercury engines have low standard
+%deviations and seem to suggest that the new runtime system is faster,
+%especially when using polling.
+
+% The left recursive mandelbrot program generates all its
+% sparks at once and the right recursive one does not.
+% The revised work stealing system may be slightly faster because it
+% notifies an engine when there is a spark to execute in parallel,
+% while in the original version, a sleeping engine polls the spark deques
+% every two milliseconds.
+% However, the more likely explanation is that the search through all the
+% deques takes longer in the original version as the number of deques is equal
+% to the number of contexts,
+% and as we saw earlier in this chapter right recursion can create a large
+% number of contexts.
+% This is especially true with larger numbers of engines;
+% fewer sparks are executed on the engine on which they were created where
+% they can re-use their parent context.
+
+\begin{figure}
+\begin{center}
+\hfill
+\begin{minipage}[b]{0.39\textwidth}
+\begin{center}
+\subfigure[\fibs, no granularity control]{
+\begin{tabular}{l}
+\code{:- func fibs(int) = int.} \\
+\\
+\code{fibs(N) = F :-} \\
+\code{~~~~( N < 2 ->} \\
+\code{~~~~~~~~F = 1} \\
+\code{~~~~;} \\
+\code{~~~~~~~~(} \\
+\code{~~~~~~~~~~~~F1 = fibs(N-1)} \\
+\code{~~~~~~~~\&} \\
+\code{~~~~~~~~~~~~F2 = fibs(N-2)} \\
+\code{~~~~~~~~),} \\
+\code{~~~~~~~~F = F1 + F2} \\
+\code{~~~~).} \\
+% Why is this the only way that I can add vertical space that works?!?
+\\
+\\
+\\
+\\
+\\
+\end{tabular}
+\label{fig:fibs}}
+\end{center}
+\end{minipage}
+%
+\hfill
+\begin{minipage}[b]{0.59\textwidth}
+\begin{center}
+\subfigure[\fibsgc, with granularity control]{
+\begin{tabular}{l}
+\code{:- func fibs\_gc(int, int) = int.} \\
+\code{} \\
+\code{fibsgc(N, Depth) = F :-} \\
+\code{~~~~( N < 2 ->} \\
+\code{~~~~~~~~F = 1} \\
+\code{~~~~;} \\
+\code{~~~~~~~~( Depth > 0 ->} \\
+\code{~~~~~~~~~~~~(} \\
+\code{~~~~~~~~~~~~~~~~F1 = fibs\_gc(N-1, Depth-1)} \\
+\code{~~~~~~~~~~~~\&} \\
+\code{~~~~~~~~~~~~~~~~F2 = fibs\_gc(N-2, Depth-1)} \\
+\code{~~~~~~~~~~~~)} \\
+\code{~~~~~~~~;} \\
+\code{~~~~~~~~~~~~F1 = fibs\_seq(N-1),} \\
+\code{~~~~~~~~~~~~F2 = fibs\_seq(N-2)} \\
+\code{~~~~~~~~),} \\
+\code{~~~~~~~~F = F1 + F2} \\
+\code{~~~~).} \\
+\end{tabular}
+\label{fig:fibsgc}}
+\end{center}
+\end{minipage}
+\hfill
+%
+\caption{Naive parallel Fibonacci with and without granularity control}
+\end{center}
+\end{figure}
+
+Because the mandelbrot results are so inconclusive we created a new
+benchmark named fibs.
 Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
-using the naive algorithm of summing the previous two
-Fibonacci numbers where these are defined recursively.
+using the naive algorithm:
+summing the previous two Fibonacci numbers where these are defined
+recursively.
 This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
     (The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers the return value while \code{N} refers to the
@@ -861,37 +958,12 @@ This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
 The naive fibs program is an excellent micro-benchmark for work stealing.
 It creates many small tasks whose overheads dominate the program's execution
 time which allows us easily measure the overheads of work stealing.
-Results for this version of \fibs (figure \ref{fig:fibs})
-are shown in the ``without GC'' (seventh) row group of table
-\ref{tab:work_stealing_revised}.
+Results for this version of \fibs
+are shown in the ``without GC'' (fifth) row group of table
+\ref{tab:work_stealing_revised_fibs}.
 
 %making the program slower than its sequential version;
 %this can be seen in the table.
-
-\begin{figure}
-\begin{verbatim}
-:- func fibs_gc(int, int) = int.
-
-fibsgc(N, Depth) = F :-
-    ( N < 2 ->
-        F = 1
-    ;
-        ( Depth > 0 ->
-            (
-                F1 = fibs_gc(N-1, Depth-1)
-            &
-                F2 = fibs_gc(N-2, Depth-1)
-            )
-        ;
-            F1 = fibs_seq(N-1),
-            F2 = fibs_seq(N-2)
-        ),
-        F = F1 + F2
-    ).
-\end{verbatim}
-\caption{\fibsgc, \fibs using granularity control}
-\label{fig:fibsgc}
-\end{figure}
 
 To avoid embarrassing parallelism and create a point for comparison,
 we have also shown results for fibs using \emph{granularity control} (GC) to
@@ -903,51 +975,59 @@ which is shown in figure \ref{fig:fibsgc}.
 the number of recursion levels near the top of the call graph in
 which parallel execution should be used,
 below this depth sequential execution is used.
-The third through sixth row groups in table
-\ref{tab:work_stealing_revised} use \fibsgc, with varying initial values for
-\Depth.
+The first four rows of
+table \ref{tab:work_stealing_revised_fibs} show results using \fibsgc,
+with varying initial values for \Depth.
 %This is just one type of granularity control.
 %Granularity control is any method used to avoid
 %embarrassing parallelism by turning a computation with 
 %many small parallel tasks into one with fewer larger parallel tasks.
 
-\plan{Evaluation}
+\input{tab_work_stealing_revised2pt2}
+
 Fibs has better parallel performance when \Depth's initial value is
 smaller,
-demonstrating how granularity control improves performance,
-(row groups three to six in the table).
-In parallelised divide and conquer code such as Fibs the context limit does
-not affect performance as badly as it does with right
-single recursive code.
-The original context for each parallel conjunction is not blocked for as
-long as it is with right recursive code,
-because in the divide and conquer case both conjuncts have roughly
-equivalent costs.
-Recall that since introducing our initial work stealing implementation in
-section \ref{sec:rts_work_stealing} left recursion has not been effected by
-the context limit at all.
-In most tests,
-the mandelbrot tests and the coarse grained fibs tests,
-there is very little difference between the performance of the old and new
-work stealing systems.
+demonstrating how granularity control improves performance.
+In parallelised divide and conquer code such as this the context limit does
+not affect performance as badly as it does with right single recursive code.
+This is because both conjuncts have similar costs compared to the different
+costs in singly recursive code,
+the original context is less likely to block on the completion of the second
+conjunct and if it does it will not need to block for as long as it would
+with right recursive code.
+We do not compare the context limit behaviour of divide and conquer with that
+of left recursion,
+as work stealing solved the context limit problems in left recursive code
+(section \ref{sec:rts_work_stealing}.
+The coarse grained fibs results (smaller values for \Depth)
+show little difference between the different work stealing implementations.
 However,
 in the fine grained fibs tests we can clearly see that the new work stealing
-system has much higher overheads.
-This is not what we expected but it makes sense.
-The new work stealing system no longer uses a timeout to wake up sleeping
-engines, allowing them to check for work.
-Instead when an engine creates a spark must notify a sleeping engine (if an
-engine is sleeping).
-We think that the additional overhead of notification contributes to part of
-the slow down,
-but probably not all of it.
-Even if notifications are not required because all the engines are busy,
-the runtime system still needs to decide if it should make a notification.
-Whereas in a polling system polling is only used when there is an idle
-engine, which is rare in this benchmark.
-Further optimisation and tweaking could improve the situation in the future.
-
-\paul{TODO: switching between notification and polling}
+system has much higher overheads,
+both with notifications and with polling.
+This makes sense for the notification tests
+as each time an engine creates a spark it may need to notify another
+engine,
+even when no notification is made the test to determine if a notification is
+needed adds overhead.
+But the new results with polling are also slower than the old runtime
+system.
+In fact,
+it is difficult to see a distinction between
+the new results with notifications, and the new results with polling.
+So the overhead of making a notification does not appear to make a strong
+difference.
+However when we consider the single engine cases,
+there is a clear difference between the old and new implementations.
+Therefore,
+the difference in performance comes from some code that is executed even
+when only one engine is used.
+Work stealing itself, or the code in \idle is probably not the cause of the
+slow down.
+This leaves only \joinandcontinue,
+whose new version contains an extra test to ensure that the engine's current
+context is compatible with the spark that it found on its local deque.
+Further tests could be done to confirm this hypothesis.
 
 There are some other interesting trends in the results.
 Most obviously,
@@ -955,18 +1035,22 @@ as expected and explained above,
 parallel fibs program with fine granularity
 (high values for \Depth or disabled granularity control),
 run more slowly than those with coarse granularity.
-There we expected that sequential version of fibs without
-granularity control to be faster than with it,
-as granularity control will introduce its own overheads, this is only
-somewhat true.
-We also expected that the overheads of granularity control would affect the
-sequential programs differently,
-that smaller values of \Depth would result in faster execution times,
-as less time is spent in the part of the call graph that includes the
-granularity control computation.
-However, when the sequential execution times for fibs with a \Depth of 40
-are faster than those with a \Depth of 10,
-they are also faster than those without granularity control.
+This is easy to understand so we will not discuss it further.
+However
+when we consider the sequential results for varying amounts of granularity,
+we see some strange results.
+We should expect to see the overheads of granularity control in these
+results;
+the results with large values for \Depth should be slower than the ones with
+smaller values.
+We would also expect the results without granularity control to be fastest,
+but not significantly,
+as in practice \fibsgc contributes to a tiny part of the callgraphs of tests
+with a low \Depth value.
+However the results are very different:
+the sequential execution times for fibs with a \Depth of 40
+are \emph{faster} than those with a \Depth of 10
+and those without granularity control.
 We are not sure of the cause,
 one hypothesis is that of the two procedures used in the granularity control
 code (\fibsseq and \fibsgc) that \fibsgc is faster due to
@@ -976,29 +1060,6 @@ This type of effect can be common with micro-benchmarks,
 which is one reason why their use is often discouraged.
 This could be tested by running several tests with randomised code layout
 \citep{curtsinger:2012:stabelizer}.
-
-In the left recursive mandelbrot tests,
-the revised work stealing implementation is slightly slower than the
-original implementation.
-This could be due to the same reasons that make the revised implementation
-slower in the finer grained fibs tests.
-Compare this to the right recursive mandelbrot tests:
-in the tests with three and four Mercury engines the revised implementation
-is slightly faster.
-The left recursive mandelbrot program generates all its
-sparks at once and the right recursive one does not.
-The revised work stealing system may be slightly faster because it
-notifies an engine when there is a spark to execute in parallel,
-while in the original version, a sleeping engine polls the spark deques
-every two milliseconds.
-However, the more likely explanation is that the search through all the
-deques takes longer in the original version as the number of deques is equal
-to the number of contexts,
-and as we saw earlier in this chapter right recursion can create a large
-number of contexts.
-This is especially true with larger numbers of engines;
-fewer sparks are executed on the engine on which they were created where
-they can re-use their parent context.
 
 \plan{Further potential work}
 \plan{Steal half}
