@@ -63,21 +63,20 @@ We only attempted to reorder completely independent conjunctions.
 It may be possible to find independent sections of dependent conjunctions
 and reorder them,
 but we have not needed to.
-\reorder is invoked on parallel conjunctions without shared variables,
+\reorder is invoked on parallel conjunctions without shared variables;
 its code is shown in algorithm \ref{alg:reorder_conjunction}.
 Its arguments are a reference to the current SCC and a list of the parallel
 conjunction's conjuncts.
 \reorder iterates over these goals in reverse order by means of the
 recursive call on line 6.
-For each goal it tests if that goal makes a call to the current SCC,
-if so it leaves the goal where it is,
+For each goal it tests if that goal makes a call to the current SCC.
+If so it leaves the goal where it is,
 if not \reorder will attempt to push the goal towards the end of the
 list using \trypushconjlater.
-\trypushconjlater is also very simple,
-It takes the current goal and the list representing the \emph{rest} of the
-conjunction,
-It iterates down this list attempting to swap the goal being pushed
-(\code{Goal}) with the goal at the front of the list (\code{Pivot}).
+\trypushconjlater takes the current goal (\var{Goal}) and the list
+representing the rest of the conjunction (\var{Conjs}).
+It iterates down this list attempting to swap \var{Goal} with the goal at
+the front of the list (\var{Pivot}).
 Not all swaps are legal,
 for example a goal cannot be swapped with an impure goal,
 therefore \trypushconjlater may not always push a goal all the way to the
