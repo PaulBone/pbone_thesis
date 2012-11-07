@@ -4,6 +4,7 @@ Spelling
     Incorrect words: contest
                      shutdown
                      week
+                     course
 
 Revisits
 Cross references
