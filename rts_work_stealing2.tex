@@ -468,7 +468,7 @@ of the engine;
 the next action that the engine should perform;
 \code{sleep\_sem} is a semaphore that the owner will wait on in order to
 sleep and other engines will signal if they want the engine to wake up;
-and\code{lock} is used to prevent multiple engines trying to wake the same
+and \code{lock} is used to prevent multiple engines trying to wake the same
 engine at once.
 The \idle code above manipulates the state field in its structure,
 which is pointed to by \code{engine\_data}.
@@ -505,7 +505,7 @@ which is pointed to by \code{engine\_data}.
 The states are shown in figure \ref{fig:engine_states} as oval-shaped nodes
 in the graph except for \code{MR\_NOTIFIED},
 which is a single value that represents all the notification types,
-depeicted as rectangular nodes in the graph.
+depicted as rectangular nodes in the graph.
 The oval node with a dashed outline is illustrative only,
 it exists in the graph to make it easier to visualise how work stealing may
 fail.
