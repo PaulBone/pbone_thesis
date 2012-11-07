@@ -11,7 +11,7 @@ In this section we take the opportunity to improve on our work stealing
 implementation from section \ref{sec:rts_work_stealing}.
 While we made these improvements,
 we also found it useful to change how idle engines behave.
-Although these too changes are conceptually distinct,
+Although these two changes are conceptually distinct,
 they were made together and their implementations are interlinked.
 Therefore we will present and benchmark them together as one set of changes.
 
@@ -164,15 +164,15 @@ victim using a new field \code{victim\_counter} in the engine structure.
 If a spark is found, \trystealspark will save the current victim index to
 this field, as this deque may contain more sparks which it can try to
 steal later.
-We have not evaluated if this policy is an improvement.
+We have not evaluated whether this policy is an improvement.
 However when compared with the improvement due to removing the lock and
 potentially large number of spark deques,
 any difference in performance due to the selection of victims will be
 negligible.
 The two other changes are minor:
 we have removed the configurable limit of the number of work stealing
-attempts per round,
-and the test for null array slots;
+attempts per round and also
+the test for null array slots;
 both are now unnecessary.
 
 \begin{algorithm}[tbp]
@@ -231,21 +231,23 @@ An idle engine with a context that is free (it can be used for any spark) or
 without a context will call \idle to acquire new work.
 \idle has changed significantly;
 the new version is shown in algorithm \ref{alg:idle}.
-This algorithm users a structure pointed to by $eng\_data$ to receive
-notifications,
+This algorithm uses a structure pointed to by $eng\_data$ to receive
+notifications;
+we will discuss this structure and notifications this later in this section.
 this is discussed later.
 For now we will discuss how \idle looks for work in lieu of any notification.
 
-\idle looks tries to find a runnable context before trying to find a local
+\idle tries to find a runnable context before trying to find a local
 spark (lines 5--16).
 A context that has already been created usually represents work that is
 \emph{to the left of}
 any work that is still a spark (section \ref{sec:rts_work_stealing}).
-Executing $G_1$ of a parallel conjunction $G_1 \& G_2$ can signal futures
-that $G_2$ may otherwise block on or create sparks,
-making more parallelism available.
-Also if the context does not block, then when it finishes its work,
-its memory can be used to execute a spark from the engine's local spark queue.
+Executing $G_1$ of a parallel conjunction $G_1~\&~G_2$ can signal futures
+that $G_2$ may otherwise block on.
+Executing $G_1$ may also create sparks leading to more parallelism.
+Once a context is resumed and its execution finishes,
+then its memory can be used to execute a spark from the engine's local spark
+deque.
 Checking for runnable contexts first also helps to avoid the creation of new
 contexts before existing contexts' computations are finished.
 This partially avoids deadlocks that can occur when the context limit is
@@ -260,8 +262,8 @@ it first checks for and unloads the engine's current context,
 and then loads the new context (lines 11--13).
 It clears the context's resume field and jumps to the field's previous value
 (lines 14--16).
-The context's resume field must be cleared here as it may later be
-synchronised on by \joinandcontinue.
+The context's resume field must be cleared here as
+\joinandcontinue may use it later for synchronisation.
 Previously the run queue's lock protected all of \idle,
 this critical section has been made smaller which might be more efficient.
 
@@ -290,9 +292,9 @@ nested_par(...) ;-
 If \idle cannot find a context to resume then it
 will attempt to run a spark from its local spark deque (lines 18--23).
 If there is a spark to execute and the engine does not have a context,
-a new one needs to be created,
+a new one needs to be created;
 this is handled by \prepareengineforspark above.
-We considered only creating a context and executing the spark only if the
+We considered creating a context and executing the spark only if the
 context limit had not been reached,
 however this can create a problem, which we explain using an example.
 Consider figure \ref{fig:nested_dep_par} which shows two nested
@@ -300,38 +302,39 @@ parallel conjunctions
 and
 two futures that create dependencies between the parallel
 computations.
-\code{X} creates a dependency between \code{p} and \code{q},
-and \code{Y} creates a dependency between \code{r} and \code{t}.
+\var{X} creates a dependency between \code{p} and \code{q},
+and \var{Y} creates a dependency between \code{r} and \code{t}.
 When an engine, called E1,
-executes this procedure it pushes the spark for the second and third
+executes this procedure,
+it pushes the spark for the second and third
 conjuncts of the outer conjunction onto its local spark deque.
 E1 then begins the execution of \code{p}.
 A second engine, called E2,
 steals the spark from E1's spark deque and immediately creates two new
-sparks, the first is for \code{t} and the second for \code{r}.
+sparks; the first is for \code{t} and the second for \code{r}.
 It pushes the sparks onto its deque,
 therefore the spark for \code{t} is on the bottom (cold end).
 E2 then begins the execution of \code{q}.
 A third engine, E3,
-wakes up and steals the spark for \code{t} spark from E2.
+wakes up and steals the spark for \code{t} from E2.
 Next,
-E2 attempts to read the value of \code{X} in \code{q} but it has not yet
+E2 attempts to read the value of \var{X} in \code{q} but it has not yet
 been produced,
-therefore E2 suspends its context and calls \idle, it cannot find a context
+therefore E2 suspends its context and calls \idle, which cannot find a context
 to execute and therefore checks for and finds the local spark for \code{r}.
 E2 needs a new context to execute \code{r}, if the context limit is exceeded
-it E2 cannot do any work.
-And if E2 does not execute \code{r} then E3 cannot complete the execution of
-\code{t} and free up its context.
+it E2 cannot proceed.
+Without E2's execution of \code{r} and production of \var{Y},
+E3 cannot complete the execution of \code{t} and free up its context.
 The system will not deadlock, as the execution of \code{p} by E1 can still
 continue, and will eventually allow the execution of \code{q} to continue.
 However, we still wish to avoid such situations,
 therefore we do not check the context limit before running local contexts.
 Without this check,
-E2 is able to create a context and execute \code{r},
-this can never create more than a handful of extra contexts:
+E2 is able to create a context and execute \code{r}.
+This can never create more than a handful of extra contexts:
 while the limit is exceeded engines will not steal work and will therefore
-will execute sparks in a left-to-right order;
+execute sparks in a left-to-right order;
 dependencies and barriers cannot cause more contexts to become blocked.
 
 The two choices we have made,
@@ -342,8 +345,8 @@ the context limit and dependencies.
 The context limit is a work-around to prevent some kinds of worst case
 behaviour and should not normally affect other algorithmic choices.
 These algorithmic choices are valid and desirable,
-even if we did not need or use the context limit as they keep the number of
-contexts low.
+even if we did not need or use the context limit,
+as they keep the number of contexts low.
 This is good for performance as contexts consume significant amounts of
 memory and the garbage collector spends time scanning that memory.
 
@@ -356,8 +359,8 @@ in the runtime system.
 It returns the address of the spark's entry point to its caller which jumps
 to the entry point.
 In this case the caller is \idle,
-which is C code that uses the Mercury calling convention,
-this convention passes all its arguments and results in the Mercury abstract
+which is C code that uses the Mercury calling convention.
+This convention passes all its arguments and results in the Mercury abstract
 machine registers, including the return address.
 Additionally \idle does not call any other Mercury procedures and allow them
 to return control to it.
@@ -367,13 +370,13 @@ Mercury procedures (and must be saved by the caller).
 \idle has another difference with other Mercury procedures:
 it never returns control to its caller.
 Instead it continues execution by jumping to the code address of the next
-thing to execute,
+instruction to execute,
 such as the resume address of a context,
 or the entry point of a spark.
 If its callee, \trystealspark, were to make this jump rather than
 returning and then letting \idle jump,
 then this would leak the stack frame created for \trystealspark.
-Therefore, \trystealspark must return the address of the next thing to
+Therefore, \trystealspark must return the address of the next spark to
 execute and allow \idle to jump to this code or jump to \sleep.
 
 \plan{Why we need notifications, their purpose}.
@@ -404,16 +407,16 @@ significant amount of CPU time.
 %produce a citation.}
 The other problem with polling is that a parallel task will not be executed
 immediately as an engine's polling timer must first expire.
-These two problems trade off against one another,
+These two problems trade off against one another:
 the more frequently an engine polls for work the quicker it can react but it
 will consume more CPU time.
     
 Notification has neither of these problems, and has some additional
 benefits.
-An engine making a notification performs a deliberate action,
-we can take advantage of this by attaching additional information to the
+An engine making a notification performs a deliberate action.
+We take advantage of this by attaching additional information to the
 notification.
-We can also send the notification to a particular engine,
+We also send the notification to a particular engine,
 allowing us to control which of several sleeping engines gets woken up and
 begins the parallel work.
 The major drawback of a notification system is that every time parallel work
@@ -432,8 +435,6 @@ We have chosen to support both methods in our new work stealing code;
 notification is used by default when a spark is created,
 but the user may elect to use polling.
 Notification is always used when a context becomes runnable. 
-We will describe notification and show the two changes necessary to use
-polling.
 
 \begin{figure}
 \begin{verbatim}
@@ -455,7 +456,7 @@ union MR_engine_wake_action_data {
 \end{figure}
 
 \plan{Normal state transitions and the \enginesleepsync structure.}
-Notifications are handled using the \enginesleepsync structure shown in
+Notifications are implemented using the \enginesleepsync structure shown in
 figure \ref{fig:engine_sleep_sync}.
 A global array allows engines to access one-another's \enginesleepsync
 structures.
@@ -467,7 +468,7 @@ of the engine;
 the next action that the engine should perform;
 \code{sleep\_sem} is a semaphore that the owner will wait on in order to
 sleep and other engines will signal if they want the engine to wake up;
-\code{lock} is used to prevent multiple engines trying to wake the same
+and\code{lock} is used to prevent multiple engines trying to wake the same
 engine at once.
 The \idle code above manipulates the state field in its structure,
 which is pointed to by \code{engine\_data}.
@@ -504,16 +505,16 @@ which is pointed to by \code{engine\_data}.
 The states are shown in figure \ref{fig:engine_states} as oval-shaped nodes
 in the graph except for \code{MR\_NOTIFIED},
 which is a single value that represents all the notification types,
-which are the rectangular nodes in the graph.
+depeicted as rectangular nodes in the graph.
 The oval node with a dashed outline is illustrative only,
 it exists in the graph to make it easier to visualise how work stealing may
 fail.
 An engine can move itself between any of the states connected by a black or
-blue edge,
+blue edge:
 blue denotes a transition that is done with a compare and swap on the
 \code{state} field of the \enginesleepsync structure,
-other transitions are made with an assignment.
-The edges whose lines are thicker, are \emph{busier},
+whilst other transitions are made with an assignment.
+The edges drawn with thicker lines are \emph{busier},
 these are the transitions that we think occur most often.
 
 \plan{Notification transitions}
@@ -544,9 +545,11 @@ These are the transitions from
 \code{MR\_WORKING}.
 Note that in the diagram all but one of the transitions from
 \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
-are protected.
-The exceptions are transitions to \code{MR\_WORKING},
-this is acceptable because we allow some notifications to be ignored if the
+are protected;
+% I think this semicolon is a supercomma.  If I understand grammer
+% correctly.
+the exceptions being transitions to \code{MR\_WORKING},
+which is acceptable because we allow some notifications to be ignored if the
 recipient has found some other work.
 The other transition and state not listed above occurs when the system shuts
 down,
@@ -556,7 +559,7 @@ runtime were shutting down\footnote{
     make the system abort.
     Supporting exceptions in the context of parallel Mercury is discussed in
     as further work (section \ref{sec:further_work}).
-}
+}.
 
 There are several different actions that a sender can specify when notifying
 another engine,
@@ -606,8 +609,8 @@ these are:
 \noindent
 \plan{Behaviour of \idle WRT notifications.}
 The code for \idle in algorithm \ref{alg:idle} shows several of these
-transitions.
-Including a the transition to the \code{MR\_STEALING} state on line 25.
+transitions,
+including the transition to the \code{MR\_STEALING} state on line 25.
 If this compare and swap fails it indicates that the current engine should 
 wait for \code{state} to become a value other than \code{MR\_BUSY} and then,
 depending on the action closure,
@@ -627,11 +630,11 @@ and are shown in figure \ref{fig:engine_states} as shaded ovals.
 Only engines in these states are sent the \code{ACTION\_WORKSTEAL} message.
 We considered including the \code{MR\_LOOKING\_FOR\_WORK} state as an idle
 state and allowing engines in this state to receive the
-\code{ACTION\_WORKSTEAL} message.
-However, we think that most engines that execute \idle will find a runnable
+\code{ACTION\_WORKSTEAL} message,
+However we think that most engines that execute \idle will find a runnable
 context or a spark from their own deque and therefore trying to steal work
 would be counter productive (and such a message would often be ignored).
-Therefore sending such a message would be \emph{too} speculative
+Sending such a message would be \emph{too} speculative
 (and is still a little speculative when sent to an engine in the
 \code{MR\_STEALING} state).
 When the user selects polling for work stealing rather notification,
@@ -781,7 +784,7 @@ understand from the figure and algorithm.
 \end{algorithm}
 
 We have also had to make two changes to \joinandcontinue,
-the new version is shown in algorithm \ref{alg:join_and_continue_ws2}.
+as shown in algorithm \ref{alg:join_and_continue_ws2}.
 The first change is an optimisation on lines 8--10,
 when the parallel conjunction's original context is suspended
 and the engine's current context executes the last conjunct in the parallel
@@ -793,7 +796,7 @@ Since we know that the current context is finished and the original one is
 runnable we now resume the original context's execution directly.
 
 The second change is on lines 15--21,
-the new if statement checks whether the context that the engine holds is
+this new if statement checks whether the context that the engine holds is
 compatible with the spark it has just popped from the deque.
 A context is incompatible if it contains stack frames of a computation that
 is not a parent of the computation the spark represents.
@@ -968,7 +971,7 @@ are shown in the ``without GC'' (fifth) row group of table
 To avoid embarrassing parallelism and create a point for comparison,
 we have also shown results for fibs using \emph{granularity control} (GC) to
 create fewer but larger parallel tasks
-(parallelism with courser grains).
+(parallelism with coarser grains).
 We can achieve this by introducing a new function \fibsgc,
 which is shown in figure \ref{fig:fibsgc}.
 \fibsgc takes an additional argument named \Depth which is
@@ -1019,15 +1022,14 @@ So the overhead of making a notification does not appear to make a strong
 difference.
 However when we consider the single engine cases,
 there is a clear difference between the old and new implementations.
-Therefore,
-the difference in performance comes from some code that is executed even
-when only one engine is used.
+Therefore the difference in performance comes from some code that is
+executed when only one engine is used.
 Work stealing itself, or the code in \idle is probably not the cause of the
 slow down.
 This leaves only \joinandcontinue,
 whose new version contains an extra test to ensure that the engine's current
 context is compatible with the spark that it found on its local deque.
-Further tests could be done to confirm this hypothesis.
+Further tests could be performed to confirm this hypothesis.
 
 There are some other interesting trends in the results.
 Most obviously,
