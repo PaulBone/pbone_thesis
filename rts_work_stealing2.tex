@@ -740,7 +740,7 @@ understand from the figure and algorithm.
   \If{$finished$}
     \If{$ST.orig\_context \neq current\_context$}
       \While{$ST.orig\_context.resume\_label \neq ContLabel$}
-        \State CPU\_busy\_loop\_hint
+        \State CPU\_spin\_loop\_hint
       \EndWhile
       \State MR\_release\_context($current\_context$)
       \State $current\_context \gets$ NULL

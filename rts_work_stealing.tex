@@ -2,9 +2,7 @@
 \section{Initial Work Stealing Implementation}
 \label{sec:rts_work_stealing}
 
-\status{I am updating this after fixing some RTS bugs.
-I now have to re-run the tests and then double check the prose.
-After which I will continue with the next section.}
+\status{This section is complete.}
 
 \plan{Refer to Peter Wang's conclusion of the early scheduling problem}
 Work stealing addresses the premature spark scheduling problem that we
@@ -335,7 +333,7 @@ The deque provides the following operations.
     \push will grow the array that is used to implement the
     deque.
 
-    \item[\code{bool MR\_pop\_spark(deque *d, spark *s)}]
+    \item[\code{MR\_bool MR\_pop\_spark(deque *d, spark *s)}]
     The deque's owner can call this to pop an item from the top of the
     queue.
     In the case that the deque contains only one item a compare and swap
@@ -355,7 +353,7 @@ The deque provides the following operations.
     A callers of any of these functions temporarily stores the spark on
     its program stack.
 
-    \item[\code{result MR\_steal\_spark(deque *d, spark *s)}]
+    \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]
     A thread other than the deque's owner can steal
     items from the bottom of the deque.
     This always uses an atomic compare and swap operation as multiple
@@ -383,7 +381,7 @@ The deque provides the following operations.
 %like behaviour of a deque from its context's perspective,
 %and the terminology used by \citet{Chase_2005_wsdeque}.
 
-\begin{figure}
+\begin{algorithm}[tbp]
 \begin{verbatim}
 void MR_push_spark(MR_SparkDeque *dq, const MR_Spark *spark)
 {
@@ -411,10 +409,10 @@ void MR_push_spark(MR_SparkDeque *dq, const MR_Spark *spark)
 }
 \end{verbatim}
 \caption{\push with memory barrier}
-\label{fig:MR_push_spark}
-\end{figure}
+\label{alg:MR_push_spark}
+\end{algorithm}
 
-\begin{figure}
+\begin{algorithm}[tbp]
 \begin{verbatim}
 volatile MR_Spark* MR_pop_spark(MR_SparkDeque *dq)
 {
@@ -454,8 +452,8 @@ volatile MR_Spark* MR_pop_spark(MR_SparkDeque *dq)
 }
 \end{verbatim}
 \caption{\pop with memory barrier}
-\label{fig:MR_pop_spark}
-\end{figure}
+\label{alg:MR_pop_spark}
+\end{algorithm}
 
 Mercury was already using \citet{Chase_2005_wsdeque}'s deques for spark
 storage,
@@ -491,7 +489,7 @@ processors in the order that they appear in the program.
 % This is much stronger than C's \code{volatile} keyword which only controls
 % how the compiler may order instructions and cache values.
 \citet{Chase_2005_wsdeque} uses Java's \code{volatile} qualifier in the
-declaration for the \code{top} and \code{bottom} fields of the deque
+declaration for the \var{top} and \var{bottom} fields of the deque
 structure.
 When adding the deque algorithms to Mercury's runtime system we translated
 them to C.
@@ -500,12 +498,16 @@ To maintain correctness we had to introduce two \emph{memory barriers},\footnote
     In particular the x86/x86\_64 instructions contain the word fence.}.
 CPU instructions which place ordering constraints on memory operations.
 First, we placed a store barrier in the \push procedure
-(the inline assembly in figure \ref{fig:MR_push_spark}).
+(the inline assembly\footnote{
+    In our implementation a C macro is used to abstract away the assembly
+    code for different architectures;
+    we have shown our figures without the macro to aid the reader.}
+in algorithm \ref{alg:MR_push_spark}).
 This barrier ensures that the spark is written into the array before the pointer to
 the top of the array is updated,
 indicating that the spark is available.
 Second, we placed a full barrier in the \pop procedure
-(the inline assembly in figure \ref{fig:MR_pop_spark}).
+(the inline assembly in algorithm \ref{alg:MR_pop_spark}).
 This barrier requires that the procedure updates the pointer to the top of the
 deque before it reads the pointer to the bottom (which it uses to
 calculate the size).
@@ -524,39 +526,43 @@ For more information about C's weak memory ordering see
 See also \citet{Adve:2010:memory-models} which discusses the Java memory
 model and the new C++0x\footnote{C++0x is also known as C++11} memory model.
 
-\begin{algorithm}
+\begin{algorithm}[tbp]
 \paul{XXX: Place these environments once we know what pagination will be
 used}
-\begin{algorithmic}[1]
-\Procedure{MR\_join\_and\_continue}{$ST, ContLabel$}
-  \State $finished \gets$ MR\_atomic\_dec\_and\_is\_zero($ST.num\_outstanding$)
-  \If{$finished$}
-    \If{$ST.orig\_context = current\_context$}
-      \Goto{$ContLabel$}
-    \Else
-      \While{$ST.orig\_context.resume\_label \neq ContLabel$}
-        \State CPU\_busy\_loop\_hint
-      \EndWhile
-      \State MR\_schedule($ST.parent$, $ContLabel$)
-      \Goto{MR\_idle}
-    \EndIf
-  \Else
-    \State $got\_spark \gets$ MR\_pop\_spark($current\_context.spark\_deque$,
-        \&$spark$)
-    \If{$got\_spark$}
-      \Goto{$spark.code\_label$}
-    \Else
-      \If{$ST.orig\_context = current\_context$}
-         \State MR\_save\_context($current\_context$)
-         \State $current\_context.resume\_label \gets ContLabel$
-         \State $current\_context \gets$ NULL
-      \EndIf
-      \Goto{MR\_idle}
-    \EndIf
-  \EndIf
-\EndProcedure
-\end{algorithmic}
-\caption{MR\_join\_and\_continue}
+\begin{verbatim}
+    void MR_join_and_continue(MR_SyncTerm *ST, MR_Code *ContLabel) {
+        MR_bool     finished, got_spark;
+        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
+        MR_Context  *orig_context = ST->MR_st_orig_context;
+ 5      MR_Spark    spark;
+
+        finished = MR_atomic_dec_and_is_zero(&(ST->MR_st_num_outstanding));
+        if (finished) {
+            if (ST->MR_st_orig_context == current_context) {
+10              MR_GOTO(ContLabel)
+            } else {
+                while (orig_context->MR_ctxt_resume != ContLabel) {
+                    CPU_spin_loop_hint();
+                }
+15              MR_schedule_context(orig_context);
+                MR_GOTO{MR_idle};
+            }
+        } else {
+            got_spark = MR_pop_spark(current_context->MR_ctxt_spark_deque, &spark);
+20          if (got_spark) {
+                MR_GOTO(spark.MR_spark_code);
+            } else {
+                if (orig_context == current_context) {
+                     MR_save_context(current_context);
+25                   current_context->MR_ctxt_resume = ContLabel;
+                     MR_ENGINE(MR_eng_current_context) = NULL;
+                }
+                MR_GOTO(MR_idle);
+            }
+30      }
+    }    
+\end{verbatim}
+\caption{\joinandcontinue --- initial work stealing version}
 \label{alg:join_and_continue_ws1}
 \end{algorithm}
 
@@ -573,7 +579,7 @@ on page \pageref{alg:join_and_continue_peterw}.
 The first change to this algorithm,
 is that this version is lock free.
 All the synchronisation is performed by atomic CPU instructions, memory
-write ordering and one busy loop.
+write ordering and one spin loop.
 The number of outstanding contexts in the synchronisation term is
 decremented and the result is checked for zero atomically.\footnote{
     On x86/x86\_64 this is a \instruction{lock dec} instruction, we read the
@@ -581,6 +587,8 @@ decremented and the result is checked for zero atomically.\footnote{
     zero.}
 This optimisation could have been made without introducing work stealing,
 it was convenient to make both changes at the same time.
+Note that in the previous version, a single lock was shared between all of
+the synchronisation terms in the system.
 
 The next change prevents a race condition that would otherwise be possible
 without locking, and occur as follows.
@@ -588,81 +596,90 @@ A conjunction of two conjuncts is executed in parallel.
 The original context, $C_{Orig}$,
 enters the barrier, decrements the counter from two to one,
 and because there is another outstanding conjunct,
-it executes the else branch on line 12.
+it executes the else branch on lines 19--29.
 At almost the same time another context, $C_{Other}$,
 enters the barrier, decrements the counter and finds that there is no more
 outstanding work.
-$C_{Other}$ attempts to schedule $C_{Orig}$ on line 10.
+$C_{Other}$ attempts to schedule $C_{Orig}$ on line 15.
 However attempting to schedule $C_{Orig}$ before it has finished suspending
 would cause an inconsistent state and memory corruption.
-Therefore lines 7--10 wait until $C_{Orig}$ has been suspended.
+Therefore lines 12--14 wait until $C_{Orig}$ has been suspended.
 The engine that is executing $C_{Orig}$ first suspends $C_{Orig}$ and then
 indicates that it has been suspended by setting $C_{Orig}$'s resume label
-(lines 18--19).
-The busy loop on lines 7--10 includes a \code{CPU\_busy\_loop\_hint}
-instruction,
-This is the \instruction{pause} instruction on x86 and x86\_64,
-It instructs the CPU to pipeline the loop differently in order to reduce
+(lines 24--25).
+The spin loop on lines 12--14 includes a use of a macro named
+\code{CPU\_spin\_loop\_hint},
+This resolves to the \instruction{pause} instruction on x86 and x86\_64,
+which instructs the CPU to pipeline the loop differently in order to reduce
 memory traffic and allow the loop to exit without a pipeline stall
 \citep{intel:pause}.
-Lines 18--19 must also include memory write ordering.
+Lines 24--25 also include memory write ordering (not shown).
 
-The other change is around line 17,
+The other change is around line 20,
 when the context pops a spark off its stack, it does not check if the spark
 was created by a callee's parallel conjunction.
 Because all sparks are placed on the context local spark deques and
-theives never steal work from the hot end of the deque,
+thieves never steal work from the hot end of the deque,
 then if there is an outstanding conjunct then either
 its spark will be at the hot end of the deque
 or the deque will be empty and the spark will have been stolen.
 
-\begin{algorithm}
-\begin{algorithmic}[1]
-\Procedure{MR\_idle}{}
-  \State MR\_acquire\_lock($MR\_runqueue\_lock$)
-  \Loop
-    \If{$MR\_exit\_now$}
-      \State MR\_release\_lock($MR\_runqueue\_lock$)
-      \State MR\_destroy\_thread()
-    \EndIf
-    \State $ctxt \gets$ MR\_get\_runnable\_context()
-    \If{$ctxt \neq \text{NULL}$}
-      \State MR\_release\_lock($MR\_runqueue\_lock$)
-      \If{$current\_context$}
-        \State MR\_release\_context($current\_context$)
-      \EndIf
-      \State MR\_load\_context($ctxt$)
-      \State $resume \gets ctxt.resume$
-      \State $ctxt.resume \gets$ NULL
-      \Goto $resume$
-    \EndIf
-    \If{$\left(
-        \begin{array}{l}
-        (current\_context \neq \text{NULL})\, \vee \\
-        (MR\_num\_outstanding\_contexts < MR\_max\_contexts) \\
-        \end{array}
-        \right)$}
-      \State $result \gets$ MR\_try\_steal\_spark(\&$spark$)
-      \If{$result$}
-        \State MR\_release\_lock($MR\_runqueue\_lock$)
-        \If{$current\_context = \text{NULL}$}
-          \State $ctxt \gets$ MR\_get\_free\_context()
-          \If{$ctxt = \text{NULL}$}
-            \State $ctxt \gets$ MR\_create\_context()
-          \EndIf
-          \State MR\_load\_context($ctxt$)
-        \EndIf
-        \State $MR\_parent\_sp \gets spark.parent\_sp$
-        \State $ctxt.thread\_local\_mutables \gets
-          spark.thread\_local\_mutables$
-        \Goto $spark.resume$
-      \EndIf
-    \EndIf
-    \State timed\_wait($MR\_runqueue\_cond, MR\_runqueue\_lock$, $timeout$)
-  \EndLoop
-\EndProcedure
-\end{algorithmic}
-\caption{MR\_idle}
+\begin{algorithm}[tbp]
+\begin{verbatim}
+    void MR_idle() {
+        MR_Context  *ctxt;
+        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
+        MR_Code     *resume;
+ 5      MR_Spark    spark;
+        MR_bool     got_spark;
+
+        MR_acquire_lock(&MR_runqueue_lock);
+        while(MR_True) {
+10          if (MR_exit_now) {
+                MR_release_lock(MR_runqueue_lock);
+                MR_destroy_thread();                        // does not return.
+            }
+
+15          // Try to run a context
+            ctxt = MR_get_runnable_context();
+            if (ctxt != NULL) { 
+                MR_release_lock(&MR_runqueue_lock);
+                if (current_context != NULL) {
+20                  MR_release_context(current_context);
+                }
+                MR_load_context(ctxt);
+                resume = ctxt->MR_ctxt_resume;
+                ctxt->MR_ctxt_resume = NULL;
+25              MR_GOTO(resume);
+            }
+        
+            // Try to run a spark.
+            if ((current_context != NULL) ||
+30                  (MR_num_outstanding_contexts < MR_max_contexts))
+            {
+                got_spark = MR_try_steal_spark(&spark);
+                if (got_spark) {
+                    MR_release_lock(&MR_runqueue_lock);
+35                  if (current_context == NULL) {
+                        ctxt = MR_get_free_context();
+                        if (ctxt == NULL) {
+                            ctxt = MR_create_context();
+                        }
+40                      MR_load_context(ctxt);
+                        current_context = ctxt;
+                    }
+                    MR_parent_sp = spark->MR_spark_parent_sp;
+                    current_context->MR_ctxt_thread_local_mutables =
+45                      spark->MR_spark_thread_local_mutables;
+                    MR_GOTO(spark->MR_spark_code);
+                }
+            }
+
+50          MR_timed_wait(&MR_runqueue_cond, &MR_runqueue_lock);
+        }
+    }
+\end{verbatim}
+\caption{\idle --- initial work stealing version}
 \label{alg:MR_idle_wsinitial}
 \end{algorithm}
 
@@ -675,7 +692,7 @@ with a call to \trystealspark (see below).
 Before attempting to steal a spark \idle must ensure that the context limit
 will not be exceeded
 (this was previously done when choosing where to place a new spark).
-This check is on line 14; it is true of either,
+This check is on lines 29--30; it is true of either,
 the engine already has a context (which is guaranteed to be available for a
 new spark),
 or that the current number of contexts is lower than the limit.
@@ -684,7 +701,7 @@ variable is not signalled,
 doing so would be wasteful.
 Therefore engines must wake up periodically to check if there is any
 parallel work available.
-This is done on line 26 using a call to \code{timed\_wait} with a
+This is done on line 50 using a call to \code{MR\_timed\_wait} with a
 configurable timeout (it defaults to 2ms).
 We discuss this timeout later in section \ref{sec:rts_work_stealing2}.
 
@@ -704,31 +721,31 @@ index in the deque array.
 To prevent concurrent access from corrupting the array these operations are
 protected by \code{MR\_spark\_deques\_lock}.
 
-\begin{algorithm}
-\begin{algorithmic}[1]
-\Procedure{MR\_try\_steal\_spark}{$spark\_ptr$}
-  \State MR\_acquire\_lock($MR\_spark\_deques\_lock$)
-
-  \State $max\_attempts \gets$ min($MR\_max\_spark\_deques$,
-    $MR\_worksteal\_max\_attempts$)
-
-  \For{$attempt = 0$ to $max\_attempts - 1$}
-    \State $MR\_victim\_counter$++
-    \State $deque \gets
-       MR\_spark\_deques$[$MR\_victim\_counter \bmod MR\_max\_spark\_deques$]
-    \If{$deque \neq$ NULL}
-      \State $result \gets$ MR\_steal\_spark($deque$, $spark\_ptr$)
-      \If{$result$}
-        \State MR\_release\_lock($MR\_spark\_deques\_lock$)
-        \State \Return $true$
-      \EndIf
-    \EndIf
-  \EndFor
-  \State MR\_release\_lock($MR\_spark\_deques\_lock$)
-  \State \Return $false$
-\EndProcedure
-\end{algorithmic}
-\caption{MR\_try\_steal\_spark}
+\begin{algorithm}[tbp]
+\begin{verbatim}
+    void MR_try_steal_spark(MR_Spark *spark) {
+        int         max_attempts;
+        MR_Deque    *deque;
+        MR_bool     got_spark;
+ 5
+        MR_acquire_lock(&MR_spark_deques_lock);
+        max_attempts = MR_MIN(MR_max_spark_deques, MR_worksteal_max_attempts);
+        for (int attempt = 0; attempts < max_attempts; attempt++) {
+            MR_victim_counter++;
+10          deque = MR_spark_deques[MR_victim_counter % MR_max_spark_deques];
+            if (deque != NULL) {
+                got_spark = MR_steal_spark(deque, spark);
+                if (got_spark) {
+                    MR_release_lock(&MR_spark_deques_lock);
+15                  return MR_true;
+                }
+            }
+        }
+        MR_release_lock(&MR_spark_deques_lock);
+20      return MR_false;
+    }
+\end{verbatim}
+\caption{\trystealspark --- initial work stealing version} 
 \label{alg:try_steal_spark_initial}
 \end{algorithm}
 
@@ -738,26 +755,26 @@ algorithm \ref{alg:try_steal_spark_initial}.
 It must also acquire the lock before using the array.
 A thief may need to make several attempts before it successfully finds a
 deque with work it can steal.
-Line 3 sets the number of attempts to make, which is either the user
+Line 7 sets the number of attempts to make, which is either the user
 configurable \var{MR\_worksteal\_max\_attempts} or the size of the array,
 whichever is smallest.
-A loop (beginning on line 4) attempts to steal work until it succeeds or it
+A loop (beginning on line 8) attempts to steal work until it succeeds or it
 has made \var{max\_attempts}.
 We use a global variable, \var{MR\_victim\_counter},
 to implement round-robin selection of the victim.
-On line 8 we attempt to steal work from a deque,
+On line 12 we attempt to steal work from a deque,
 provided that its deque pointer in the array is non-null.
 If the call to \steal succeeded,
 it will have written spark data into the memory pointed to by
-\var{spark\_ptr},
+\var{spark},
 then \trystealspark releases the lock and returns true.
-Eventually \trystealspark may give up (lines 13--14).
+Eventually \trystealspark may give up (lines 19--20).
 If it does so it will release the lock and return false.
 Whether or not a thief steals work or gives up,
 the next thief will resume the round-robin selection where the previous
 thief left off,
 this is guaranteed because \var{MR\_victim\_counter} is protected by the
-lock acquired on line 2.
+lock acquired on line 6.
 
 \plan{Work stealing fixes the premature scheduling decision problem}
 All sparks created by a context are placed on its local spark deque.
@@ -846,5 +863,5 @@ context limit.
 The work stealing program is more likely to reach the context limit earlier,
 where it will be forced into sequential execution.
 
-\paul{XXX: Consider verifying this point with instrumentation.}
+%\paul{XXX: Consider verifying this point with instrumentation.}
 
