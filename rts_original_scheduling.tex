@@ -72,18 +72,18 @@ last-in-first-out manner.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_join_and_continue(MR_SyncTerm *ST, MR_Code *ContLabel) {
+    void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
         MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
 
         MR_acquire_lock(&MR_SyncTermLock);
- 5      ST->MR_st_num_outstanding--;
-        if (ST->MR_st_num_outstanding == 0) {
-            if (ST->MR_st_orig_context == current_context) {
+ 5      st->MR_st_num_outstanding--;
+        if (st->MR_st_num_outstanding == 0) {
+            if (st->MR_st_orig_context == current_context) {
                 MR_release_lock(&MR_SyncTermLock);
-                MR_GOTO(ContLabel);
+                MR_GOTO(cont_label);
 10          } else {
-                ST->MR_st_orig_context->MR_ctxt_resume_label = ContLabel;
-                MR_schedule(ST->MR_st_orig_context);
+                st->MR_st_orig_context->MR_ctxt_resume_label = cont_label;
+                MR_schedule(st->MR_st_orig_context);
                 MR_release_lock(&MR_SyncTermLock);
                 MR_GOTO(MR_idle);
 15          }
@@ -107,7 +107,7 @@ last-in-first-out manner.
                     */
                     MR_push_spark(current_context->MR_ctxt_spark_stack, &spark);
 35              }
-                if (ST->MR_st_orig_context == current_context) {
+                if (st->MR_st_orig_context == current_context) {
                     MR_save_context(current_context)
                     MR_ENGINE(MR_eng_current_context) = NULL;
                 }
@@ -151,7 +151,7 @@ there are three important scenarios:
     Therefore when $C_{Orig}$ reaches the \joinandcontinue barrier
     (line 5 in the example),
     the context $G_2$ will be outstanding and
-    \var{ST->MR\_st\_num\_outstanding} will be non-zero.
+    \var{st->MR\_st\_num\_outstanding} will be non-zero.
     $C_{Orig}$ will execute else branch on lines 17--42 of \joinandcontinue
     where it will pop the spark for $G_2$ off the top of the spark stack.
     It is not possible for some other spark to be on the top of the stack;
@@ -170,7 +170,7 @@ there are three important scenarios:
     After executing $G_2$,
     $C_{Orig}$ will execute the second call to \joinandcontinue,
     the one on line 8 of the example.
-    This time \var{ST->MR\_st\_num\_outstanding} will be zero,
+    This time \var{st->MR\_st\_num\_outstanding} will be zero,
     and $C_{Orig}$ will execute the then branch on lines 7--15 of
     \joinandcontinue.
     In the condition of the nested if-then-else,
@@ -194,7 +194,7 @@ there are three important scenarios:
     lock protecting the barrier code.
 
     When $C_{Other}$ executes \joinandcontinue,
-    It will find that \var{ST->MR\_st\_num\_outstanding} is non-zero,
+    It will find that \var{st->MR\_st\_num\_outstanding} is non-zero,
     and will execute the else branch on lines 17--42 of \joinandcontinue.
     It then attempts to pop a spark off its stack,
     as in another scenario a spark on the stack might represent an
@@ -205,7 +205,7 @@ there are three important scenarios:
     and was either empty or brand new before executing this spark,
     meaning that it had no sparks on its stack before executing $G_2$.
     Therefore $C_{Other}$ will not have any sparks of its own and
-    \code{pop\_spark} will fail.
+    \code{MR\_pop\_spark} will fail.
     $C_{Other}$ will continue to line 36 in \joinandcontinue
     whose condition will also fail since $C_{Other}$
     is not the original context ($C_{Orig}$).
@@ -216,7 +216,7 @@ there are three important scenarios:
     (line 5 of the example),
     or be executed after waiting on the barrier's lock (line 4 of
     \joinandcontinue),.
-    When this happens it will find that \var{ST->MR\_st\_num\_outstanding}
+    When this happens it will find that \var{st->MR\_st\_num\_outstanding}
     is zero,
     and execute the then branch beginning at line 7 of \joinandcontinue.
     $C_{Orig}$ will test if it is the original context,
@@ -237,7 +237,7 @@ there are three important scenarios:
     $C_{Other}$ reaches its barrier on line 8.
 
     When $C_{Orig}$ executes \joinandcontinue,
-    it finds that \var{ST->MR\_st\_num\_outstanding} is non-zero,
+    it finds that \var{st->MR\_st\_num\_outstanding} is non-zero,
     causing it to execute the else branch on lines 17--42 of \joinandcontinue.
     $C_{Orig}$ will try to pop a spark of its local spark stack.
     However the spark for $G_2$ was placed on the global
@@ -253,7 +253,7 @@ there are three important scenarios:
     before jumping to \idle.
 
     When $C_{Other}$ reaches the barrier on line 8,
-    it will find that \var{ST->MR\_st\_num\_outstanding} is zero,
+    it will find that \var{st->MR\_st\_num\_outstanding} is zero,
     and will execute the then branch of the if-then-else.
     Within this branch it will test to see if it is the original
     context,
