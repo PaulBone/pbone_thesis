@@ -631,53 +631,51 @@ or the deque will be empty and the spark will have been stolen.
         MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
         MR_Code     *resume;
  5      MR_Spark    spark;
-        MR_bool     got_spark;
 
         MR_acquire_lock(&MR_runqueue_lock);
         while(MR_True) {
-10          if (MR_exit_now) {
-                MR_release_lock(MR_runqueue_lock);
+            if (MR_exit_now) {
+10              MR_release_lock(MR_runqueue_lock);
                 MR_destroy_thread();                        // does not return.
             }
 
-15          // Try to run a context
-            ctxt = MR_get_runnable_context();
+            // Try to run a context
+15          ctxt = MR_get_runnable_context();
             if (ctxt != NULL) { 
                 MR_release_lock(&MR_runqueue_lock);
                 if (current_context != NULL) {
-20                  MR_release_context(current_context);
-                }
+                    MR_release_context(current_context);
+20              }
                 MR_load_context(ctxt);
                 resume = ctxt->MR_ctxt_resume;
                 ctxt->MR_ctxt_resume = NULL;
-25              MR_GOTO(resume);
-            }
+                MR_GOTO(resume);
+25          }
         
             // Try to run a spark.
             if ((current_context != NULL) ||
-30                  (MR_num_outstanding_contexts < MR_max_contexts))
-            {
-                got_spark = MR_try_steal_spark(&spark);
-                if (got_spark) {
+                    (MR_num_outstanding_contexts < MR_max_contexts))
+30          {
+                if (MR_try_steal_spark(&spark)) {
                     MR_release_lock(&MR_runqueue_lock);
-35                  if (current_context == NULL) {
+                    if (current_context == NULL) {
                         ctxt = MR_get_free_context();
-                        if (ctxt == NULL) {
+35                      if (ctxt == NULL) {
                             ctxt = MR_create_context();
                         }
-40                      MR_load_context(ctxt);
+                        MR_load_context(ctxt);
                         current_context = ctxt;
-                    }
-                    MR_parent_sp = spark->MR_spark_parent_sp;
+40                  }
+                    MR_parent_sp = spark.MR_spark_parent_sp;
                     current_context->MR_ctxt_thread_local_mutables =
-45                      spark->MR_spark_thread_local_mutables;
-                    MR_GOTO(spark->MR_spark_code);
-                }
+                        spark.MR_spark_thread_local_mutables;
+                    MR_GOTO(spark.MR_spark_code);
+45              }
             }
-
-50          MR_timed_wait(&MR_runqueue_cond, &MR_runqueue_lock);
+  
+            MR_timed_wait(&MR_runqueue_cond, &MR_runqueue_lock);
         }
-    }
+50  }
 \end{verbatim}
 \caption{\idle --- initial work stealing version}
 \label{alg:MR_idle_wsinitial}
@@ -692,7 +690,7 @@ with a call to \trystealspark (see below).
 Before attempting to steal a spark \idle must ensure that the context limit
 will not be exceeded
 (this was previously done when choosing where to place a new spark).
-This check is on lines 29--30; it is true of either,
+This check is on lines 28--29; it is true of either,
 the engine already has a context (which is guaranteed to be available for a
 new spark),
 or that the current number of contexts is lower than the limit.
@@ -701,7 +699,7 @@ variable is not signalled,
 doing so would be wasteful.
 Therefore engines must wake up periodically to check if there is any
 parallel work available.
-This is done on line 50 using a call to \code{MR\_timed\_wait} with a
+This is done on line 48 using a call to \code{MR\_timed\_wait} with a
 configurable timeout (it defaults to 2ms).
 We discuss this timeout later in section \ref{sec:rts_work_stealing2}.
 
@@ -723,26 +721,24 @@ protected by \code{MR\_spark\_deques\_lock}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_try_steal_spark(MR_Spark *spark) {
+    MR_bool MR_try_steal_spark(MR_Spark *spark) {
         int         max_attempts;
         MR_Deque    *deque;
-        MR_bool     got_spark;
- 5
-        MR_acquire_lock(&MR_spark_deques_lock);
+  
+ 5      MR_acquire_lock(&MR_spark_deques_lock);
         max_attempts = MR_MIN(MR_max_spark_deques, MR_worksteal_max_attempts);
         for (int attempt = 0; attempts < max_attempts; attempt++) {
             MR_victim_counter++;
-10          deque = MR_spark_deques[MR_victim_counter % MR_max_spark_deques];
-            if (deque != NULL) {
-                got_spark = MR_steal_spark(deque, spark);
-                if (got_spark) {
+            deque = MR_spark_deques[MR_victim_counter % MR_max_spark_deques];
+10          if (deque != NULL) {
+                if (MR_steal_spark(deque, spark));
                     MR_release_lock(&MR_spark_deques_lock);
-15                  return MR_true;
+                    return MR_true;
                 }
-            }
+15          }
         }
         MR_release_lock(&MR_spark_deques_lock);
-20      return MR_false;
+        return MR_false;
     }
 \end{verbatim}
 \caption{\trystealspark --- initial work stealing version} 
@@ -755,26 +751,26 @@ algorithm \ref{alg:try_steal_spark_initial}.
 It must also acquire the lock before using the array.
 A thief may need to make several attempts before it successfully finds a
 deque with work it can steal.
-Line 7 sets the number of attempts to make, which is either the user
+Line 6 sets the number of attempts to make, which is either the user
 configurable \var{MR\_worksteal\_max\_attempts} or the size of the array,
 whichever is smallest.
-A loop (beginning on line 8) attempts to steal work until it succeeds or it
+A loop (beginning on line 7) attempts to steal work until it succeeds or it
 has made \var{max\_attempts}.
 We use a global variable, \var{MR\_victim\_counter},
 to implement round-robin selection of the victim.
-On line 12 we attempt to steal work from a deque,
+On line 11 we attempt to steal work from a deque,
 provided that its deque pointer in the array is non-null.
 If the call to \steal succeeded,
 it will have written spark data into the memory pointed to by
 \var{spark},
 then \trystealspark releases the lock and returns true.
-Eventually \trystealspark may give up (lines 19--20).
+Eventually \trystealspark may give up (lines 17--18).
 If it does so it will release the lock and return false.
 Whether or not a thief steals work or gives up,
 the next thief will resume the round-robin selection where the previous
 thief left off,
 this is guaranteed because \var{MR\_victim\_counter} is protected by the
-lock acquired on line 6.
+lock acquired on line 5.
 
 \plan{Work stealing fixes the premature scheduling decision problem}
 All sparks created by a context are placed on its local spark deque.
