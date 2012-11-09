@@ -244,11 +244,34 @@ parse_macro(Lines, File, Src, Token, !PS) :-
             identifier(macro_chars, macro_chars, Src, Ident, !PS)
         ->
             zero_or_more(parse_macro_arg(Lines, File), Src, ArgTokens, !PS),
-            Token = macro(Ident, cord.from_list(ArgTokens), Locn)
+            Token = macro(Ident, cord.from_list(ArgTokens), Locn),
+            (
+                Ident = "begin",
+                ArgTokens = [macro_arg(Tokens, _)],
+                [ArgToken] = list(Tokens),
+                word("verbatim", _) = ArgToken
+            ->
+                % Skip over stuff inside a verbatim environment.
+                skip_to_end_of_verbatim(Src, !PS)
+            ;
+                true
+            )
         ;
             whitespace(Src, _, !PS),
             Token = macro(" ", cord.empty, Locn)
         )
+    ).
+
+:- pred skip_to_end_of_verbatim(src::in, ps::in, ps::out) is semidet.
+
+skip_to_end_of_verbatim(Src, !PS) :-
+    (
+        keyword("", "\\end{verbatim}", Src, _, !PS)
+    ->
+        true
+    ;
+        next_char(Src, _, !PS),
+        skip_to_end_of_verbatim(Src, !PS)
     ).
 
 :- pred parse_group(line_numbers::in, string::in, src::in,
