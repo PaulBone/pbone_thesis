@@ -244,7 +244,6 @@ parse_macro(Lines, File, Src, Token, !PS) :-
             identifier(macro_chars, macro_chars, Src, Ident, !PS)
         ->
             zero_or_more(parse_macro_arg(Lines, File), Src, ArgTokens, !PS),
-            Token = macro(Ident, cord.from_list(ArgTokens), Locn),
             (
                 Ident = "begin",
                 ArgTokens = [macro_arg(Tokens, _)],
@@ -252,9 +251,10 @@ parse_macro(Lines, File, Src, Token, !PS) :-
                 word("verbatim", _) = ArgToken
             ->
                 % Skip over stuff inside a verbatim environment.
-                skip_to_end_of_verbatim(Src, !PS)
+                skip_to_end_of_verbatim(Src, !PS),
+                Token = environment("verbatim", empty, empty, Locn)
             ;
-                true
+                Token = macro(Ident, cord.from_list(ArgTokens), Locn)
             )
         ;
             whitespace(Src, _, !PS),
