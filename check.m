@@ -307,7 +307,8 @@ contractions = [
     "they're",
     "they've",
     "they'd",
-    "heapsize"
+    "heapsize",
+    "callgraph"
     ].
 
 :- func invalid_hypenations = list(string).
@@ -325,7 +326,8 @@ invalid_hypenations = [
     "re-order",
     "re-ordering",
     "re-ordered",
-    "shut-down"
+    "shut-down",
+    "call-graph"
     ].
 
 :- func acronyms = list(string).

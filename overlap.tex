@@ -74,14 +74,14 @@ than representative input data for the profiling run.
 The structure of this chapter is as follows.
 Section \ref{sec:overlap_aims} states our two aims for this chapter.
 Then Section \ref{sec:overlap_approach} outlines our general approach
-including information about the callgraph search for parallelisation
+including information about the call graph search for parallelisation
 opportunities.
 Section \ref{sec:overlap_reccalls}
 describes how we calculate information about recursive calls missing from
 the profiling data.
 Section \ref{sec:overlap_coverage}
 describes our change to coverage profiling which provides more accurate
-coverage data for the new callgraph based search for parallelisation
+coverage data for the new call graph based search for parallelisation
 opportunities.
 Section \ref{sec:overlap_overlap_alg} describes our algorithm for
 calculating the execution overlap between two or more dependent conjuncts.
@@ -367,7 +367,7 @@ obsoletes some old parallelisation opportunities and creates others.
 Nevertheless, if programmers want to parallelise some conjunctions manually,
 they can do so: our system will not override the programmer.
 
-% \section{Traversing the callgraph}
+% \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
 % 
 % % XXX Further work.
@@ -539,7 +539,7 @@ Then its typical cost is $10 + 4.5(100 + 1) = 464.5$ call sequence counts.
 \hfill
 \end{minipage}
 \begin{minipage}[b][1.9in]{0.49\textwidth}
-\subfigure[Callgraph]{%
+\subfigure[Call graph]{%
 \includegraphics[width=0.98\textwidth]{pics/call_tree_dc}
 \label{fig:quicksort_acc_callgraph}
 }
@@ -547,7 +547,7 @@ Then its typical cost is $10 + 4.5(100 + 1) = 464.5$ call sequence counts.
 \end{minipage}
 \end{center}
 \vspace{-2ex}
-\caption{Accumulator quicksort, definition and callgraph}
+\caption{Accumulator quicksort, definition and call graph}
 \end{figure}
 
 {\bf Pattern 3: Divide-and-conquer procedures.}
@@ -562,7 +562,7 @@ problematic.
 We know that if a good value for \code{Pivot} is chosen \quicksortacc runs
 optimally,
 dividing the list in half with each recursion.
-Figure \ref{fig:quicksort_acc_callgraph} shows the callgraph for such an
+Figure \ref{fig:quicksort_acc_callgraph} shows the call graph for such an
 invocation of \quicksortacc.
 This graph has 15 nodes excluding ``main'',
 each node has exactly one call leading to it;
@@ -598,7 +598,7 @@ call.
 Pathologically bad cases are rare and are considered bugs;
 programmers will usually want to remove such bugs in order to improve
 sequential execution performance.
-Slight imbalance in a callgraph is a more common occurrence,
+Slight imbalance in a call graph is a more common occurrence,
 such situations fall into the same class as those where the profiling data
 is not quite representative of the optimised program's future use,
 or our estimates of parallel execution overheads do not match the hardware's
@@ -3059,7 +3059,7 @@ and the anonymous referees for their suggestions.
 The previous version of the tool did not use the call graph.
 Instead it looked at the most expensive procedures,
 considering only those whose cost was above its own threshold.
-The callgraph traversal is better because it allows us to avoid parallelising
+The call graph traversal is better because it allows us to avoid parallelising
 a callee when the caller already provides enough parallelism.
 
 \paul{Throttle recursive parallelism based on the cost of each iteration.}
