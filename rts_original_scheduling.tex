@@ -136,6 +136,8 @@ and executing $G_1$ (lines 1--4).
 Then it executes the barrier \joinandcontinue,
 whose is shown in
 algorithm \ref{alg:join_and_continue_peterw}.
+The algorithms throughout this chapter use a macro named \code{MR\_ENGINE}
+to access the fields of the current engine structure.
 Depending on how full the global run queue is,
 and how parallel tasks are interleaved,
 there are three important scenarios:

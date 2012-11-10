@@ -530,18 +530,18 @@ model and the new C++0x\footnote{C++0x is also known as C++11} memory model.
 \paul{XXX: Place these environments once we know what pagination will be
 used}
 \begin{verbatim}
-    void MR_join_and_continue(MR_SyncTerm *ST, MR_Code *ContLabel) {
+    void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
         MR_bool     finished, got_spark;
         MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
-        MR_Context  *orig_context = ST->MR_st_orig_context;
+        MR_Context  *orig_context = st->MR_st_orig_context;
  5      MR_Spark    spark;
 
-        finished = MR_atomic_dec_and_is_zero(&(ST->MR_st_num_outstanding));
+        finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
         if (finished) {
-            if (ST->MR_st_orig_context == current_context) {
-10              MR_GOTO(ContLabel)
+            if (orig_context == current_context) {
+10              MR_GOTO(cont_label)
             } else {
-                while (orig_context->MR_ctxt_resume != ContLabel) {
+                while (orig_context->MR_ctxt_resume != cont_label) {
                     CPU_spin_loop_hint();
                 }
 15              MR_schedule_context(orig_context);
@@ -554,7 +554,7 @@ used}
             } else {
                 if (orig_context == current_context) {
                      MR_save_context(current_context);
-25                   current_context->MR_ctxt_resume = ContLabel;
+25                   current_context->MR_ctxt_resume = cont_label;
                      MR_ENGINE(MR_eng_current_context) = NULL;
                 }
                 MR_GOTO(MR_idle);
