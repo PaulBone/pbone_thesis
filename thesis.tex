@@ -32,7 +32,7 @@
 \usepackage{algpseudocode}
 \usepackage{amsmath}
 \usepackage[margin=3cm]{geometry}
-\usepackage[sort&compress]{natbib}
+\usepackage[sort&compress,numbers]{natbib}
 \usepackage{pstricks}
 \usepackage{setspace}
 \usepackage{breakurl}
@@ -44,6 +44,11 @@
 \usepackage{multicol}   % multiple columns for small sections of text
 \usepackage{float}      % Custom floats.
 %\usepackage{varwidth}  % parbox with variable width.
+\usepackage{mathtools}
+%\DeclarePairedDelimiter{\ceil}{\left\lceil}{\right\rceil}
+%\DeclarePairedDelimiter{\floor}{\left\lfloor}{\right\rfloor}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
 
 % If you do not have this package, install texlive-math-extra, I did not want
 % to include it in this directory since it brings fonts with it, (and they are

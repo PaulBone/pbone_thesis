@@ -11,16 +11,18 @@ instead of the plain conjunction operator (a comma) to tell the compiler
 that the conjuncts of the conjunction should be executed in parallel with
 one another.
 However,
-in many places where parallelism can be introduced it will not be
-profitable as it is not worth while parallelising small computations.
+in almost all places where parallelism can be introduced,
+it will not be
+profitable as it is not worthwhile parallelising small computations.
 Making a task available to another CPU
 may take thousands of instructions,
-spawning off a task that takes only a hundred instructions is clearly a loss.
+so spawning off a task that takes only a hundred instructions is clearly a
+loss.
 Even spawning off a task of a few thousand instructions is not a win;
 it should only be done for computations
 that take long enough to benefit from parallelism.
-It is difficult for a programmer to determine if parallelisation of any
-particular computation is worth while.
+It is often difficult for a programmer to determine if parallelisation of
+any particular computation is worthwhile.
 Researchers have therefore worked towards automatic parallelisation.
 Autoparallelising compilers have long tried to use granularity analysis to
 ensure that they only spawn off computations whose cost will probably exceed
@@ -29,7 +31,7 @@ However, this is not enough to yield good results,
 because data dependencies may \emph{also} limit
 the usefulness of running computations in parallel.
 If a spawned off computation blocks almost immediately
-and can resume only after another has completed its work,
+and can resume only after another computation has completed its work,
 then the cost of parallelisation again exceeds the benefit.
 
 %This chapter is based on and extends our paper:
@@ -64,8 +66,18 @@ We have implemented this technique for Mercury
 in the form of a tool
 that uses data from Mercury's deep profiler
 to generate recommendations about what to parallelise.
-The compiler applies these recommendations the next time the program is
-compiled.
+The programmer can then execute the compiler with automatic parallelism
+enabled and provide the recommendations to generate a parallel version of
+the program.
+An important benefit of profile-directed parallelisation is that
+since programmers do not annotate the source program,
+it can be re-parallelised easily after a change to the program
+obsoletes some old parallelisation opportunities and creates others.
+To do this the programmer can reprofile the program to generate fresh
+recommendations and recompile the program to apply those recommendations.
+Nevertheless, if programmers want to parallelise some conjunctions manually,
+they can do so: our system will not override the programmer.
+
 We present preliminary results that show that
 this technique can yield useful parallelisation speedups,
 while requiring nothing more from the programmer
@@ -110,7 +122,7 @@ there are 53 conjunctions containing two or more expensive goals,
 but in only one of those conjunctions are the expensive goals independent.
 This is why Mercury supports the parallel execution of dependent conjunctions
 through the use of futures and a compiler transformation
-\citep{wang:2011:dep-par,wang:2006:hons} (Section \ref{sec:backgnd_deppar}).
+\citep{wang:2006:hons, wang:2011:dep-par} (section \ref{sec:backgnd_deppar}).
 If the \emph{consumer} of the variable attempts to retrieve the variable's value
 before it has been produced, then its execution is blocked
 until the \emph{producer} makes the variable available.
@@ -253,8 +265,8 @@ and the execution overlap allowed by their dependencies.
 A compiler may be able to estimate some cost information from static
 analysis.
 However, this will not be accurate;
-static analysis cannot take into account sizes of data terms or other
-values that are only available at runtime.
+static analysis cannot take into account sizes of data terms,
+or other values that are only available at runtime.
 Therefore, we use profiler feedback information in our implementation.
 This was introduced in section \ref{sec:backgnd_autopar}
 which also includes a description of Mercury's deep profiler.
@@ -292,9 +304,18 @@ A visual representation of such a workflow is shown in figure
 \ref{fig:prof_fb} on page \pageref{fig:prof_fb}.
 It is up to the programmer using our system
 to select training input for the profiling run in step 2.
-Obviously, programmers should pick input that is as representative as possible,
-but the recommended parallelisation can be useful
-even for input data that is quite different from the training input.
+Obviously, programmers should pick input that is as representative as
+possible;
+bet even input data that is quite different from the training input can
+generate useful parallelisation recommendations.
+Variations in our input data will change the numerical results
+that we use to decide whether something should be parallelised,
+however they rarely change a ``should parallelise'' decision into a
+``should not parallelise'' decision and \emph{vice-versa}.
+The other source of inacuracy comes from misestimating the hardware's
+performance on certain operations such as the cost of spawning off a new
+task.
+Such misestimations will have the same impact as variations in impact data.
 The main focus of this chapter is on step 3;
 we give the main algorithms used by the feedback tool.
 However, we will also touch on steps 1 and 4.
@@ -304,7 +325,8 @@ as they understand what input is representative for their program.
 \plan{DFS \& limits}
 Our feedback tool looks for parallelisation opportunities
 by doing a depth-first search of the call tree of the profiling run,
-each node of which is an SCC (strongly connected component) of procedures.
+each node of which is an SCC (strongly connected component) of procedure
+calls.
 It explores the subtree below a node in the tree
 only if the per-call cost of the subtree is greater than a configurable
 threshold,
@@ -358,14 +380,6 @@ and therefore multiple parallelisations may be generated for the same
 conjunctions within the procedure.
 We discuss how we resolve conflicting recommendations for the same procedure
 in section \ref{sec:overlap_pragmatic}.
-
-\paul{Move this paragraph elsewhere, conclusion or introduction?}
-An important benefit of profile-directed parallelisation is that
-since programmers do not annotate the source program,
-it can be re-parallelised easily after a change to the program
-obsoletes some old parallelisation opportunities and creates others.
-Nevertheless, if programmers want to parallelise some conjunctions manually,
-they can do so: our system will not override the programmer.
 
 % \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
@@ -489,16 +503,31 @@ We call this the average deepest recursion:
 AvgMaxDepth = Calls_{RecCallSites} / Calls_{ParentCallSite}
 \end{equation*}
 
-The deepest call executes only the non-recursive path,
-and incurs only its costs.
+The deepest recursive call site executes only the non-recursive path,
+and incurs only its costs ($CostNonRec$).
+We measure the costs of calls in \emph{call sequence counts} (csc),
+a unit defined in section \ref{sec:backgnd_deep}.
 The next deepest would take the recursive path,
-and incur one copy of the costs of the non-recursive calls along that path,
-plus the cost of the last call.
+and incur one copy of the non-recursive call costs along the recursive path
+($CostNonRec$)
+plus the cost of the recursive call itself ($1$)
+plus the cost of the non-recursive branch ($CostNonRec$).
 The third last would incur two copies of the costs
 of the non-recursive calls along the recursive path,
 plus the cost of the last call.
+The formulas for each of these recursive call site costs is:
+
+\[
+\begin{array}{r @{}l @{}l}
+cost(0)~&= CostNonRec \\
+cost(1)~&= CostNonRec + CostRec + 1 \\
+cost(2)~&= CostNonRec + 2{\times}CostRec + 2
+\end{array}
+\]
+
+\noindent
 By induction,
-the cost of a recursive call at depth $D$ (0 being the deepest)
+the cost of a recursive call site at depth $D$ (0 being the deepest)
 is:
 
 \begin{equation*}
@@ -513,11 +542,10 @@ The depth representing the typical use of such a procedure is half of
 $AvgMaxDepth$.
 This allows us to calculate the typical cost of a recursive call from this
 call site.
-For example, if \mapfoldl's non-recursive path cost is 10 call sequences
-counts (a unit defined in section \ref{sec:backgnd_deep}),
-its recursive path cost is 100csc,
+For example, if \mapfoldl's non-recursive path cost is 10csc,
+its recursive path cost is 10,000csc,
 and its typical depth is $9/2 = 4.5$.
-Then its typical cost is $10 + 4.5(100 + 1) = 464.5$ call sequence counts.
+Then its typical cost is $10 + 4.5(10,000 + 1) = 45,014.5$ call sequence counts.
 
 \begin{figure}[tb]
 \begin{center}
@@ -564,20 +592,23 @@ optimally,
 dividing the list in half with each recursion.
 Figure \ref{fig:quicksort_acc_callgraph} shows the call graph for such an
 invocation of \quicksortacc.
-This graph has 15 nodes excluding ``main'',
+There are 15 notes in ``qs'''s call tree,
 each node has exactly one call leading to it;
 therefore there is one call from outside \quicksortacc's SCC
 (the call from ``main''),
 and 14 calls within the SCC
 (the calls from ``qs'' nodes).
 By inspection, there are four complete levels of recursion.
-There are always $\log_2(N+1)$ levels in a divide and conquer call graph
-with $N$ nodes,
-and since there are always $N-1$ calls from within the SCC for a graph with
-$N$ nodes then
-it follows that,
-there are $\log_2(C+2)$ levels for a divide and conquer call graph with $C$
-recursive calls.
+There are always
+$\ceil{\log_2(N+1)}$
+%$\log_2(N+1)$
+levels in a divide and conquer call graph of $N$ nodes when
+the graph is a \emph{complete binary tree}
+(we will cover non-complete binary trees later).
+Since there are always $N-1$ calls from within the SCC for a graph with
+$N$ nodes then it follows that
+there are $\ceil{\log_2(C+2)}$ levels for a divide and conquer call graph
+with $C$ recursive calls.
 In this example, $C$ is 14 and therefore there are four levels of recursion
 as we noted above by inspection.
 If there were two invocations of \quicksortacc from \code{main/2} then there
@@ -591,34 +622,47 @@ AvgMaxDepth = \log_2
 	\left(\frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}} + 2\right)
 \end{equation*}
 
-If consistently worst-case pivots are chosen then \quicksortacc fails to
-divide the list at each recursion passing an empty list to one recursive call
-and a list whose length is one item shorter than the input list to the other
-call.
-Pathologically bad cases are rare and are considered bugs;
+This is the approximate depth of the tree so we omit the ceiling operator.
+If consistently worst-case pivots are chosen then \quicksortacc call graph
+will resemble a stick.
+Pathologically bad cases are rare and are considered performance bugs;
 programmers will usually want to remove such bugs in order to improve
-sequential execution performance.
+sequential execution performance before they attempt to parallelise their
+program.
 Slight imbalance in a call graph is a more common occurrence,
 such situations fall into the same class as those where the profiling data
-is not quite representative of the optimised program's future use,
-or our estimates of parallel execution overheads do not match the hardware's
-actual performance.
-Such variations in our calculations' inputs rarely change a ``should
-parallelise'' decision into a ``should not parallelise'' decision and
-\emph{vice-versa}.
+is not quite representative of the optimised program's future.
+In section \ref{sec:overlap_approach} we explained that these variations are
+harmless.
 Therefore, we assume that all divide and conquer code is, on average,
 evenly balanced.
-
 As before, the deepest call executes only the non-recursive path,
 and incurs only its costs.
 The next deepest takes the recursive path,
 it incurs the costs of the goals along that path,
-plus twice the base case's cost, plus the costs of calls to the base case.
+plus the costs of the two calls to the base case,
+plus twice the base case's cost itself.
+The third deepest also takes the recursive path,
+plus the costs of the two recursive calls' executions of the recursive path,
+that is three times the cost of the recursive path ($3{RecCost}$);
+plus the costs of the two recursive calls and the costs of the four calls to
+the base case ($6$);
+plus four times the base case's cost ($4{CostNonRec}$).
+
+\[
+\begin{array}{r @{}l @{}l}
+cost(0)~&= CostNonRec \\
+cost(1)~&= CostRec + 2 + 2{CostNonRec} \\
+cost(2)~&= 3{CostRec} + 6 + 4{CostNonRec} \\
+\end{array}
+\]
+
 By induction,
-the cost of a recursive call in a divide and conquer procedure at depth $D$ is:
+the cost of a recursive call in a prefectly balanced divide and conquer
+procedure at depth $D$ is:
 
 \begin{equation*}
-cost(D) = 2^D{CostNonRec} + 2^{D-1}(CostRec + 1)
+cost(D) = 2^D-1(CostRec + 2) + 2^D{CostNonRec} \\
 \end{equation*}
 
 \plan{interesting depth of d\&c}
@@ -1446,7 +1490,7 @@ In many cases,
 the conjunction given to algorithm \ref{alg:dep_par_conj_overlap_middle}
 will contain a recursive call.
 In these cases the recursive call's cost at its average recursion depth is
-used to determine if the parallelisation is worth-while.
+used to determine if the parallelisation is worthwhile.
 This assumes that the recursive call
 calls the \emph{original, sequential} version of the procedure.
 When the recursive call calls the parallelised version,

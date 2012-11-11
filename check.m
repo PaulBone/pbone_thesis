@@ -327,7 +327,8 @@ invalid_hypenations = [
     "re-ordering",
     "re-ordered",
     "shut-down",
-    "call-graph"
+    "call-graph",
+    "worth-while"
     ].
 
 :- func acronyms = list(string).
@@ -360,7 +361,8 @@ macro_words = [
 bad_ngrams = [
         ["time", "speeds", "up"],
         ["can", "not"],
-        ["round", "robin"]
+        ["round", "robin"],
+        ["worth", "while"]
     ].
 
 % Convert the document into different data structures.
