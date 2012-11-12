@@ -497,10 +497,12 @@ that each non-recursive call
 (from the parent SCC)
 would on average yield nine recursive calls
 (from within the SCC).
+Note that there are actually ten levels of recursion so we add one for the
+highest level of recursion (the call from the parent SCC).
 We call this the average deepest recursion:
 
 \begin{equation*}
-AvgMaxDepth = Calls_{RecCallSites} / Calls_{ParentCallSite}
+AvgMaxDepth = Calls_{RecCallSites} / Calls_{ParentCallSite} + 1
 \end{equation*}
 
 The deepest recursive call site executes only the non-recursive path,
@@ -527,7 +529,7 @@ cost(2)~&= CostNonRec + 2{\times}CostRec + 2
 
 \noindent
 By induction,
-the cost of a recursive call site at depth $D$ (0 being the deepest)
+the cost of a recursive call site to depth $D$ (0 being the deepest)
 is:
 
 \begin{equation*}
@@ -539,13 +541,18 @@ recursion.
 Simply recursive procedures have a uniform number of calls at each depth of
 the recursion.
 The depth representing the typical use of such a procedure is half of
-$AvgMaxDepth$.
+$AvgMaxDepth - 1$.
+We subtract 1 as the first level of recursion is not reached by a recursive
+call site.
 This allows us to calculate the typical cost of a recursive call from this
 call site.
+The typical depth of this part of the call graph is $(10 - 1)/2 - 1 = 3.5$
+The extra subtraction of 1 is necessary as we start counting depth from
+zero.
 For example, if \mapfoldl's non-recursive path cost is 10csc,
 its recursive path cost is 10,000csc,
-and its typical depth is $9/2 = 4.5$.
-Then its typical cost is $10 + 4.5(10,000 + 1) = 45,014.5$ call sequence counts.
+and its typical depth is $3.5$.
+Then its typical cost is $10 + 3.5(10,000 + 1) = 35,013.5$ call sequence counts.
 
 \begin{figure}[tb]
 \begin{center}
@@ -592,7 +599,7 @@ optimally,
 dividing the list in half with each recursion.
 Figure \ref{fig:quicksort_acc_callgraph} shows the call graph for such an
 invocation of \quicksortacc.
-There are 15 notes in ``qs'''s call tree,
+There are 15 nodes in ``qs'''s call tree,
 each node has exactly one call leading to it;
 therefore there is one call from outside \quicksortacc's SCC
 (the call from ``main''),
@@ -610,7 +617,7 @@ $N$ nodes then it follows that
 there are $\ceil{\log_2(C+2)}$ levels for a divide and conquer call graph
 with $C$ recursive calls.
 In this example, $C$ is 14 and therefore there are four levels of recursion
-as we noted above by inspection.
+as we noted above.
 If there were two invocations of \quicksortacc from \code{main/2} then there
 would be two calls from outside the SCC and 28 calls from within,
 in this case the depth is still four.
@@ -622,20 +629,30 @@ AvgMaxDepth = \log_2
 	\left(\frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}} + 2\right)
 \end{equation*}
 
+\noindent
 This is the approximate depth of the tree so we omit the ceiling operator.
-If consistently worst-case pivots are chosen then \quicksortacc call graph
-will resemble a stick.
-Pathologically bad cases are rare and are considered performance bugs;
-programmers will usually want to remove such bugs in order to improve
-sequential execution performance before they attempt to parallelise their
-program.
-Slight imbalance in a call graph is a more common occurrence,
-such situations fall into the same class as those where the profiling data
-is not quite representative of the optimised program's future.
-In section \ref{sec:overlap_approach} we explained that these variations are
-harmless.
+Non-complete binary trees can be divided into two cases:
+
+\begin{description}
+    \item[Pathologically bad trees] (trees which resemble sticks)
+    are created when consistently worst-case pivots are chosen.
+
+    These are rare and are considered performance bugs;
+    programmers will usually want to remove such bugs in order to improve
+    sequential execution performance before they attempt to parallelise
+    their program.
+
+    \item[Slightly imbalanced trees] are more common,
+    such situations fall into the same class as those where the profiling
+    data is not quite representative of the optimised program's future.
+    In section \ref{sec:overlap_approach} we explained that these variations
+    are harmless.
+\end{description}
+
+\noindent
 Therefore, we assume that all divide and conquer code is, on average,
 evenly balanced.
+
 As before, the deepest call executes only the non-recursive path,
 and incurs only its costs.
 The next deepest takes the recursive path,
@@ -657,12 +674,13 @@ cost(2)~&= 3{CostRec} + 6 + 4{CostNonRec} \\
 \end{array}
 \]
 
+\noindent
 By induction,
 the cost of a recursive call in a prefectly balanced divide and conquer
 procedure at depth $D$ is:
 
 \begin{equation*}
-cost(D) = 2^D-1(CostRec + 2) + 2^D{CostNonRec} \\
+cost(D) = (2^D-1)(CostRec + 2) + 2^D{CostNonRec}
 \end{equation*}
 
 \plan{interesting depth of d\&c}
@@ -672,62 +690,126 @@ levels.
 However, for parallelism the high recursion levels are more interesting:
 we know that parallelising the top of the algorithm's call graph can provide
 ample coarse-grained parallelism.
+We will show how to calculate the cost of a recursive call at the top of the
+call graph.
+First, depth is measured from zero in the equations above, so we must
+subtract one from AvgMaxDepth.
+Second, the recursive calls at the first level call the second level,
+to compute the cost of calls to this level we must subtract one again.
+Therefore we use the cost formula with $D = AvgMaxDepth - 2$.
+
 \plan{quicksort example}
-For example, lets compute the costs of the recursive calls at the top of
+For example, let us compute the costs of the recursive calls at the top of
 \quicksortacc's call graph.
 In this example, we gathered data using Mercury's deep profiler on 10
 executions of \quicksortacc sorting a list of 32,768 elements.
-the profiler reports that there are 655,370 calls into this SCC,
+The profiler reports that there are 655,370 calls into this SCC,
 10 of which come from the parent SCC, leaving 655,360 from the two call sites
 within \quicksortacc's SCC.
-With each recursive call the size of the list is roughly halved,
-thus on average there are $\log_{2}(655,360/10) = 16$ levels of recursion.
-This is not quite accurate for the case of \quicksortacc;
-there are two reasons why:
-it is possible to choose a bad value for \code{Pivot} and,
-at each level \code{Pivot} is removed from the list before partitioning it.
-It is more accurate for mergesort for example.
+Using the formulas above we find that the AvgMaxDepth is
+$\log_{2}(655,360/10 + 2) \approx 16$.
 The total per-call cost of the call site to partition reported by the profiler
-is approximately 35.5csc,
+is an estimated 35.5csc,
 it is the only other goal in either the base case or recursive case with a
 non-zero cost.
-The call at the 16\textsuperscript{th} level of recursion is the call from the
-parent SCC into \quicksortacc.
-We want to calculate the cost of the calls in the next level down from the
-parent,
-the 15\textsuperscript{th} level, which is:
-$0 + 2^{15 - 1}(35.5 + 1) \approx 591,462$.
+We wish to compute the costs of the recursive calls at the
+15\textsuperscript{th} lavel so $D$ must be 14.
+The cost of these calls is
+$(2^{14} - 1)(35.5 + 2) + 2^{14}\times0 \approx 614,363$.
 This is the average cost of both of the two recursive calls;
-depending on how the list was partitioned,
-either sub-list could be larger, making the other one
-smaller and affecting the costs of the recursive calls similarly.
-However the deep profiler does not provide this type of information and we
-believe that on average the costs computed here will be good enough.
+assuming that the list was partitioned evenly.
 Since the deep profiler reports that the total per-call cost of the
 \quicksortacc SCC is 1,229,106csc, we can see that the above figure makes
 sense.
 
-%\begin{algorithm}
-%\begin{algorithmic}
-%\Procedure{classify}{$Goal$}
-%    \Switch{$Goal$}
-%        \Case unify or builtin call
-%            \State $Res \gets [\reccallres{0}{1}{0}]$
-%        \EndCase
-%        \Case non-recursive call
-%            \State $Res \gets [\reccallres{0}{1}{\cost{Goal}}]$
-%        \EndCase
-%        \Case recursive call
-%            \State $Res \gets [\reccallres{1}{1}{0}]$
-%        \EndCase
-%        \Case conjunction
-%            \State $Res \gets $classify\_conj$($conjuncts$(Goal))$
-%        \EndCase
-%        
-%    \EndSwitch
-%\EndProcedure
-%\end{algorithmic}
-%\end{algorithm}
+There are two ways in which this calculation can be inaccurate.
+First, poorly chosen pivot values create imbalanced call graphs.
+We have already discussed how this can affect the calculation of the
+recursion depth.
+This can also affect the cost calculation in much the same way,
+and the same rebutals apply.
+There is one extra concern,
+a pivot that is not perfect will result in two sublists of different sizes
+and therefore the recursive calls will have different costs rather than the
+same cost we computed above.
+\emph{Parallel slackness} can be used as on average the computed costs will
+be close enough,
+and any difference between the predicted cost and the actual cost will not
+affect the system as a whole.
+
+The second cause of inacurate results comes from our assumption about
+\partition's cost.
+We assumed that partition always has the same cost at every level of
+the call graph.
+However \partition's cost is directly proportal to the size of its input
+list which is smaller at deeper levels.
+In our example we are using lists of integers and integer comparison costs
+1csc.
+The cost of the call to \partition is one (for the call itself) plus two
+times the lenght of the list (for the integer comparison and for the next
+recursive call within \partition):
+
+\begin{equation*}
+part\_cost(L) = 2L + 1 \\
+\end{equation*}
+
+\noindent
+As we move from the leaves to the root of \quicksortacc's call tree,
+the length of the list is double plus one.
+The costs of the calls to \partition in a tree is double the cost of the
+call in one of the calls in a child plus the cost of the call in the root
+node.
+And the number of calls to \partition in a tree is double the number of calls in
+either of its subtrees plus one, which is also $2^D - 1$
+
+\paul{XXX: Can I turn the second equation into an exponential rather than a
+recursive function?}
+\[
+\begin{array}{l @{}l @{}l}
+length(D)              ~&= 2D + 1 \\
+total\_part\_cost(D)   ~&= part\_cost(length(D)) +
+    \begin{cases}
+        2total\_part\_cost(D - 1) & \text{if}~ D > 0 \\
+        0                         & \text{if}~ D = 0 \\
+    \end{cases} \\
+num\_part\_calls(D)    ~&= 2^D - 1 \\
+\end{array}
+\]
+
+\noindent
+As above,
+these are accruate only when \quicksortacc's call graph is a complete binary
+tree.
+But now we can calculate the average cost of the calls to partition in any
+subtree begining at depth $D$:
+
+\begin{equation*}
+avg\_part\_cost(D) = \frac{total\_part\_cost(D)}{num\_part\_calls(D)}
+\end{equation*}
+
+\paul{This seems to approch 6 as D approches $\inf$.
+If I knew how to remove the recursive definition above I could prove this
+and show that in a big enough tree inaccuracies don't matter.
+Also the computed average cost is way different to the measured cost, which
+is probably due to imperfect pivots, this is more of an issue when computing
+the cost of the recursive calls.
+
+%Consider the call graph in figure \ref{fig:quicksort_acc_callgraph},
+%at the lowest level the base cases are executed and partition is not called.
+%At the next level up, the length of each input list is one, the pivot value,
+%and the rest of the list is empty, the cost of \partition is 1csc
+%(the cost of calling \partition).
+%At the next level (the second level from the top) the lists have three
+%items including the pivot, \partition is executed on a list of two items and
+%its cost is 3csc.
+%Finally at the top most level, the list has seven items, and \partition is
+%called on a list of six items, its cost is 7csc.
+%There are seven calls to \partition the and average cost is
+%$(7 + 2\times3 + 4\times1) / 7 = 17/7 \approx 2.43\text{csc}$
+%The calls to \partition below the second level from the top are the ones
+%that should be used in our calculation of the recursive calls' costs,
+%these are the calls at the second lowest level which cost 1csc.
+
 
 \begin{figure}
 \begin{center}

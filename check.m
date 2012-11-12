@@ -307,6 +307,8 @@ contractions = [
     "they're",
     "they've",
     "they'd",
+    "let's",
+    %"lets",
     "heapsize",
     "callgraph"
     ].
