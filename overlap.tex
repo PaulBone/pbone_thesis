@@ -73,7 +73,7 @@ An important benefit of profile-directed parallelisation is that
 since programmers do not annotate the source program,
 it can be re-parallelised easily after a change to the program
 obsoletes some old parallelisation opportunities and creates others.
-To do this the programmer can reprofile the program to generate fresh
+To do this the programmer can re-profile the program to generate fresh
 recommendations and recompile the program to apply those recommendations.
 Nevertheless, if programmers want to parallelise some conjunctions manually,
 they can do so: our system will not override the programmer.
@@ -211,7 +211,7 @@ or we could execute two conjuncts in sequence
 and execute that sequential conjunction in parallel with the remaining conjunct.
 In this case, there is little point in executing
 the higher order calls to the \M and \F predicates
-%(herein map and fold respectivly)
+%(herein map and fold respectively)
 in parallel with one another,
 since in virtually all cases,
 \M will generate \code{Y} very late and
@@ -312,10 +312,10 @@ Variations in our input data will change the numerical results
 that we use to decide whether something should be parallelised,
 however they rarely change a ``should parallelise'' decision into a
 ``should not parallelise'' decision and \emph{vice-versa}.
-The other source of inacuracy comes from misestimating the hardware's
+The other source of inaccuracy comes from miss estimating the hardware's
 performance on certain operations such as the cost of spawning off a new
 task.
-Such misestimations will have the same impact as variations in impact data.
+Such miss estimations will have the same impact as variations in impact data.
 The main focus of this chapter is on step 3;
 we give the main algorithms used by the feedback tool.
 However, we will also touch on steps 1 and 4.
@@ -630,7 +630,7 @@ AvgMaxDepth = \log_2
 \end{equation*}
 
 \noindent
-This is the approximate depth of the tree so we omit the ceiling operator.
+This is the estimated depth of the tree so we omit the ceiling operator.
 Non-complete binary trees can be divided into two cases:
 
 \begin{description}
@@ -676,7 +676,7 @@ cost(2)~&= 3{CostRec} + 6 + 4{CostNonRec} \\
 
 \noindent
 By induction,
-the cost of a recursive call in a prefectly balanced divide and conquer
+the cost of a recursive call in a perfectly balanced divide and conquer
 procedure at depth $D$ is:
 
 \begin{equation*}
@@ -713,7 +713,7 @@ is an estimated 35.5csc,
 it is the only other goal in either the base case or recursive case with a
 non-zero cost.
 We wish to compute the costs of the recursive calls at the
-15\textsuperscript{th} lavel so $D$ must be 14.
+15\textsuperscript{th} level so $D$ must be 14.
 The cost of these calls is
 $(2^{14} - 1)(35.5 + 2) + 2^{14}\times0 \approx 614,363$.
 This is the average cost of both of the two recursive calls;
@@ -727,7 +727,7 @@ First, poorly chosen pivot values create imbalanced call graphs.
 We have already discussed how this can affect the calculation of the
 recursion depth.
 This can also affect the cost calculation in much the same way,
-and the same rebutals apply.
+and the same rebuttals apply.
 There is one extra concern,
 a pivot that is not perfect will result in two sublists of different sizes
 and therefore the recursive calls will have different costs rather than the
@@ -737,103 +737,99 @@ be close enough,
 and any difference between the predicted cost and the actual cost will not
 affect the system as a whole.
 
-The second cause of inacurate results comes from our assumption about
+The second cause of inaccurate results comes from our assumption about
 \partition's cost.
 We assumed that partition always has the same cost at every level of
 the call graph.
-However \partition's cost is directly proportal to the size of its input
-list which is smaller at deeper levels.
-In our example we are using lists of integers and integer comparison costs
-1csc.
-The cost of the call to \partition is one (for the call itself) plus two
-times the lenght of the list (for the integer comparison and for the next
-recursive call within \partition):
+However \partition's cost is directly proportional to the size of its input
+list which is itself directly proportional to the depth in \quicksortacc's call
+graph.
+This would seem to affect our calculations of the cost of recursive calls
+different levels within the call tree.
+However the rate at which \partition's cost increases with hight in the tree
+is linear, while at the same time the number of calls to \partition grows at
+a power of two with the tree's hight.
+Therefore as the tree becomes larger the \emph{average} cost of calls to
+\partition within it asymptotes towards a constant number.
+So in significantly large trees the varying costs of \partition do not
+matter.
 
-\begin{equation*}
-part\_cost(L) = 2L + 1 \\
-\end{equation*}
-
-\noindent
-As we move from the leaves to the root of \quicksortacc's call tree,
-the length of the list is double plus one.
-The costs of the calls to \partition in a tree is double the cost of the
-call in one of the calls in a child plus the cost of the call in the root
-node.
-And the number of calls to \partition in a tree is double the number of calls in
-either of its subtrees plus one, which is also $2^D - 1$
-
-\paul{XXX: Can I turn the second equation into an exponential rather than a
-recursive function?}
-\[
-\begin{array}{l @{}l @{}l}
-length(D)              ~&= 2D + 1 \\
-total\_part\_cost(D)   ~&= part\_cost(length(D)) +
-    \begin{cases}
-        2total\_part\_cost(D - 1) & \text{if}~ D > 0 \\
-        0                         & \text{if}~ D = 0 \\
-    \end{cases} \\
-num\_part\_calls(D)    ~&= 2^D - 1 \\
-\end{array}
-\]
-
-\noindent
-As above,
-these are accruate only when \quicksortacc's call graph is a complete binary
-tree.
-But now we can calculate the average cost of the calls to partition in any
-subtree begining at depth $D$:
-
-\begin{equation*}
-avg\_part\_cost(D) = \frac{total\_part\_cost(D)}{num\_part\_calls(D)}
-\end{equation*}
-
-\paul{This seems to approch 6 as D approches $\inf$.
-If I knew how to remove the recursive definition above I could prove this
-and show that in a big enough tree inaccuracies don't matter.
-Also the computed average cost is way different to the measured cost, which
-is probably due to imperfect pivots, this is more of an issue when computing
-the cost of the recursive calls.
-}
-
-%Consider the call graph in figure \ref{fig:quicksort_acc_callgraph},
-%at the lowest level the base cases are executed and partition is not called.
-%At the next level up, the length of each input list is one, the pivot value,
-%and the rest of the list is empty, the cost of \partition is 1csc
-%(the cost of calling \partition).
-%At the next level (the second level from the top) the lists have three
-%items including the pivot, \partition is executed on a list of two items and
-%its cost is 3csc.
-%Finally at the top most level, the list has seven items, and \partition is
-%called on a list of six items, its cost is 7csc.
-%There are seven calls to \partition the and average cost is
-%$(7 + 2\times3 + 4\times1) / 7 = 17/7 \approx 2.43\text{csc}$
-%The calls to \partition below the second level from the top are the ones
-%that should be used in our calculation of the recursive calls' costs,
-%these are the calls at the second lowest level which cost 1csc.
+%
+%In our example we are using lists of integers and integer comparison costs
+%1csc.
+%The cost of the call to \partition is one (for the call itself) plus two
+%times the lenght of the list (for the integer comparison and for the next
+%recursive call within \partition):
+%
+%\begin{equation*}
+%part\_cost(L) = 2L + 1 \\
+%\end{equation*}
+%
+%\noindent
+%As we move from the leaves to the root of \quicksortacc's call tree,
+%the length of the list is double plus one.
+%The costs of the calls to \partition in a tree is double the cost of the
+%call in one of the calls in a child plus the cost of the call in the root
+%node.
+%And the number of calls to \partition in a tree is double the number of calls in
+%either of its subtrees plus one, which is also $2^D - 1$
+%
+%\paul{XXX: Can I turn the second equation into an exponential rather than a
+%recursive function?}
+%\[
+%\begin{array}{l @{}l @{}l}
+%length(D)              ~&= 2(D - 1) \\
+%total\_part\_cost(D)   ~&= part\_cost(length(D)) +
+%    \begin{cases}
+%        2total\_part\_cost(D - 1) & \text{if}~ D > 1 \\
+%        0                         & \text{if}~ otherwise \\
+%    \end{cases} \\
+%num\_part\_calls(D)    ~&= 2^D - 1 \\
+%\end{array}
+%\]
+%
+%\noindent
+%As above,
+%these are accruate only when \quicksortacc's call graph is a complete binary
+%tree.
+%But now we can calculate the average cost of the calls to partition in any
+%subtree begining at depth $D$:
+%
+%\begin{equation*}
+%avg\_part\_cost(D) = \frac{total\_part\_cost(D)}{num\_part\_calls(D)}
+%\end{equation*}
+%
+%\paul{This seems to approch 2 as D approches $\inf$.
+%If I knew how to remove the recursive definition above I could prove this
+%and show that in a big enough tree inaccuracies does not matter.
+%Also the computed average cost is way different to the measured cost, which
+%is probably due to imperfect pivots, this is more of an issue when computing
+%the cost of the recursive calls.
+%}
 
 
 \begin{figure}
 \begin{center}
 \begin{tabular}{rlrr}
 \C{Line} & \C{Code}         & \C{Coverage}  & \C{Cost}  \\
- 1  & \code{p(X, Y, ...) :-}&         100\% &           \\
- 2  & \code{~~~~(}          &               &           \\
- 3  & \code{~~~~~~~~X = a,} &          20\% &         0 \\
- 4  & \code{~~~~~~~~p(...)} &          20\% &           \\
+    & \code{p(X, Y, ...) :-}&         100\% &           \\
+    & \code{~~~~(}          &               &           \\
+    & \code{~~~~~~~~X = a,} &          60\% &         0 \\
+    & \code{~~~~~~~~q(...)} &          60\% &     1,000 \\
  5  & \code{~~~~;}          &               &           \\
- 6  & \code{~~~~~~~~X = b,} &          60\% &         0 \\
- 7  & \code{~~~~~~~~q(...)} &          60\% &     1,000 \\
- 8  & \code{~~~~;}          &               &           \\
- 9  & \code{~~~~~~~~X = c,} &          20\& &         0 \\
-10  & \code{~~~~~~~~r(...)} &          20\% &     2,000 \\
-11  & \code{~~~~),}         &               &           \\
-12  & \code{~~~~(}          &               &           \\
-13  & \code{~~~~~~~~Y = d,} &          10\% &         0 \\
-14  & \code{~~~~~~~~p(...)} &          10\% &           \\
+    & \code{~~~~~~~~X = b,} &          20\& &         0 \\
+    & \code{~~~~~~~~r(...)} &          20\% &     2,000 \\
+    & \code{~~~~;}          &               &           \\
+    & \code{~~~~~~~~X = c,} &          20\% &         0 \\
+10  & \code{~~~~~~~~p(...)} &          20\% &           \\
+    & \code{~~~~),}         &               &           \\
+    & \code{~~~~(}          &               &           \\
+    & \code{~~~~~~~~Y = d,} &          90\% &         0 \\
+    & \code{~~~~~~~~s(...)} &          90\% &    10,000 \\
 15  & \code{~~~~;}          &               &           \\
-16  & \code{~~~~~~~~Y = e,} &          90\% &         0 \\
-17  & \code{~~~~~~~~s(...)} &          90\% &    10,000 \\
-18  & \code{~~~~).}         &               &           \\
+    & \code{~~~~~~~~Y = e,} &          10\% &         0 \\
+    & \code{~~~~~~~~p(...)} &          10\% &           \\
+    & \code{~~~~).}         &               &           \\
 \end{tabular}
 \end{center}
 \caption{Two recursive calls and six code paths.}
@@ -845,8 +841,8 @@ We classify recursion types with an algorithm that walks over the structure
 of a procedure.
 As it traverses the procedure,
 it counts the number of recursive calls along each path,
-the path's cost and the number of times the path is executed.
-When a branching structure like an if-then-else or switch is found,
+the path's cost, and the number of times the path is executed.
+When it finds a branching structure like an if-then-else or switch,
 the algorithm processes each branch independently and then merges its
 results at the end of the branch.
 If several branches have the same number of recursive calls (including zero)
@@ -857,19 +853,19 @@ This means that the result of traversing a goal might include data for
 several different recursion counts.
 Consider the example in figure \ref{fig:2_reccalls_4_paths}.
 The example code has been annotated with coverage information (in the
-third column) and with cost information where it is available (forth
+third column) and with cost information where it is available (fourth
 column). 
-The conjunction on lines six and seven does not contain a recursive call.
+The conjunction on lines three and four does not contain a recursive call.
 The result of processing it is a list containing a single tuple:
 \code{[(reccalls: 0, coverage: 60\%, cost: 1,000)]}.
-The other conjunction in the same switch (lines three and four) does contain
-a recursive call.
-The result of processing it is a list containing the tuple:
-\code{[(reccalls: 1, coverage: 20\%, cost: 0)]}.
-The result for the remaining switch arm (lines 9 and 10) is:
+The result for the second switch arm (lines six and seven) is:
 \code{[(reccalls: 0, coverage: 20\%, cost: 2,000)]}.
+The third conjunction in the same switch (lines nine and ten) contains
+a recursive call.
+The result of processing it is:
+\code{[(reccalls: 1, coverage: 20\%, cost: 0)]}.
 When the algorithm is finished processing all the cases in the switch it
-adds them together;
+adds them together.
 When adding tuples, we can add tuples together with the same number of
 recursive calls by adding their coverage and adding their costs weighted by
 coverage (these are per-call costs).
@@ -947,13 +943,13 @@ calls, averaging the coverage counts, and adding the costs.
 \end{center}
 
 \noindent
-Again, we can merge the cases with the sane numbers of recursive calls.
+Again, we merge the cases with the sane numbers of recursive calls.
 
 \noindent
 \begin{center}
 \begin{tabular}{l}
 \code{[   (rc: 0, cvg: 72\%, cost: 11,250),} \\
-\code{   ~(rc: 1, cvg: 26\%, cost: ~1,319),} \\ 
+\code{   ~(rc: 1, cvg: 26\%, cost: ~7,308),} \\ 
 \code{   ~(rc: 2, cvg: ~2\%, cost: ~~~~~0)]} \\
 \end{tabular}
 \end{center}
@@ -961,10 +957,10 @@ Again, we can merge the cases with the sane numbers of recursive calls.
 \noindent
 There are six paths through this procedure,
 and two recursive calls.
-However, we can represent all six paths using just three tuples,
-one for each path type.
+The number of tuples needed is linear in the number of path types;
+in this case we represent all six paths using three tuples.
 This allows us to conveniently handle procedures of different forms as
-rather simple recursion types such as ``simply recursion'' we saw above:
+rather simple recursion types such as ``simple recursion'' we saw above:
 a procedure with two recursive paths with one call each can be handled as
 if it has just one recursive path and one base case.
 
@@ -986,29 +982,37 @@ We have not found it necessary to handle these cases.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{l|rrr}
-Recursion Type & No.\ of SCCs       & Percent & Total cost \\
+\begin{tabular}{ll|rrr}
+\multicolumn{2}{c|}{\textbf{Recursion Type}} &
+\textbf{No.\ of SCCs} &
+\textbf{Percent} &
+\textbf{Total cost} \\
 \hline
-Not recursive  &            292,893 & 78.07\% & 2,320,270,385 \\
-Simple recursion&            48,458 & 12.92\% &   402,430,967 \\
-Divide and conquer&           1,917 &  0.51\% &     5,337,293 \\
-Mutual recursion: 2 procs &   4,066 &  1.08\% &    27,099,504 \\
-Mutual recursion: 3 procs &   9,393 &  2.50\% &    14,846,076 \\
-Mutual recursion: 4 procs &   1,092 &  0.29\% &    12,542,308 \\
-Mutual recursion: 5 procs &   1,035 &  0.28\% &     3,863,295 \\
-Mutual recursion: other   &   3,707 &  0.99\% &   139,975.394 \\
+\Lbr{2}{Not recursive}              & 292,893 & 78.07\% & 2,320,270,385 \\
+\Lbr{2}{Simple recursion}           &  48,458 & 12.92\% &   402,430,967 \\
 
-Other recursion with rec-branches: 1, 2
-                           &     44 &  0.01\% &       580,994 \\
-Other recursion with rec-branches: 2, 3
-                           &    281 &  0.07\% &       189,377 \\
-Other recursion with rec-branches: 2, 3, 4
-                           &    564 &  0.15\% &     3,902,188 \\
-Other multi recursive-branch:
-                           &    200 &  0.05\% &         5,908 \\
-Unknown (built-in \& foreign language code) 
-						   & 10,623 &  2.83\% &           364 \\
-Unknown (error)            &  1,180 &  0.32\% &     8,838,291 \\
+\Lbr{2}{Mutual recursion: totals}  
+                                    &  19,293 &  5.14\% &   198,326,577 \\
+~~~~&
+ \Lbr{1}{2 procs}                   &   4,066 &  1.08\% &    27,099,504 \\
+&\Lbr{1}{3 procs}                   &   9,393 &  2.50\% &    14,846,076 \\
+&\Lbr{1}{4 procs}                   &   1,092 &  0.29\% &    12,542,308 \\
+&\Lbr{1}{5 procs}                   &   1,035 &  0.28\% &     3,863,295 \\
+&\Lbr{1}{6+ procs}                  &   3,707 &  0.99\% &   139,975.394 \\
+
+\Lbr{2}{Unknown}                    &  11,803 &  3.05\% &     8,838,655 \\
+\Lbr{2}{Divide and conquer}         &   1,917 &  0.51\% &     5,337,293 \\
+
+\Lbr{2}{Multiple recursive paths: totals}
+                                    &   1,089 &  0.28\% &     4,678,467 \\
+&\Lbr{1}{rec-branches: 1, 2}        &      44 &  0.01\% &       580,994 \\
+&\Lbr{1}{rec-branches: 2, 3}        &     281 &  0.07\% &       189,377 \\
+&\Lbr{1}{rec-branches: 2, 3, 4}     &     564 &  0.15\% &     3,902,188 \\
+&\Lbr{1}{other}                     &     200 &  0.05\% &         5,908 \\
+
+%\Lbr{2}{Unknown (built-in \& foreign language code)}
+%						            &  10,623 &  2.83\% &           364 \\
+%\Lbr{2}{Unknown (error)}            &   1,180 &  0.32\% &     8,838,291 \\
 \end{tabular}
 \end{center}
 \caption{Survey of recursion types in an execution of the Mercury compiler}
@@ -1034,14 +1038,19 @@ It may be possible to perform further analysis on mutually recursive SCCs,
 but we have not found it important to do this yet.
 Mutual recursion as a whole accounts for a larger proportion of procedures
 than divide and conquer.
-The ``Other'' recursion types refer to cases where there are multiple
-recursive paths through the SCC's procedure with different numbers of
-recursive calls plus a base case,
-we have not classified these cases further.
-The table row labelled ``Unknown (error)'' refers to cases that our algorithm
-could not handle.
-These are primarily procedures that may backtrack because they are either
-\dnondet or \dmulti.
+The ``Multiple recursive paths'' recursion types refer to cases where there
+are multiple recursive paths through the SCC's procedure with different
+numbers of recursive calls plus a base case.
+The table row labelled ``Unknown'' refers to cases that our algorithm
+could not or does not handle.
+This can include builtin code, foreign language code and
+procedures that may backtrack because they are either \dnondet or \dmulti.
+Note that some procedures such as \dsemidet procedures which we cannot
+parallelise are still interesting:
+such a procedure may be involved in the production or consumption of a
+variable that is an argument to the procedure;
+understanding this procedure may provide information needed to
+decide if a parallelisation in the procedure's caller is profitable or not. 
 
 The profiler represents each procedure in the program's source code as a \PS
 structure (section \ref{sec:backgnd_deep}).
@@ -1051,16 +1060,15 @@ Each SCC may have a different recursion type depending on how it was called.
 For example, calling \code{length/2} on an empty list will not execute the base
 case and therefore this \emph{use} of \code{length/2} is non-recursive.
 
-Some of the ``Other'' recursion type cases are due to the implementation of the
-\code{map} ADT and code in Mercury's standard library,
-which uses a 2--3--4 tree implementation, and hence many of the
-multi-recursive path cases with 2, 3 or 4 recursive calls on a path
-are often 2--3--4 tree traversals.
+Some of the ``Multiple recursive paths'' recursion type cases are due to the
+implementation of the \code{map} ADT and code in Mercury's standard library,
+which uses a 2-3-4 tree implementation,
+and hence almost all of the cases with 2, 3 or 4 recursive calls on a path
+are 2-3-4 tree traversals.
 These traversals also account for some of the other multi recursive path
 cases,
 such as those with 2 or 3 recursive calls on a path.
-these may be due to the same code running on a tree without any
-4-nodes.
+In many cases these are the same code running on a tree without any 4-nodes.
 
 \begin{figure}
 \begin{center}
@@ -1088,8 +1096,8 @@ these may be due to the same code running on a tree without any
 \end{figure}
 
 \plan{Mutual recursion}
-We can handle simple cases of mutual recursion by a process of hypothetical
-inlining.
+It may be possible to handle simple cases of mutual recursion by a process
+of hypothetical inlining.
 Consider the call graph in figure \ref{fig:mutrec1}.
 In this example $f$, $g$ and $h$ represent an SCC,
 $f$ calls $g$, which calls $h$, which calls $f$.
@@ -1127,9 +1135,10 @@ Our current implementation handles non-recursive and simply recursive
 loops within a single procedure.
 We have shown how to calculate the cost of recursive calls in divide and
 conquer code.
-However, generating efficient parallel code is slightly more complicated,
+However, generating efficient parallel divide and conquer code is slightly
+more complicated,
 as Granularity Control is needed to prevent embarrassingly parallel
-workloads (Section \ref{sec:rts_work_stealing2}).
+workloads (section \ref{sec:rts_work_stealing2}).
 This is less true with simply recursive code as a non-recursive call that is
 parallelised against will usually have a non-trivial cost in all levels of
 the recursion.
@@ -1343,7 +1352,7 @@ the program.
 We must enable optimisations when compiling profiling versions of programs
 for the purpose of automatic parallelisation (or other types of profiler
 feedback)
-Therefore we have presented profiling results with optimsations both
+Therefore we have presented profiling results with optimisations both
 disabled (as one would do when using the profiler by hand)
 and enabled (as one would do when using profile feedback directed
 optimisations).
@@ -1375,7 +1384,7 @@ It does slightly affect the program's performance.
 Associating coverage data with \PD structures rather than \PS structures
 measurably affects memory usage,
 but the amount of memory usage (an additional 56MB or 50MB
-(without and with optimisations respectivly)
+(without and with optimisations respectively)
 is acceptable.
 Collecting deep coverage information does have a slight performance impact over
 collecting static coverage information,

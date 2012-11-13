@@ -348,7 +348,8 @@ acronyms = [
 :- func names = list(string).
 
 names = [
-    "Mercury"
+    "Mercury",
+    "Forth"
     ].
 
 % Words that should be written with macros.
