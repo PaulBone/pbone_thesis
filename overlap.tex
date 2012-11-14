@@ -117,6 +117,7 @@ so that the relative costs of parallel execution are small,
 and they should be independent to minimise synchronisation costs.
 Unfortunately, goals expensive enough to be worth executing in parallel
 are rarely independent.
+\paul{XXX: Say how these figures are generated.}
 For example, in the Mercury compiler itself,
 there are 53 conjunctions containing two or more expensive goals,
 but in only one of those conjunctions are the expensive goals independent.
@@ -165,6 +166,8 @@ The first purpose of this chapter is to show how one can find these conjunctions
 \label{fig:map_foldl_seq}
 {\small
 \begin{tabular}{l}
+\\
+\\
 \code{map\_foldl(\_, \_, [], Acc, Acc).} \\
 \code{map\_foldl(M, F, [X $|$ Xs], Acc0, Acc) :-} \\
 \code{~~~~M(X, Y),} \\
@@ -1329,6 +1332,7 @@ profiling for automatic parallelism.
 
 \begin{table}
 \begin{center}
+\paul{TODO: Present these figures without ASLR and with more sagnificant digits.}
 \begin{tabular}{l|rrr|rrr}
 \Cbr{\textbf{Profiling type}} &
 \multicolumn{3}{c|}{\textbf{Without optimisations}} &
