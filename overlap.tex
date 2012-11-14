@@ -842,8 +842,11 @@ of a procedure.
 As it traverses the procedure,
 it counts the number of recursive calls along each path,
 the path's cost, and the number of times the path is executed.
-When it finds a branching structure like an if-then-else or switch,
-the algorithm processes each branch independently and then merges its
+The number of times a path is executed is generated using coverage
+profiling, which is described in the next section.
+When the algorithm finds a branching structure like an if-then-else or
+switch,
+it processes each branch independently and then merges its
 results at the end of the branch.
 If several branches have the same number of recursive calls (including zero)
 they can be merged.
@@ -1148,72 +1151,57 @@ the recursion.
 
 \status{This section is ready for review.}
 
-\paul{This section and the previous one have a circular dependency.
-However it is useful to put this section after the previous one as the
-previous one provides motivation for this section and this section has an
-example that relies on understanding the previous section.}
-    
-Our auto-parallelism feedback tool is an extension of the Mercury deep
-profiler,
-which is able to provide ancestor call chain specific (\emph{deep})
-profiling data.
-Deep profiling data is extremely valuable if not necessary for profiling
-programs in declarative languages.
-This also applies to profiler directed optimisations such as
-auto-parallelisation.
-This means that our algorithms should therefore use deep profiling data to
-compute auto-parallelisation feedback specific to ancestor call chains;
-this includes the variable use time algorithm (section
-\ref{sec:backgnd_var_use_analysis})
-and the recursive call cost calculation (above).
-These two analyses use coverage data to compute how often different branches
-in procedures are taken.
-Coverage data is collected by the profiler's coverage profiling feature
-(section \ref{sec:backgnd_coverage}),
-which records how many times execution reaches each point in the program,
-the \emph{coverage} of that program point.
-It is possible to calculate the coverage of \emph{most} program points using
-only the call counts associated with call sites.
-Coverage profiling introduces some extra profiling instrumentation and
-allows coverage to be inferred for \emph{all} program points.
-
 \plan{Explain the shallow coverage information.}
-Until now,
-the profiler provided deep cost data,
-but only \emph{static} coverage data.
-The static coverage data is collected and stored in the profiler's \PS
-structures where it cannot be associated with a specific ancestor context of
+In section \ref{sec:backgnd_deep} we introduced the deep profiler,
+a profiler that can gather \emph{ancestor context} specific profiling data.
+We also introduced coverage profiling in section \ref{sec:backgnd_coverage},
+which can gather the \emph{coverage} of any program point.
+Before we started this project the coverage data gathered was not ancestor
+context specific.
+Coverage data was collected and stored in the profiler's \PS
+structures where it was not be associated with a specific ancestor context of
 a procedure.
-The data is represented by using two arrays and an integer describing the
-arrays' lengths.
-Each corresponding pair of slots in the arrays refers to a single coverage
-point in the procedure.
-The first array gives static information such as the type of coverage point and
-its location in the compiler's representation of the procedure.
-The second array contains the current value of the coverage point.
-Each time execution reaches the coverage point this value is incremented.
+Throughout this section we will use the term \emph{deep} to describe data
+that is ancestor context specific,
+and we will use \emph{static} to describe data that is not ancestor
+context specific.
+We want to use deep profiling data for automatic parallelisation,
+which requires using analyses that in turn require coverage data such as
+the calcuation of recursive call sites' costs
+(section \ref{sec:overlap_reccalls}),
+and variable use time anlysis (section \ref{sec:backgnd_var_use_analysis}).
+Therefore we have changed the way coverage data is collected and stored;
+this section describes our changes.
 
 \begin{figure}
 \begin{center}
-\begin{tabular}{r|rr|rr|l}
-\C{\textbf{Line}} &
-\multicolumn{2}{c|}{\textbf{Static}} & \multicolumn{2}{c|}{\textbf{Deep}} &
+\begin{tabular}{r|rr|r|l}
+\Cbr{\textbf{Line}} &
+\multicolumn{2}{c|}{\textbf{Coverage}} & \Cbr{\textbf{Percall Cost}} &
     \C{\textbf{Code}} \\
 &
-\C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & 
-\C{\textbf{Coverage}} & \Cbr{\textbf{Cost}} & \\ 
+\C{\textbf{Static}} & \Cbr{\textbf{Deep}} &
+& \\
 \hline
- 1 & 7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
- 2 &     - &     - &     - &         - & \code{~~~~(} \\
- 3 & 2,142 &     0 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
- 4 &     - &     - &     - &         - & \code{~~~~;} \\
- 5 & 5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
- 6 & 5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
- 7 & 5,709 & 2,097 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
- 8 &     - &     - &     - &         - & \code{~~~~).} \\
+ 1 & 7,851 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
+ 2 &     - &     - &         - & \code{~~~~(} \\
+ 3 & 2,142 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
+ 4 &     - &     - &         - & \code{~~~~;} \\
+ 5 & 5,709 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
+ 6 & 5,709 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
+ 7 & 5,709 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
+ 8 &     - &     - &         - & \code{~~~~).} \\
+%  1 & 7,851 & 3,358 & 2,689 & 3,898,634 & \code{foldl3(P, Xs0, !Acc1, ...) :-} \\
+%  2 &     - &     - &     - &         - & \code{~~~~(} \\
+%  3 & 2,142 &     0 &     1 &         0 & \code{~~~~~~~~Xs0 = []} \\
+%  4 &     - &     - &     - &         - & \code{~~~~;} \\
+%  5 & 5,709 &     0 & 2,688 &         0 & \code{~~~~~~~~Xs0 = [X $|$ Xs],} \\
+%  6 & 5,709 & 1,259 & 2,688 &     1,449 & \code{~~~~~~~~P(X, !Acc1, ...),} \\
+%  7 & 5,709 & 2,097 & 2,688 & 3,897,182 & \code{~~~~~~~~foldl3(P, Xs, !Acc1, ...)} \\
+%  8 &     - &     - &     - &         - & \code{~~~~).} \\
 \end{tabular}
 \end{center}
-\caption{Static and Deep coverage and cost data for \foldlthree}
+\caption{Static and Deep coverage data for \foldlthree}
 \label{fig:static_and_deep_coverage}
 \end{figure}
 
@@ -1221,18 +1209,29 @@ Each time execution reaches the coverage point this value is incremented.
 Our automatic parallelisation tool uses deep profiling data throughout.
 However, using deep profiling data and static coverage data creates
 inconsistencies that can result in erroneous results.
-Figure \ref{fig:static_and_deep_coverage} shows \foldlthree from
+Figure \ref{fig:static_and_deep_coverage} shows \listfoldlthree from
 Mercury's standard library;
 it is annotated with data collected from a profiling run of the Mercury
 compiler.
-Each line of code is shown with static and deep profiling data to its left.
-The static data is shown in the first two columns and the dynamic data in
-the next two.
-Within each group
-the first of column shows the code coverage, the number of times this code was
-executed,
-and the second shows the average per-call cost of executing this code
-measured in call sequence counts.
+Each line of code is shown with deep profiling data to its immediate left
+(the fourth column).
+The first cell in this column shows the per-call cost of the 
+call site in the parent SCC (the total cost of \foldlthree's call graph).
+The other cells in this column show the per-call costs of \foldlthree's call
+sites from the top-most level of \foldlthree's recursion,
+only the value for the recursive call was calculated by the algorithms
+in the previous section;
+the other values are provided by the profiler.
+This recursion level was chosen as so that the sum of the costs of calls in
+the body of the procedure is approximatly equal to the cost of the procedure
+from its parent call site.
+The second and third columns in this table report static and deep coverage
+data respectivly.
+The deep profiling and coverage data was collected from an SCC of
+\foldlthree whose ancestor context  is part of the compiler's mode checker,
+the last procedure in the call chain, excluding \foldlthree, is
+\code{modecheck\_to\_fixpoint/8}.
+
 Using the static coverage data we can see that \foldlthree is called 7,851 times
 (line one)
 throughout the execution of the compiler,
@@ -1240,41 +1239,53 @@ this includes recursive calls.
 There are 5,709 directly recursive calls (the coverage on line seven).
 Using these figures we can calculate that the average deepest recursion is 
 2.66 levels.
-The static cost data provided by the profiler includes the average per-call
-cost for the procedure as a whole on line one,
-and the average per-call cost for the call to P on line six.
-We calculated the average cost of the recursive call (line seven) using the
-methods in the previous section for the depth of 1.66,
-which is the first level down from the top of \foldlthree's call tree
-(the first recursive call).
+% The static cost data provided by the profiler includes the average per-call
+% cost for the procedure as a whole on line one,
+% and the average per-call cost for the call to P on line six.
+% We calculated the average cost of the recursive call (line seven) using the
+% methods in the previous section for the depth of 1.66,
+% which is the first level down from the top of \foldlthree's call tree
+% (the first recursive call).
 We can conclude that on average across the whole program,
 \foldlthree does not make very deep recursions
-(it is called on short lists),
-and that the cost of the higher order call is cheap.
-
-When we consider the \emph{deep} profiling information specific to a
-particular ancestor call chain,
-indecently a use of \foldlthree in the compiler's mode-checker,
-we see a case where there is only a single non-recursive call and 2,688
-recursive calls.
-This recursion is rather deep having a maximum depth of 2,689 levels.
-Without the deep coverage information in the third column of the table we
-would not be able to compute this recursion depth accurately.
-Using only static information we would have computed the depth of 2.66
-as above.
-This incorrect recursion depth could cause problems if we tried to analyse
-this loop.
+(it is called on short lists).
+This information is correct when generalised across the program,
+but it is incorrect in specific ancestor contexts:
+if we tried to analyse this loop in a specific context it would cause
+problems.
 Additionally, coverage data is necessary to accurately compute the cost of
 the recursive call.
+% and that the cost of the higher order call is cheap.
 For example,
-the true cost of the recursive call at the second level of the recursion is 
-3,897,182
-(calculated using the deep coverage data).
-Had we computed this using the erroneous depth from the static coverage
-data,
-the result would be 4,464.
+if we use this information with the deep profiling information in the fourth
+column we would calculate an incorrect value of 4,464csc for the recursive
+call's cost at this top-most level of the call tree.
+This is obviously incorrect:
+if we add it to the cost of the higher order call, 1,449csc
+then the sum is 5,913csc,
+which is a far cry from the true cost the call to this SCC (3,898,634csc).
 It is easy to understand how this discrepancy could affect a later analysis
 such as the variable use time analysis.
+
+If instead we use coverage information specific to this ancestor context,
+then we see that the base case is executed only once and the recursive case
+is executed 2,688 times.
+This means that the recursion is much deeper,
+with a depth of 2,689 levels.
+Using this value,
+we calculate that the cost of the recursive call at the top-most level of
+the recursion is 
+3,897,182csc.
+
+%The data is represented by using two arrays and an integer describing the
+%arrays' lengths.
+%Each corresponding pair of slots in the arrays refers to a single coverage
+%point in the procedure.
+%The first array gives static information such as the type of coverage point and
+%its location in the compiler's representation of the procedure.
+%The second array contains the current value of the coverage point.
+%Each time execution reaches the coverage point this value is incremented.
+
 
 \plan{Explain how we gather deep coverage info, and why it fixes the
 problem.}
