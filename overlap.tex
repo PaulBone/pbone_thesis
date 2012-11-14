@@ -1169,7 +1169,7 @@ We want to use deep profiling data for automatic parallelisation,
 which requires using analyses that in turn require coverage data such as
 the calcuation of recursive call sites' costs
 (section \ref{sec:overlap_reccalls}),
-and variable use time anlysis (section \ref{sec:backgnd_var_use_analysis}).
+and variable use time analysis (section \ref{sec:backgnd_var_use_analysis}).
 Therefore we have changed the way coverage data is collected and stored;
 this section describes our changes.
 
@@ -1218,23 +1218,23 @@ Each line of code is shown with deep profiling data to its immediate left
 The first cell in this column shows the per-call cost of the 
 call site in the parent SCC (the total cost of \foldlthree's call graph).
 The other cells in this column show the per-call costs of \foldlthree's call
-sites from the top-most level of \foldlthree's recursion,
-only the value for the recursive call was calculated by the algorithms
-in the previous section;
-the other values are provided by the profiler.
+sites;
+the recursive calls cost is the cost of the first recursive call
+(the call on the top-most recursion level)
+as calculated by the algorithms in the previous section.
 This recursion level was chosen as so that the sum of the costs of calls in
-the body of the procedure is approximatly equal to the cost of the procedure
+the body of the procedure is approximately equal to the cost of the procedure
 from its parent call site.
 The second and third columns in this table report static and deep coverage
-data respectivly.
-The deep profiling and coverage data was collected from an SCC of
+data respectively.
+The deep profiling and coverage data was collected from a single SCC of
 \foldlthree whose ancestor context  is part of the compiler's mode checker,
 the last procedure in the call chain, excluding \foldlthree, is
 \code{modecheck\_to\_fixpoint/8}.
 
 Using the static coverage data we can see that \foldlthree is called 7,851 times
 (line one)
-throughout the execution of the compiler,
+throughout the execution of the compiler;
 this includes recursive calls.
 There are 5,709 directly recursive calls (the coverage on line seven).
 Using these figures we can calculate that the average deepest recursion is 
@@ -1263,7 +1263,8 @@ call's cost at this top-most level of the call tree.
 This is obviously incorrect:
 if we add it to the cost of the higher order call, 1,449csc
 then the sum is 5,913csc,
-which is a far cry from the true cost the call to this SCC (3,898,634csc).
+which is a far cry from the measured cost of the call to this SCC
+(3,898,634csc).
 It is easy to understand how this discrepancy could affect a later analysis
 such as the variable use time analysis.
 
@@ -1277,34 +1278,54 @@ we calculate that the cost of the recursive call at the top-most level of
 the recursion is 
 3,897,182csc.
 
-%The data is represented by using two arrays and an integer describing the
-%arrays' lengths.
-%Each corresponding pair of slots in the arrays refers to a single coverage
-%point in the procedure.
-%The first array gives static information such as the type of coverage point and
-%its location in the compiler's representation of the procedure.
-%The second array contains the current value of the coverage point.
-%Each time execution reaches the coverage point this value is incremented.
-
-
 \plan{Explain how we gather deep coverage info, and why it fixes the
 problem.}
+We said above that coverage data was stored in \PS structures where it was
+not associated with an ancestor context.
+The data was represented using two arrays and an integer describing the
+arrays' lengths.
+Each corresponding pair of slots in the arrays referred to a single coverage
+point in the procedure.
+The first array gives static information such as the type of coverage point and
+its location in the compiler's representation of the procedure.
+The second array contains the current value of the coverage point,
+which is incremented each time execution reaches the program point.
 Each procedure in the program is associated with a single \PS structure
 and any number of \PD structures.
-Each \PD structure links the procedure to one of its uses in the program's
+Each \PD structure represents a use of a procedure in the program's
 call graph (modulo recursive calls).
-Therefore we can move the array containing the coverage points' execution
+We moved the array containing the coverage points' execution
 counts into the \PD structure.
-There are more \PD structures than \PS structures in a program's
-profile;
+Since there are more \PD structures than \PS structures in a program's
+profile,
 this will make the profile larger, consuming more memory and potentially
 affecting performance.
 It is important to minimise a profiler's impact on performance.
 Poor performance both affects the user's experience and 
 increases the risk of distorting the program's profile.
-However, we do not have to worry about distortion as our unit of time,
-call sequence counts,
-cannot be distorted.
+However, we do not have to worry about distortion as of time measured in
+call sequence counts.
+Time measured in seconds may be distorted slightly, this is very minimal.
+
+\plan{Optimisations \& profiling}
+Normally during profiling we disable optimisations that can transform a
+program in ways that would make it hard for a programmer to recognise their
+program's profile.
+For example inlining one procedure into another might cause the programmer
+to see one of their procedures making calls to other procedures that they
+did not write.
+However automatic parallelisation, like other optimisations,
+is used to speedup a program;
+a programmer will typically use other optimisations in conjunction with
+automatic parallelism in order to achieve more optimal speedups.
+The compiler performs parallelisation after most other optimisations,
+and therefore it operates on a version of the program that has already had
+these optimisations applied.
+So that we can generate feedback information that can easily be applied to
+the optimised program,
+the feedback tool must also operate on an optimised version of the program.
+Therefore we must enable optimisations when compiling the program for
+profiling for automatic parallelism.
 
 \begin{table}
 \begin{center}
@@ -1334,60 +1355,38 @@ The rows of the table give results for no profiling support,
 profiling support without coverage profiling,
 static coverage profiling support,
 and dynamic coverage profiling support.
-The two groups of result columns show results with certain optimisations
-disabled and enabled.
-the non-profiling version of the compiler was not compiled or tested with
-optimisations disabled.
+The two groups of result columns show results with optimisations that
+distort the callgraph both disabled and enabled\footnote{
+    The non-profiling version of the compiler was not compiled or tested with
+    optimisations disabled
+    as it ignores the \samp{--profile-optimised} flag when profiling is
+    disabled.}.
 The three result columns in each of the two column groups show:
 the user time, an average of 20 executions while compiling the eight largest
 modules of the compiler itself;
 the \emph{heap growth}, the amount by which the program break\footnote{
     The program break marks the end of the heap area.
-    See the \code{sbrk(2)} Unix system call}
+    See the \code{sbrk(2)} Unix system call.}
 moved during the execution;
 and the size of the resulting profiling file.
-
-Certain optimisations, such as inlining,
-transform a program in ways that would make it hard for a programmer to
-recognise their program's profile.
-We normally disable such optimisations when compiling with profiling
-support.
-However automatic parallelisation like other optimisations is used to
-speedup a program, and therefore normally used with other optimisations.
-The compiler performs parallelisation after most other optimisations,
-and therefore it operates on a version of the program that has already had
-these optimisations applied.
-The feedback tool must also operate on a similar version of the program;
-so that its feedback can be matched against the compiler's representation of
-the program.
-We must enable optimisations when compiling profiling versions of programs
-for the purpose of automatic parallelisation (or other types of profiler
-feedback)
-Therefore we have presented profiling results with optimisations both
-disabled (as one would do when using the profiler by hand)
-and enabled (as one would do when using profile feedback directed
-optimisations).
 
 We can see that enabling profiling slows the program down by at least a
 factor of three,
 or a factor of five if optimisations are disabled.
-While this is a considerable slow down,
-we would like to remind the reader that the profile cannot be distorted by
-such a slowdown as we use call sequence counts as our unit of time.
 The difference between the results with and without optimisations is
 unsurprising.
 It is well established that simple optimisations such as inlining can make a
 significant difference to performance.
 As optimisations make the program simpler, the call graph also becomes
 simpler.
-For example, inlining will reduce the number of procedures in the program,
-which means that fewer data structures are used to represent them in the
+For example, inlining reduces the number of procedures in the program,
+which means that fewer data structures are needed to represent them in the
 program's memory and in the data file.
 This is why the results show that the optimised programs use less memory
 and generate smaller profiling data files.
-It can also have a secondary effect on performance, the fewer procedures
-there are the less instrumentation there will be which improves the
-program's performance.
+Optimisations can also improve performance in another way:
+inlining reduces the number of procedures which reduces the amount of
+instrumentation placed in the code by the profiler.
 
 Enabling static coverage profiling does not significantly impact the memory
 usage or profile size of the program.
