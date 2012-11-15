@@ -1332,8 +1332,8 @@ profiling for automatic parallelism.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{l|rrr|rrr}
 \paul{TODO: Retest this data, thare are problems with the no coverage results.}
+\begin{tabular}{l|rrr|rrr}
 \Cbr{\textbf{Profiling type}} &
 \multicolumn{3}{c|}{\textbf{Without optimisations}} &
 \multicolumn{3}{c}{\textbf{With optimisations}} \\
@@ -1491,9 +1491,63 @@ it maps each shared variable to the time at which $p$ would produce the
 variable during sequential execution.
 This data is gathered using the variable use time analysis.
 
-\iclp{
+\picfigure{overlap2-swap}{Overlap with multiple variables}
+
+The algorithm works by dividing ${SeqTime}_q$ into chunks,
+it keeps track of when those chunks can execute.
+Each chunk repreresents the time before $q$ may consume the
+$i$\textsuperscript{th} shared variable except the last,
+these chunks' durations are $Duration_{q, i}$ (line 6).
+The last chunk represents the time after producing the last shared variable
+but before $q$ finishes; 
+$q$ may use this time to produce any variables that are not shared with the
+other conjuncts but are consumed by code after the parallel conjunction,
+this chunk's duration is $DurationRest$ (line 10).
+Figure~\ref{fig:overlap2-swap} shows the overlap of a parallel conjunction 
+($p \& q$) with two shared variables \var{A} and \var{B}.
+The figure is to scale and the sequential execution times of $p$ and $q$ are
+5 and 4 respectively.
+$q$ is broken up into the chunks $qA$, $qB$ and $qR$.
+The algorithm keeps track of the sequential and parallel execution times of $q$
+up to the consumption of the current shared variable.
+In the sequential version,
+each chunk can execute immediately after the previous chunk,
+since the values of the shared variables are all available when $q$ starts.
+In the parallel version,
+$p$ is producing the shared variables while $q$ is running.
+If $q$ tries to use a variable (by calling \wait on the variable's future)
+and the variable has not been produced yet then $q$ may need to block.
+We can see this for \var{A}:
+$ParWantTime_{q, 0}$ is 2 but $ProdTimeMap_p[\text{\var{A}}]$ is 4,
+so during the first execution of the loop,
+line 9 sets $CurParTime$ to 4 which is when $q$ may resume execution.
+However, it is also possible that $p$ will produce the variable before it is
+needed.
+In these cases, $q$ will not be suspended.
+We can see this for \var{B},
+when the loop starts its second iteration $CurSeqTime$ is 2,
+$CurParTime$ is 4, $ConsTime_{q, 1}$ is 3.5 and
+$ProdTimeMap_q[\text{\var{B}}$ is 1;
+the algorithm calculates the duration of this second chunk as 1.5,
+and $ParWantTime_{q, 1}$ as 5.5.
+Line 9 chooses the maximum of $ParWantTime_{q, 1}$ and the time when the
+variable was produced (1), and sets the new $CurParTime$ to 5.5 as the
+variable's value was already available.
+After the loop terminates the algorithm calculates the length of the final
+chunk ($DurationRest$) as 0.5,
+and adds it to $CurParTime$ to get the parallel execution time of the
+conjunction: 6.
+
+\picfigure{overlap3}{Overlap of more than two conjuncts}
+
+When there is more than two conjuncts in the parallel conjunction our
+algorithm requires an order loop.
+An example of such parallel conjunction is shown in figure
+\ref{fig:overlap3}.
+We can see that the third conjunct's execution depends on the second's.
+
 \begin{algorithm}[tb]
-\begin{algorithmic}[1]
+\begin{algorithmic}[5]
 \Procedure{find\_par\_time}{$Conjs$}
     \State $ProdTimeMap \gets empty$
     \State $TotalParTime \gets 0$
@@ -1765,59 +1819,7 @@ that accounts for overheads.
 % The last two lines reflect this cost.
 
 %XXX end of iclp
-}
 \tr{
-
-\picfigure{overlap2-swap}{Overlap with multiple variables}
-
-The algorithm works by dividing ${SeqTime}_q$ into chunks,
-it keeps track of when those chunks can execute.
-Each chunk repreresents the time before $q$ may consume the
-$i$\textsuperscript{th} shared variable except the last,
-these chunks' durations are $Duration_{q, i}$ (line 6).
-The last chunk represents the time after producing the last shared variable
-but before $q$ finishes; 
-$q$ may use this time to produce any variables that are not shared with the
-other conjuncts but are consumed by code after the parallel conjunction,
-this chunk's duration is $DurationRest$ (line 10).
-Figure~\ref{fig:overlap2-swap} shows the overlap of a parallel conjunction with
-two shared variables \var{A} and \var{B}.
-$q$ is broken up into the chunks $qA$, $qB$ and $qR$.
-The algorithm keeps track of the sequential and parallel execution times of $q$
-up to the consumption of the current shared variable.
-In the sequential version,
-each chunk can execute immediately after the previous chunk,
-since the values of the shared variables are all available when $q$ starts.
-In the parallel version,
-$p$ is producing the shared variables while $q$ is running.
-If $p$ has produced the value of ${Var}_i$ by the time $q$ needs it,
-there $q$ does not need to wait for it;
-the variable \var{B} in the figure shows this case.
-However, it is also possible that $p$ will produce ${Var}_i$
-only after the time at which $q$ would like to use it.
-In that case, $q$ will suspend the variable's future,
-and will resume only when $p$ signals that it is available;
-we can see this for \var{A} in the the figure.
-The algorithm determines which alternative is correct on line 9,
-$ParWantTime_{q, i}$ is the that $q$ wants to consume the
-$i$\textsuperscript{the} variable,
-and $ProdTimeMap_{p}[Var_i]$ is the time at which $p$ produces the variable,
-this is a map as variables may be consumed in a different order than they
-where produced.
-
-\paul{Currently here}
-On both sides figure~\ref{fig:overlap_compare}
-${SeqTime}_p = 5$ and ${SeqTime}_q = 4$.
-On the left side, ${ConsTime}_{qA} = 2$,
-and therefore ${Duration}_{qA} = 2$ and ${DurationRest}_{qA} = 2$,
-Since ${ProdTime}_{pA} = 1$,
-the first update of ${CurParTime}_q$ sets it to $2$,
-and the second sets it to $4$, so ${ParTime}_q = 4$.
-On the right side, ${ConsTime}_{qA} = 1$,
-and therefore ${Duration}_{qA} = 1$ and ${DurationRest}_{qA} = 3$,
-Since ${ProdTime}_{pA} = 4$,
-the first update of ${CurParTime}_q$ sets it to ${max}(1, 4) = 4$,
-and the second sets it to $4+3 = 7$, so ${ParTime}_q$ is 7.
 
 \begin{table}
 \begin{center}
