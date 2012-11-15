@@ -1332,8 +1332,8 @@ profiling for automatic parallelism.
 
 \begin{table}
 \begin{center}
-\paul{TODO: Present these figures without ASLR and with more sagnificant digits.}
 \begin{tabular}{l|rrr|rrr}
+\paul{TODO: Retest this data, thare are problems with the no coverage results.}
 \Cbr{\textbf{Profiling type}} &
 \multicolumn{3}{c|}{\textbf{Without optimisations}} &
 \multicolumn{3}{c}{\textbf{With optimisations}} \\
@@ -1360,7 +1360,7 @@ profiling support without coverage profiling,
 static coverage profiling support,
 and dynamic coverage profiling support.
 The two groups of result columns show results with optimisations that
-distort the callgraph both disabled and enabled\footnote{
+distort the call graph both disabled and enabled\footnote{
     The non-profiling version of the compiler was not compiled or tested with
     optimisations disabled
     as it ignores the \samp{--profile-optimised} flag when profiling is
@@ -1373,6 +1373,9 @@ the \emph{heap growth}, the amount by which the program break\footnote{
     See the \code{sbrk(2)} Unix system call.}
 moved during the execution;
 and the size of the resulting profiling file.
+
+\paul{Write about how the static coverage information is not stored on the
+heap, maybe measure .data and .bss}
 
 We can see that enabling profiling slows the program down by at least a
 factor of three,
@@ -1439,6 +1442,28 @@ The variable use analysis implementation has been updated since my honours
 candidate to make use of the deep coverage information described in the
 previous section.
 
+\begin{algorithm}
+\begin{algorithmic}[5]
+\Procedure{overlap\_simple}{$SeqTime_q$, $VarUseList_q$, $ProdTimeMap_p$} 
+\State $CurSeqTime \gets 0$
+\State $CurParTime \gets 0$
+\State sort $VarUseList_q$ on $ConsTime_{q, i}$
+\For{$(Var_i, ConsTime_{q, i}) \in VarUseList_q$}
+    \State $Duration_{q, i} \gets ConsTime_{q, i} - CurSeqTime$
+    \State $CurSeqTime \gets CurSeqTime + Duration_{q, i}$
+    \State $ParWantTime_{q, i} \gets CurParTime + Duration_{q, i}$
+    \State $CurParTime \gets$ max($ParWantTime_q, ProdTimeMap_{p}[Var_i]$)
+\EndFor
+\State $DurationRest_q \gets SeqTime_q - CurSeqTime$
+%\State $SeqTime_q \gets CurSeqTime_q + DurationRest_q$
+\State $ParTime_q \gets CurParTime + DurationRest_q$
+\State \Return $ParTime_q$
+\EndProcedure
+\end{algorithmic}
+\caption{Dependent parallel conjunction overlap calculation}
+\label{alg:dep_par_conj_overlap_simple}
+\end{algorithm}
+
 Suppose a candidate parallel conjunction has two conjuncts $p$ and $q$,
 and their execution times in the original, sequential conjunction $p, q$,
 are ${SeqTime}_p$ and ${SeqTime}_q$, which are both provided by the profiler.
@@ -1449,16 +1474,22 @@ Whilst the parallel execution time of $q$, namely $ParTime_q$, may be
 different from its sequential execution time as $q$ may block on futures
 that $p$ may not have signaled yet.
 In section \ref{sec:backgnd_priorautopar} we showed how to calculate
-$ParTime_q$, which we used with $ParTime_p$ to calculate the speedup due to
+$ParTime_q$ in cases where there is a single shared variable between $p$ and
+$q$.
+We use $ParTime_p$ and $ParTime_q$ to calculate the speedup due to
 parallelism.
-However with multiple shared variables we now calculate $ParTime_q$
-differently.
-Suppose that $VarUseList$ is a list of tuples,
+When there are multiple shared variables we must use a different algorithm
+such as the one shown in algorithm~\ref{alg:dep_par_conj_overlap_simple},
+which is a simplified version of the one we use.
+It caclulates $ParTime_q$ from its arguments $SeqTime_q$, $VarUseList_q$ and
+$ProdTimeMap_p$.
+$VarUseList_q$ is a list of tuples,
 each tuple is a shared variable and the time at which $q$ would consume it
 during sequential execution.
-For each $({Var}_i, ConsTime_i) \in VarUseList$,
-the time at which $p$ produces it is ${ProdTimeMap}_{p}[Var_i]$
-($ProdTimeMap_p$ is a map/dictionary).
+$ProdTimeMap_p$ is a map (sometimes called a dictionary),
+it maps each shared variable to the time at which $p$ would produce the
+variable during sequential execution.
+This data is gathered using the variable use time analysis.
 
 \iclp{
 \begin{algorithm}[tb]
@@ -1736,41 +1767,22 @@ that accounts for overheads.
 %XXX end of iclp
 }
 \tr{
-\paul{Currently here.}
 
-\begin{algorithm}
-\begin{algorithmic}
-\State $CurSeqTime \gets 0$
-\State $CurParTime \gets 0$
-\State sort $VarUseList_q$ on $ConsTime_{q, i}$
-\For{$(Var_i, ConsTime_{q, i}) \in VarUseList_q$}
-    \State $Duration_{q, i} \gets ConsTime_{q, i} - CurSeqTime$
-    \State $CurSeqTime \gets CurSeqTime + Duration_{q, i}$
-    \State $ParWantTime_{q, i} \gets CurParTime + Duration_{q, i}$
-    \State $CurParTime \gets$ max($ParWantTime_q, ProdTimeMap_{p}[Var_i]$)
-\EndFor
-\State $DurationRest_q \gets SeqTime_q - CurSeqTime$
-%\State $SeqTime_q \gets CurSeqTime_q + DurationRest_q$
-\State $ParTime_q \gets CurParTime + DurationRest_q$
-\end{algorithmic}
-\caption{Dependent parallel conjunction overlap calculation}
-\label{alg:dep_par_conj_overlap_simple}
-\end{algorithm}
+\picfigure{overlap2-swap}{Overlap with multiple variables}
 
-Algorithm~\ref{alg:dep_par_conj_overlap_simple} shows
-a simple version of the algorithm we use to compute ${ParTime}_q$.
-Its main input is ${ConsList}_q$,
-a list of the variables shared by $p$ and $q$,
-together with their times of consumption by $q$.
-
-The main task of the algorithm is to divide up ${SeqTime}_q$ into chunks,
-and keep track of when those chunks can execute.
-There is one chunk (${Duration}_{qi})$ for each shared variable
-that ends at the time at which that variable is first consumed,
-and there is one chunk ${DurationRest}$
-after the consumption of the last shared variable.
-(Figure~\ref{fig:overlap_compare}
-shows the former as ${qA}$ and the latter as ${qR}$.)
+The algorithm works by dividing ${SeqTime}_q$ into chunks,
+it keeps track of when those chunks can execute.
+Each chunk repreresents the time before $q$ may consume the
+$i$\textsuperscript{th} shared variable except the last,
+these chunks' durations are $Duration_{q, i}$ (line 6).
+The last chunk represents the time after producing the last shared variable
+but before $q$ finishes; 
+$q$ may use this time to produce any variables that are not shared with the
+other conjuncts but are consumed by code after the parallel conjunction,
+this chunk's duration is $DurationRest$ (line 10).
+Figure~\ref{fig:overlap2-swap} shows the overlap of a parallel conjunction with
+two shared variables \var{A} and \var{B}.
+$q$ is broken up into the chunks $qA$, $qB$ and $qR$.
 The algorithm keeps track of the sequential and parallel execution times of $q$
 up to the consumption of the current shared variable.
 In the sequential version,
@@ -1778,15 +1790,22 @@ each chunk can execute immediately after the previous chunk,
 since the values of the shared variables are all available when $q$ starts.
 In the parallel version,
 $p$ is producing the shared variables while $q$ is running.
-If $p$ has produced the value of ${SV}_i$ by the time $q$ needs it,
+If $p$ has produced the value of ${Var}_i$ by the time $q$ needs it,
 there $q$ does not need to wait for it;
-the left side of figure~\ref{fig:overlap_compare} shows this case.
-However, it is also possible that $p$ will produce ${SV}_i$
+the variable \var{B} in the figure shows this case.
+However, it is also possible that $p$ will produce ${Var}_i$
 only after the time at which $q$ would like to use it.
-In that case, $q$ will suspend on ${SV}_i$,
+In that case, $q$ will suspend the variable's future,
 and will resume only when $p$ signals that it is available;
-the right side of figure~\ref{fig:overlap_compare} shows this case.
+we can see this for \var{A} in the the figure.
+The algorithm determines which alternative is correct on line 9,
+$ParWantTime_{q, i}$ is the that $q$ wants to consume the
+$i$\textsuperscript{the} variable,
+and $ProdTimeMap_{p}[Var_i]$ is the time at which $p$ produces the variable,
+this is a map as variables may be consumed in a different order than they
+where produced.
 
+\paul{Currently here}
 On both sides figure~\ref{fig:overlap_compare}
 ${SeqTime}_p = 5$ and ${SeqTime}_q = 4$.
 On the left side, ${ConsTime}_{qA} = 2$,
