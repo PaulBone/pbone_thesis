@@ -1333,17 +1333,29 @@ profiling for automatic parallelism.
 \begin{table}
 \begin{center}
 \paul{TODO: Retest this data, thare are problems with the no coverage results.}
-\begin{tabular}{l|rrr|rrr}
+\begin{tabular}{l|r|rrr|r|r}
 \Cbr{\textbf{Profiling type}} &
-\multicolumn{3}{c|}{\textbf{Without optimisations}} &
-\multicolumn{3}{c}{\textbf{With optimisations}} \\
- & Time & Heap growth & Profile size &
-   Time & Heap growth & Profile size \\
+\Cbr{\textbf{Time}} &
+\C{\textbf{.text}} &
+\C{\textbf{.(ro)data}} &
+\Cbr{\textbf{.bss}} &
+\Cbr{\textbf{Heap growth}} &
+\C{\textbf{Profile size}} \\ 
 \hline
-no profiling     & -     &     - &    - & 10.8s & 182MB & - \\
-no coverage      & 55.1s & 410MB & 36MB & 35.9s & 312MB & 24MB \\
-static coverage  & 56.9s & 410MB & 36MB & 37.3s & 312MB & 25MB \\
-dynamic coverage & 58.0s & 466MB & 42MB & 38.0s & 362MB & 31MB \\ 
+\hline
+\multicolumn{7}{c}{Without optimisations} \\
+\hline
+no coverage     & 54.2s & 30,591K & 31,799K & 5,646K & 435,852K & 36,155K \\
+static coverage & 56.0s & 34,097K & 33,547K & 6,267K & 419,380K & 36,151K \\
+deep coverage   & 57.6s & 34,327K & 33,306K & 5,646K & 476,880K & 42,896K \\
+\hline
+\hline
+\multicolumn{7}{c}{With optimisations} \\
+\hline
+no profiling    & 10.6s & 12,003K &  3,203K & 5,645K & 186,752K & - \\
+no coverage     & 35.8s & 29,605K & 30,993K & 5,646K & 319,184K & 24,049K \\
+static coverage & 37.1s & 33,391K & 32,856K & 6,302K & 319,188K & 24,640K \\
+deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\ 
 \end{tabular}
 \end{center}
 \caption{Coverage profiling overheads}
@@ -1442,6 +1454,21 @@ The variable use analysis implementation has been updated since my honours
 candidate to make use of the deep coverage information described in the
 previous section.
 
+Suppose a candidate parallel conjunction has two conjuncts $p$ and $q$,
+and their execution times in the original, sequential conjunction $p, q$,
+are ${SeqTime}_p$ and ${SeqTime}_q$, which are both provided by the profiler.
+The parallel execution time of $p$, namely $ParTime_p$,
+is the same as its sequential execution time;
+we ignore overheads for now but will come back to them later.
+Whilst the parallel execution time of $q$, namely $ParTime_q$, may be
+different from its sequential execution time as $q$ may block on futures
+that $p$ may not have signaled yet.
+In section \ref{sec:backgnd_priorautopar} we showed how to calculate
+$ParTime_q$ in cases where there is a single shared variable between $p$ and
+$q$.
+We use $ParTime_p$ and $ParTime_q$ to calculate the speedup due to
+parallelism.
+
 \begin{algorithm}
 \begin{algorithmic}[5]
 \Procedure{overlap\_simple}{$SeqTime_q$, $VarUseList_q$, $ProdTimeMap_p$} 
@@ -1460,24 +1487,10 @@ previous section.
 \State \Return $ParTime_q$
 \EndProcedure
 \end{algorithmic}
-\caption{Dependent parallel conjunction overlap calculation}
+\caption{Dependent parallel conjunction algorithm, for exactly two conjuncts}
 \label{alg:dep_par_conj_overlap_simple}
 \end{algorithm}
 
-Suppose a candidate parallel conjunction has two conjuncts $p$ and $q$,
-and their execution times in the original, sequential conjunction $p, q$,
-are ${SeqTime}_p$ and ${SeqTime}_q$, which are both provided by the profiler.
-The parallel execution time of $p$, namely $ParTime_p$,
-is the same as its sequential execution time;
-we ignore overheads for now but will come back to them later.
-Whilst the parallel execution time of $q$, namely $ParTime_q$, may be
-different from its sequential execution time as $q$ may block on futures
-that $p$ may not have signaled yet.
-In section \ref{sec:backgnd_priorautopar} we showed how to calculate
-$ParTime_q$ in cases where there is a single shared variable between $p$ and
-$q$.
-We use $ParTime_p$ and $ParTime_q$ to calculate the speedup due to
-parallelism.
 When there are multiple shared variables we must use a different algorithm
 such as the one shown in algorithm~\ref{alg:dep_par_conj_overlap_simple},
 which is a simplified version of the one we use.
@@ -1493,8 +1506,10 @@ This data is gathered using the variable use time analysis.
 
 \picfigure{overlap2-swap}{Overlap with multiple variables}
 
-The algorithm works by dividing ${SeqTime}_q$ into chunks,
-it keeps track of when those chunks can execute.
+The algorithm works by dividing ${SeqTime}_q$ into chunks
+and processing them in order,
+and keeps track of of the sequential and parallel execution times of the
+chunks so far.
 Each chunk repreresents the time before $q$ may consume the
 $i$\textsuperscript{th} shared variable except the last,
 these chunks' durations are $Duration_{q, i}$ (line 6).
@@ -1544,14 +1559,20 @@ When there is more than two conjuncts in the parallel conjunction our
 algorithm requires an order loop.
 An example of such parallel conjunction is shown in figure
 \ref{fig:overlap3}.
-We can see that the third conjunct's execution depends on the second's.
+We can see that the third conjunct's execution depends on the second's,
+which depends upon the first's.
+The new algorithm therefore iterates over the conjuncts from left to right.
+Dependencies can only exist in the left to right direction,
+if they do not and there are no cycles the compiler will reorder them;
+this is part of Mercury's mode system for both parallel and sequential
+conjunctions.
 
 \begin{algorithm}[tb]
 \begin{algorithmic}[5]
 \Procedure{find\_par\_time}{$Conjs$}
     \State $ProdTimeMap \gets empty$
     \State $TotalParTime \gets 0$
-    \For{$i = 1$ to length($Conjs$)}
+    \For{$Conj_i \in Conjs$}
         \State $CurSeqTime \gets 0$
         \State $CurParTime \gets 0$
         \State $VarUsesList_i \gets$ get\_variable\_uses($Conj_i$)
@@ -1581,33 +1602,17 @@ We can see that the third conjunct's execution depends on the second's.
 %\vspace{-2\baselineskip}
 \end{algorithm}
 
-Algorithm \ref{alg:dep_par_conj_overlap_middle} shows
-a simplified version of the algorithm we use to compute
-the expected execution time of a conjunction
-when its conjuncts are executed in parallel,
-assuming an unlimited number of CPUs.
+Algorithm \ref{alg:dep_par_conj_overlap_middle} shows a more complete
+version of our algorithm;
+this version handles multiple conjuncts and variables,
+but does not account for overheads.
+% assuming an unlimited number of CPUs.
 The input of the algorithm is $Conjs$,
 the conjuncts themselves.
-%$ProdConsList$,
-%which gives, for each conjunct,
-%the list of its input and output variables,
-%together with the times at which,
-%% (during the profiling run, which executes the conjuncts in sequence)
-%in a sequential execution,
-%they are respectively first consumed or produced.
-%The times are relative to the start of the execution of the relevant conjunct.
-The main task of the algorithm is
-to divide the execution times of all the conjuncts into chunks
-and keep track of when those chunks can execute.
-The execution time of $Conj_i$
-has one chunk ($Duration_{i, j}$) for each of $Conj_i$'s shared variables
-that ends at the time at which that variable is produced or first consumed,
-and there is one chunk $DurationRest_{i}$ at the end,
-during which the call may produce non-shared variables.
-Figure \ref{fig:overlap_compare} shows that
-the production of $A$ divides $p$ into two chunks, ${pA}$ and ${pR}$,
-while the consumption of $A$ divides $q$ into ${qA}$ and ${qR}$.
+The algorithm returns the parallel execution time of the conjunction as a
+whole.
 
+\paul{Currently here}
 The algorithm processes the chunks in order, and keeps track
 of the sequential and parallel execution times of the chunks so far.
 When a chunk of $Conj_i$ ends with the production of a variable,
