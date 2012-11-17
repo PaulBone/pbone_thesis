@@ -117,10 +117,10 @@ so that the relative costs of parallel execution are small,
 and they should be independent to minimise synchronisation costs.
 Unfortunately, goals expensive enough to be worth executing in parallel
 are rarely independent.
-\paul{XXX: Say how these figures are generated.}
 For example, in the Mercury compiler itself,
-there are 53 conjunctions containing two or more expensive goals,
-but in only one of those conjunctions are the expensive goals independent.
+there are 69 conjunctions containing two or more expensive goals,
+goals with a cost above 10,000csc,
+but in only three of those conjunctions are the expensive goals independent.
 This is why Mercury supports the parallel execution of dependent conjunctions
 through the use of futures and a compiler transformation
 \citep{wang:2006:hons, wang:2011:dep-par} (section \ref{sec:backgnd_deppar}).
