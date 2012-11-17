@@ -1445,7 +1445,8 @@ especially when optimisations are enabled during a profiling build.
 \section{Calculating the overlap between dependent conjuncts}
 \label{sec:overlap_overlap_alg}
 
-\status{Work in progress.}
+\status{Draft finished, I don't know if I'll read this myself before asking
+for reviews or not}
 
 The previous two sections provide us with the information necessary to
 estimate a candidate parallelisation's performance,
@@ -1589,6 +1590,8 @@ the compiler re-orders right to left dependencies and reports errors for
 cyclic dependencies.
 This is part of Mercury's mode system for both parallel and sequential
 conjunctions.
+
+\paul{XXX: VarUseList or VarUsesList}
 
 \begin{algorithm}[tb]
 \begin{algorithmic}[5]
@@ -1787,21 +1790,15 @@ we assume that the start of that chunk is delayed until a CPU becomes free.
 % which became idle when the first conjunct finished.
 % The last two lines reflect this cost.
 
-%XXX end of iclp
-\tr{
-
-\paul{Currently here}
-
-
 \begin{table}
 \begin{center}
-\begin{tabular}{l|rr}
- & \multicolumn{1}{|c}{Cost}
- & \multicolumn{1}{|c}{Local use of \code{Acc1}} \\
+\begin{tabular}{l|rlr}
+ & \C{\textbf{Cost}}
+ & \multicolumn{2}{c}{\textbf{Local use of \code{Acc1}}} \\
 \hline
-\code{M}  &   1,625,050 & none \\
-\code{F}  &           3 & ${Prod}_{Acc1}$ =         3 \\
-\mapfoldl &   1,625,054 & ${Cons}_{Acc1}$ = 1,625,051 \\
+\code{M}  &   1,625,050 &             & none \\
+\code{F}  &           3 & production  & 3 \\
+\mapfoldl &   1,625,054 & consumption & 1,625,051 \\
 % Note: The cost of the recursive call assumes that there is one
 % recursive case and one base case remaining in the recursion.
 \end{tabular}
@@ -1827,169 +1824,169 @@ we assume that the start of that chunk is delayed until a CPU becomes free.
 % \end{figure}
 
 To see how the algorithm works on realistic data,
-consider the \mapfoldl example in figure~\ref{fig:map_foldl}.
+consider the \mapfoldl example from figure~\ref{fig:map_foldl}.
 Table \ref{tab:prof_data_map_foldl} gives
 the approximate costs of the calls in the recursive clause of \mapfoldl
 when used in a Mandelbrot image generator.
-Each call to $M$ draws a row,
-while $F$ appends the new row
+Each call to \code{M} draws a row,
+while \code{F} appends the new row
 onto the list of the rows already drawn.
-The table also shows when $F$ produces ${Acc1}$
-and when the recursive call consumes ${Acc1}$.
+The table also shows when \code{F} produces \var{Acc1}
+and when the recursive call consumes \var{Acc1}.
 The costs were collected from a real execution using Mercury's deep profiler
 and then rounded to make mental arithmetic easier.
 
 Figure~\ref{fig:map_foldl_par} shows the best parallelisation of
 \mapfoldl.
 When evaluating the speedup for this parallelisation,
-${Cons}_{{F} {Acc1}} = 1,625,000 + 2 = 1,625,002$, and
-${Cons}_{{map\_foldl} {Acc1}} = 1,625,000 + 2 + 1,620,000 = 3,245,002$.
-\zoltan{Show the rest of the algorithm's execution when this question is answered.}
-\paul{I would have fixed this but I do not know what these formulas mean,
-Maybe I am confused by notation}
+the production time for \var{Acc1} in the first conjunct
+(\code{M(X, Y), F(Y, Acc0, Acc1)})
+is 
+$1,625,050 + 3 = 1,625,053$, and
+the production time for \var{Acc1} in the recursive call (\code{map\_foldl}
+is $1,625,051$.
+In this example we are assuming that the recursive call calls a sequential
+version of the code and that the recursive case will be executed,
+and that in turn that recursive case calls the base case.
+The first iteration of
+algorithm~\ref{alg:dep_par_conj_overlap_middle}'s outer loop processes the
+first conjunct,
+breaking it into two chunks separated by the production of \var{Acc1},
+which is added to $ProdTimeMap$.
+During the second iteration the recursive call is also broken into two
+chunks, which are separated by the consumption of \var{Acc1}.
+This chunk is a long chunk (1,625,051csc).
+$ParWantTime$ will be 1,625,051 (above) and $ProdTimeMap[\text{\var{Acc1}}]$
+will be 1,625,053 (above).
+The execution of the recursive call is likely to block
+(these values are estimates) but only very breifly,
+$CurParTime$ will be set to 1,625,053 and the second chunk's duration will
+be very small, only $1,625,054 - 1,625,051 = 3$.
+This is added to $CurParTime$ to determine the parallel execution time of
+the recursive call (1,625,056),
+which is also the maximum of either of the conjunct's total parallel
+execution times,
+making it the parallel execution time of the conjunction as a whole.
 
-% \zoltan{Show real data, if we can,
-% that shows that quicksort has very little overlap.}
+\paul{XXX: Future work}
+As we stated above we do not currently handle recursive code specially other
+than putting in effort to calculate the cost of recursive calls.
+We assume that the recursive calls themselves call the sequential version of
+the procedure.
+A simple but imperfect solution for simply recursive code would be to
+calculate the \emph{time saving} of one iteration such as in the example
+above.
+Time saving is defined as:
 
-The speedup computed by algorithm~\ref{alg:dep_par_conj_overlap_simple}
-applies only when the recursive call
-calls the original sequential version of the predicate.
-When the recursive call calls the parallelised version,
-the maximum speedup available (assuming an unlimited number of CPUs)
-depends on the structure of the recursion.
-The profiling data gives us \tr{$E$,}
-the number of entry calls to the procedure from the higher clique,
-and \tr{$R_i$,} the number of recursive calls at each recursive call site.
-From these, and the structure of the procedure's code,
-we can calculate the average depth of recursion in most cases.
+\begin{equation*}
+TimeSaving = SeqTime - ParTime
+\end{equation*}
 
-For singly recursive predicates like \mapfoldl,
-there is only one recursive call site,
-and the depth of recursion is simply $R_1/E$.
-For example, if $E = 2$ and $R_1 = 20$,
-then the average call sequence to the procedure
-has one entry call followed by the recursive calls.
-It also means that the average call sequence
-has ten calls that cause the procedure to execute its recursive clause,
-the clause containing the conjunction being parallelised,
-followed by one call that executes the base clause.
-From this, we can deduce that if ${SeqSaving} = {SeqTime} - {ParTime}$
-is the time saving we get from parallelising the top conjunction
-if the recursive call calls the original sequential version of the procedure,
-then making it call the parallelised version of the procedure
-would yield a time saving of ${ParSaving} = {SeqSaving} * R_1/E$
-if we have enough CPUs to execute all the $R_1/E$ iterations in parallel.
-\peter{I think this needs more explanation.  It does not look right to me.
-I would expect it to be ${ParSaving} = {SeqTime} - {ParTime} * R_1/E$.}
-This assumes that we get the same savings at each iteration,
-\peter{I find this sentence weakens the claim, rather than strengthing it.
-Can we just add ``, assuming we get the same savings at each iteration'' at
-the end of the previous sentence?}
-but this is reasonable,
-since what we are doing is essentially executing
-the different iterations of a loop in parallel,
-and we have no reason to believe that the savings
-from executing iteration $k$ in parallel with iteration $k+1$
-would vary systematically based on the value of $k$.
+\noindent
+Time saving is the benefit of parallelism in absolute terms
+the related concept of \emph{speedup} which is the benefit of parallelism in
+relative terms.
+If we multiply time saving by the average maximum depth (number of
+iterations) this would give an indication of the amount of time we could
+save given an infinite number of CPUs.
+A better solution would be to construct and solve an equation for the
+speedup of the loop as a whole.
+The equation could be built using the overlap algorithms that we have shown.
 
-Some singly recursive predicates have more than one recursive clause,
-each with one recursive call site.
-Suppose there are $n$ call sites, with execution counts $R_1 \ldots R_n$.
-The overall time saving from parallelising the conjunct
-that contains the call site associated $R_i$
-has to be multiplied by the fraction of recursive calls
-that execute the conjunction being parallelised:
-${ParSaving} = {SeqSaving} * R_i/E * R_i/\sum_{j=1}^n R_j$.
-
-For doubly recursive predicates like \code{quicksort}, $R_1 = R_2$,
-and just under half of their calls invoke the recursive clause,
-so for them, ${ParSaving} = {SeqSaving} * R_1/(2 * E)$.
-\zoltan{check the math}
-\peter{I think it is a bit confusing to use $R_1$ and $R_2$ to name the
-recursive calls to quicksort, when above they have named the sole recursive
-call from different clauses.  Maybe use $R^i_j$ to indicate the $i^{th}$
-recursive call from the $j^{th}$ clause.  Then you can use $R^1_i$ in the
-previous paragraph, and $R_1^1$ and $R_1^2$ in this one.}
-
-All these calculations show that the available parallelism
-can be greater than the number of CPUs.
+If there are many conjuncts in the parallel conjunction or if the parallel
+conjunction contains a recursive call we can create more parallelism than
+the number of CPUs.
 If the machine has e.g.\ four CPUs,
 then we do not actually want to spawn off
 hundreds of iterations for parallel execution,
-since parallel execution actually has several forms of overhead:
+since parallel execution actually has several forms of overhead.
+We classify each overhead into one of two groups, costs and delays.
+Costs are time spent \emph{doing} something, the current context must do
+something such as spawn off another computation or read a future.
+Delays represent time spent \emph{waiting} for something;
+during this time the context is suspended (or being suspended or being woken
+up).
 
 \begin{description}
-\item[SparkCost]
+\item[$SparkCost$]
 is the cost of creating a spark and adding it to the local spark stack.
 In a parallel conjunction,
 every conjunct that is not the last conjunct incurs this cost
 to create the spark for the rest of the conjunction.
-\item[SparkDelay]
+\item[$SparkDelay$]
 is the estimated length of time between the creation of a spark
 and the beginning of its execution on another engine.
 Every parallel conjunct that is not the first incurs this delay
 before it starts running.
-\item[SignalCost]
+\item[$SignalCost$]
 is the cost of signalling a future.
-\item[WaitCost]
+\item[$WaitCost$]
 is the cost of waiting on a future.
-\item[ContextWakeupDelay]
+\item[$ContextWakeupDelay$]
 is the estimated time that it takes for a context to resume execution
 after being placed on the runnable queue,
 assuming that the queue is empty and there is an idle engine.
-\item[BarrierCost]
+This can occur in two places:
+either at the end of a parallel conjunction the original context may need to
+be resumed to continue its execution,
+or when a context was blocked on a future it may will need to be resumed
+once that future is signalled.
+\item[$BarrierCost$]
 is the cost of executing the operation
 that synchronises all the conjuncts at the barrier
 at the end of the conjunction.
 \end{description}
 
-Because of these overheads, our system uses \emph{throttling}.
-If a conjunction being parallelised contains a recursive call,
-then the compiler will replace the original sequential conjunction
-not with the parallel form of the conjunction,
-but with an if-then-else.
-The condition of this if-then-else
-will test at runtime
-whether spawning off a new job is a good idea or not.
-If it is, we execute the parallelised conjunction,
-if it is not, we execute the original sequential conjunction.
-The condition is obviously a heuristic.
-If the heuristic allows the list of runnable jobs to become empty,
-then we will not have any work to give to a CPU
-that finishes its task and becomes available.
-On the other hand,
-if the heuristic allows the list of runnable jobs to become too long,
-then we incur the overheads of spawning off some jobs unnecessarily.
-Currently, on machines with $N$ CPUs,
-we prefer to have a total of $M$ running and runnable jobs where $M > N$,
-so our heuristic stops spawning attempts
-if and only if the queue already has $M$ entries.
-Our current system by default sets $M$ to be $32$ for $N = 4$,
-though users can easily override this.
+%Because of these overheads, our system uses \emph{throttling}.
+%If a conjunction being parallelised contains a recursive call,
+%then the compiler will replace the original sequential conjunction
+%not with the parallel form of the conjunction,
+%but with an if-then-else.
+%The condition of this if-then-else
+%will test at runtime
+%whether spawning off a new job is a good idea or not.
+%If it is, we execute the parallelised conjunction,
+%if it is not, we execute the original sequential conjunction.
+%The condition is obviously a heuristic.
+%If the heuristic allows the list of runnable jobs to become empty,
+%then we will not have any work to give to a CPU
+%that finishes its task and becomes available.
+%On the other hand,
+%if the heuristic allows the list of runnable jobs to become too long,
+%then we incur the overheads of spawning off some jobs unnecessarily.
+%Currently, on machines with $N$ CPUs,
+%we prefer to have a total of $M$ running and runnable jobs where $M > N$,
+%so our heuristic stops spawning attempts
+%if and only if the queue already has $M$ entries.
+%Our current system by default sets $M$ to be $32$ for $N = 4$,
+%though users can easily override this.
 
-The overheads of parallel execution can also affect conjunctions
-that do not contain recursive calls:
-a conjunction that looks worth parallelising if you ignore overheads
-may look not worth parallelising if you take them into account.
+Our runtime system is now quite efficient so that these
+costs are kept low (chapter \ref{chap:rts}).
+This does not eliminate the overheads, and cannot ever hope to,
+instead we wish to parallelise only those conjunctions that are still
+profitable despite overheads.
 This is why our system actually uses
 algorithm~\ref{alg:dep_par_conj_overlap_complete},
-a version of algorithm~\ref{alg:dep_par_conj_overlap_simple}
+a version of algorithm~\ref{alg:dep_par_conj_overlap_middle}
 that accounts for overheads.
 
-\begin{algorithm}
-\begin{algorithmic}
-\Procedure{find\_par\_time}{$Conjs, VarUseLists, SeqTimes$}
+\begin{algorithm}[tbp]
+\begin{algorithmic}[5]
+\Procedure{find\_par\_time}{$Conjs$, $SeqTimes$}
     \State $N \gets$ length($Conjs$)
     \State $ProdTimeMap \gets$ empty
     \State $FirstConjTime \gets 0$
     \State $TotalParTime \gets 0$
-    \For{$i \gets 1$ to $N$}
+    \For{$i \gets 0$ to $N$}
+        \State $Conj_i \gets Conjs[i]$
         \State $CurSeqTime \gets 0$
-        \State $CurParTime \gets (SparkCost + SparkDelay) \times (i-1)$
+        \State $CurParTime \gets (SparkCost + SparkDelay) \times i$
+        \State $VarUsersList_i \gets$ get\_variable\_uses($Conj_i$) 
+        \State sort $VarUseList_i$ by time
         \If{$i \neq N$}
             \State $CurParTime \gets CurParTime + SparkCost$
         \EndIf
-        \State sort $VarUseList_i$ on $Time_{i, j}$
         \For{$(Var_{i, j}, Time_{i, j}) \in VarUseList_i$}
             \State $Duration_{i, j} \gets Time_{i, j} - CurSeqTime$
             \State $CurSeqTime \gets CurSeqTime + Duration_{i, j}$
@@ -1997,7 +1994,8 @@ that accounts for overheads.
                 \State $CurParTime \gets
                     CurParTime + Duration_{i, j} + SignalCost$
                 \State $ProdTimeMap$[$Var_{i, j}$]$ \gets CurParTime$
-            \Else \Comment $Conj_i$ must consume $Var_{i, j}$
+            \Else
+                \Comment $Conj_i$ must consume $Var_{i, j}$
                 \State $ParWantTime \gets CurParTime + Duration_{i, j}$
                 \State $CurParTime \gets$
                     max($ParWantTime, ProdTimeMap$[$Var_{i, j}$]$) + WaitCost$
@@ -2006,9 +2004,9 @@ that accounts for overheads.
                 \EndIf
             \EndIf
         \EndFor
-        \State $DurationRest \gets SeqTime_i - CurSeqTime$
-        \State $CurParTime \gets CurParTime + DurationRest + BarrierCost$
-        \If{$i = 1$}
+        \State $DurationRest_i \gets SeqTime_i - CurSeqTime$
+        \State $CurParTime \gets CurParTime + DurationRest_i + BarrierCost$
+        \If{$i = 0$}
             \State $FirstConjTime = CurParTime$
         \EndIf
         \State $TotalParTime \gets$ max($TotalParTime, CurParTime$)
@@ -2019,97 +2017,71 @@ that accounts for overheads.
     \State \Return $TotalParTime$
 \EndProcedure
 \end{algorithmic}
-\caption{Dependent parallel conjunction complete algorithm}
+\caption{Dependent parallel conjunction algorithm with overheads}
 \label{alg:dep_par_conj_overlap_complete}
 \end{algorithm}
 
-Algorithm~\ref{alg:dep_par_conj_overlap_complete}
-can also handle $n$-way conjunctions for $n>2$.
-Since the Mercury mode system reorders conjunctions
-to ensure that data flows only to the right,
-in a two-conjunct conjunction,
-the left conjunct can only produce
-the variables it shares with the right conjunct
-and the right conjunct can only consume
-those variables.
-However, in longer conjunctions,
-the conjuncts in the middle
-can both consume variables produced by conjuncts on their left
-and produce variables consumed by conjuncts on their right.
-This is why our algorithm associates with \code{Conj\_i}, the $i$th conjunct,
-\code{ProdConsList\_i}:
-the list of shared variables that \code{Conj\_i} either produces or consumes,
-together with their times of production and first consumption respectively.
-This is a generalisation of \code{ConsList\_q} in
-algorithm~\ref{alg:dep_par_conj_overlap_simple}.
-We also need to generalise \code{Prod\_pi},
-because the time at which a non-first conjunct produces a variable
-can and usually will be affected
-by the overheads and/or synchronisation delays suffered by that conjunct.
-This is why we use \code{ProdTimeMap},
-which maps each shared variable to its time of production.
+Algorithm~\ref{alg:dep_par_conj_overlap_complete} handles each of the
+overheads listed above.
+The first two overheads that this algorithm accounts for are 
+$SparkCost$ and $SparkDelay$ on lines 9 and 12--13.
+Each conjunct is started by a spark created by the previous conjunct,
+except the first which is executed directly and therefore has no delay.
+In a conjunction $G_1~\&~G_2~\&~G_3$, $G_1$ is executed directly and spends
+$SparkCost$ time creating the spark for $G_2~\&~G_3$.
+This spark is not executed until a further $SparkDelay$ time has passed.
+Therefore on line 9, when we process $G_2$ and $i = 1$ we add the time
+$SparkCost + SparkDelay$ to the parallel execution time so far.
+$G_2$ will the create the spark for $G_3$ which costs $G_2$ a further
+$SparkCost$ time (lines 12--13).
+The third conjunct ($G_3$) must wait for the first conjunct to create the
+second and the second to create it and then $SparkDelay$,
+so line 9 adds $2\times(SparkDelay + SparkCost)$ to the current parallel
+execution time.
+$G_3$ does not need to create any other sparks, so the cost on lines 12--13
+is not applied.
 
-The main body of the algorithm consists of two nested loops.
-The outer loop loops over all the conjuncts from left to right,
-because the execution of a conjunct can be affected
-by the conjuncts to its left
-(through the time at which they produce the shared variables it consumes),
-but not by the conjuncts to its right.
-The first few lines of the outer loop body
-(the first two assignments to \code{CurParTime})
-compute for each conjunct
-the time at which that conjunct can start execution.
+The next overhead is on line 18, the cost of signaling a future.
+It is applied each time a future is signalled and the result of applying it
+is factored into $ProdTimeMap$ along with all other costs,
+so that its non-direct effects on later conjuncts is accounted for.
+A related pair of overheads are accounted for on lines 22--24:
+$WaitCost$ is the cost of a \wait operation and is paid any time any context
+waits on a future.
+$ContextWakeupDelay$ is also used here, if a context is likely to suspend
+because of a future then it will take some time between getting signalled and
+waking up,
+in these cases $ContextWakeupDelay$ accounts for this.
+On line 26 the algorithm accounts for the $BarrierCost$ overhead,
+which is paid at the end of every parallel conjunct.
 
-The inner loop loops over all the components of the current conjunct,
-such as \code{pA} and \code{pR}
-from figure~\ref{fig:overlap_compare}.
-Just as our previous algorithm did,
-this loop updates the simulated current time
-in both the original sequential execution of the conjunct (\code{CurSeqTime})
-and in its modified parallelised execution (\code{CurParTime}).
-For time components that end in the consumption of a variable,
-we do what we did before,
-but also reflect the cost of the wait operation needed for the consumption.
-For time components that end in the production of a variable,
-we record the time at which
-that variable would be available in the parallel execution;
-this will be when the producer finishes executing the signal operation on it.
+Throughout chapter \ref{chap:rts} we saw the problems that right recursion
+count create.
+These problems were caused because the leftmost conjunct of a parallel
+conjunction will be executed by the context that started the execution of
+the conjunction (the original context),
+and if the same context does not execute the other conjuncts and those
+conjuncts take longer to execute than the leftmost one,
+the original context must be suspended.
+When this context is resumed we must wait $ContextWakeupDelay$ before it can
+resume the execution of the code that follows the parallel conjunction.
+We account for this overhead on lines 30--31.
+However this requires extra code throughout the algorithm to compute the
+parallel execution time of the first conjunct $FirstConjTime$.
+This is done on lines 4 and 27--28.
 
-We use \code{TotalParTime} to keep track of the ending time
-of the parallel conjunct that ends last.
-We also remember, in \code{FirstConjTime},
-the time at which the first conjunct finishes.
-The reason we do this is because
-our runtime system requires that
-when the parallel conjunction finishes,
-execution must continue in the context
-that entered the parallel conjunction in the first place.
-In our implementation, this context will execute the first conjunct.
-If the last conjunct to finish is the first conjunct,
-it can continue on without delay;
-if the last conjunct to finish is some other conjunct,
-then we need to free its context,
-and switch to executing the original context,
-which became idle when the first conjunct finished.
-The last two lines reflect this cost.
+There is another important piece of information that we compute:
+it is useful to know how much time the contexts executing the parallel
+conjunction may spend blocked,
+not executing but consuming memory resources.
+We add up the times that contexts are likely to spend blocked on futures,
+and that the first conjunct may spend blocked on the completion of the other
+conjuncts.
+We call this the \emph{dead time}.
+We do not currently use it to make decisions about parallelisations but it
+could be used for instance to break ties between alternative
+parallelisations with similar parallel speedups.
 
-% Each conjunct's execution depends on
-% when the variables it consumes are produced by other conjuncts.
-% These must be conjuncts to its left,
-% since the compiler reorders conjunctions as needed
-% to ensure that data flows only from left to right.
-% Therefore, we can calculate the execution time of
-% $G_1 \& \ldots \& G_n$
-% by computing the execution time
-% first of $G_1$,
-% then of $G_1 \& G_2$,
-% then of $(G_1 \& G_2) \& G_3$,
-% % then of $((G_1 \& G_2) \& G_3) \& G_4$,
-% and so on.
-
-% \zoltan{Discuss how the synchronisation at the end of the algorithm is
-% similar to the synchronisation while waiting for another variable.}
-}
 
 \section{Choosing how to parallelise a conjunction}
 \label{sec:overlap_howto}
@@ -2122,7 +2094,7 @@ yields the most parallelism.
 Unfortunately, this will often be \emph{too} much parallelism,
 because in practice many conjuncts are unifications
 and arithmetic operations whose execution takes very few instructions.
-Executing such conjuncts in their own threads
+executing such conjuncts in their own threads
 costs far more in overheads than they save by running in parallel.
 Therefore in most cases,
 we want to create parallel conjunctions with $k < n$ conjuncts,
