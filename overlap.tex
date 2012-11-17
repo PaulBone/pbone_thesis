@@ -1332,7 +1332,6 @@ profiling for automatic parallelism.
 
 \begin{table}
 \begin{center}
-\paul{TODO: Retest this data, thare are problems with the no coverage results.}
 \begin{tabular}{l|r|rrr|r|r}
 \Cbr{\textbf{Profiling type}} &
 \Cbr{\textbf{Time}} &
@@ -1345,7 +1344,7 @@ profiling for automatic parallelism.
 \hline
 \multicolumn{7}{c}{Without optimisations} \\
 \hline
-no coverage     & 54.2s & 30,591K & 31,799K & 5,646K & 435,852K & 36,155K \\
+no coverage     & 55.4s & 30,585K & 32,040K & 5,646K & 419,360K & 35,066K \\
 static coverage & 56.0s & 34,097K & 33,547K & 6,267K & 419,380K & 36,151K \\
 deep coverage   & 57.6s & 34,327K & 33,306K & 5,646K & 476,880K & 42,896K \\
 \hline
@@ -1353,7 +1352,7 @@ deep coverage   & 57.6s & 34,327K & 33,306K & 5,646K & 476,880K & 42,896K \\
 \multicolumn{7}{c}{With optimisations} \\
 \hline
 no profiling    & 10.6s & 12,003K &  3,203K & 5,645K & 186,752K & - \\
-no coverage     & 35.8s & 29,605K & 30,993K & 5,646K & 319,184K & 24,049K \\
+no coverage     & 35.9s & 29,599K & 31,218K & 5,646K & 319,184K & 23,465K \\
 static coverage & 37.1s & 33,391K & 32,856K & 6,302K & 319,188K & 24,640K \\
 deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\ 
 \end{tabular}
@@ -1367,27 +1366,32 @@ Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling
 the Mercury compiler, including coverage profiling.
 We compiled the Mercury compiler with seven different sets of options for
 profiling.
-The rows of the table give results for no profiling support,
-profiling support without coverage profiling,
-static coverage profiling support,
-and dynamic coverage profiling support.
-The two groups of result columns show results with optimisations that
-distort the call graph both disabled and enabled\footnote{
+The two row groups of the table show results with optimisations both
+disabled and enabled.
+The rows of the table give results for no profiling support\footnote{
     The non-profiling version of the compiler was not compiled or tested with
     optimisations disabled
     as it ignores the \samp{--profile-optimised} flag when profiling is
-    disabled.}.
-The three result columns in each of the two column groups show:
+    disabled.},
+profiling support without coverage profiling,
+static coverage profiling support,
+and dynamic coverage profiling support.
+The second column in the table shows
 the user time, an average of 20 executions while compiling the eight largest
-modules of the compiler itself;
+modules of the compiler itself.
+The next three columns show the sizes of different sections in the
+executable file:
+the size of the executable's \samp{.text} section (the compiled executable
+code);
+the size of the \samp{.data} and \samp{.rodata} sections (static data);
+the size of the \samp{.bss} section (static data that is initially zero).
+The sixth column shows
 the \emph{heap growth}, the amount by which the program break\footnote{
     The program break marks the end of the heap area.
     See the \code{sbrk(2)} Unix system call.}
-moved during the execution;
-and the size of the resulting profiling file.
-
-\paul{Write about how the static coverage information is not stored on the
-heap, maybe measure .data and .bss}
+moved during the execution.
+The final column shows the size of the resulting profiling file.
+All sizes are shown in kilobytes (KiB) (1024 bytes).
 
 We can see that enabling profiling slows the program down by at least a
 factor of three,
@@ -1399,29 +1403,40 @@ significant difference to performance.
 As optimisations make the program simpler, the call graph also becomes
 simpler.
 For example, inlining reduces the number of procedures in the program,
-which means that fewer data structures are needed to represent them in the
-program's memory and in the data file.
+which means that fewer profiling data structures are needed to represent
+them in both the program's memory and in the data file.
 This is why the results show that the optimised programs use less memory
 and generate smaller profiling data files.
 Optimisations can also improve performance in another way:
 inlining reduces the number of procedures which reduces the amount of
 instrumentation placed in the code by the profiler.
 
-Enabling static coverage profiling does not significantly impact the memory
-usage or profile size of the program.
-It does slightly affect the program's performance.
+Enabling static coverage profiling does not significantly impact the heap 
+usage.
+The statis coverage data is tored in the \PS structures which are stored in
+the program's static data, the \samp{.data}, \samp{.rodata} and \samp{.bss}
+sections of the executuable;
+in particular, the coverage point values themselves are in the \samp{.bss}
+section.
+Coverage profiling also creates a small increase the the size of the
+executable program, as the program now contains some additional
+instrumentation.
+Likewise this instrumentation affects performance very slightly.
+The effect is well within our goal of minimising coverage profiling's
+overheads.
 Associating coverage data with \PD structures rather than \PS structures
-measurably affects memory usage,
-but the amount of memory usage (an additional 56MB or 50MB
-(without and with optimisations respectively)
+significantly affects heap usage as \PD structures and the coverage points
+therein are all stored on the heap.
+This additional amount of heap usage (56MB or 50MB,
+without and with optimisations respectively)
 is acceptable.
-Collecting deep coverage information does have a slight performance impact over
-collecting static coverage information,
-but the difference is minimal.
-The small cost of collecting deep coverage data is small compared to the
-benefit that this data provides,
+Conversly we see that the amount of statically allocated memory decreases
+when using deep coverage profiling.
+The size of the \samp{.text} section and the program's execution time
+increase only slightly when using deep coverage information.
+This additional cost of collecting deep coverage data is very small compared
+to the benefit that this data provides,
 especially when optimisations are enabled during a profiling build.
-
 
 \section{Calculating the overlap between dependent conjuncts}
 \label{sec:overlap_overlap_alg}
