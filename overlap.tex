@@ -1170,7 +1170,7 @@ and we will use \emph{static} to describe data that is not ancestor
 context specific.
 We want to use deep profiling data for automatic parallelisation,
 which requires using analyses that in turn require coverage data such as
-the calcuation of recursive call sites' costs
+the calculation of recursive call sites' costs
 (section \ref{sec:overlap_reccalls}),
 and variable use time analysis (section \ref{sec:backgnd_var_use_analysis}).
 Therefore we have changed the way coverage data is collected and stored;
@@ -1413,16 +1413,15 @@ instrumentation placed in the code by the profiler.
 
 Enabling static coverage profiling does not significantly impact the heap 
 usage.
-The statis coverage data is tored in the \PS structures which are stored in
-the program's static data, the \samp{.data}, \samp{.rodata} and \samp{.bss}
-sections of the executuable;
+The \PS structures and their coverage data are stored in the program's
+static data,
+the \samp{.data}, \samp{.rodata} and \samp{.bss} sections of the executable;
 in particular, the coverage point values themselves are in the \samp{.bss}
 section.
-Coverage profiling also creates a small increase the the size of the
-executable program, as the program now contains some additional
-instrumentation.
+Coverage profiling also creates a small increase in the size of the
+executable code, as the code now contains some additional instrumentation.
 Likewise this instrumentation affects performance very slightly.
-The effect is well within our goal of minimising coverage profiling's
+The effect is well within our goal of minimising coverage profiling
 overheads.
 Associating coverage data with \PD structures rather than \PS structures
 significantly affects heap usage as \PD structures and the coverage points
@@ -1430,7 +1429,7 @@ therein are all stored on the heap.
 This additional amount of heap usage (56MB or 50MB,
 without and with optimisations respectively)
 is acceptable.
-Conversly we see that the amount of statically allocated memory decreases
+Conversely we see that the amount of statically allocated memory decreases
 when using deep coverage profiling.
 The size of the \samp{.text} section and the program's execution time
 increase only slightly when using deep coverage information.
@@ -1477,7 +1476,7 @@ is the same as its sequential execution time;
 we ignore overheads for now but will come back to them later.
 Whilst the parallel execution time of $q$, namely $ParTime_q$, may be
 different from its sequential execution time as $q$ may block on futures
-that $p$ may not have signaled yet.
+that $p$ may not have signalled yet.
 In section \ref{sec:backgnd_priorautopar} we showed how to calculate
 $ParTime_q$ in cases where there is a single shared variable between $p$ and
 $q$.
@@ -1509,7 +1508,7 @@ parallelism.
 When there are multiple shared variables we must use a different algorithm
 such as the one shown in algorithm~\ref{alg:dep_par_conj_overlap_simple},
 which is a simplified version of the one we use.
-It caclulates $ParTime_q$ from its arguments $SeqTime_q$, $VarUseList_q$ and
+It calculates $ParTime_q$ from its arguments $SeqTime_q$, $VarUseList_q$ and
 $ProdTimeMap_p$.
 $VarUseList_q$ is a list of tuples,
 each tuple is a shared variable and the time at which $q$ would consume the
@@ -1527,7 +1526,7 @@ chunks so far.
 The end of each chunk, except the last, is defined by $q$'s consumption of a
 shared variable;
 the last chunk ends at the end of the $q$'s execution.
-This way each of the $i$ chunks repreresents the time before $q$ may consume the
+This way each of the $i$ chunks represents the time before $q$ may consume the
 $i$\textsuperscript{th} shared variable,
 these chunks' durations are $Duration_{q, i}$ (line 6).
 The last ($i+1$-\textsuperscript{th}) chunk represents the time after
@@ -1707,7 +1706,7 @@ However, our current approach handles the 78\% majority of cases correctly,
 and a further 13\% of cases (single recursion) reasonably well
 (Section \ref{sec:overlap_reccalls}).
 Note that even better results for singly recursive procedures can be
-acheived because of the work in chapter \ref{chap:loop_control}.
+achieved because of the work in chapter \ref{chap:loop_control}.
 
 So far, we have assumed an unlimited number of CPUs,
 which is of course unrealistic.
