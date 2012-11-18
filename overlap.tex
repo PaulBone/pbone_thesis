@@ -2223,7 +2223,7 @@ from section \ref{sec:overlap_overlap_alg}.
 If $Extend$ is more profitable than $AddNew$,
 then the recursive call in line 11 searches for the best parallel
 conjunction beginning with $Extend$;
-otherwise similar code is executed on linw 26.
+otherwise similar code is executed on line 26.
 
 It is desirable to explore the full $O(2^n)$ solution space however doing so
 for large conjunctions is infeasible.
@@ -2266,7 +2266,7 @@ obviously a bad idea to do in parallel, such as building a ground term.
 The algorithm should treat these as a single conjunct.
 % XXX we could make the third item tr only if we need space
 \item
-Take other metrics such as total CPU utilisation, dead time, or GC preassure
+Take other metrics such as total CPU utilisation, dead time, or GC pressure
 into account,
 at least by using it to break ties on overall CPU time.
 \item
@@ -2369,19 +2369,22 @@ in the feedback file we create for the compiler.
 
 % pushing waits and signals into calles stops at module boundaries
 
-% \subsection{Cliques vs procedures}
-% \label{sec:pragmacliqueproc}
+\subsection{Merging parallelisations from different ancestor contexts}
+\label{sec:overlap_pragma_merge}
 
-\emph{Dynamic context}
-The algorithms in sections \ref{sec:overlap_overlap_alg}
-and \ref{sec:overlap_howto}
-work on profiling data that shows the behaviour of a procedure
-in the context given by a particular chain of ancestors.
-Many procedures are of course called from multiple ancestor contexts.
-What happens when our analysis of the behaviour of the same procedure
-yields different results for different ancestor contexts?
+In section \ref{sec:overlap_approach} we said that we search the program's
+call graph for parallelisation opportunities.
+This means that we may visit the same procedure multiple times from
+different ancestor contexts.
+In different context a procedure may have different optimal
+parallelisations,
+or no optimal parallelisation.
+% In addition to this,
+% multiple conjunctions in the procedure may be parallelised.
+In this section we discuss how we resolve multiple pieces of parallelisation
+advice for a single procedure.
 
-At the moment, for any procedure
+At the moment, for any procedure and conjunction
 that our analysis indicates is worth parallelising in any context,
 we pick one particular parallelisation (usually there is only one anyway),
 and transform the procedure accordingly.
@@ -2395,6 +2398,15 @@ This will of course require the creation of specialised versions
 of its parent, grandparent etc procedures,
 until we get to an ancestor procedure
 which occurs in the common prefix of all the conflicting ancestor contexts.
+
+When different conjunctions in the same procedure have parallelisation
+advice, we save all this advice into the feedback file.
+When the compiler acts on this advice,
+it applies the advice deeper within compound goals first
+so that when we apply each piece of advice the goal path indicating the
+conjunction which should be parallelised is easier to find.
+If any conjunction cannot be found or the advice cannot be applied,
+then the compiler skips that piece of advice and issues a warning.
 
 % \subsection{Searching for parallelism opportunities}
 % \label{sec:pragmabestfirst}
@@ -2421,26 +2433,33 @@ which occurs in the common prefix of all the conflicting ancestor contexts.
 % again, we expect that this way,
 % our traversal will stop before it gets to the cheapest conjunctions.
 
-% \subsection{Parallelising children vs ancestors}
-% \label{sec:pragmachildancestor}
+\subsection{Parallelising children vs ancestors}
+\label{sec:overlap_pragma_child_ancestor}
 
-\emph{Parallelising children vs ancestors}
 What happens when we decide that a conjunction that should be parallelised
 has an ancestor that we decided should also be parallelised?
 We can
-(1) parallelise only the ancestor,
-(2) parallelise only this conjunction, or
-(3) parallelise both
 
-% The first alternative (parallelise neither) has already been rejected twice,
-% since we concluded that (2) was better (1)
-% when we decided to parallelise the ancestor,
-% and we concluded that (3) was better (1)
-% when we decided to parallelise this conjunction.
+\begin{enumerate}
+\item parallelise neither,
+\item parallelise only the ancestor,
+\item parallelise only this conjunction, or
+\item parallelise both
+\end{enumerate}`
 
-\zoltan{Does the implementation actually do this now?}
-We choose among the other three alternatives
-by evaluating the speedup you get from each of them, and just pick the best.
+The first alternative (parallelise neither) has already been rejected twice,
+since we concluded that (2) was better than (1)
+when we decided to parallelise the ancestor,
+and we concluded that (3) was better than (1)
+when we decided to parallelise this conjunction.
+
+Currently our system will parallelise both the ancestor and the current
+conjunction.
+Although the system will not explore parts of the call graph
+(and therefore conjunctions)
+when it thinks there is ample parallelism in the procedure's ancestors.
+In the future we could choose among the three reasonable alternatives:
+we could evaluate the speedup from each of them, and just pick the best.
 This reevaluation must take into account
 the fact that for each invocation of the ancestor conjunction,
 we will invoke the current conjunction many times,
@@ -2448,155 +2467,142 @@ and that therefore we will incur both the overheads and the benefits
 of parallelising the current conjunction many times.
 The profile will give the actual number.
 
-% \subsection{Disagreement among children}
-% \label{sec:pragmachildchild}
-
-% what if for some ``current'' clique,
+% This complicates how we might handle specialisation in the future.
+% Consider a situation where 
+% for some ``current'' clique,
 % you want to parallelise the ancestor,
 % but for some other current clique,
 % you do not want to parallelise the same ancestor?
 
-\emph{Parallelising branched goals}
+\subsection{Parallelising branched goals}
+\label{sec:overlap_pragma_push}
+
 Many programs have code that looks like this:
 \begin{verbatim}
 ( if ... then
-    ... expensive call 1 ...
+    ...,
+    expensive goal 1,
+    ...
 else
-    ... cheap goal ...
+    ...,
+    cheap goal,
+    ...
 ),
-expensive call 2
+expensive goal 2
 \end{verbatim}
 If the condition of the if-then-else succeeds only rarely,
 then the average cost of the if-then-else
 may be below the threshold of what we consider to be an expensive goal.
 We therefore would not even consider
-parallelising the top-level conjunction,
+parallelising the top-level conjunction
+(the conjunction of the if-then-else and ``expensive goal 2''),
 rightly considering that its overheads would probably outweigh its benefits.
 
-What we want to do in such cases
+In these cases we detect the expensive goal within the if-then-else
+so that when we see ``expensive goal 2'' we \emph{push}
+``expensive goal 2'' into both branches of the if-then-else and test if it
+creates profitable parallelism there.
+What we do in such cases
 is execute just the two expensive calls in parallel,
 which would be equivalent to parallelising the conjunction
 in the then part of this transformed goal:
 \begin{verbatim}
 ( if ... then
-    ... expensive call 1 ...
+    ...,
+    expensive call 1,
+    ...,
     expensive call 2
 else
-    ... cheap goal ...
+    ...,
+    cheap goal,
+    ...,
     expensive call 2
 )
 \end{verbatim}
-We intend to change our feedback tool to detect such situations,
-and if found, to recommend
-some equivalence-preserving transformations for the compiler to apply
-before parallelising some of the resulting conjunctions.
 
-% \subsection{Garbage collector issues}
-% \label{sec:pragmagc}
+This transformation is only applied it does not involve reordering goals.
+For example, we cannot push ``expensive goal 2'' past ``other goal'' in the
+following code:
 
-\emph{Garbage collector issues}
-The Mercury implementation uses the Boehm-Demers-Weiser
-conservative collector for C \zoltan{add cite} to manage memory.
-This system has worse overheads
-for parallel programs than for sequential programs.
-First, even though this collector uses
-a separate memory pool for each mutator thread
-(and hence, in our system, for each Mercury engine),
-you still need synchronisation to access the global pool
-when a local pool runs out.
-Second, this collector
-does not support incremental collection for parallel programs,
-and a full collection stops all threads,
-and thrashes the caches of their CPUs.
-We therefore ran our benchmarks with the collector tuned
-to use large local pool sizes
-and to grow the size of the global pool more quickly than usual.
-These settings significantly improved
-the performance of the sequential programs as well.
+\begin{verbatim}
+( if ... then
+    ...,
+    ( if ... then
+        expensive goal 1,
+    else
+        ...
+    ),
+    other goal,
+else
+    ...,
+    cheap goal,
+    ...
+),
+expensive goal 2
+\end{verbatim}
 
-% GC In our case, the worry is that
-% GC the Boehm collector may scale significantly worse than
-% GC the Mercury code that we choose to parallelise.
+\subsection{Garbage collection and estimated parallelism}
+\label{sec:overlap_pragma_gc}
 
-% GC From the perspective of a GC implementor,
-% GC a program's runtime has two components:
-% GC the execution time of the main part of the program (the \emph{mutator}),
-% GC and the execution time of the collector itself.
-% GC When the mutator is a Mercury program,
-% GC there is a fixed (and usually small) limit
-% GC on the number of instructions it can execute
-% GC between increments of the call sequence count
-% GC (though the limit is program-dependent).
-% GC There is no such limit on the collector.
-% GC This is can be a problem.
-% GC Since a construction unification does not involve a call,
-% GC our profiler considers its CSC cost to be zero.
-% GC \peter{Haven't defined ``CSC \emph{cost}''.}
-% GC Yet if the memory allocation required by a construction
-% GC triggers a collection,
-% GC then this nominally zero-cost action can actually take as much time
-% GC as many calls in the mutator.
-% GC
-% GC The normal way to view the time taken by gc
-% GC is to simply distribute it among the allocations,
-% GC so that one CSC represents the average time taken
-% GC by the mutator between two calls
-% GC plus the average amortized cost of the collections
-% GC triggered by the unifications between those calls.
-% GC For a sequential program, this view works very well.
-% GC For a parallel program, it works less well,
-% GC because the performance of the mutator and the collector may scale differently.
-% GC In our case, the worry is that
-% GC the Boehm collector may scale significantly worse than
-% GC the Mercury code that we choose to parallelise.
-% GC
-% GC For Mercury code,
-% GC the limits on speedups from parallelism fall into two categories:
-% GC those that our analysis takes into account, and those it does not.
-% GC The former include the cost of spawning new contexts,
-% GC the cost of the barrier synchronisation at the end of the conjunction,
-% GC the cost of creating the synchronisation terms,
-% GC the cost of the wait and signal operations on those terms,
-% GC and idle time of the consumer while waiting on the producer.
-% GC The latter include interference
+We described the garbage collector's effects on parallel performance in
+detail in section \ref{sec:rts_gc}.
+In this section we will describe how it relates to automatic parallelism in
+particular.
+Throughout this chapter we have measured the costs of computations as call
+sequence counts,
+however this metric does not take into account memory allocations or
+collection.
+There is a fixed (and usually small) limit
+on the number of instructions that the program can execute
+between increments of the call sequence count
+(though the limit is program-dependent).
+There is no such limit on the collector.
+This is can be a problem.
+Since a construction unification does not involve a call,
+our profiler considers its cost (in CSCs) to be zero.
+Yet if the memory allocation required by a construction
+triggers a collection,
+then this nominally zero-cost action can actually take as much time
+as many thousands of calls in the mutator.
 
-% lock at allocation vs stop the world at collection
+The normal way to view the time taken by a collection
+is to simply distribute it among the allocations,
+so that one CSC represents the average time taken
+by the mutator between two calls
+plus the average amortised cost of the collections
+triggered by the unifications between those calls.
+For a sequential program, this view works very well.
+For a parallel program, it works less well,
+because the performance of the mutator and the collector scale differently
+as we were able to show in section \ref{sec:rts_gc}.
 
-% memory
-% heat
-%
-% is to simply consider the amortized cost
-% In sequential programs,
-% one can consider that the cost of the
-%
-% In sequential programs,
-% it is not really feasible to separate
-% the time cost of the collector from the cost of the mutator.
-% On
-%
-% When parallelising the program, there is unfortunately
-% a natural way to separate
-%
-% and CSCs can be considered to measure both parts of the program.
-%
-% CSCs not a true representation of time
-%
-% take heap allocation intensity (allocations per CSC) into account
-% in the algorithms above:
-% consider two high-intensity goals being executed in parallel
-% to be another source of overhead.
-%
-% convert allocs to CSCs, add them to both sequential and parallel times
-%
-% involve the alloc ratios somehow?
-%
-% There is also the consideration that with Boehm gc,
-% a collection stops the world,
-% and the overheads of this stopping scale with the number of CPUs being used.
-% The overheads of stopping include
-% not just the direct costs of the interruption,
-% but also indirect costs,
-% such as having to refill the cache after the collector trashes it.
+We could take allocations into account in the algorithms above in a couple
+of different ways.
+We already proposed using other metrics to split ties between alternative
+parallelisations.
+We could also create a new unit for time that combines call sequence counts
+and allocations and use this to determine how much parallelism we can
+achieve.
+Allocating in different threads could be an optimisation;
+at first glance allocations take time and parallelising them against one
+another may be beneficial.
+This is only true when allocations to not exhaust their thread local memory
+pools and contend for the shared memory pool.
+Access to the shared memory pool is normally amortised across a number of
+allocations.
+High allocation rates also correspond to high memory bandwidth usage.
+Parallel computations with high memory bandwidth demands may exhaust the
+available bandwidth,
+which will reduce the amount that parallelism can improve performance.
+
+There is also the consideration that with the
+Boehm-Demers-Weiser~\citep{boehm:1988:gc}
+a collection stops the world,
+and the overheads of this stopping scale with the number of CPUs being used.
+The overheads of stopping include
+not just the direct costs of the interruption,
+but also indirect costs,
+such as having to refill the cache after the collector trashes it.
 
 \section{Performance results}
 \label{sec:overlap_perf}
