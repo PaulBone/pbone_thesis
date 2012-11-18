@@ -1442,11 +1442,12 @@ This additional cost of collecting deep coverage data is very small compared
 to the benefit that this data provides,
 especially when optimisations are enabled during a profiling build.
 
+
 \section{Calculating the overlap between dependent conjuncts}
 \label{sec:overlap_overlap_alg}
 
-\status{Draft finished, I don't know if I'll read this myself before asking
-for reviews or not}
+\status{Draft finished, I do not know if I will read this myself before
+asking for reviews or not}
 
 The previous two sections provide us with the information necessary to
 estimate a candidate parallelisation's performance,
@@ -1859,7 +1860,7 @@ This chunk is a long chunk (1,625,051csc).
 $ParWantTime$ will be 1,625,051 (above) and $ProdTimeMap[\text{\var{Acc1}}]$
 will be 1,625,053 (above).
 The execution of the recursive call is likely to block
-(these values are estimates) but only very breifly,
+(these values are estimates) but only very briefly,
 $CurParTime$ will be set to 1,625,053 and the second chunk's duration will
 be very small, only $1,625,054 - 1,625,051 = 3$.
 This is added to $CurParTime$ to determine the parallel execution time of
@@ -2041,7 +2042,7 @@ execution time.
 $G_3$ does not need to create any other sparks, so the cost on lines 12--13
 is not applied.
 
-The next overhead is on line 18, the cost of signaling a future.
+The next overhead is on line 18, the cost of signalling a future.
 It is applied each time a future is signalled and the result of applying it
 is factored into $ProdTimeMap$ along with all other costs,
 so that its non-direct effects on later conjuncts is accounted for.
@@ -2086,186 +2087,194 @@ parallelisations with similar parallel speedups.
 \section{Choosing how to parallelise a conjunction}
 \label{sec:overlap_howto}
 
-A conjunction with $n > 2$ conjuncts
-can be converted into several different parallel conjunctions.
+\status{Draft finished, I do not know if I will read this myself before
+asking for reviews or not}
+
+A conjunction with more than two conjuncts can be converted into several
+different parallel conjunctions.
 Converting all the commas into ampersands
-(e.g.\ \code{c1, c2, c3} into \code{c1 \& c2 \& c3})
+(e.g.\ $G_1,~G_2,~G_3$ into $G_1~\&~G_2~\&~G_3$)
 yields the most parallelism.
 Unfortunately, this will often be \emph{too} much parallelism,
 because in practice many conjuncts are unifications
 and arithmetic operations whose execution takes very few instructions.
-executing such conjuncts in their own threads
-costs far more in overheads than they save by running in parallel.
+Executing such conjuncts in their own threads
+costs far more in overheads than can be gained by running in parallel.
+To see just how big conjunctions can be,
+let us consider the quadratic equation example
+from section \ref{sec:backgnd_mercury} which we have repeated here.
+The quadratic equation is often written as a single conjunct:
+
+\begin{verbatim}
+X = (-B + sqrt(B^2 - 4*A*C)) / (2*A)
+\end{verbatim}
+
+\noindent
+Which is exampled by the complier into 12 conjuncts:
+
+\begin{verbatim}
+V_1  = 2,               V_2  = B ^ V_1,         V_3 = 4,
+V_4  = V_3 * A,         V_5  = V_4 * C,         V_6 = V_2 - V_5,
+V_7  = sqrt(V_6),       V_8  = -1,              V_9 = V_8 * B,
+V_10 = V_9 + V_7,       V_11 = V_1 * A,         X   = V_10 / V_11
+\end{verbatim}
+
+\noindent
 Therefore in most cases,
-we want to create parallel conjunctions with $k < n$ conjuncts,
-each consisting of a contiguous sequence
+we want to transform sequential conjunctions with $n$ conjuncts into
+parallel conjunctions with $k$ conjuncts where $k < n$.
+Each conjunct should consist of a contiguous sequence
 of one or more of the original sequential conjuncts,
 effectively partitioning the original conjuncts into groups.
 
-\begin{figure}
-\begin{center}
-\begin{verbatim}
-global NumEvals := 0
-find_best_partition(InitPartition, InitTime, LaterConjs)
-    returns <FinalTime, FinalPartitionSet>:
-  switch on LaterConjs:
-  when LaterConjs = []:
-    return <InitTime, {InitPartition}>
-  when LaterConjs = [Head | Tail]:
-    Extend := all_but_last(InitPartition) ++ [last(InitPartition) ++ [Head]]
-    AddNew := InitPartition ++ [Head]
-    ExtendTime := find_par_time(Extend)
-    AddNewTime := find_par_time(AddNew)
-    NumEvals := NumEvals + 2
-    if ExtendTime < AddNewTime:
-      BestExtendSoln := find_best_partition(Extend, ExtendTime, Tail)
-      let BestExtendSoln be <BextExTime, BestExPartSet>
-      if NumEvals < PreferLinearEvals:
-        BestAddNewSoln := find_best_partition(AddNew, AddNewTime, Tail)
-        let BestAddNewSoln be <BestANTime, BestANPartSet>
-        if BestExTime < BestANTime:
-          return BestExtendSoln
-        else if BestExTime = BestANTime:
-          return <BextExTime, BestExPartSet union BestANPartSet>
-        else:
-          return BestAddNewSoln
-      else:
-        return BestExtendSoln
-    else:
-      <symmetric with the then case>
-\end{verbatim}
-\end{center}
-\caption{Search for the best parallelisation}
-\label{fig:best_par_search}
-%\vspace{-2\baselineskip}
-\end{figure}
+Deciding how to parallelise something in this way can be thought of as
+choosing which of the $n-1$ conjunction operators (\samp{,}) in an $n$-ary
+conjunction to turn into parallel conjunction operators (\samp{\&}).
+For example, $G_1,~G_2,~G_3$ can be converted
+into any of:
+$(G_1~\&~G_2),~G_3$;
+$G_1,~(G_2~\&~G_3)$;
+$G_1~\&~(G_2,~G_3)$;
+$(G_1,~G_2)~\&~G_3$; or
+$G_1~\&~G_2~\&~G_3$.
+Our goal is to find the best parallelisation of a conjunction from among
+the various possible parallel conjunctions.
+The solution space is $2^{n-1}$, 
+and as the quadratic equation example demonstrates $n$ can be quite large
+even for simple expressions.
+The largest conjunction we have seen is 150 conjuncts long,
+this is in the Mercury compiler itself.
 
-For any conjunction to be worth parallelising,
-it should contain two or more expensive goals.
-Our main algorithm (figure \ref{fig:best_par_search} works on the list
-of conjuncts
-from the first expensive goal to the last.
-This will be the middle of original conjunction,
-with (possibly empty) lists of cheap goals before it and after it.
+\begin{algorithm}[tbp]
+\begin{algorithmic}[5]
+% global NumEvals := 0
+\Procedure{find\_best\_partition}{$InitPartition$, $InitTime$, $LaterConjs$}
+  \If{empty($LaterConjs$)}
+    \State \Return $(InitTime, InitPartition)$
+  \Else
+    \State $Head \gets$ pop($LaterConjs$)
+    \State $Extend \gets$ all\_but\_last($InitPartition$) ++
+        [last($InitPartition$) ++ [$Head$]]
+    \State $AddNew \gets InitPartition$ ++ [$Head$]
+    \State $ExtendTime \gets$ find\_par\_time($Extend$)
+    \State $AddNewTime \gets$ find\_par\_time($AddNew$)
+    \State $NumEvals \gets NumEvals + 2$
+    \If{$ExtendTime < AddNewTime$}
+      \State $BestExtendSoln \gets$ find\_best\_partition($Extend$,
+        $ExtendTime$, $Tail$)
+      \State $(BestExTime, BestExPartSet) \gets BestExtendSoln$
+      \If{$NumEvals < PreferLinearEvals$}
+        \State $BestAddNewSoln \gets$ find\_best\_partition($AddNew$,
+            $AddNewTime$, $Tail$)
+        \State $(BestANTime, BestAnPartSet) \gets BestAddNewSoln$
+        \If{$BestExTime < BestANTime$}
+          \State \Return $BestExtendSoln$
+        \ElsIf{$BestExTime = BestANTime$}
+          \State \Return $(BextExTime, BestExPartSet \cup BestANPartSet)$
+        \Else
+          \State \Return $BestAddNewSoln$
+        \EndIf
+      \Else
+        \State \Return $BestExtendSoln$
+      \EndIf
+    \Else
+      \State symmetric with the then case
+    \EndIf
+  \EndIf
+\EndProcedure
+\end{algorithmic}
+\caption{Search for the best parallelisation}
+\label{alg:best_par_search}
+%\vspace{-2\baselineskip}
+\end{algorithm}
+
+The first prerequisite for a profitable parallel conjunction is two or more
+expensive conjuncts (conjuncts whose per-call cost is above a certain
+threshold)
+(section~\ref{sec:overlap_approach}).
+In such conjunctions we create a list of goals from the first expensive
+conjunct to the last,
+which we dub the ``middle goals''.
+There are (possibly empty) lists of cheap goals before and after list of
+middle goals.
 Our initial search assumes that
 the set of conjuncts in the parallel conjunction we want to create
 is exactly the set of conjuncts in the middle.
 A post-processing step then removes that assumption.
 
-% into \code{(c1 \& c2), c3},
-% into \code{c1, (c2 \& c3)},
-% into \code{c1 \& (c2, c3)},
-% into \code{(c1, c2) \& c3}, or
-% into \code{c1 \& c2 \& c3}.
-
-% In the usual case where $n >> 2$,
-% there will be a huge number ways to do this.
-% Our parallelisation algorithm,
-% algorithm~\ref{alg:best_par_search},
-% therefore tries to find the partition
-% that yields the lowest overall execution time.
-
-% A middle sequence with $n > 2$ conjuncts
-% can be converted into several different parallel conjunctions;
-% for example, \code{c1, c2, c3} can be converted
-% into \code{(c1 \& c2), c3},
-% into \code{c1, (c2 \& c3)},
-% into \code{c1 \& (c2, c3)},
-% into \code{(c1, c2) \& c3}, or
-% into \code{c1 \& c2 \& c3}.
-% The first two do not make sense if \code{c1} and {c3} are expensive goals,
-% so we consider only conjunctions in which all conjuncts in the middle sequence
-% are part of one parallel conjunct or another.
-% The last of these gives the finest grain parallelism.
-% Unfortunately, this will often be \emph{too} fine-grained,
-% because in practice many conjuncts are unifications
-% or builtin operations such as arithmetic
-% whose execution takes very few instructions.
-% Executing such conjuncts in their own threads
-% can cost far more in overheads than they save by running in parallel.
-% Therefore in most cases,
-% we want to create parallel conjunctions with $k < n$ conjuncts,
-% each consisting of a contiguous sequence
-% of one or more of the original sequential conjuncts,
-% effectively partitioning the original conjuncts into groups.
-% % In the usual case where $n >> 2$,
-% % there will be a huge number ways to do this.
-% % Our parallelisation algorithm,
-% % algorithm~\ref{alg:best_par_search},
-% % therefore tries to find the partition
-% % that yields the lowest overall execution time.
-
-% Therefore, it is best to break sequential conjunctions into a number of
-% smaller sequential conjunctions that are conjuncts of a larger
-% parallel conjunction, however there are a multiple possible ways to do
-% this.
-
-If the middle sequence has $n$ conjuncts,
-then there are $n-1$ AND operations between them,
-each of which can be either sequential or parallel.
-There are then $2^{n-1}$ combinations,
-all but one of which are parallelisations.
-That is a large space to search for the \emph{best} parallelisation,
-and it would be larger still if we allowed code reordering,
-that is, parallel conjuncts consisting of
-a \emph{non}contiguous sequence of the original conjuncts.
-We explore this space with a search algorithm,
-\code{find\-\_\-best\-\_\-par\-ti\-tion}, which
-we invoke with the empty list as \code{InitPartition},
-zero as \code{InitTime}, and the list of middle conjuncts as \code{LaterConj}.
-\code{InitPartition} expresses a partition of an initial sequence
+The initial search space is explored by
+algorithm \ref{alg:best_par_search}, which processes the middle goals.
+% That is a large space to search for the \emph{best} parallelisation,
+% and it would be larger still if we allowed code reordering,
+% that is, parallel conjuncts consisting of
+% a \emph{non}contiguous sequence of the original conjuncts.
+The algorithm starts with an empty list as  $InitPartition$,
+zero as $InitTime$, and the list of middle conjuncts as $LaterConjs$.
+$InitPartition$ expresses a partition of an initial sequence
 of the middle goals into parallel conjuncts
-whose estimated execution time is \code{InitTime},
+whose estimated execution time is $InitTime$,
 and considers whether it is better to add the next middle goal
-to the last existing parallel conjunct (\code{Extend}),
-or to put it into a new parallel conjunct (\code{AddNew}).
-It explores extensions of the better of the resulting partitions first.
-If the search is still under the limit on the number of evaluations,
-it explores the worse partition as well,
-which is an exponential search.
-When it hits the limit,
-it switches to a linear search;
-we explore the more promising partition first
-to make this search more effective.
-(This limit ensures that the algorithm runs in reasonable time.)
-The algorithm returns a set of equal best parallelisations so far,
-``best'' being measured by
-\iclp{a version of the algorithm in figure~\ref{fig:dep_par_conj_overlap_middle} that
-computes the estimated parallel execution time \emph{including} overheads.}
-\tr{algorithm \ref{alg:dep_par_conj_overlap_complete},
-that is, the estimated parallel execution time including overheads.}
+to the last existing parallel conjunct ($Extend$) (line 6),
+or to put it into a new parallel conjunct ($AddNew$) (line 7).
+the calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
+estimating their parallel overlap using 
+algorithm \ref{alg:dep_par_conj_overlap_complete}
+from section \ref{sec:overlap_overlap_alg}.
+If $Extend$ is more profitable than $AddNew$,
+then the recursive call in line 11 searches for the best parallel
+conjunction beginning with $Extend$;
+otherwise similar code is executed on linw 26.
 
-There are some simple ways to improve this algorithm.
-%\vspace{-2mm}
-\begin{itemize}
-\item
-Most invocations of \verb|find_par_time| specify a partition
-that is an extension of a partition processed in the recent past.
-In such cases, \verb|find_part_time| should do its task
-incrementally, not from scratch.
-\item
-If the expected execution time
-for the candidate partition currently being considered
-is already greater than the fastest existing complete partition,
+It is desirable to explore the full $O(2^n)$ solution space however doing so
+for large conjunctions is infeasible.
+Therefore we compromise by using a complete algorithm that can switch into a
+greedy (linear) mode if the solution space is too large.
+Before the algorithm begins we set the global variable $NumEvals$ to zero.
+It counts how many overlap calculations have been performed 
+and if this reaches the threshold $PreferLinearEvals$ then our algorithm
+explores only the most profitable of the two alternatives at any choice
+point.
+If the threshold has not been reached the code on lines 15--22 is executed
+which explores the least profitable alternative ($AddNew$).
+Symmetric code which explores $Extend$ when it is the least profitable
+belongs on line 26.
+The algorithm returns the best of the two solutions
+(or merges the solutions when they are of equal value on line 20).
+If the threshold has been reached the least profitable alternative is not
+explored (line 24).
+
+The algorithm differers from algorithm~\ref{alg:best_par_search}:
+our algorithm will also test each partial parallelisation against the best
+solution found so far,
+If the expected execution time for the candidate currently being considered
+is already greater than the fastest existing complete parallelisation,
 we can stop exploring that branch;
 it cannot lead to a better solution.
-\tr{
-(This is the idea of branch-and-bound algorithms.)
-}
+This is the idea of branch-and-bound algorithms.
+
+There are some simple ways to improve this algorithm.
+
+\begin{itemize}
+\item
+Most invocations of \findpartime specify a partition
+that is an extension of a partition processed in the recent past.
+In such cases, \findpartime should do its task
+incrementally, not from scratch.
 \item
 Sometimes consecutive conjuncts do things that are
 obviously a bad idea to do in parallel, such as building a ground term.
 The algorithm should treat these as a single conjunct.
 % XXX we could make the third item tr only if we need space
-\tr{
 \item
-graph of dependencies
+Take other metrics such as total CPU utilisation, dead time, or GC preassure
+into account,
+at least by using it to break ties on overall CPU time.
 \item
-take total CPU utilisation into account,
-at least by using it to break ties on overall CPU time
-}
+Also, the current implementation does not make an estimate of the
+minimum cost of the work that is yet to be scheduled after the current point.
+This affects the amount of pruning that the branch-and-bound code
+is able to achieve.
 \end{itemize}
-%\vspace{-2mm}
 
 \noindent
 At the completion of the search,
@@ -2309,11 +2318,6 @@ We loop from $i=b$ down towards $i=1$, and check whether
 including $B_i,~\ldots,~B_b$ at the start of $P_1$ is improvement.
 If not, we stop; if it is, we keep going.
 We do the same from the other end.
-% If we end up with moving
-% The second search loops from $j=1$ up towards $j=a$
-% and checks whether including $A_1, \ldots, A_j$ at the end of $P_p$
-% is improvement.
-% Each loop stops when the answer becomes ``no'',
 The stopping points of the loops of the contraction and expansion phases
 dictate our preferred parallel form of the conjunction, which
 (if we shrunk the middle at the left edge and expanded it at the right)
@@ -2325,7 +2329,8 @@ A_{j+1},$ $\ldots,$ $A_a$.
 % ((B_i, \ldots, B_b, P_1) \& P_2, \ldots \& P_{p-1} \& (P_p, A_1, \ldots, A_j)),
 % A_{j+1}, \ldots, A_a$.
 If this preferred parallelisation is better than
-the original sequential version of the conjunction by at least 1% (a configurable threshold),
+the original sequential version of the conjunction by at least 1\% (a
+configurable threshold),
 then we include a recommendation for its conversion to this form
 in the feedback file we create for the compiler.
 
@@ -2354,26 +2359,7 @@ in the feedback file we create for the compiler.
 % \item
 % Currently no tie breaking is done and we have not explored
 % using other formulas for the search's objective function.
-% % \item
-% % Also, the current implementation does not make an estimate of the
-% % minimum cost of the work that could be scheduled after the current point.
-% % This affects the amount of pruning that the branch and bound code
-% % is able to achieve.
 % \end{itemize}
-
-% When explaining the algorithm, tell readers to first assume that
-% GoalsBefore and GoalsAfter are the empty list,
-% i.e. MaxBefore = 0 and MinAfter = N+1.
-% Only after explaining the algorithm in that case
-
-% Consider changing the loop structure so that instead of
-% loop on Before;
-%     loop on After,
-%         loop on Arrangement,
-% it is
-% loop on Arrangement,
-%     loop on Before (assuming a given After) find the best and commit to it,
-%     loop on After, find the best and commit to it.
 
 \section{Pragmatic issues}
 \label{sec:overlap_pragmatic}
