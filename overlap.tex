@@ -2613,6 +2613,8 @@ such as having to refill the cache after the collector trashes it.
 \section{Performance results}
 \label{sec:overlap_perf}
 
+\status{I will run the benchmarks again and then fixup this section.}
+
 % \begin{table*}
 % \begin{center}
 % \begin{tabular}{l|rrrrrrrrrr}
@@ -2644,14 +2646,16 @@ such as having to refill the cache after the collector trashes it.
 % and CPU usage (as integral if possible, as well as peack CPU usage).
 
 We tested our system on three benchmark programs:
-matrix multiplication, a mandelbrot image generator and a raytracer.
+the raytracer program and a modified version of the mandelbrot program,
+both from chapter \ref{chap:rts},
+as well as a matrix multiplication program.
 Matrixmult has abundant independent AND-parallelism.
-Mandelbrot uses the actual \code{map\_foldl} predicate
-from figure~\ref{fig:map_foldl}
+Mandelbrot was modified, and now it uses dependent AND-parallelism
+via the actual \code{map\_foldl} predicate from figure~\ref{fig:map_foldl}
 to iterate over rows of pixels.
 Raytracer does not use \code{map\_foldl},
 but does use a similar code structure to perform a similar task.
-This is not an accident:
+This similar structure is not an accident:
 \emph{many} predicates use this kind of code structure,
 partly because programmers in declarative languages
 often use accumulators to make their loops tail recursive.
@@ -2659,6 +2663,7 @@ often use accumulators to make their loops tail recursive.
 % and the mandelbrot program does a lot of integer arithmetic as well.
 % The Mercury backend we are using always boxes floating point numbers,
 % so each floating point operation requires the creation of a new cell on the heap.
+% No it does not -pbone.
 % This makes matrixmult and raytracer very memory allocation intensive.
 % Since the garbage collector accounts for a large fraction of their runtimes,
 % Amdahl's law dictates the maximum speedup we can get by speeding up their mutators
@@ -2668,11 +2673,12 @@ We ran all three programs
 with one set of input parameters to collect profiling data,
 and with a \emph{different} set of input parameters to produce
 the timing results in the following table.
-All tests were run on
+All tests were run on the same system as throughout chapter \ref{chap:rts},
+the system is described on page \pageref{cabsav}.
 % taura
-a Dell Optiplex 755 PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
-running Linux 2.6.31.
-Each test was run ten times;
+% a Dell Optiplex 755 PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
+% running Linux 2.6.31.
+Each test was run 20 times;
 we discarded the highest and lowest times, and averaged the rest.
 
 % \begin{table*}[h]
@@ -2730,40 +2736,50 @@ we discarded the highest and lowest times, and averaged the rest.
 % \vspace{-2mm}
 \begin{table}[tb]
 \begin{center}
-\begin{tabular}{llrrrrr}
-\hline \hline
-\multicolumn{1}{c}{\textbf{Program}} &
-\multicolumn{1}{c}{\textbf{Par}}    &
-\multicolumn{1}{c}{\textbf{1 CPU}}   &
-\multicolumn{1}{c}{\textbf{2 CPUs}}  &
-\multicolumn{1}{c}{\textbf{3 CPUs}}  &
-\multicolumn{1}{c}{\textbf{4 CPUs}}  \\
+\begin{tabular}{l|rr|rrrr}
+\Cbr{\textbf{Version}} &
+\multicolumn{2}{c|}{\textbf{Sequential}} &
+\multicolumn{4}{c}{\textbf{Parallel w/ $N$ Engines}} \\
+\Cbr{} & \C{\textbf{not TS}} & \Cbr{\textbf{TS}} &
+\C{\textbf{1}} & \C{\textbf{2}} & \C{\textbf{3}} & \C{\textbf{4}} \\
 \hline
-%\hhline{|-|-||-|-|-|-|-|}
-% \hline
-% matrixmult & indep & 14.7 (0.76) &  7.6 (1.47) &  5.2 (2.15) &  5.2 (2.15) \\
-% seq 11.2   & naive & 14.7 (0.76) &  8.0 (1.40) &  5.7 (1.96) &  4.7 (2.38) \\
-% par 14.6   & overlap  & 14.7 (0.76) &  7.6 (1.47) &  6.7 (1.67) &  5.2 (2.15) \\
-matrixmult & indep    & 14.6 (0.75) &  7.5 (1.47) &  7.0 (1.66) &  5.2 (2.12) \\
-seq 11.0   & naive    & 14.6 (0.75) &  7.6 (1.45) &  5.2 (2.12) &  5.2 (2.12) \\
-par 14.6   & overlap  & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12) \\
-%\hhline{|-|-||-|-|-|-|-|}
 \hline
-mandelbrot & indep    & 35.2 (0.95) & 35.1 (0.95) & 35.2 (0.95) & 35.3 (0.95) \\
-seq 33.4   & naive    & 35.4 (0.94) & 18.0 (1.86) & 12.1 (2.76) &  9.1 (3.67) \\
-par 35.2   & overlap  & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67) \\
+\multicolumn{7}{c}{Matrix multiplication} \\
+\hline
+indep    & 5.10 & 7.69 & 7.70 (0.66) & 3.87 (1.32) & 2.60 (1.96) & 1.97 (2.59) \\
+naive    &    - &    - & 7.70 (0.66) & 3.87 (1.32) & 2.60 (1.96) & 1.97 (2.59) \\
+overlap  &    - &    - & 7.70 (0.66) & 3.87 (1.32) & 2.60 (1.96) & 1.97 (2.59) \\
+%matrixmult & indep    & 14.6 (0.75) &  7.5 (1.47) &  7.0 (1.66) &  5.2 (2.12) \\
+%seq 11.0   & naive    & 14.6 (0.75) &  7.6 (1.45) &  5.2 (2.12) &  5.2 (2.12) \\
+%par 14.6   & overlap  & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12) \\
 %\hhline{|-|-||-|-|-|-|-|}
 \hline
-raytracer  & indep    & 26.2 (0.87) & 26.3 (0.86) & 26.1 (0.87) & 26.2 (0.87) \\
-seq 22.7   & naive    & 25.3 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
-par 26.5   & overlap  & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
-%\hhline{|-|-||-|-|-|-|-|}
-\hline \hline
+\hline
+\multicolumn{7}{c}{Right recursive dependent Mandelbrot} \\
+\hline
+indep    & 15.3 & 15.3 & 15.2 (1.01) & 15.2 (1.01) & 15.2 (1.01) & 15.1 (1.01) \\
+naive    &    - &    - & 15.2 (1.01) & 10.4 (1.48) &  5.9 (2.58) &  4.2 (3.67) \\
+overlap  &    - &    - & 15.2 (1.01) &  9.9 (1.53) &  5.4 (2.82) &  4.0 (3.85) \\
+%mandelbrot & indep    & 35.2 (0.95) & 35.1 (0.95) & 35.2 (0.95) & 35.3 (0.95) \\
+%seq 33.4   & naive    & 35.4 (0.94) & 18.0 (1.86) & 12.1 (2.76) &  9.1 (3.67) \\
+%par 35.2   & overlap  & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67) \\
+\hline
+\hline
+\multicolumn{7}{c}{Raytracer} \\
+\hline
+indep    & 14.7 & 16.9 & 16.9 (0.87) & 16.9 (0.87) & 17.0 (0.87) & 17.0 (0.87) \\
+naive    &    - &    - & 17.5 (0.84) & 13.7 (1.08) & 10.3 (1.44) &  8.9 (1.66) \\
+overlap  &    - &    - & 17.4 (0.85) & 13.0 (1.13) & 10.4 (1.42) &  9.1 (1.63) \\
+%raytracer  & indep    & 26.2 (0.87) & 26.3 (0.86) & 26.1 (0.87) & 26.2 (0.87) \\
+%seq 22.7   & naive    & 25.3 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
+%par 26.5   & overlap  & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
 \end{tabular}
 \end{center}
-%\vspace{-2\baselineskip}
+\caption{Automatic parallelism performance results}
+\label{tab:autopar}
 \end{table}
 
+Table \ref{tab:autopar} presents our auto parallelisation results.
 Each group of three rows reports the results for one benchmark.
 The first column shows the benchmark name,
 the runtime of the program when compiled for sequential execution, and
@@ -2988,11 +3004,8 @@ is so small that it is not noticeable.
 % I will need to test a na\"ive approach, for instance: assuming maximum
 % overlap, or factoring in some fixed cost for each shared variable.
 
-% \section{Related work}
-% \label{sec:related_work}
-
-\section{Related work and conclusion}
-\label{sec:overlap_conc}
+\section{Related work}
+\label{sec:overlap_related}
 
 % Mercury's strong mode system
 % greatly simplifies the parallel execution of logic programs,
@@ -3017,7 +3030,7 @@ The information gathered by semantic analysis in Mercury
 makes it easy to solve most of the problems faced by the
 designers of parallel versions of Prolog and Prolog-like languages.
 These include testing the independence of goals
-in systems that support only independent AND-parallelism
+in systems that support only independent AND-parallelism such as
 and discovering producer-consumer relationships
 in systems that also support dependent AND-parallelism,
 such as \cite{DBLP:journals/tcs/GrasH09}.
