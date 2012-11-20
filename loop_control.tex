@@ -1689,6 +1689,22 @@ to systems that resemble the Mercury implementation,
 but this should apply to the implementation
 of every eager declarative language.
 
+\section{Notes/To use}
+
+Currently, the Mercury runtime system
+often continues execution, on completion of a parallel conjunction,
+on a CPU different from the one being used before that parallel conjunction.
+When our system finds a smattering of parallel conjunctions
+through a mostly sequential program,
+these switches from a CPU with a warm cache to a CPU with a cold cache
+severely degrade the program's performance.
+Right now, for most programs,
+this effect yields a slowdown significantly bigger
+than the speedups yielded by automatic parallelisation.
+Once this defect is fixed, we hope to report significantly better results
+for more and bigger programs.
+
+
 % possible future work: store futures in loop control slots,
 % if their lifetime allows,
 % to replace numfuturesperlevel*numlevels allocations with just one

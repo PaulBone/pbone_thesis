@@ -232,7 +232,7 @@ with its parent processing the first element of the list
 even if (as is typical) the fold predicate generates \code{Acc1} very late.
 This parallel version of \mapfoldl is shown in figure
 \ref{fig:map_foldl_par}.
-A representation of the first three iterations of it 
+A representation of the first three iterations of it
 is shown in figure \ref{fig:mapfoldl-overlap}.
 (This is the kind of computation that
 Reform Prolog \citep{bevemyr:reform} was designed to parallelise.)
@@ -390,7 +390,7 @@ in section \ref{sec:overlap_pragmatic}.
 
 % \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
-% 
+%
 % % XXX Further work.
 % \paul{TODO: This feature is not yet implemented.}
 % If the depth first search later finds
@@ -633,7 +633,7 @@ The average maximum recursion depth in terms of call counts for divide and
 conquer code is therefore:
 
 \begin{equation*}
-AvgMaxDepth = \log_2 
+AvgMaxDepth = \log_2
 	\left(\frac{Calls_{RecCallSites}}{Calls_{ParentCallSite}} + 2\right)
 \end{equation*}
 
@@ -865,7 +865,7 @@ several different recursion counts.
 Consider the example in figure \ref{fig:2_reccalls_4_paths}.
 The example code has been annotated with coverage information (in the
 third column) and with cost information where it is available (fourth
-column). 
+column).
 The conjunction on lines three and four does not contain a recursive call.
 The result of processing it is a list containing a single tuple:
 \code{[(reccalls: 0, coverage: 60\%, cost: 1,000)]}.
@@ -947,7 +947,7 @@ calls, averaging the coverage counts, and adding the costs.
 \begin{center}
 \begin{tabular}{l}
 \code{[   (rc: 0, cvg: 72\%, cost: 11,250),} \\
-\code{   ~(rc: 1, cvg: ~8\%, cost: ~1,250),} \\ 
+\code{   ~(rc: 1, cvg: ~8\%, cost: ~1,250),} \\
 \code{   ~(rc: 1, cvg: 18\%, cost: 10,000),} \\
 \code{   ~(rc: 2, cvg: ~2\%, cost: ~~~~~0),} \\
 \end{tabular}
@@ -960,7 +960,7 @@ Again, we merge the cases with the sane numbers of recursive calls.
 \begin{center}
 \begin{tabular}{l}
 \code{[   (rc: 0, cvg: 72\%, cost: 11,250),} \\
-\code{   ~(rc: 1, cvg: 26\%, cost: ~7,308),} \\ 
+\code{   ~(rc: 1, cvg: 26\%, cost: ~7,308),} \\
 \code{   ~(rc: 2, cvg: ~2\%, cost: ~~~~~0)]} \\
 \end{tabular}
 \end{center}
@@ -1002,7 +1002,7 @@ We have not found it necessary to handle these cases.
 \Lbr{2}{Not recursive}              & 292,893 & 78.07\% & 2,320,270,385 \\
 \Lbr{2}{Simple recursion}           &  48,458 & 12.92\% &   402,430,967 \\
 
-\Lbr{2}{Mutual recursion: totals}  
+\Lbr{2}{Mutual recursion: totals}
                                     &  19,293 &  5.14\% &   198,326,577 \\
 ~~~~&
  \Lbr{1}{2 procs}                   &   4,066 &  1.08\% &    27,099,504 \\
@@ -1061,7 +1061,7 @@ parallelise are still interesting:
 such a procedure may be involved in the production or consumption of a
 variable that is an argument to the procedure;
 understanding this procedure may provide information needed to
-decide if a parallelisation in the procedure's caller is profitable or not. 
+decide if a parallelisation in the procedure's caller is profitable or not.
 
 The profiler represents each procedure in the program's source code as a \PS
 structure (section \ref{sec:backgnd_deep}).
@@ -1223,7 +1223,7 @@ it is annotated with data collected from a profiling run of the Mercury
 compiler.
 Each line of code is shown with deep profiling data to its immediate left
 (the fourth column).
-The first cell in this column shows the per-call cost of the 
+The first cell in this column shows the per-call cost of the
 call site in the parent SCC (the total cost of \foldlthree's call graph).
 The other cells in this column show the per-call costs of \foldlthree's call
 sites;
@@ -1245,7 +1245,7 @@ Using the static coverage data we can see that \foldlthree is called 7,851 times
 throughout the execution of the compiler;
 this includes recursive calls.
 There are 5,709 directly recursive calls (the coverage on line seven).
-Using these figures we can calculate that the average deepest recursion is 
+Using these figures we can calculate that the average deepest recursion is
 2.66 levels.
 % The static cost data provided by the profiler includes the average per-call
 % cost for the procedure as a whole on line one,
@@ -1283,7 +1283,7 @@ This means that the recursion is much deeper,
 with a depth of 2,689 levels.
 Using this value,
 we calculate that the cost of the recursive call at the top-most level of
-the recursion is 
+the recursion is
 3,897,182csc.
 
 \plan{Explain how we gather deep coverage info, and why it fixes the
@@ -1309,7 +1309,7 @@ profile,
 this will make the profile larger, consuming more memory and potentially
 affecting performance.
 It is important to minimise a profiler's impact on performance.
-Poor performance both affects the user's experience and 
+Poor performance both affects the user's experience and
 increases the risk of distorting the program's profile.
 However, we do not have to worry about distortion as of time measured in
 call sequence counts.
@@ -1344,7 +1344,7 @@ profiling for automatic parallelism.
 \C{\textbf{.(ro)data}} &
 \Cbr{\textbf{.bss}} &
 \Cbr{\textbf{Heap growth}} &
-\C{\textbf{Profile size}} \\ 
+\C{\textbf{Profile size}} \\
 \hline
 \hline
 \multicolumn{7}{c}{Without optimisations} \\
@@ -1359,7 +1359,7 @@ deep coverage   & 57.6s & 34,327K & 33,306K & 5,646K & 476,880K & 42,896K \\
 no profiling    & 10.6s & 12,003K &  3,203K & 5,645K & 186,752K & - \\
 no coverage     & 35.9s & 29,599K & 31,218K & 5,646K & 319,184K & 23,465K \\
 static coverage & 37.1s & 33,391K & 32,856K & 6,302K & 319,188K & 24,640K \\
-deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\ 
+deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\
 \end{tabular}
 \end{center}
 \caption{Coverage profiling overheads}
@@ -1367,7 +1367,7 @@ deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\
 \end{table}
 
 \plan{Benchmark coverage profiling.}
-Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling 
+Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling
 the Mercury compiler, including coverage profiling.
 We compiled the Mercury compiler with seven different sets of options for
 profiling.
@@ -1416,7 +1416,7 @@ Optimisations can also improve performance in another way:
 inlining reduces the number of procedures which reduces the amount of
 instrumentation placed in the code by the profiler.
 
-Enabling static coverage profiling does not significantly impact the heap 
+Enabling static coverage profiling does not significantly impact the heap
 usage.
 The \PS structures and their coverage data are stored in the program's
 static data,
@@ -1492,11 +1492,11 @@ parallelism.
 
 \begin{algorithm}
 \begin{algorithmic}[5]
-\Procedure{overlap\_simple}{$SeqTime_q$, $VarUseList_q$, $ProdTimeMap_p$} 
+\Procedure{overlap\_simple}{$SeqTime_q$, $VarUsesList_q$, $ProdTimeMap_p$}
 \State $CurSeqTime \gets 0$
 \State $CurParTime \gets 0$
-\State sort $VarUseList_q$ on $ConsTime_{q, i}$
-\For{$(Var_i, ConsTime_{q, i}) \in VarUseList_q$}
+\State sort $VarUsesList_q$ on $ConsTime_{q, i}$
+\For{$(Var_i, ConsTime_{q, i}) \in VarUsesList_q$}
     \State $Duration_{q, i} \gets ConsTime_{q, i} - CurSeqTime$
     \State $CurSeqTime \gets CurSeqTime + Duration_{q, i}$
     \State $ParWantTime_{q, i} \gets CurParTime + Duration_{q, i}$
@@ -1515,9 +1515,9 @@ parallelism.
 When there are multiple shared variables we must use a different algorithm
 such as the one shown in algorithm~\ref{alg:dep_par_conj_overlap_simple},
 which is a simplified version of the one we use.
-It calculates $ParTime_q$ from its arguments $SeqTime_q$, $VarUseList_q$ and
+It calculates $ParTime_q$ from its arguments $SeqTime_q$, $VarUsesList_q$ and
 $ProdTimeMap_p$.
-$VarUseList_q$ is a list of tuples,
+$VarUsesList_q$ is a list of tuples,
 each tuple is a shared variable and the time at which $q$ would consume the
 variable during sequential execution.
 $ProdTimeMap_p$ is a map (sometimes called a dictionary),
@@ -1537,11 +1537,11 @@ This way each of the $i$ chunks represents the time before $q$ may consume the
 $i$\textsuperscript{th} shared variable,
 these chunks' durations are $Duration_{q, i}$ (line 6).
 The last ($i+1$-\textsuperscript{th}) chunk represents the time after
-producing the last shared variable but before $q$ finishes; 
+producing the last shared variable but before $q$ finishes;
 $q$ may use this time to produce any variables that are not shared with $p$
 but are consumed by code after the parallel conjunction,
 this chunk's duration is $DurationRest$ (line 10).
-Figure~\ref{fig:overlap2-swap} shows the overlap of a parallel conjunction 
+Figure~\ref{fig:overlap2-swap} shows the overlap of a parallel conjunction
 ($p~\&~q$) with two shared variables \var{A} and \var{B}.
 The figure is to scale and the sequential execution times of $p$ and $q$ are
 5 and 4 respectively.
@@ -1591,8 +1591,6 @@ the compiler re-orders right to left dependencies and reports errors for
 cyclic dependencies.
 This is part of Mercury's mode system for both parallel and sequential
 conjunctions.
-
-\paul{XXX: VarUseList or VarUsesList}
 
 \begin{algorithm}[tb]
 \begin{algorithmic}[5]
@@ -1842,7 +1840,7 @@ Figure~\ref{fig:map_foldl_par} shows the best parallelisation of
 When evaluating the speedup for this parallelisation,
 the production time for \var{Acc1} in the first conjunct
 (\code{M(X, Y), F(Y, Acc0, Acc1)})
-is 
+is
 $1,625,050 + 3 = 1,625,053$, and
 the production time for \var{Acc1} in the recursive call (\code{map\_foldl}
 is $1,625,051$.
@@ -1983,12 +1981,12 @@ that accounts for overheads.
         \State $Conj_i \gets Conjs[i]$
         \State $CurSeqTime \gets 0$
         \State $CurParTime \gets (SparkCost + SparkDelay) \times i$
-        \State $VarUsersList_i \gets$ get\_variable\_uses($Conj_i$) 
-        \State sort $VarUseList_i$ by time
+        \State $VarUsersList_i \gets$ get\_variable\_uses($Conj_i$)
+        \State sort $VarUsesList_i$ by time
         \If{$i \neq N$}
             \State $CurParTime \gets CurParTime + SparkCost$
         \EndIf
-        \For{$(Var_{i, j}, Time_{i, j}) \in VarUseList_i$}
+        \For{$(Var_{i, j}, Time_{i, j}) \in VarUsesList_i$}
             \State $Duration_{i, j} \gets Time_{i, j} - CurSeqTime$
             \State $CurSeqTime \gets CurSeqTime + Duration_{i, j}$
             \If{$Conj_i$ produces $Var_{i, j}$}
@@ -2024,7 +2022,7 @@ that accounts for overheads.
 
 Algorithm~\ref{alg:dep_par_conj_overlap_complete} handles each of the
 overheads listed above.
-The first two overheads that this algorithm accounts for are 
+The first two overheads that this algorithm accounts for are
 $SparkCost$ and $SparkDelay$ on lines 9 and 12--13.
 Each conjunct is started by a spark created by the previous conjunct,
 except the first which is executed directly and therefore has no delay.
@@ -2139,7 +2137,7 @@ $(G_1,~G_2)~\&~G_3$; or
 $G_1~\&~G_2~\&~G_3$.
 Our goal is to find the best parallelisation of a conjunction from among
 the various possible parallel conjunctions.
-The solution space is $2^{n-1}$, 
+The solution space is $2^{n-1}$,
 and as the quadratic equation example demonstrates $n$ can be quite large
 even for simple expressions.
 The largest conjunction we have seen is 150 conjuncts long,
@@ -2217,7 +2215,7 @@ and considers whether it is better to add the next middle goal
 to the last existing parallel conjunct ($Extend$) (line 6),
 or to put it into a new parallel conjunct ($AddNew$) (line 7).
 the calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
-estimating their parallel overlap using 
+estimating their parallel overlap using
 algorithm \ref{alg:dep_par_conj_overlap_complete}
 from section \ref{sec:overlap_overlap_alg}.
 If $Extend$ is more profitable than $AddNew$,
@@ -2230,7 +2228,7 @@ for large conjunctions is infeasible.
 Therefore we compromise by using a complete algorithm that can switch into a
 greedy (linear) mode if the solution space is too large.
 Before the algorithm begins we set the global variable $NumEvals$ to zero.
-It counts how many overlap calculations have been performed 
+It counts how many overlap calculations have been performed
 and if this reaches the threshold $PreferLinearEvals$ then our algorithm
 explores only the most profitable of the two alternatives at any choice
 point.
@@ -2474,7 +2472,7 @@ of parallelising the current conjunction many times.
 The profile will give the actual number.
 
 % This complicates how we might handle specialisation in the future.
-% Consider a situation where 
+% Consider a situation where
 % for some ``current'' clique,
 % you want to parallelise the ancestor,
 % but for some other current clique,
@@ -2613,7 +2611,8 @@ such as having to refill the cache after the collector trashes it.
 \section{Performance results}
 \label{sec:overlap_perf}
 
-\status{I will run the benchmarks again and then fixup this section.}
+\status{This is a draft version of this section, I wish to run the
+benchmarks again to see if the strange trend disappears}
 
 % \begin{table*}
 % \begin{center}
@@ -2781,64 +2780,97 @@ overlap  &    - &    - & 17.4 (0.85) & 13.0 (1.13) & 10.4 (1.42) &  9.1 (1.63) \
 
 Table \ref{tab:autopar} presents our auto parallelisation results.
 Each group of three rows reports the results for one benchmark.
-The first column shows the benchmark name,
-the runtime of the program when compiled for sequential execution, and
-its runtime when compiled for parallel execution
-but without enabling auto-parallelisation.
-This shows the overhead of support for parallel execution
-when it does not buy any benefits.
 We auto-parallelised each program three different ways:
 executing expensive goals in parallel
 only when they are independent (``indep'');
 even if they are dependent, regardless of overlap (``naive'');  and
 even if they are dependent, but only if they have good overlap (``overlap'').
+The next two columns give the sequential execution time of each program,
+the first of these is the
+runtime of the program when compiled for sequential execution,
+the second is
+its runtime when compiled for parallel execution
+but without enabling auto-parallelisation.
+This shows the overhead of support for parallel execution
+when it does not buy any benefits.
 The last four columns give the runtime in seconds
 of each of these versions of the program
-on 1, 2, 3 and 4 CPUs,
-with speedups compared to the sequential version.
+using one to four Mercury engines,
+with speedups compared to the sequential version in parentheses.
 
+Compiling for parallelism but not using it
+often yields a slowdown, sometimes as high as 50\% (for matrixmult).
+(We observe such slowdowns for other programs as well.)
+There are two reasons for this.
+The first reason is that the runtime system, and in particular the garbage
+collector must be thread safe.
+We tested how the garbage collector affected parallel performance
+extensively in section \ref{sec:rts_gc}.
+The results shown in table \ref{tab:autopar} were collected using one marker
+thread in the garbage collector.
+The second reason for a slowdown in thread safe grades comes from how we
+compile Mercury code.
+Mercury uses four\footnote{
+    We only use four real registers because these registers must
+    be callee-save registers,
+    and we do not want to over-constrain the C compiler's register
+    allocator.}
+of the x86\_64's six callee-save registers~\citep{sysv-abi} to implement
+four of the Mercury abstract machine registers (section
+\ref{sec:backgnd_merpar}).
+The four abstract machine registers that use real registers are:
+the stack pointer,
+the success instruction pointer (continuation pointer),
+and first two general purpose registers.
 The parallel version of the Mercury system
 needs to use a real machine register
-to point to thread-specific data,
-such as each engine's abstract machine registers.
-On x86s, this leaves only one real register for the Mercury abstract machine,
-so compiling for parallelism but not using it
-yields a slowdown ranging from 5\% on mandelbrot to 25\% on matrixmult.
-(We observe such slowdowns for other programs as well.)
-On one CPU, autoparallelisation gets only this slowdown,
+to point to thread-specific data (section \ref{sec:backgnd_merpar}),
+such as each engine's other abstract machine registers.
+On x86\_64, this means that only the first abstract general purpose register
+uses a real machine register.
+
+The parallelised versions running on one Mercury engine, get
+only this slowdown,
 plus the (small) additional overheads of all the parallel conjunctions
-that cannot get any parallelism.
-% However, when we move to 2, 3 or 4 CPUs,
-% some of the autoparallelised programs do get speedups.
+which cannot get any parallelism.
+However, when we move to two, three or four Engines,
+many of the auto-parallelised programs do get speedups.
 
 The parallelism in the main predicate of matrixmult is independent,
-Overlap parallelises the program the same way as indep,
-so it gets the same speedup.
-The numbers look different for 3 CPUs,
-but all the runs for both versions actually took either 5.2 or 7.5 seconds,
-depending (we think) on which way
-the OS arranged the engines across the two CPU die of the Q6600;
-the indep version just happened to get the 7.5s arrangement fewer times.
-For naive, all the runs just happened to take 5.2 seconds,
-even though naive creates a worse parallelisation than either indep or overlap:
-during the expansion phase we described in section~\ref{sec:overlap_howto},
-it includes an extra goal in the first of the parallel conjuncts;
-this makes the conjunction dependent, which adds some overhead.
-Naive also executes the code that does the matrix multiplication
-in parallel with the goals that create its inputs,
-which also adds overhead without speedup.
-These overheads are too small to affect the results.
+Regardless of which parallel cost calculation we used (naive, indep or
+overlap),
+the same feedback was sent to the compiler.
+All versions of matrixmult where parallelised the same way and performed the
+same.
+This is normal for such a small example with simple parallelism.
+We discuss the much more complicated example of the Mercury compiler
+below.
+In an earlier version of our system,
+the version that was current when we published this
+research~\citep{bone:2011:overlap},
+the naive parallelisation chose a to parallelise matrixmult's main loop
+differently,
+it included an extra goal inside the parallel conjunct thereby creating
+a dependent parallel conjunction even though the parallelisation was
+independent.
+Therefore in \citet{bone:2011:overlap} we reported that naive performed
+worse than either indep or overlap.
 
 In mandelbrot and raytracer, all the parallelism is dependent,
-which is why indep gets no speedup for them.
-For mandelbrot, naive and overlap get speedups
-that are as good as one can reasonably expect:
-$35.2/9.1 = 3.87$ on four CPUs over the one CPU case.
-% (Perfect speedups of 4.0 on 4 CPUs are not attainable in practice
-% due to bottlenecks such as CPU-memory buses and stop-the-world garbage
-% collection.)
+which is why indep gets no speedup for them as it refuses to create
+dependent parallel conjunctions.
+For mandelbrot, overlap gets a speedup
+that is as good as one can reasonably expect: 3.85 on four engines.
+Naive performs worse,
+however the feedback given to the compiler is the same as overlap's,
+there is no reason why it should perform slower as the generated code should
+be the same.
+\paul{XXX: Test them again, see if this reoccurs}
+(Perfect speedups of 4.0 on 4 CPUs are not attainable in practice
+due to bottlenecks such as CPU-memory buses and stop-the-world garbage
+collection.)
 For matrixmult and raytracer, the speedups they get,
-2.12 and 2.42 on four CPUs,
+2.59 and 1.63 on four CPUs,
 also turn out to be pretty good when one takes a closer look.
 
 For matrixmult, the bottleneck is almost certainly CPU-memory bandwidth.
@@ -2846,31 +2878,44 @@ Each step in this program does only one multiply and one add (both integer)
 before creating a new cell on the heap and filling it in.
 On current CPUs, the arithmetic takes much less time than the memory writes,
 and since the new cells are never accessed again, caches do not help,
-which makes it easy to saturate the memory bus, even when using only three CPUs.
+which makes it easy to saturate the memory bus.
 
 The raytracer is very memory-allocation-intensive,
-because it does lots of FP arithmetic,
-and the Mercury backend we are using always boxes floating point numbers,
-so each floating point operation requires
-the creation of a new cell on the heap.
+because it stores intermediate results such as colours and vectors in
+records on the heap.
+Each operation requires the creation of a cell on the heap to store the
+result.
 Because of this, memory bandwidth may also be an issue for it,
-but its bigger problem is GC;
-while GC takes only about 5\% of the runtime when run on one CPU,
-it takes almost 40\% of the runtime when run on four CPUs,
-even though we used four marker threads.
-(For fairness, we used four marker threads
-regardless of how many CPUs the Mercury code used.)
-Given this fact, the best speedup we can hope for is
-$(4 \times 0.6 + 0.4)/(0.6 + 0.4) = 2.8$,
-and we do come pretty close to that.
+but its bigger problem is GC.
+We measured the effects of GC on this program in section \ref{sec:rts_gc}.
 
-GC becomes more expensive with more CPUs
-not only because of increased contention,
-but also because the GC has more work to do:
-with more contexts being spawned, there are more stacks for it to scan.
-We have tested versions of the raytracer in which
+In section \ref{sec:rts_reorder} we introduced a work around for the
+right recursive problem.
+The work around reorders the conjuncts of a parallel conjunction to
+transform right recursion into left recursion.
+However this cannot be done to dependent conjunctions as it would create
+mode incorrect code.
+Therefore the programs that use dependent parallelism,
+raytracer and mandelbrot,
+do not perform well when parallelised
+(either automatically or manually).
+Even if these programs do not reach the context limit,
+the additional stacks created by the large number of contexts they create
+need to be scanned for pointers by the garbage collector.
+This means that parallel versions of these programs put more demands on the
+garbage collector than their sequential equivalents.
+Additionally,
+the more Mercury engines that are used, the more sparks are stolen and
+therefore more contexts are created,
+dependent parallel right recursive code does not scale to large numbers of
+processors well.
+
+We have verified this idea by
+testing versions of the raytracer in which
 each spawned-off goal computed the pixels for several rows, not just one,
-and these versions yield speedups of about 3.3 on four CPUs.
+and these versions yield speedups of about 3.3 on four engines.
+This testing was done on a different machine to the above results so we
+cannot compare the results directly.
 These versions spawn many fewer contexts, thus putting much less load
 on the GC.
 This shows that
@@ -2879,6 +2924,7 @@ are likely to be a promising area for future work.
 % We thus expect that applying throttling
 % (as described in section~\ref{sec:overlap})
 % should significantly improve these results.
+We fix the right recursion problem in chapter \ref{chap:loop_control}.
 
 Most small programs like these benchmarks
 have only one loop that dominates their runtime.
@@ -2888,31 +2934,37 @@ and usually the same way;
 they tend to differ only in how they parallelise code
 that executes much less often (typically only once)
 whose effect is lost in the noise.
-The raw timings show a great deal of variability:
-we have seen two consecutive runs of the same program on the same data
-differ in their runtime by as much as 15\%.
+The raw timings show a great deal of variability for dependent parallelism:
+Some of this variability remains even after filtering and averaging.
+However, the raw times showed significant variability,
+and this process does not entirely eliminate that variability.
+
+% we have seen two consecutive runs of the same program on the same data
+% differ in their runtime by as much as 15\%.
 % (One possible cause of this is differences
 % in whether the OS puts frequently-communicating engines
 % on cores on the same die, or cores on two different dies.)
 % As the table shows,
-Some of this variability remains even after filtering and averaging.
+% Some of this variability remains even after filtering and averaging.
 % However, the raw times showed significant variability,
 % and this process does not entirely eliminate that variability.
 
 To see the difference between naive and overlap,
 we need to look at larger programs.
 Our standard large test program is the Mercury compiler, which contains
-53 conjunctions with two or more expensive goals.
-Of these, 52 are dependent,
-and only 31 have an overlap
-that leads to a predicted local speedup of more than 1\%,
-our default threshold.
+69 conjunctions with two or more expensive goals
+(goals with a per call cost of at least 10,000csc).
+Of these, 66 are dependent,
+and only 34 have an overlap
+that leads to a predicted local speedup of more than 2\%.
 Our algorithms can thus prevent
-the unproductive parallelisation of $53-31=22$ of these conjunctions.
+the unproductive parallelisation of $69-34=35$ (51\%) of these conjunctions.
 Unfortunately, programs that are large and complex enough
 to show a performance effect from this saving
 also tend to have large components
 that cannot be profitably parallelised with existing techniques,
+and incur the overheads of thread safety in the garbage collector and cannot
+use an extra real CPU register.
 which means that (due to Amdahl's law)
 our autoparallelisation system cannot yield overall speedups for them yet.
 
@@ -2924,85 +2976,6 @@ The extra time taken by the Mercury compiler
 when it follows the recommendations in feedback files
 is so small that it is not noticeable.
 
-% Currently, the Mercury runtime system
-% often continues execution, on completion of a parallel conjunction,
-% on a CPU different from the one being used before that parallel conjunction.
-% When our system finds a smattering of parallel conjunctions
-% through a mostly sequential program,
-% these switches from a CPU with a warm cache to a CPU with a cold cache
-% severely degrade the program's performance.
-% Right now, for most programs,
-% this effect yields a slowdown significantly bigger
-% than the speedups yielded by automatic parallelisation.
-% Once this defect is fixed, we hope to report significantly better results
-% for more and bigger programs.
-
-% \footnote{
-% For referees
-% who read this paper together
-% with the submission by Wang and Somogyi,
-% the version of the raytracer used in that paper
-% had manual granularity control;
-% the version we are using in this paper is the original version of the program,
-% which was not written for parallelism and has no manual granularity control.}
-
-% \begin{itemize}
-% \item
-% ICFP2000 --- Raytracer
-% \item
-% Mandelbrot Image generator.
-% \item
-% Variations on the above two programs including varying degrees
-% of dependence and a \mapfoldl version.
-% \item
-% ICFP2001 --- SGML optimizer
-% \item
-% Compiler --- We do not expect this to speed up.
-% However it will be useful to ensure that it does not slow down too much.
-% \item
-% pic --- a NuFib benchmark by ported by Peter
-% \item
-% SWRL --- An inference engine provided by Mission Critical.
-% % The mission critical benchmark is at:
-% %
-% %     taura:/home/taura/pbone/mcdemo/swrl-snapshot.tar.gz
-% %
-% % SWRL is an inference engine.  Building and running it is covered by:
-% %
-% %     taura:/home/taura/pbone/mcdemo/swrl.txt
-% %
-% % These files are owned by a new group, mcdemo, since they are MC's
-% % closed source project.  Peter Ross is easy going and has let us use
-% % them without any formal non-disclosure agreement.  That said, I am
-% % respecting this IP as much as I would anything where I had signed a
-% % formal NDA.
-% \end{itemize}
-
-% Two programs, a raytracer and a mandelbrot image generator showed
-% strong speedups, see figure \ref{tab:results}.
-% This confirms that our analysis is correctly identifying parallelism
-% available within the main loops of these programs.
-% The two programs have a similar structure, they both have a loop with
-% an accumulator that contains the rows of the images already rendered.
-% We believe that a lot of dependent parallelism has this form as
-% programmers in declarative languages are trained to use accumulators
-% in their loops to ensure that the loop is tail-recursive.
-% The mandelbrot program's loop uses \mapfoldl example above.
-% \paul{Should I include a back-reference for the mapfoldl figure?}
-%
-% We used different inputs for the profiling and benchmarking
-% executions to ensure that the profile analysis would not over-fit the
-% parallelisation to a particular input.
-
-% Other programs tested included the Mercury compiler and pic, a program
-% ported to Mercury from the nofib~\cite{nofib} benchmark suite.
-% Our analysis found exploitable parallelism within these benchmarks,
-% however,
-% it appears to be too fine-grained for Mercury's runtime to handle.
-% We hope to correct these problems fix before the camera ready deadline.
-
-% I will need to test a na\"ive approach, for instance: assuming maximum
-% overlap, or factoring in some fixed cost for each shared variable.
 
 \section{Related work}
 \label{sec:overlap_related}
