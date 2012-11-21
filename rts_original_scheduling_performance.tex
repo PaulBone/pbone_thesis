@@ -27,7 +27,7 @@
 \label{fig:map_right_and_left_recursive}
 \end{figure}
 
-In section \ref{sec:gc} we ran our benchmarks with a recent version of the
+In section \ref{sec:rts_gc} we ran our benchmarks with a recent version of the
 runtime system.
 In the rest of this chapter we describe many of the improvements to the
 runtime system that improved parallel performance.
@@ -73,7 +73,7 @@ and therefore tend to write right recursive code.
 \plan{Show performance figures.}
 Table \ref{tab:right} shows average elapsed time in seconds for the
 mandelbrot\_lowalloc program from 20 test runs.
-We use the mandelbrot\_lowalloc program from section \ref{sec:gc}.
+We use the mandelbrot\_lowalloc program from section \ref{sec:rts_gc}.
 Using this program we can easily observe the
 speedup due to parallelism in Mercury without the effects of the garbage
 collector.

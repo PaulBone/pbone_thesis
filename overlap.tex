@@ -2645,19 +2645,19 @@ benchmarks again to see if the strange trend disappears}
 % and CPU usage (as integral if possible, as well as peack CPU usage).
 
 We tested our system on three benchmark programs:
-the raytracer program and a modified version of the mandelbrot program,
-both from chapter \ref{chap:rts},
-as well as a matrix multiplication program.
-Matrixmult has abundant independent AND-parallelism.
-Mandelbrot was modified, and now it uses dependent AND-parallelism
-via the actual \code{map\_foldl} predicate from figure~\ref{fig:map_foldl}
-to iterate over rows of pixels.
+the first two are from chapter \ref{chap:rts},
+they are the raytracer and a modified version of the mandelbrot program,
+the third is a matrix multiplication program.
+Mandelbrot's modifications make it use dependent AND-parallelism
+via the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
+\mapfoldl is used to iterate over the rows of pixels in the image.
 Raytracer does not use \code{map\_foldl},
 but does use a similar code structure to perform a similar task.
 This similar structure is not an accident:
 \emph{many} predicates use this kind of code structure,
 partly because programmers in declarative languages
 often use accumulators to make their loops tail recursive.
+Matrixmult has abundant independent AND-parallelism.
 % All three programs do lots of floating point arithmetic,
 % and the mandelbrot program does a lot of integer arithmetic as well.
 % The Mercury backend we are using always boxes floating point numbers,
@@ -2677,7 +2677,7 @@ the system is described on page \pageref{cabsav}.
 % taura
 % a Dell Optiplex 755 PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
 % running Linux 2.6.31.
-Each test was run 40 times.
+Each test was executed 40 times.
 
 % \begin{table*}[h]
 % \begin{center}
@@ -2742,15 +2742,14 @@ Each test was run 40 times.
 \C{\textbf{1}} & \C{\textbf{2}} & \C{\textbf{3}} & \C{\textbf{4}} \\
 \hline
 \hline
-\multicolumn{7}{c}{Matrix multiplication} \\
+\multicolumn{7}{c}{Raytracer} \\
 \hline
-indep    & 5.10 & 7.69 & 7.69 (1.00) & 3.87 (1.99) & 2.60 (2.96) & 1.97 (3.90) \\
-naive    &    - &    - & 7.69 (1.00) & 3.87 (1.98) & 2.60 (2.96) & 1.97 (3.90) \\
-overlap  &    - &    - & 7.69 (1.00) & 3.87 (1.99) & 2.60 (2.96) & 1.97 (3.90) \\
-%matrixmult & indep    & 14.6 (0.75) &  7.5 (1.47) &  7.0 (1.66) &  5.2 (2.12) \\
-%seq 11.0   & naive    & 14.6 (0.75) &  7.6 (1.45) &  5.2 (2.12) &  5.2 (2.12) \\
-%par 14.6   & overlap  & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12) \\
-%\hhline{|-|-||-|-|-|-|-|}
+indep    & 14.7 & 16.9 & 16.9 (1.00) & 16.9 (1.00) & 17.0 (0.99) & 17.0 (1.00) \\
+naive    &    - &    - & 17.5 (0.97) & 13.4 (1.26) & 10.4 (1.62) &  8.9 (1.90) \\
+overlap  &    - &    - & 17.4 (0.97) & 13.2 (1.28) & 10.5 (1.61) &  9.0 (1.88) \\
+%raytracer  & indep    & 26.2 (0.87) & 26.3 (0.86) & 26.1 (0.87) & 26.2 (0.87) \\
+%seq 22.7   & naive    & 25.3 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
+%par 26.5   & overlap  & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
 \hline
 \hline
 \multicolumn{7}{c}{Right recursive dependent Mandelbrot} \\
@@ -2763,26 +2762,28 @@ overlap  &    - &    - & 15.2 (1.01) &  9.8 (1.56) &  5.7 (2.66) &  4.0 (3.85) \
 %par 35.2   & overlap  & 35.6 (0.94) & 17.9 (1.87) & 12.1 (2.76) &  9.1 (3.67) \\
 \hline
 \hline
-\multicolumn{7}{c}{Raytracer} \\
+\multicolumn{7}{c}{Matrix multiplication} \\
 \hline
-indep    & 14.7 & 16.9 & 16.9 (1.00) & 16.9 (1.00) & 17.0 (0.99) & 17.0 (1.00) \\
-naive    &    - &    - & 17.5 (0.97) & 13.4 (1.26) & 10.4 (1.62) &  8.9 (1.90) \\
-overlap  &    - &    - & 17.4 (0.97) & 13.2 (1.28) & 10.5 (1.61) &  9.0 (1.88) \\
-%raytracer  & indep    & 26.2 (0.87) & 26.3 (0.86) & 26.1 (0.87) & 26.2 (0.87) \\
-%seq 22.7   & naive    & 25.3 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
-%par 26.5   & overlap  & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
+indep    & 5.10 & 7.69 & 7.69 (1.00) & 3.87 (1.99) & 2.60 (2.96) & 1.97 (3.90) \\
+naive    &    - &    - & 7.69 (1.00) & 3.87 (1.98) & 2.60 (2.96) & 1.97 (3.90) \\
+overlap  &    - &    - & 7.69 (1.00) & 3.87 (1.99) & 2.60 (2.96) & 1.97 (3.90) \\
+%matrixmult & indep    & 14.6 (0.75) &  7.5 (1.47) &  7.0 (1.66) &  5.2 (2.12) \\
+%seq 11.0   & naive    & 14.6 (0.75) &  7.6 (1.45) &  5.2 (2.12) &  5.2 (2.12) \\
+%par 14.6   & overlap  & 14.6 (0.75) &  7.5 (1.47) &  6.2 (1.83) &  5.2 (2.12) \\
+%\hhline{|-|-||-|-|-|-|-|}
 \end{tabular}
 \end{center}
 \caption{Automatic parallelism performance results}
 \label{tab:autopar}
 \end{table}
 
-Table \ref{tab:autopar} presents our auto parallelisation results.
+Table \ref{tab:autopar} presents these results.
 Each group of three rows reports the results for one benchmark.
 We auto-parallelised each program three different ways:
 executing expensive goals in parallel
 only when they are independent (``indep'');
-even if they are dependent, regardless of overlap (``naive'');  and
+even if they are dependent, regardless of how dependencies affect the
+estimiated available parallelism (``naive'');  and
 even if they are dependent, but only if they have good overlap (``overlap'').
 The next two columns give the sequential execution time of each program,
 the first of these is the
@@ -2791,7 +2792,7 @@ the second is
 its runtime when compiled for parallel execution
 but without enabling auto-parallelisation.
 This shows the overhead of support for parallel execution
-when it does not buy any benefits.
+when it does not have any benefits.
 The last four columns give the runtime in seconds
 of each of these versions of the program
 using one to four Mercury engines,
@@ -2810,8 +2811,8 @@ thread in the garbage collector.
 The second reason for a slowdown in thread safe grades comes from how we
 compile Mercury code.
 Mercury uses four\footnote{
-    We only use four real registers because these registers must
-    be callee-save registers,
+    We only use four real registers because we may use only 
+    callee-save registers,
     and we do not want to over-constrain the C compiler's register
     allocator.}
 of the x86\_64's six callee-save registers~\citep{sysv-abi} to implement
@@ -2820,73 +2821,42 @@ four of the Mercury abstract machine registers (section
 The four abstract machine registers that use real registers are:
 the stack pointer,
 the success instruction pointer (continuation pointer),
-and first two general purpose registers.
+and the first two general purpose registers.
 The parallel version of the Mercury system
 needs to use a real machine register
-to point to thread-specific data (section \ref{sec:backgnd_merpar}),
-such as each engine's other abstract machine registers.
+to point to thread-specific data,
+such as each engine's other abstract machine registers
+(section \ref{sec:backgnd_merpar}).
 On x86\_64, this means that only the first abstract general purpose register
-uses a real machine register.
+is implemented using a real machine register.
 
-The parallelised versions running on one Mercury engine, get
+The parallelised versions running on one Mercury engine get
 only this slowdown,
 plus the (small) additional overheads of all the parallel conjunctions
 which cannot get any parallelism.
-However, when we move to two, three or four Engines,
+However, when we move to two, three or four engines,
 many of the auto-parallelised programs do get speedups.
-
-The parallelism in the main predicate of matrixmult is independent,
-Regardless of which parallel cost calculation we used (naive, indep or
-overlap),
-the same feedback was sent to the compiler.
-All versions of matrixmult where parallelised the same way and performed the
-same.
-This is normal for such a small example with simple parallelism.
-We discuss the much more complicated example of the Mercury compiler
-below.
-In an earlier version of our system,
-the version that was current when we published this
-research~\citep{bone:2011:overlap},
-the naive parallelisation chose a to parallelise matrixmult's main loop
-differently,
-it included an extra goal inside the parallel conjunct thereby creating
-a dependent parallel conjunction even though the parallelisation was
-independent.
-Therefore in \citet{bone:2011:overlap} we reported that naive performed
-worse than either indep or overlap.
 
 In mandelbrot and raytracer, all the parallelism is dependent,
 which is why indep gets no speedup for them as it refuses to create
 dependent parallel conjunctions.
+Raytracer achieves a speedups of 1.90 and 1.89 with four Mercury engines.
+We might expect better results with four engines, but as we discussed in
+section \ref{sec:rts_gc} the raytracer's performance is limited due to how
+much time it spends in the garbage collector.
 For mandelbrot, overlap gets a speedup
 that is as good as one can reasonably expect: 3.85 on four engines.
-Naive performs worse,
-however the feedback given to the compiler is the same as overlap's,
-there is no reason why it should perform slower as the generated code should
-be the same.
-\paul{XXX: Test them again, see if this reoccurs}
-(Perfect speedups of 4.0 on 4 CPUs are not attainable in practice
-due to bottlenecks such as CPU-memory buses and stop-the-world garbage
-collection.)
-For matrixmult and raytracer, the speedups they get,
-2.59 and 1.63 on four CPUs,
-also turn out to be pretty good when one takes a closer look.
-
-For matrixmult, the bottleneck is almost certainly CPU-memory bandwidth.
-Each step in this program does only one multiply and one add (both integer)
-before creating a new cell on the heap and filling it in.
-On current CPUs, the arithmetic takes much less time than the memory writes,
-and since the new cells are never accessed again, caches do not help,
-which makes it easy to saturate the memory bus.
-
-The raytracer is very memory-allocation-intensive,
-because it stores intermediate results such as colours and vectors in
-records on the heap.
-Each operation requires the creation of a cell on the heap to store the
-result.
-Because of this, memory bandwidth may also be an issue for it,
-but its bigger problem is GC.
-We measured the effects of GC on this program in section \ref{sec:rts_gc}.
+At first glance there appears to be a difference between naive and overlap.
+However the feedback data given to the compiler is the same in both cases,
+so the generated code will be the same.
+Any apparent difference is due to the high degree of variability in these
+tests' results,
+which is why we executed each benchmark 40 times.
+This variability does not exist in the indep case,
+so we believe it comes from how dependencies in parallel conjunctions are
+handled.
+Both the implementation of futures,
+and the right recursive problem is probably affecting the performance.
 
 In section \ref{sec:rts_reorder} we introduced a work around for the
 right recursive problem.
@@ -2894,27 +2864,22 @@ The work around reorders the conjuncts of a parallel conjunction to
 transform right recursion into left recursion.
 However this cannot be done to dependent conjunctions as it would create
 mode incorrect code.
-Therefore the programs that use dependent parallelism,
-raytracer and mandelbrot,
-do not perform well when parallelised
-(either automatically or manually).
-Even if these programs do not reach the context limit,
-the additional stacks created by the large number of contexts they create
-need to be scanned for pointers by the garbage collector.
+Even if raytracer and mandelbrot do not reach the context limit,
+the garbage collector needs to scan the large number of stacks created by
+right recursion.
 This means that parallel versions of these programs put more demands on the
 garbage collector than their sequential equivalents.
 Additionally,
 the more Mercury engines that are used, the more sparks are stolen and
-therefore more contexts are created,
-dependent parallel right recursive code does not scale to large numbers of
+therefore more contexts are created.
+Dependent parallel right recursive code will not scale to large numbers of
 processors well.
 
 We have verified this idea by
 testing versions of the raytracer in which
 each spawned-off goal computed the pixels for several rows, not just one,
-and these versions yield speedups of about 3.3 on four engines.
-This testing was done on a different machine to the above results so we
-cannot compare the results directly.
+and these versions yield better speedups.
+\paul{Maybe re-test this so we can compare it}
 These versions spawn many fewer contexts, thus putting much less load
 on the GC.
 This shows that
@@ -2925,6 +2890,42 @@ are likely to be a promising area for future work.
 % should significantly improve these results.
 We fix the right recursion problem in chapter \ref{chap:loop_control}.
 
+The parallelism in the main predicate of matrixmult is independent,
+Regardless of which parallel cost calculation we used (naive, indep or
+overlap),
+the same feedback was sent to the compiler.
+All versions of matrixmult where parallelised the same way and performed the
+same.
+This is normal for such a small example with simple parallelism.
+(We compare this to a more complicated example of the Mercury compiler
+below.)
+In an earlier version of our system,
+the version that was current when we published this
+research \citep{bone:2011:overlap},
+the naive strategy chose to parallelise matrixmult's main loop
+differently,
+it included an extra goal inside the parallel conjunct thereby creating
+a dependent parallel conjunction even though the parallelisation was
+independent.
+Therefore in \citet{bone:2011:overlap} we reported that naive performed
+worse than either indep or overlap.
+
+% For matrixmult, the bottleneck is almost certainly CPU-memory bandwidth.
+% Each step in this program does only one multiply and one add (both integer)
+% before creating a new cell on the heap and filling it in.
+% On current CPUs, the arithmetic takes much less time than the memory writes,
+% and since the new cells are never accessed again, caches do not help,
+% which makes it easy to saturate the memory bus.
+
+%The raytracer is very memory-allocation-intensive,
+%because it stores intermediate values, such as colours and vectors, in
+%records on the heap.
+%Each operation requires the creation of a cell on the heap to store the
+%result.
+%Because of this, memory bandwidth may also be an issue for it,
+%but its bigger problem is GC.
+%We measured the effects of GC on this program in section \ref{sec:rts_gc}.
+
 Most small programs like these benchmarks
 have only one loop that dominates their runtime.
 In all three of these benchmarks, and in many others,
@@ -2933,10 +2934,10 @@ and usually the same way;
 they tend to differ only in how they parallelise code
 that executes much less often (typically only once)
 whose effect is lost in the noise.
-The raw timings show a great deal of variability for dependent parallelism:
-Some of this variability remains even after filtering and averaging.
-However, the raw times showed significant variability,
-and this process does not entirely eliminate that variability.
+%The raw timings show a great deal of variability for dependent parallelism:
+%Some of this variability remains even after filtering and averaging.
+%However, the raw times showed significant variability,
+%and this process does not entirely eliminate that variability.
 
 % we have seen two consecutive runs of the same program on the same data
 % differ in their runtime by as much as 15\%.
@@ -2962,8 +2963,8 @@ Unfortunately, programs that are large and complex enough
 to show a performance effect from this saving
 also tend to have large components
 that cannot be profitably parallelised with existing techniques,
-and incur the overheads of thread safety in the garbage collector and cannot
-use an extra real CPU register.
+%and incur the overheads of thread safety in the garbage collector and cannot
+%use an extra real CPU register.
 which means that (due to Amdahl's law)
 our autoparallelisation system cannot yield overall speedups for them yet.
 
