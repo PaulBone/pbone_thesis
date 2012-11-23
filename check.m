@@ -107,7 +107,9 @@ check_tokens(Tokens, Errors) :-
     Words = words(Tokens),
     WordErrors = cord_concat(cord.map(check_word, Words)),
     check_ngrams(Tokens, NGramErrors),
-    Errors = WordErrors ++ NGramErrors.
+    Macros = macros(Tokens),
+    MacroErrors = cord_concat(cord.map(check_macro, Macros)),
+    Errors = WordErrors ++ NGramErrors ++ MacroErrors.
 
 :- func check_word(word) = cord(prose_error).
 
@@ -174,6 +176,9 @@ check_bad_words(Word, Locn, BadWord, Message, MaybeError) :-
     ;
         MaybeError = no
     ).
+
+% Checking of ngrams
+%------------------------------------------------------------------------%
 
 :- pred check_ngrams(cord(token)::in, cord(prose_error)::out) is det.
 
@@ -275,6 +280,32 @@ stri_compare(StrA, StrB, Index) :-
         not index(StrA, Index, _),
         not index(StrB, Index, _)
     ).
+
+% Checking of macros
+%------------------------------------------------------------------------%
+
+:- func check_macro(macro_or_environment) = cord(prose_error).
+
+check_macro(macro(Name, Args, Locn)) = Errors :-
+    some [!Errors] (
+        !:Errors = empty,
+        ( Name = "cite" ->
+            record_error(Locn, "Bad citation, use \\citep or \\citet", !Errors)
+        ;
+            true
+        ),
+        ArgErrors = cord_concat(cord.map(check_macro_arg, Args)),
+        Errors = !.Errors ++ ArgErrors
+    ).
+check_macro(environment(_Name, Args, Macros, _Locn)) =
+        ArgErrors ++ MacrosErrors :-
+    ArgErrors = cord_concat(cord.map(check_macro_arg, Args)),
+    MacrosErrors = cord_concat(cord.map(check_macro, Macros)). 
+
+:- func check_macro_arg(macro_arg(macro_or_environment)) = cord(prose_error).
+
+check_macro_arg(macro_arg(Contents, _Locn)) =
+    cord_concat(cord.map(check_macro, Contents)).
 
 % Data
 %------------------------------------------------------------------------%
@@ -390,7 +421,7 @@ tokens_to_consecutive_words(Tokens, Words, !IDs) :-
     cord(cord(word))::in, cord(cord(word))::out,
     counter::in, counter::out) is det.
 
-token_to_consecutive_words(word(Word, Locn), !LastGroup, !Groups, !IDs) :- 
+token_to_consecutive_words(word(Word, Locn), !LastGroup, !Groups, !IDs) :-
     !:LastGroup = snoc(!.LastGroup, word(Word, Locn)).
 token_to_consecutive_words(punct(_, _), !LastGroup, !Groups, !IDs) :-
     end_group(!LastGroup, !Groups).
@@ -458,7 +489,7 @@ token_to_consecutive_words(environment(Name, _Args, Tokens, _), !LastGroup,
     ),
     maybe_end_group(BreaksFlow, !LastGroup, !Groups).
 
-:- pred insert_noun(string::in, locn::in, cord(word)::in, cord(word)::out, 
+:- pred insert_noun(string::in, locn::in, cord(word)::in, cord(word)::out,
     counter::in, counter::out) is det.
 
 insert_noun(Name, Locn, !LastGroup, !IDs) :-
@@ -466,8 +497,8 @@ insert_noun(Name, Locn, !LastGroup, !IDs) :-
     !:LastGroup = snoc(!.LastGroup,
         word(format("%s_%d", [s(Name), i(Num)]), Locn)).
 
-:- pred macro_arg_to_consecutive_words(macro_breaks_flow::in, macro_arg::in,
-    cord(word)::in, cord(word)::out,
+:- pred macro_arg_to_consecutive_words(macro_breaks_flow::in,
+    macro_arg(token)::in, cord(word)::in, cord(word)::out,
     cord(cord(word))::in, cord(cord(word))::out, counter::in, counter::out)
     is det.
 

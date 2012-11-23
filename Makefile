@@ -62,7 +62,8 @@ all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling checking
 wc :
 	wc -w $(TEX_PROSE)
 
-thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) bib.bib
+thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) \
+        bib.bib checking
 	latex thesis
 	bibtex thesis
 	latex thesis

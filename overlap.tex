@@ -3006,7 +3006,7 @@ These include testing the independence of goals
 in systems that support only independent AND-parallelism such as
 and discovering producer-consumer relationships
 in systems that also support dependent AND-parallelism,
-such as \cite{DBLP:journals/tcs/GrasH09}.
+such as \citet{DBLP:journals/tcs/GrasH09}.
 They also make it possible to \emph{avoid} having to solve some tough problems,
 the main example being how to execute nondeterministic conjuncts in parallel
 without excessive overhead.
@@ -3032,13 +3032,13 @@ Almost all previous work on automatic parallelisation
 has focused on granularity control:
 parallelising only computations that are expensive enough
 to make parallel execution
-worthwhile \cite{harris_07_feedback_imp_par,lopez96:distance_granularity},
+worthwhile \citep{harris_07_feedback_imp_par,lopez96:distance_granularity},
 and properly accounting for the overheads
-of parallelism itself \cite{shen_98_granularity-control}.
+of parallelism itself \citep{shen_98_granularity-control}.
 Most of the rest has tried to find opportunities
 to exploit independent AND-parallelism
 during the execution of otherwise-dependent conjunctions
-\cite{DBLP:journals/jlp/MuthukumarBBH99,DBLP:conf/lopstr/CasasCH07}.
+\citep{DBLP:journals/jlp/MuthukumarBBH99,DBLP:conf/lopstr/CasasCH07}.
 
 Our experience with our feedback tool shows that
 for Mercury programs, this is far from enough.
@@ -3058,7 +3058,7 @@ We know of only three attempts to estimate the overlap
 between parallel computations.
 One was in the context of speculative execution in imperative programs.
 Given two successive blocks of instructions,
-\cite{von_Praun:2007:implicit_parallelism_with_ordered_transactions}
+\citet{von_Praun:2007:implicit_parallelism_with_ordered_transactions}
 % estimates the likely speedup
 % from executing the two blocks in parallel
 % by using the difference between the addresses of two instructions
@@ -3071,7 +3071,7 @@ but in the presence of call instructions
 this heuristic will not be at all accurate.
 
 Another attempt was a previous auto-parallelisation project for
-Mercury \cite{tannier:2007:parallel_mercury}.
+Mercury \citep{tannier:2007:parallel_mercury}.
 % This did not use profiling data,
 % and instead used the number of shared variables between conjuncts
 This used the number of shared variables between conjuncts
@@ -3083,7 +3083,7 @@ we have found this heuristic too inaccurate to be useful.
 
 The most closely related work to ours
 generated parallelism annotations for the ACE and/or-parallel system
-\cite{Pontelli97automaticcompile-time}.
+\citep{Pontelli97automaticcompile-time}.
 This system used, much as we do,
 estimates of the costs of calls
 and of the times at which variables are produced and consumed.

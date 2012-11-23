@@ -32,12 +32,12 @@
             )
     ;       macro(
                 tm_name     :: string,
-                tm_args     :: cord(macro_arg),
+                tm_args     :: cord(macro_arg(token)),
                 tm_locn     :: locn
             )
     ;       environment(
                 te_name     :: string,
-                te_args     :: cord(macro_arg),
+                te_args     :: cord(macro_arg(token)),
                 te_tokens   :: cord(token),
                 te_locn     :: locn
             ).
@@ -48,9 +48,22 @@
                 fw_locn     :: locn
             ).
 
-:- type macro_arg
+:- type macro_or_environment
+    --->    macro(
+                m_name      :: string,
+                m_args      :: cord(macro_arg(macro_or_environment)),
+                m_locn      :: locn
+            )
+    ;       environment(
+                e_name      :: string,
+                e_args      :: cord(macro_arg(macro_or_environment)),
+                e_contents  :: cord(macro_or_environment),
+                e_locn      :: locn
+            ).
+
+:- type macro_arg(T)
     --->    macro_arg(
-                ma_tokens   :: cord(token),
+                ma_contents :: cord(T),
                 ma_locn     :: locn
             ).
 
@@ -59,6 +72,8 @@
 :- pred token_locn(token::in, locn::out) is det.
 
 :- func words(cord(token)) = cord(word).
+
+:- func macros(cord(token)) = cord(macro_or_environment).
 
 :- pred parse_texfile(string::in, src::in, cord(token)::out,
     ps::in, ps::out) is semidet.
@@ -115,9 +130,32 @@ token_words(environment(Ident, _, Tokens, _)) = Words :-
         Words = cord.empty
     ).
 
-:- func macro_arg_words(macro_arg) = cord(word).
+:- func macro_arg_words(macro_arg(token)) = cord(word).
 
 macro_arg_words(macro_arg(Tokens, _)) = words(Tokens).
+
+%----------------------------------------------------------------------------%
+
+macros(Tokens) = cord_concat(map(token_macros, Tokens)).
+
+:- func token_macros(token) = cord(macro_or_environment).
+
+token_macros(word(_, _)) = cord.empty.
+token_macros(punct(_, _)) = cord.empty.
+token_macros(macro(Ident, Args0, Locn)) =
+        cord.singleton(macro(Ident, Args, Locn)) :-
+    Args = map(macro_arg_tokens_to_macro_arg_macros, Args0).
+token_macros(environment(Ident, Args0, Tokens, Locn)) =
+        cord.singleton(environment(Ident, Args, Macros, Locn)) :-
+    Args = map(macro_arg_tokens_to_macro_arg_macros, Args0),
+    Macros = macros(Tokens).
+
+:- func macro_arg_tokens_to_macro_arg_macros(macro_arg(token)) = 
+    macro_arg(macro_or_environment).
+
+macro_arg_tokens_to_macro_arg_macros(macro_arg(Tokens, Locn)) =
+        macro_arg(Macros, Locn) :-
+    Macros = macros(Tokens).
 
 %----------------------------------------------------------------------------%
 
@@ -294,7 +332,7 @@ parse_punct(Lines, File, Src, Token, !PS) :-
     Token = punct(string.from_char_list(Chars), Locn).
 
 :- pred parse_macro_arg(line_numbers::in, string::in, src::in,
-    macro_arg::out, ps::in, ps::out) is semidet.
+    macro_arg(token)::out, ps::in, ps::out) is semidet.
 
 parse_macro_arg(Lines, File, Src, Arg, !PS) :-
     offset_to_locn(Lines, File, Src, Locn, !.PS),
@@ -415,8 +453,8 @@ parse_token_to_environments(environment(Name, Args, Tokens0, Locn),
         environment(Name, Args, Tokens, Locn)) :-
     detect_environments(Tokens0, Tokens).
 
-:- pred is_start_environment(token::in, string::out, cord(macro_arg)::out,
-    locn::out) is semidet.
+:- pred is_start_environment(token::in, string::out,
+    cord(macro_arg(token))::out, locn::out) is semidet.
 
 is_start_environment(macro(MName, Args0, Locn), Name, Args, Locn) :-
     ( MName = "begin" ->
@@ -469,7 +507,7 @@ token_is_end_env(Name, Token) :-
         )
     ).
 
-:- pred arg_to_string(macro_arg::in, string::out) is semidet.
+:- pred arg_to_string(macro_arg(token)::in, string::out) is semidet.
 
 arg_to_string(macro_arg(Tokens, _), String) :-
     cord.head_tail(Tokens, word(String, _), _).
@@ -565,13 +603,13 @@ pretty_token(environment(Name, Args, Tokens, _)) = Doc :-
         str("\\end{"), str(Name), str("}"), hard_nl],
     Doc = group(Docs).
 
-:- func pretty_macro_args(cord(macro_arg)) = docs.
+:- func pretty_macro_args(cord(macro_arg(token))) = docs.
 
 pretty_macro_args(Args) = Docs :-
     ArgsDocs0 = map(pretty_macro_arg, list(Args)),
     Docs = intersperse(nl, ArgsDocs0).
 
-:- func pretty_macro_arg(macro_arg) = doc.
+:- func pretty_macro_arg(macro_arg(token)) = doc.
 
 pretty_macro_arg(macro_arg(Tokens, _)) = Doc :-
     TokenDocs = pretty_tokens(Tokens),

@@ -113,20 +113,20 @@ the algorithms they use to generate estimates of both costs and benefits.
 % it is to spawn off the computation as a new task.
 % We want to use profiling data from the parallel runtime to anwser this.
 
-As researchers working on the parallel implementation of Mercury~\cite{mercury_jlp},
+As researchers working on the parallel implementation of Mercury \citep{mercury_jlp},
 a pure logic programming language designed for
 the creation of large, reliable and efficient application programs,
 we fall into all three of the above categories.
 We have long needed a tool
 to help us understand the behavior of parallel Mercury programs,
 of the parallel Mercury runtime system
-and of our autoparallelization tool \cite{bon-som-tplp-11},
+and of our autoparallelization tool \citep{bone:2011:overlap},
 but the cost of building such a tool seemed daunting.
 We therefore looked around for alternative approaches.
 The one we selected was to adapt to Mercury
 an existing profiler for another parallel system.
 
-The profiler we chose was \tscope~\cite{threadscope},
+The profiler we chose was \tscope \citep{threadscope},
 a profiler built by the team behind the Glasgow Haskell Compiler (GHC)
 for their parallel implementation of Haskell.
 We chose \tscope because
@@ -136,9 +136,9 @@ because it was \emph{designed} to be extensible,
 and, like many visualization tools, it is extremely useful
 for finding subtle issues that cause significant problems.
 
-% This paper presents the adaption of \tscope~\cite{threadscope}
+% This paper presents the adaption of \tscope \citep{threadscope}
 % --- a tool for profiling the parallel execution of Haskell programs
-% --- to Mercury~\cite{jlp} --- a pure logic programming language.
+% --- to Mercury \citep{jlp} --- a pure logic programming language.
 % We will use the above three types of users to determine the usefulness of our
 % work.
 
@@ -714,7 +714,7 @@ which parts are parallelized but not yet enough to use all available CPUs,
 and which parts still have no parallelism at all.
 They can then focus their efforts on the latter.
 The visualization of this curve has been implemented,
-and is described by \cite{threadscope}.
+and is described by \citet{threadscope}.
 
 % number of sparks available for execution at any given time
 % number of runnable but not running contexts at any given time
@@ -724,7 +724,7 @@ and is described by \cite{threadscope}.
 \emph{GC\_STATS: The number of garbage collections,
 and the average, minimum, maximum and variance
 of the elapsed time taken by each collection.}
-Mercury uses the Boehm-Demers-Weiser garbage collector~\cite{boehm:1988:gc}.
+Mercury uses the Boehm-Demers-Weiser garbage collector \citep{boehm:1988:gc}.
 This collector supports parallel marking using GC-specific helper threads
 rather than the OS threads that run Mercury engines.
 Therefore, even when parallel marking is used,
@@ -739,7 +739,7 @@ We calculate this by summing the times
 between pairs of GC\_START and GC\_END events,
 and dividing the result by the program's total runtime.
 (Both sides of the division refer to elapsed time, not CPU time.)
-Due to Amdahl's law~\cite{amdahl:1967:law},
+Due to Amdahl's law \citep{amdahl:1967:law},
 % XXX Explain amdahl's law since the paper dosn't describe the usual
 % interpretation.
 this fraction limits the best possible speedup we can get
@@ -751,7 +751,7 @@ then no parallelization of the program can yield a speedup of more than three,
 
 \emph{NANOSECS\_PER\_CALL:
 The average number of nanoseconds between successive procedure calls.}
-The Mercury profiler for sequential programs~\cite{conway:2001:mercury-deep}
+The Mercury profiler for sequential programs \citep{conway:2001:mercury-deep}
 (which has nothing to do with \tscope)
 measures time in call sequence counts (CSCs);
 the call sequence counter is incremented at every procedure call.
@@ -1391,11 +1391,11 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % However,
 % system calls can be expensive due to the switch between privilege levels.
 % Some operating systems have efficient solutions to these problems,
-% such as Linux's VSO support~\cite{linux:vso};
+% such as Linux's VSO support \citep{linux:vso};
 % however, such features are not standard.
 % Therefore,
 % on i386 and amd64 systems that support it we use the \RDTSCP and
-% \RDTSC instructions~\cite{intel:rdtsc}.
+% \RDTSC instructions \citep{intel:rdtsc}.
 % These instructions read a time stamp counter (TSC) from the CPU's internal
 % counter.
 % In some processors there is no linear relationship between the time stamp
@@ -1429,28 +1429,28 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % It is well established that a visualization tool is extremely useful
 % for programmers debugging and tuning complex systems.
 % \tscope definitely supports this when used either with
-% Haskell~\cite{threadscope},
+% Haskell \citep{threadscope},
 % or, as we have proposed, when used with Mercury.
 % Furthermore, extending \tscope to work with Mercury has been
 % relatively straight forward,
 % largely due to \tscope's extensible file format.
 % 
 % Other tools have existed for profiling the parallel execution of other
-% languages such as Eden's trace viewer~\cite{edentraceviewer}.
+% languages such as Eden's trace viewer \citep{edentraceviewer}.
 % This shows a similar timeline to that of threadscope,
 % but since Eden is a distributed programming language it also shows
 % communication.
 % 
-% GranSim~\cite{loidl98:gransim} is a simulator that determines how much
+% GranSim \citep{loidl98:gransim} is a simulator that determines how much
 % parallelism is in a Haskell program.
 % Ben Lippmeier wrote a similar tool/paper, its on his website.
 % 
-% \cite{runciman93:profilingparfp} introduces another visualization tool.
+% \citet{runciman93:profilingparfp} introduces another visualization tool.
 % This also shows the amount of parallelism in a Haskell program, but it does it
 % over time and also shows the number of blocked tasks.
 % 
 % Apparently GUM has some good profiling tools, but I did not read this
-% paper~\cite{trinder:1996:gum}
+% paper \citep{trinder:1996:gum}
 
 % Use this as a source of feedback.
 % Discuss what this work implies for Haskell.
@@ -1465,9 +1465,9 @@ and the people implementing those languages find them useful too.
 Such tools have been created for all kinds of programming languages:
 imperative (even Visual Studio has one),
 functional
-(\cite{edentraceviewer,loidl98:gransim,runciman93:profilingparfp} among others)
-and logic (\cite{Foster96,vace}
-and the systems cited by \cite{Gupta95parallelexecution}).
+(\citet{edentraceviewer,loidl98:gransim,runciman93:profilingparfp} among others)
+and logic (\citet{Foster96,vace}
+and the systems cited by \citet{Gupta95parallelexecution}).
 
 Many of these visualizers share common ideas and features.
 For example, many systems (including \tscope)
@@ -1491,7 +1491,7 @@ have quite different concerns from users of Mercury
 
 We know of only one visualizer
 for a not-inherently-concurrent logic programming language
-that does nevertheless support dependent AND-parallelism: VACE \cite{vace}.
+that does nevertheless support dependent AND-parallelism: VACE \citep{vace}.
 However, the ACE system supports
 OR-parallelism and independent AND-parallelism
 as well as dependent AND-parallelism,

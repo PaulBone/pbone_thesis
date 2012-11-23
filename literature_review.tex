@@ -16,7 +16,7 @@
 \status{I probably need to come back to this and add more references.}
 
 \section{Concurrency}
-\label{sec:backgnd_concurrency}
+\label{sec:intro_concurrency}
 
 % Parallelism and concurrency.
 It is important to distinguish between \emph{parallelism} and
@@ -177,21 +177,24 @@ Channels are more powerful than mailboxes as multiple processes can read from
 the same channel (but not at the same time).
 A process can also set up multiple channels for different types of message,
 the same benefit can be gained by tagging messages in the mailbox analogy.
-The first language based on CSP is Occam \cite{occam}.
+The first language based on CSP is occam \citep{occam1, occam3}.
 
-Similar to CSP is the $\pi$-calculus \cite{milner:pi}.
+Similar to CSP is \citet{milner:pi}'s $\pi$-calculus.
 The difference between the two process algebras is that in the $\pi$-calculus
 channels are first class, meaning that a channel can be sent in a channel.
 This allows programmers to compose a dynamic communication network.
 %The Jomel language \citep{jomel} (an ML \citep{ml}) is based on the $\pi$-calculus
-Jocaml \cite{jocaml} (an Ocaml \citep{ocaml} derivative) is a language based
-on the related join-calculus.
+Jocaml \citep{jocaml} (an Ocaml
+\citep{ml-types, ocaml-modules, ocaml-bytecode, ocaml-native}
+derivative) is a language based on the related join-calculus
+\citep{join-calculas}.
 Join-calculus differs by using asynchronous communication and adding a number
 of restrictions, which are not important to our discussion.
 Jocaml differs from Occam in the same ways that the join-calculus differs
 from CSP.
-However Occam, in particular its first version, was intended as a research
-tool to experiment with CSP, Jocaml was not.
+However Occam, in particular its first version \citep{occam1},
+was intended as a research tool to experiment with CSP, Jocaml was not.
+Later versions of occam \citep{occam3} were designed for more practical use.
 Jocaml is more widely used and appears to be much more practical.
 Jocaml, like Erlang, is a powerful language with support for distributed
 computing.
@@ -249,14 +252,14 @@ adds to the amount of contention.
 Including side-effecting computations inside an STM critical section can also
 be a problem.
 This can be avoided in a pure declarative language such as
-Mercury \citep{jlp:mercury} or Haskell \citep{Haskell} as side effects cannot
+Mercury \citep{mercury_jlp} or Haskell \citep{haskell98} as side effects cannot
 be expressed.
 \citet{mika:mercury-stm} is an implementation for Mercury
 and \citet{harris:2005:haskell-stm} is an implementation for Haskell.
 
 
-\subsection{Explicit Parallelism}
-\label{sec:back_par_explicit}
+\section{Explicit Parallelism}
+\label{sec:intro_explicit_par}
 
 % Parallelism w/o concurrency in imperative languages.
 Parallelism can also be achieved without concurrency,
@@ -368,8 +371,8 @@ automatically;
 the programmer will not need to worry about parallel evaluation any more
 than they currently worry about inlining and register allocation.
 
-\subsection{Implicit Parallelism}
-\label{sec:lit_implicit-parallelism}
+\section{Implicit Parallelism}
+\label{sec:intro_implicit_par}
 
 Some computer languages support implicit parallelism,
 in these languages many parts of programs are executed in parallel.
@@ -431,8 +434,8 @@ It is understood that carefully adding a few explicit parallelism annotations
 to a program with the aid of a profiler will produce a faster-running
 program than implicitly parallelising most independent computations.
 
-\subsection{Automatic Parallelisation}
-\label{sec:lit_automatic-parallelisation}
+\section{Automatic Parallelisation}
+\label{sec:intro_auto_par}
 
 % Look at automatic parallelisation in Haskell.
 \citet{harris_07_feedback_imp_par} developed a profiler

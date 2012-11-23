@@ -91,7 +91,7 @@ One impediment to this goal is the control of the \emph{granularity}
 of the computations to be carried out in parallel.
 Setting up and cleaning up after a parallel computation has a significant cost,
 so running small tasks in parallel actually slows the computation.
-In earlier work \cite{bon-som-tplp-11},
+In earlier work \citep{bone:2011:overlap},
 we presented our approach for using feedback from program profiling
 to select large-grained parts of a computation
 that can be run in parallel with minimal synchronization.
@@ -1267,7 +1267,7 @@ and we have not found the wasted space to be a problem.
 This may be because we have mostly been working with
 automatically parallelized programs,
 and our automatic parallelization tools
-put much effort into granularity control \cite{bon-som-tplp-11}:
+put much effort into granularity control \citep{bone:2011:overlap}:
 the rarer spawning-off a goal is,
 the less the effect of any wasted space.
 \tr{
@@ -1603,7 +1603,7 @@ keeping it at a reasonable level.
 
 However, most throttling mechanisms we know of
 have been general in nature,
-such as granularity control systems \cite{lopez96:distance_granularity}.
+such as granularity control systems \citep{lopez96:distance_granularity}.
 These have similar objectives,
 but use totally different methods:
 restricting the set of places in a program
@@ -1612,7 +1612,7 @@ not changing \emph{how} they choose to exploit it.
 
 We know of one system that tries to preserve tail recursion
 even when the tail comes from a parallel conjunction.
-The ACE system \cite{gupta01:optimization_for_parallel_nodet_code}
+The ACE system \citep{gupta01:optimization_for_parallel_nodet_code}
 normally generates one parcall frame for each parallel conjunction,
 but it will flatten two or more nested parcall frames into one
 if runtime determinacy tests indicate it is safe to do so.
@@ -1630,7 +1630,7 @@ since our restrictions prevent any interaction
 between AND-parallel code and code that can backtrack.
 
 The only work on specially loop-oriented parallelism in logic languages
-that we are aware of is Reform Prolog \cite{bevemyr:reform}.
+that we are aware of is Reform Prolog \citep{bevemyr:reform}.
 This system was not designed for throttling either,
 but it is more general than ours in one sense
 (it can handle recursion in the middle of a clause)
@@ -1650,7 +1650,7 @@ it parallelizes only deterministic code
 % no granularity control,
 
 The only work on loop-oriented parallelism in functional languages
-we know of is Sisal \cite{sisal}.
+we know of is Sisal \citep{sisal}.
 It shares two of Reform Prolog's limits:
 no parallelism anywhere except loops, and
 no nesting of parallel computations inside one another.
