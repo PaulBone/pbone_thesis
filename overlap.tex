@@ -2047,9 +2047,9 @@ We account for this overhead on lines 30--31.
 This requires knowing the cost of the first conjunct $FirstConjTime$,
 which is computed by code on lines 4 and 27--28.
 
-There are two other important pieces of information tht we compute,
+There are two other important pieces of information that we compute,
 although neither are shown in the algorithm.
-The first is ``time on CPU'';
+The first is ``CPU utilisation'';
 it is the sum of all the chunks' lenghts which include the costs but not the
 delays.
 The second is the ``dead time'':
@@ -2057,7 +2057,7 @@ it is the sum of the time spent waiting on each future plus the time that
 the original context spends waiting at the barrier for the conjunction to
 finish.
 This represents the amount of time that contexts consume memory without
-the contexts being activly used.
+the contexts being actively used.
 We do not currently use either of these metrics to make decisions about
 parallelisations,
 but they could be used to break ties between alternative parallelisations
@@ -2082,7 +2082,8 @@ Executing such conjuncts in their own threads
 costs far more in overheads than can be gained by running in parallel.
 To see just how big conjunctions can be,
 let us consider the quadratic equation example
-from section \ref{sec:backgnd_mercury} which we have repeated here.
+from section \ref{sec:backgnd_mercury},
+which we have repeated here.
 The quadratic equation is often written as a single conjunct:
 
 \begin{verbatim}
@@ -2090,7 +2091,7 @@ X = (-B + sqrt(B^2 - 4*A*C)) / (2*A)
 \end{verbatim}
 
 \noindent
-Which is exampled by the complier into 12 conjuncts:
+Which is decomposed by the complier into 12 conjuncts:
 
 \begin{verbatim}
 V_1  = 2,               V_2  = B ^ V_1,         V_3 = 4,
@@ -2100,6 +2101,8 @@ V_10 = V_9 + V_7,       V_11 = V_1 * A,         X   = V_10 / V_11
 \end{verbatim}
 
 \noindent
+If the quadratic equation were involved in a parallel conjunction,
+we would not want to create 12 separate parallel tasks for it.
 Therefore in most cases,
 we want to transform sequential conjunctions with $n$ conjuncts into
 parallel conjunctions with $k$ conjuncts where $k < n$.
@@ -2112,27 +2115,38 @@ choosing which of the $n-1$ conjunction operators (\samp{,}) in an $n$-ary
 conjunction to turn into parallel conjunction operators (\samp{\&}).
 For example, $G_1,~G_2,~G_3$ can be converted
 into any of:
-$(G_1~\&~G_2),~G_3$;
-$G_1,~(G_2~\&~G_3)$;
-$G_1~\&~(G_2,~G_3)$;
-$(G_1,~G_2)~\&~G_3$; or
+
+\begin{tabular}{l}
+$G_1~\&~(G_2,~G_3)$; \\
+$(G_1,~G_2)~\&~G_3$; or \\
 $G_1~\&~G_2~\&~G_3$.
+\end{tabular}
+
+%\noindent
+%Our algorithm will also consider
+%
+%\begin{tabular}{l}
+%$(G_1~\&~G_2),~G_3$; \\
+%$G_1,~(G_2~\&~G_3)$; \\
+%\end{tabular}
+
+\noindent
 Our goal is to find the best parallelisation of a conjunction from among
 the various possible parallel conjunctions.
 The solution space is $2^{n-1}$,
 and as the quadratic equation example demonstrates $n$ can be quite large
 even for simple expressions.
-The largest conjunction we have seen is 150 conjuncts long,
+The largest conjunction we have seen and tried to parallelise is about 150
+conjuncts long,
 this is in the Mercury compiler itself.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}[5]
-% global NumEvals := 0
 \Procedure{find\_best\_partition}{$InitPartition$, $InitTime$, $LaterConjs$}
   \If{empty($LaterConjs$)}
     \State \Return $(InitTime, InitPartition)$
   \Else
-    \State $Head \gets$ pop($LaterConjs$)
+    \State $(Head, Tail) \gets$ deconstruct($LaterConjs$)
     \State $Extend \gets$ all\_but\_last($InitPartition$) ++
         [last($InitPartition$) ++ [$Head$]]
     \State $AddNew \gets InitPartition$ ++ [$Head$]
@@ -2146,7 +2160,7 @@ this is in the Mercury compiler itself.
       \If{$NumEvals < PreferLinearEvals$}
         \State $BestAddNewSoln \gets$ find\_best\_partition($AddNew$,
             $AddNewTime$, $Tail$)
-        \State $(BestANTime, BestAnPartSet) \gets BestAddNewSoln$
+        \State $(BestANTime, BestANPartSet) \gets BestAddNewSoln$
         \If{$BestExTime < BestANTime$}
           \State \Return $BestExtendSoln$
         \ElsIf{$BestExTime = BestANTime$}
@@ -2162,21 +2176,24 @@ this is in the Mercury compiler itself.
     \EndIf
   \EndIf
 \EndProcedure
+\State
+\State $NumEvals \gets 0$
+\State $BestPar \gets$ find\_best\_partition($[]$, 0, $MiddleGoals$)
 \end{algorithmic}
 \caption{Search for the best parallelisation}
 \label{alg:best_par_search}
 %\vspace{-2\baselineskip}
 \end{algorithm}
 
-The first prerequisite for a profitable parallel conjunction is two or more
+The prerequisite for a profitable parallel conjunction is two or more
 expensive conjuncts (conjuncts whose per-call cost is above a certain
 threshold)
 (section~\ref{sec:overlap_approach}).
 In such conjunctions we create a list of goals from the first expensive
 conjunct to the last,
 which we dub the ``middle goals''.
-There are (possibly empty) lists of cheap goals before and after list of
-middle goals.
+There are (possibly empty) lists of cheap goals before and after the 
+list of middle goals.
 Our initial search assumes that
 the set of conjuncts in the parallel conjunction we want to create
 is exactly the set of conjuncts in the middle.
@@ -2198,8 +2215,8 @@ to the last existing parallel conjunct ($Extend$) (line 6),
 or to put it into a new parallel conjunct ($AddNew$) (line 7).
 the calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
 estimating their parallel overlap using
-algorithm \ref{alg:dep_par_conj_overlap_complete}
-from section \ref{sec:overlap_overlap_alg}.
+algorithm \ref{alg:dep_par_conj_overlap_complete}.
+%from section \ref{sec:overlap_overlap_alg}.
 If $Extend$ is more profitable than $AddNew$,
 then the recursive call in line 11 searches for the best parallel
 conjunction beginning with $Extend$;
@@ -2207,12 +2224,14 @@ otherwise similar code is executed on line 26.
 
 It is desirable to explore the full $O(2^n)$ solution space however doing so
 for large conjunctions is infeasible.
-Therefore we compromise by using a complete algorithm that can switch into a
-greedy (linear) mode if the solution space is too large.
+Therefore we compromise by using an algorithm that is
+initially complete,
+but can switch into a greedy (linear) mode if the solution space is too
+large.
 Before the algorithm begins we set the global variable $NumEvals$ to zero.
 It counts how many overlap calculations have been performed
-and if this reaches the threshold $PreferLinearEvals$ then our algorithm
-explores only the most profitable of the two alternatives at any choice
+and if this reaches the threshold ($PreferLinearEvals$) then our algorithm
+explores only the most profitable of the two alternatives at every choice
 point.
 If the threshold has not been reached the code on lines 15--22 is executed
 which explores the least profitable alternative ($AddNew$).
@@ -2223,14 +2242,15 @@ The algorithm returns the best of the two solutions
 If the threshold has been reached the least profitable alternative is not
 explored (line 24).
 
-The algorithm differers from algorithm~\ref{alg:best_par_search}:
+The actual algorithm is more complex than
+algorithm~\ref{alg:best_par_search}:
 our algorithm will also test each partial parallelisation against the best
 solution found so far,
 If the expected execution time for the candidate currently being considered
 is already greater than the fastest existing complete parallelisation,
 we can stop exploring that branch;
 it cannot lead to a better solution.
-This is the idea of branch-and-bound algorithms.
+This is a simple branch-and-bound algorithm.
 
 There are some simple ways to improve this algorithm.
 
@@ -2248,7 +2268,7 @@ The algorithm should treat these as a single conjunct.
 \item
 Take other metrics such as total CPU utilisation, dead time, or GC pressure
 into account,
-at least by using it to break ties on overall CPU time.
+at least by using it to break ties on parallel execution time.
 \item
 Also, the current implementation does not make an estimate of the
 minimum cost of the work that is yet to be scheduled after the current point.
@@ -2269,7 +2289,7 @@ which can happen if $P_1$ produces its outputs at its very end
 and the other $P_i$ consume those outputs at their start,
 then we conceptually move $P_1$ out of the parallel conjunction
 (from the ``middle'' part of the conjunction to the ``before'' part).
-We keep doing this for $P_2$, $P_3$ etc until either
+We keep doing this for $P_2$, $P_3$ et cetera, until either
 we find a goal worth keeping in the parallel conjunction,
 or we run out of conjuncts.
 We also do the same thing at the other end of the middle part.
@@ -2280,7 +2300,7 @@ Normally, we want to keep cheap goals out of parallel conjunctions,
 since more conjuncts tends to mean
 more shared variables and thus more synchronisation overhead,
 but sometimes this consideration is overruled by others.
-Suppose the goals before the conjuncts in $P_1~\&~\ldots~\&~P_p$
+Suppose the goals before $P_1~\&~\ldots~\&~P_p$
 in the original conjunction were $B_1,~\ldots,~B_b$
 and the goals after it $A_1,~\ldots,~A_a$,
 and consider $A_1$ after $P_p$.
