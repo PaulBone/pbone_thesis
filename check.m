@@ -393,10 +393,16 @@ macro_words = [
 :- func bad_ngrams = list(list(string)).
 
 bad_ngrams = [
+        % Bad phrase
         ["time", "speeds", "up"],
+
+        % These should be one word.
         ["can", "not"],
         ["round", "robin"],
-        ["worth", "while"]
+        ["worth", "while"],
+
+        % Hypenate this.
+        ["if", "then", "else"]
     ].
 
 % Convert the document into different data structures.
