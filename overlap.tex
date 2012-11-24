@@ -2067,8 +2067,7 @@ with similar parallel speedups.
 \section{Choosing how to parallelise a conjunction}
 \label{sec:overlap_howto}
 
-\status{Draft finished, I do not know if I will read this myself before
-asking for reviews or not}
+\status{Draft finished, This is ready for review by Zoltan.}
 
 A conjunction with more than two conjuncts can be converted into several
 different parallel conjunctions.
@@ -2364,8 +2363,7 @@ in the feedback file we create for the compiler.
 \section{Pragmatic issues}
 \label{sec:overlap_pragmatic}
 
-\status{Draft finished, I do not know if I will read this myself before
-asking for reviews or not}
+\status{Draft finished, This is ready for review by Zoltan.}
 
 In this section we discuss several pragmatic issues with our implementation.
 We also discuss several directions for further research.
@@ -2378,39 +2376,74 @@ We also discuss several directions for further research.
 \subsection{Merging parallelisations from different ancestor contexts}
 \label{sec:overlap_pragma_merge}
 
-In section \ref{sec:overlap_approach} we said that we search the program's
-call graph for parallelisation opportunities.
+We search the program's
+call graph for parallelisation opportunities
+(section \ref{sec:overlap_approach}).
 This means that we may visit the same procedure multiple times from
 different ancestor contexts.
-In different context a procedure may have different optimal
-parallelisations,
+In a different context a procedure may have a different optimal
+parallelisation,
 or no optimal parallelisation.
 % In addition to this,
 % multiple conjunctions in the procedure may be parallelised.
-In this section we discuss how we resolve multiple pieces of parallelisation
-advice for a single procedure.
+Me must somehow resulve cases where there are multiple candidate
+parallelisations for the same procedure.
 
-At the moment, for any procedure and conjunction
-that our analysis indicates is worth parallelising in any context,
+At the moment, for any procedure and conjunction within that procedure
+which our analysis indicates is worth parallelising in any context,
 we pick one particular parallelisation (usually there is only one anyway),
 and transform the procedure accordingly.
 This gets the benefit of parallelisation when it is worthwhile,
 but incurs its costs even in contexts when it is not.
-In the future, we plan to fix this using multi-version specialisation.
+
+\begin{figure}
+\begin{center}
+\subfigure[$j$ is called from two different ancestor contexts]{
+\includegraphics[width=0.8\textwidth]{pics/par_specialisation.eps}
+\label{fig:par_specialisation_before}}
+\subfigure[$j$'s parallel version is a specialisation, which requires
+specialising $i$]{
+\includegraphics[width=0.8\textwidth]{pics/par_specialisation2.eps}
+\label{fig:par_specialisation_after}}
+\end{center}
+\caption{Parallel specialisation}
+\label{fig:par_specialisation}
+\end{figure}
+
+In the future, we plan to use multi-version specialisation.
 For every procedure with different parallelisation recommendations,
 we intend to create a specialised version for each recommendation,
 leaving the original sequential version.
 This will of course require the creation of specialised versions
 of its parent, grandparent etc procedures,
 until we get to an ancestor procedure
-which occurs in the common prefix of all the conflicting ancestor contexts.
+which does not occur in the common prefix of all the conflicting ancestor contexts.
+This is shown in figure \ref{fig:par_specialisation}, in the figure $j$ is
+being parallelised when it is called from the
+$main \calls f \calls h \calls i \calls j$ ancestor context,
+but not when it is called from the $main \calls f \calls g \calls i \calls j$
+context.
+Therefore by specialising both $j$ and $i$ into new versions 
+$j\_par$ and $i\_par$ respectively and calling $i\_par$ from $h$ rather than
+$i$ we can parallelise $j$ only when it is called from the correct ancestor
+context.
 
+Each candidate parallel conjunction sent to the compiler includes a goal
+path and procedure;
+this points to the procedure and conjunction within the procedure that we
+wish to parallelise.
 When different conjunctions in the same procedure have parallelisation
 advice, we save all this advice into the feedback file.
 When the compiler acts on this advice,
-it applies the advice deeper within compound goals first
-so that when we apply each piece of advice the goal path indicating the
-conjunction which should be parallelised is easier to find.
+it applies the parallelisations deeper within compound goals first.
+This ensures that as we apply advice,
+the goal path leading to each
+sucessive conjunction that we parallelise, still points to the correct
+conjunction.
+The compiler attempts to match calls within the procedure's body with calls
+in the candidate conjunction to ensure that it is applying advice correctly.
+It will attempt to match both the callee's name and the variables that are
+being passed.
 If any conjunction cannot be found or the advice cannot be applied,
 then the compiler skips that piece of advice and issues a warning.
 
@@ -2444,14 +2477,17 @@ then the compiler skips that piece of advice and issues a warning.
 
 What happens when we decide that a conjunction that should be parallelised
 has an ancestor that we decided should also be parallelised?
-We can
+This can happen both with an ancestor in the same procedure (a compound goal
+in a parallel conjunction that also contains a parallel conjunction)
+or a call from a parallel conjunction to the current procedure.
+In either case our options are:
 
 \begin{enumerate}
 \item parallelise neither,
 \item parallelise only the ancestor,
 \item parallelise only this conjunction, or
 \item parallelise both
-\end{enumerate}`
+\end{enumerate}
 
 The first alternative (parallelise neither) has already been rejected twice,
 since we concluded that (2) was better than (1)
@@ -2466,12 +2502,15 @@ Although the system will not explore parts of the call graph
 when it thinks there is ample parallelism in the procedure's ancestors.
 In the future we could choose among the three reasonable alternatives:
 we could evaluate the speedup from each of them, and just pick the best.
-This reevaluation must take into account
+This is simple to do when both candidates are in the same procedure.
+When on of the candidates is in an ancestor call we must also 
+take into account
 the fact that for each invocation of the ancestor conjunction,
-we will invoke the current conjunction many times,
-and that therefore we will incur both the overheads and the benefits
+we will invoke the current conjunction many times.
+Therefore we will incur both the overheads and the benefits
 of parallelising the current conjunction many times.
-The profile will give the actual number.
+We will be able to determine the actual number of invocations from the
+profile.
 
 % This complicates how we might handle specialisation in the future.
 % Consider a situation where
@@ -2487,64 +2526,66 @@ Many programs have code that looks like this:
 \begin{verbatim}
 ( if ... then
     ...,
-    expensive goal 1,
+    expensive_call_1(...),
     ...
 else
     ...,
-    cheap goal,
+    cheap_call(...),
     ...
 ),
-expensive goal 2
+expensive_call_2(...)
 \end{verbatim}
 If the condition of the if-then-else succeeds only rarely,
 then the average cost of the if-then-else
 may be below the threshold of what we consider to be an expensive goal.
-We therefore would not even consider
+We therefore would not consider
 parallelising the top-level conjunction
-(the conjunction of the if-then-else and ``expensive goal 2''),
-rightly considering that its overheads would probably outweigh its benefits.
+(the conjunction of the if-then-else and \code{expensive\_call\_2});
+this is correct as its overheads would probably outweigh its benefits.
 
-In these cases we detect the expensive goal within the if-then-else
-so that when we see ``expensive goal 2'' we \emph{push}
-``expensive goal 2'' into both branches of the if-then-else and test if it
-creates profitable parallelism there.
-What we do in such cases
-is execute just the two expensive calls in parallel,
-which would be equivalent to parallelising the conjunction
-in the then part of this transformed goal:
+In these cases we remember the expensive goal within the if-then-else
+so that when we see \code{expensive\_call\_2} we virtually \emph{push}
+\code{expensive\_call\_2} into both branches of the if-then-else and test if it
+creates profitable parallelism in the branch next to
+\code{expensive\_call\_1}.
+If we estimate that this will create profitable parallelism then when we
+give feedback to the compiler we tell the compiler to push
+\code{expensive\_call\_2} just as we have.
+Then during execution parallelism is only used when the then branch of this
+if-then-else is executed.
 \begin{verbatim}
 ( if ... then
     ...,
-    expensive call 1,
+    expensive\_call\_1(...),
     ...,
-    expensive call 2
+    expensive\_call\_2(...)
 else
     ...,
-    cheap goal,
+    cheap\_call(...),
     ...,
-    expensive call 2
+    expensive\_call\_2(...)
 )
 \end{verbatim}
 
-This transformation is only applied it does not involve reordering goals.
-For example, we cannot push ``expensive goal 2'' past ``other goal'' in the
-following code:
+This transformation is only applied when it does not involve reordering goals.
+For example, we do not push \code{expensive\_call\_2} past
+\code{other\_call} in the following code:
 
 \begin{verbatim}
 ( if ... then
     ...,
     ( if ... then
-        expensive goal 1,
+        expensive\_call\_1(...),
     else
         ...
     ),
-    other goal,
+    other\_call(...),
 else
     ...,
-    cheap goal,
+    cheap\_call(...),
     ...
 ),
-expensive goal 2
+expensive\_call\_2(...)
 \end{verbatim}
 
 \subsection{Garbage collection and estimated parallelism}
@@ -2554,6 +2595,7 @@ We described the garbage collector's effects on parallel performance in
 detail in section \ref{sec:rts_gc}.
 In this section we will describe how it relates to automatic parallelism in
 particular.
+
 Throughout this chapter we have measured the costs of computations as call
 sequence counts,
 however this metric does not take into account memory allocations or
@@ -2562,14 +2604,13 @@ There is a fixed (and usually small) limit
 on the number of instructions that the program can execute
 between increments of the call sequence count
 (though the limit is program-dependent).
-There is no such limit on the collector.
-This is can be a problem.
+There is no such limit on the collector, which can be a problem.
 Since a construction unification does not involve a call,
 our profiler considers its cost (in CSCs) to be zero.
 Yet if the memory allocation required by a construction
 triggers a collection,
 then this nominally zero-cost action can actually take as much time
-as many thousands of calls in the mutator.
+as many thousands of CSCs.
 
 The normal way to view the time taken by a collection
 is to simply distribute it among the allocations,
@@ -2580,26 +2621,37 @@ triggered by the unifications between those calls.
 For a sequential program, this view works very well.
 For a parallel program, it works less well,
 because the performance of the mutator and the collector scale differently
-as we were able to show in section \ref{sec:rts_gc}.
+(section \ref{sec:rts_gc}).
 
 We could take allocations into account in the algorithms above in a couple
 of different ways.
-We already proposed using other metrics to split ties between alternative
-parallelisations.
-We could also create a new unit for time that combines call sequence counts
+%We already proposed using other metrics to split ties between alternative
+%parallelisations.
+We could create a new unit for time that combines call sequence counts
 and allocations and use this to determine how much parallelism we can
 achieve.
-Allocating in different threads could be an optimisation;
-at first glance allocations take time and parallelising them against one
+At first glance allocations take time and parallelising them against one
 another may be beneficial.
-This is only true when allocations to not exhaust their thread local memory
-pools and contend for the shared memory pool.
-Access to the shared memory pool is normally amortised across a number of
+Therefore we may wish to arrange parallel conjunctions so that memory
+allocation is done in parallel.
+However this may lead to slowdowns when there is too much parallel
+allocation.
+%allocations exhaust their thread
+%ocal memory pools and increase the contention for the shared memory pool.
+Memory can be allocated from the shared memory pool or from thread local
+pools.
+Threads will try to allocate memory from their own local memory pool first.
+This amortises the accesses to the shared memory pool across a number of
 allocations.
+Therefore parallelising memory allocation will increase contention on the
+shared memory pool, slowing the computation down.
 High allocation rates also correspond to high memory bandwidth usage.
 Parallel computations with high memory bandwidth demands may exhaust the
 available bandwidth,
 which will reduce the amount that parallelism can improve performance.
+Therefore,
+if we use memory allocation information when estimating the benefit of
+parallelisation we must weigh up these factors carefully.
 
 There is also the consideration that with the
 Boehm-Demers-Weiser~\citep{boehm:1988:gc}
