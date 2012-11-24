@@ -56,14 +56,14 @@ BENCH_ALL=          lc_bench_all
 DETEX=detex -l -n
 
 .PHONY : all
-all : thesis.pdf thesis.ps undefined.txt talk.pdf spelling checking
+all : thesis.pdf thesis.ps undefined.txt talk.pdf
 
 .PHONY : wc
 wc :
 	wc -w $(TEX_PROSE)
 
 thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) \
-        bib.bib checking
+        bib.bib checking spelling
 	latex thesis
 	bibtex thesis
 	latex thesis
@@ -90,8 +90,8 @@ mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
 undefined.txt: thesis.log
 	cat $< | grep undefined | sort -u > undefined.txt
 
-.PHONY : checking 
 checking : $(CHECK_FILES)
+	touch checking
 
 %.check : %.tex check
 	if [ -e .use_mercury ]; then \
@@ -105,8 +105,8 @@ check : check.m parse_tex.m tex.m util.m
 		touch check; \
 	fi
 
-.PHONY : spelling
 spelling : $(SPELL_FILES)
+	touch spelling
 
 %.spell : %.tex
 	$(DETEX) < $< | spell | sort -u > $@
