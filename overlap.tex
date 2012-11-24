@@ -2386,7 +2386,7 @@ parallelisation,
 or no optimal parallelisation.
 % In addition to this,
 % multiple conjunctions in the procedure may be parallelised.
-Me must somehow resulve cases where there are multiple candidate
+Me must somehow resolve cases where there are multiple candidate
 parallelisations for the same procedure.
 
 At the moment, for any procedure and conjunction within that procedure
@@ -2438,7 +2438,7 @@ When the compiler acts on this advice,
 it applies the parallelisations deeper within compound goals first.
 This ensures that as we apply advice,
 the goal path leading to each
-sucessive conjunction that we parallelise, still points to the correct
+successive conjunction that we parallelise, still points to the correct
 conjunction.
 The compiler attempts to match calls within the procedure's body with calls
 in the candidate conjunction to ensure that it is applying advice correctly.
@@ -2665,8 +2665,7 @@ such as having to refill the cache after the collector trashes it.
 \section{Performance results}
 \label{sec:overlap_perf}
 
-\status{This is a draft version of this section, I wish to run the
-benchmarks again to see if the strange trend disappears}
+\status{Draft finished, This is ready for review by Zoltan.}
 
 % \begin{table*}
 % \begin{center}
@@ -2698,12 +2697,14 @@ benchmarks again to see if the strange trend disappears}
 % Report analysis times as well as sequential and parallel execution times
 % and CPU usage (as integral if possible, as well as peack CPU usage).
 
-We tested our system on three benchmark programs:
-the first two are from chapter \ref{chap:rts},
-they are the raytracer and a modified version of the mandelbrot program,
-the third is a matrix multiplication program.
-Mandelbrot's modifications make it use dependent AND-parallelism
-via the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
+We tested our system on four benchmark programs:
+the first three are modified versions of the raytracer and mandelbrot
+program from chapter \ref{chap:rts},
+the fourth is a matrix multiplication program.
+The two versions of the raytracer and the mandelbrot program only have
+dependent parallelism available.
+%Mandelbrot's modifications make it use dependent AND-parallelism
+Mandelbrot uses the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
 \mapfoldl is used to iterate over the rows of pixels in the image.
 Raytracer does not use \code{map\_foldl},
 but does use a similar code structure to perform a similar task.
@@ -2711,6 +2712,10 @@ This similar structure is not an accident:
 \emph{many} predicates use this kind of code structure,
 partly because programmers in declarative languages
 often use accumulators to make their loops tail recursive.
+The second raytracer program renders \emph{chunks} of 16 rows at a time in
+each iteration of its render loop.
+This is not normally how a programmer would write such a program;
+we have done this deliberately to aid a discussion below.
 Matrixmult has abundant independent AND-parallelism.
 % All three programs do lots of floating point arithmetic,
 % and the mandelbrot program does a lot of integer arithmetic as well.
@@ -2722,7 +2727,7 @@ Matrixmult has abundant independent AND-parallelism.
 % Amdahl's law dictates the maximum speedup we can get by speeding up their mutators
 % will be correspondingly limited.
 
-We ran all three programs
+We ran all four programs
 with one set of input parameters to collect profiling data,
 and with a \emph{different} set of input parameters to produce
 the timing results in the following table.
@@ -2806,6 +2811,13 @@ overlap  &    - &    - & 17.4 (0.97) & 13.2 (1.28) & 10.5 (1.61) &  9.0 (1.88) \
 %par 26.5   & overlap  & 25.1 (0.90) & 16.0 (1.42) & 11.2 (2.03) &  9.4 (2.42) \\
 \hline
 \hline
+\multicolumn{7}{c}{Raytracer w/ 16-row chunks} \\
+\hline
+indep    & 14.9 & 17.8 & 17.9 (1.00) & 18.0 (0.99) & 18.0 (0.99) & 18.1 (0.98) \\
+naive    &    - &    - & 17.4 (1.02) & 10.2 (1.75) &  7.9 (2.26) &  6.5 (2.73) \\
+overlap  &    - &    - & 17.5 (1.02) & 10.2 (1.75) &  7.9 (2.27) &  6.5 (2.73) \\
+\hline
+\hline
 \multicolumn{7}{c}{Right recursive dependent Mandelbrot} \\
 \hline
 indep    & 15.2 & 15.1 & 15.1 (1.01) & 15.2 (1.01) & 15.2 (1.01) & 15.2 (1.01) \\
@@ -2857,7 +2869,7 @@ often yields a slowdown, sometimes as high as 50\% (for matrixmult).
 (We observe such slowdowns for other programs as well.)
 There are two reasons for this.
 The first reason is that the runtime system, and in particular the garbage
-collector must be thread safe.
+collector, must be thread safe.
 We tested how the garbage collector affected parallel performance
 extensively in section \ref{sec:rts_gc}.
 The results shown in table \ref{tab:autopar} were collected using one marker
@@ -2891,10 +2903,11 @@ which cannot get any parallelism.
 However, when we move to two, three or four engines,
 many of the auto-parallelised programs do get speedups.
 
-In mandelbrot and raytracer, all the parallelism is dependent,
+In mandelbrot and both raytracers,
+all the parallelism is dependent,
 which is why indep gets no speedup for them as it refuses to create
 dependent parallel conjunctions.
-Raytracer achieves a speedups of 1.90 and 1.89 with four Mercury engines.
+The non-chunking raytracer achieves a speedups of 1.90 and 1.89 with four Mercury engines.
 We might expect better results with four engines, but as we discussed in
 section \ref{sec:rts_gc} the raytracer's performance is limited due to how
 much time it spends in the garbage collector.
@@ -2903,8 +2916,8 @@ that is as good as one can reasonably expect: 3.85 on four engines.
 At first glance there appears to be a difference between naive and overlap.
 However the feedback data given to the compiler is the same in both cases,
 so the generated code will be the same.
-Any apparent difference is due to the high degree of variability in these
-tests' results,
+Any apparent difference is due to the high degree of variability in the
+results,
 which is why we executed each benchmark 40 times.
 This variability does not exist in the indep case,
 so we believe it comes from how dependencies in parallel conjunctions are
@@ -2918,7 +2931,7 @@ The work around reorders the conjuncts of a parallel conjunction to
 transform right recursion into left recursion.
 However this cannot be done to dependent conjunctions as it would create
 mode incorrect code.
-Even if raytracer and mandelbrot do not reach the context limit,
+Even if non-chunking raytracer and mandelbrot do not reach the context limit,
 the garbage collector needs to scan the large number of stacks created by
 right recursion.
 This means that parallel versions of these programs put more demands on the
@@ -2929,40 +2942,48 @@ therefore more contexts are created.
 Dependent parallel right recursive code will not scale to large numbers of
 processors well.
 
-We have verified this idea by
-testing versions of the raytracer in which
-each spawned-off goal computed the pixels for several rows, not just one,
-and these versions yield better speedups.
-\paul{Maybe re-test this so we can compare it}
+We verified this idea by testing the chunking version of raytracer.
+This version renders 16 rows of the image on each iteration and therefore
+creates fewer larger contexts.
+We can see that chunking raytracer performs much better than the
+non-chunking raytracer when either naive or overlap parallelism is used.
+However it performs worse without parallelism, including indep
+auto-parallelism (which cannot find any candidate parallel conjunctions).
+We are not sure why it performs worse without parallelism;
+one idea is that the garbage collector is affected somehow by how and where
+memory is allocated.
 These versions spawn many fewer contexts, thus putting much less load
 on the GC.
+We know that this speed up is due to the interaction of the right recursion
+problem and the GC because mandelbrot,
+which creates just as many contexts but has a much lower allocation rate,
+already runs very optimally.
 This shows that
 program transformations that cause more work to be done in each context
-are likely to be a promising area for future work.
+are likely to be an optimisation,
+this includes the work in chapter \ref{chap:loop_control}.
 % We thus expect that applying throttling
 % (as described in section~\ref{sec:overlap})
 % should significantly improve these results.
-We fix the right recursion problem in chapter \ref{chap:loop_control}.
 
 The parallelism in the main predicate of matrixmult is independent,
 Regardless of which parallel cost calculation we used (naive, indep or
 overlap),
 the same feedback was sent to the compiler.
-All versions of matrixmult where parallelised the same way and performed the
+All versions of matrixmult were parallelised the same way and performed the
 same.
 This is normal for such a small example with simple parallelism.
 (We compare this to a more complicated example of the Mercury compiler
 below.)
 In an earlier version of our system,
-the version that was current when we published this
-research \citep{bone:2011:overlap},
-the naive strategy chose to parallelise matrixmult's main loop
+the version that was used in \citet{bone:2011:overlap},
+the naive strategy parallelised matrixmult's main loop
 differently,
 it included an extra goal inside the parallel conjunct thereby creating
 a dependent parallel conjunction even though the parallelisation was
 independent.
-Therefore in \citet{bone:2011:overlap} we reported that naive performed
-worse than either indep or overlap.
+Therefore in \citet{bone:2011:overlap},
+naive performed worse than either indep or overlap.
 
 % For matrixmult, the bottleneck is almost certainly CPU-memory bandwidth.
 % Each step in this program does only one multiply and one add (both integer)
@@ -2982,7 +3003,7 @@ worse than either indep or overlap.
 
 Most small programs like these benchmarks
 have only one loop that dominates their runtime.
-In all three of these benchmarks, and in many others,
+In all four of these benchmarks, and in many others,
 the naive and overlap methods will parallelise the same loops,
 and usually the same way;
 they tend to differ only in how they parallelise code
@@ -3023,9 +3044,9 @@ which means that (due to Amdahl's law)
 our autoparallelisation system cannot yield overall speedups for them yet.
 
 On the bright side,
-our feedback tool generates feedback files
-in less than a second from the profiles of small programs like these benchmarks,
-and in only a minute or two even from much larger profiles.
+our feedback tool can process the profiles of small programs like these
+benchmarks in less than a second 
+and in only a minute or two even for much larger profiles.
 The extra time taken by the Mercury compiler
 when it follows the recommendations in feedback files
 is so small that it is not noticeable.
