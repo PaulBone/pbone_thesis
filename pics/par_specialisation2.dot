@@ -1,0 +1,11 @@
+digraph {
+    rankdir=LR;
+
+    main -> f;
+    f -> g;
+    f -> h;
+    g -> i;
+    h -> i_par;
+    i -> j;
+    i_par -> j_par;
+}
