@@ -380,7 +380,9 @@ acronyms = [
 
 names = [
     "Mercury",
-    "Forth"
+    "Forth",
+    "Prolog",
+    "Haskell"
     ].
 
 % Words that should be written with macros.

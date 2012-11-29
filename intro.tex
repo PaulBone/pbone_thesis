@@ -141,50 +141,6 @@ Mercury already supports explicit parallelism of dependent conjunctions,
 as well as powerful profiling tools which generate data for our profile
 feedback analyses.
 
-In the rest of this chapter we will explore the literature concerning
-parallel programming.
-We have created four categories in which we group the various parallel
-programming systems, including our own.
-
-\begin{description}
-    \item[Concurrency] is related to parallelism, however the two concepts
-    are orthogonal.
-    We will explain this and discuss the systems that use concurrency in
-    order to achieve parallelism (\emph{concurrency for parallelism})
-    (section \ref{sec:intro_concurrency}).
-
-    \item[Explicit parallelism] is safer and easier to use compared to
-    concurrency, however it is less expressive.
-    We will explain how explicit parallelism is distinct from and improves
-    upon \emph{concurrency for parallelism} in section
-    \ref{sec:intro_explicit_par}.
-
-    \item[Implicit parallelism] is a category that includes 
-    systems that attempt to make parallel execution the typical form of
-    execution.
-    We describe a number of systems and explain why the general approach is
-    flawed in section \ref{sec:intro_implicit_par}.
-
-    \item[Automatic parallelism] is our last category.
-    In these systems sequential execution is the typical form of execution
-    and parallel execution is used sparingly.
-    Many authors often group these systems with implicit parallelism systems.
-    We have chosen to separate them because the authors of the two systems
-    approach the same problem from different directions
-    (parallel as default vs.\ sequential as default).
-    Prior work in automatic parallelism is discussed in section
-    \ref{sec:intro_auto_par}.
-\end{description}    
-
-\noindent
-We explore the literature in this order as each successive category builds
-on the work of the previous category.
-Our own system is an automatic parallelism system;
-it makes use of concepts described in the previous categories.
-Therefore
-we cannot discuss it meaningfully until we have explored the literature
-from giants upon whose shoulders we are standing.
-
 % \plan{SMP \& programming}
 % Prior forms of multiprocessor computing include
 % symmetric multi processing (SMP) and non-uniform memory architectures

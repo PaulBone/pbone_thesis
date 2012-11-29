@@ -13,7 +13,7 @@
     title={The free lunch is over: A fundamental turn toward concurrency in
     software},
     author={Herb Sutter},
-    journel={Dr Dobb's Journel},
+    journal={Dr Dobb's Journel},
     volume=30,
     number=3,
     year={2005},
@@ -173,7 +173,7 @@
  issue_date = {September. 1965},
  volume = {8},
  number = {9},
- month = September,
+ month = {September},
  year = {1965},
  issn = {0001-0782},
  pages = {569--},
@@ -440,6 +440,19 @@
   file = {TOPLASS99.gs.ps}
 }
 
+@inproceedings{brus:1987:clean,
+  author = {Brus, T. and M.C.J.D. van Eekelen and M. van Leer and M.J. Plasmeijer and
+  H.P. Barendregt},
+  title = {{CLEAN} - A Language for Functional Graph Rewriting},
+  booktitle = {Proceedings of Conference on Functional Programming Languages and
+  Computer Architecture},
+  address = {Portland, Oregon, USA},
+  publisher = {Springer-Verlag},
+  series = {Lecture Notes on Computer Science},
+  volume = {274},
+  pages = {364--384},
+  year = {1987}
+}
 
 @inproceedings{1991:concurrent-clean,
  author = {N\"{o}cker, E. G. J. M. H. and Smetsers, J. E. W. and Eekelen, Marko C. J. D. van and Plasmeijer, Marinus J.},
@@ -876,10 +889,10 @@
 	pages = {2001}
 }
 
-@InProceedings{gph,
+@InProceedings{gph:gum,
   author = 	 {Philip W. Trinder and Kevin Hammond and James
 S. {Mattson Jr.} and Andrew S. Partridge and Simon L. {Peyton Jones}},
-  title = 	 {{GUM}: a portable implementation of {H}askell},
+  title = 	 {{GUM}: a portable parallel implementation of {H}askell},
   booktitle = 	 {Proceedings of Programming Language Design and Implementation},
   month = 	 may,
   year = 	 {1996},
@@ -897,6 +910,17 @@ S. {Mattson Jr.} and Andrew S. Partridge and Simon L. {Peyton Jones}},
   read =         {yes},
   comments =     {Nothing new since trinder_98_statergies except for some perfomance tweeks,
                   This is not implicit parallelism at all},
+}
+
+@inproceedings{harris:2005:haskell-smp,
+    author = {Tim Harris and Simon Marlow and Simon Peyton-Jones},
+    title = {{H}askell on a Shared Memory Multiprocessor},
+    booktitle = {Proceedings of the 2005 ACM SIGPLAN workshop on Haskell},
+    pages = {49--61},
+    address = {Tallinn, Estonia},
+    publisher = {ACM},
+    year = {2005},
+    month = {September}
 }
 
 @article{harris_singh:haskell-auto-par,
@@ -981,7 +1005,7 @@ S. {Mattson Jr.} and Andrew S. Partridge and Simon L. {Peyton Jones}},
   pages =     {46--55},
   month =     {Janurary--March}}
 
-@article{sisal,
+@article{feo:1990:sisal-report,
 	author =	{John T. Feo and David C. Cann and Rodney R. Oldehoeeft},
 	title =		{A report on the {S}isal language Project},
 	journal =	{Journal of Parallel and Disributed Computing},
@@ -1360,7 +1384,7 @@ p               Enrico Pontelli},
  issue_date = {Aug. 1978},
  volume = {21},
  number = {8},
- month = August,
+ month = {August},
  year = {1978},
  issn = {0001-0782},
  pages = {666--677},
@@ -1460,5 +1484,155 @@ p               Enrico Pontelli},
     howpublished={online
     \url{http://www.wotug.org/occam/documentation/oc3refman.pdf}
     retrieved 22/11/2012}
+}
+
+@book{cplusplus,
+  author = {Stroustrup, Bjarne},
+  title = {The {C++} Programming Language},
+  year = {1997},
+  isbn = {0201 889544},
+  edition = {Third},
+  publisher = {Addison-Wesley Longman Publishing Co., Inc.},
+  address = {Boston, MA, USA},
+} 
+
+@inproceedings{backus:1957:fortran,
+  author = {Backus, J. W. and Beeber, R. J. and Best, S. and Goldberg, R. and Haibt, L. M. and Herrick, H. L. and Nelson, R. A. and Sayre, D. and Sheridan, P. B. and Stern, H. and Ziller, I. and Hughes, R. A. and Nutt, R.},
+  title = {The {FORTRAN} automatic coding system},
+  booktitle = {Western joint computer conference: Techniques for reliability},
+  series = {IRE-AIEE-ACM '57 (Western)},
+  year = {1957},
+  month = {Febuary},
+  location = {Los Angeles, California},
+  pages = {188--198},
+  publisher = {ACM},
+  address = {New York, NY, USA}
+} 
+
+@phdthesis{ddc,
+  author={Ben Lippmeier},
+  title={Type Inference and Optimisation for an Impure World},
+  school={Australian National University},
+  year={2009},
+  month={June}
+}
+
+@article{haskell-monads,
+    author={John Launchbury and Simon Peyton-Jones},
+    title={State in {Haskell}},
+    journal={Lisp and Symbolic Computation},
+    volume={8},
+    number={4},
+    year={1995},
+    month={December},
+    pages={293--341}
+}
+
+@inproceedings{kowalski_sld,
+    author={Robert Kowalski},
+    title={Predicate Logic as a Programming Language},
+    booktitle={Proceedings of IFIP Congress},
+    address={Stockholm, Holland},
+    publisher={North Holland Publishing Company},
+    year={1974},
+    pages={569--574}
+}
+
+@inproceedings{augustsson:1989:parallel-graph-reduction,
+    title={Parallel graph reduction with the (v, G)-machine},
+    author={Lennart Augustsson and Thomas Johnsson},
+    booktitle={Proceedings of the fourth international conference on
+        Functional programming languages and computer architecture},
+    publisher={ACM},
+    year={1989},
+    pages={202--213}
+}
+
+@inproceedings{burn:1989:parallel-reduction-machine,
+    title={Overview of a Parallel Reduction Machine Project II},
+    author={G. L. Burn},
+    booktitle={PARLE '89 Parallel Architectures and Languages Europe},
+    address={Eindhoven, The Netherlands},
+    publisher={Springer Berlin Heidelberg},
+    series={Lecture Notes in Computer Science},
+    year={1989},
+    month={June},
+    volume={365},
+    pages={385--396}
+}
+
+@inproceedings{peyton-jones:1989:parallel-graph-reduction,
+    title={High-performance parallel graph reduction},
+    author={Simon Peyton-Jones and Chris Clack and Jon Salkild},
+    booktitle={PARLE '89 Parallel Architectures and Languages Europe},
+    address={Eindhoven, The Netherlands},
+    publisher={Springer Berlin Heidelberg},
+    series={Lecture Notes in Computer Science},
+    year={1989},
+    month={June},
+    volume={365},
+    pages={193--206},
+}
+
+@article{lusk:1990:aurora,
+    year={1990},
+    journal={New Generation Computing},
+    volume={7},
+    number={2--3},
+    title={The {A}urora or-parallel {P}rolog system},
+    publisher={Springer-Verlag},
+    keywords={Logic Programming; Prolog; Parallel Computing; Automatic
+    Parallelization},
+    author={Lusk, Ewing and Butler, Ralph and Disz, Terrence and Olson, Robert
+    and Overbeek, Ross and Stevens, Rick and Warren, David H. D. and Calderwood,
+    Alan and Szeredi, P\'eter and Haridi, Seif and Brand, Per and Carlsson, Mats
+    and Ciepielewski, Andrzej and Hausman, Bogumil},
+    pages={243--271},
+    language={English}
+}
+
+@inproceedings{hausman:1987:or,
+  title={OR-parallel {P}rolog made efficient on shared memory
+    multiprocessors},
+  author={Bogumil Hausman and Andrzej Ciepielewski and Seif Haridi},
+  booktitle={Proceedings of the 1987 Symposium on Logic Programming},
+  year={1987},
+  month={August--September},
+  address={San Francisco, California, USA},
+  publisher={IEEE Computer Society Press},
+  pages={69--79}
+}
+
+@article{hermenegildo:1991:and-parallel,
+    title={The \&-{P}rolog system: Exploiting Independent And-Parallelism},
+    author={M. V. Hermenegildo and K. J. Greene},
+    journal={New Generation Computing},
+    volume={9},
+    number={3--4},
+    year={1991},
+    pages={233--257},
+    publisher={Springer-Verlag},
+}
+
+@inproceedings{haridi:1990:andorra,
+    title={{K}ernel {A}ndorra {P}rolog and its computation model},
+    author={Haridi, Seif and Janson, Sverker},
+    booktitle={Logic Programming: Proceedings of the Seventh International
+    Conference},
+    address={Jerusalem, Israel},
+    year={1990},
+    month={June},
+    publisher={MIT Press}
+}
+
+@article{ali:1990:muse,
+    title={The {M}use approach to Or-parallel {P}rolog},
+    author={Khayri A. M. Ali and Roland Karlsson},
+    journal={International Journal of Parallel Programming},
+    volume={19},
+    number={2},
+    pages={129--162},
+    year={1990},
+    month={April}
 }
 

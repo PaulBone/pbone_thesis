@@ -13,9 +13,88 @@
 %it is compared with my work.
 %}
 
-\status{I probably need to come back to this and add more references.}
+\status{Work in progress.}
 
-\section{Concurrency}
+In the rest of this chapter we will explore the literature concerning
+parallel programming.
+The languages in which parallelism is used have a strong influence on the
+semantics and safty of the parallelism.
+We group languages into the following two classifications.
+
+\begin{description}
+
+    \item[Imperative] programming languages are those that allow
+    \emph{side-effects}.
+    A side effect is an action that a computation may perform without
+    needint to declare the possibility of the action.
+    This can include input/output (IO) and modification of data structures.
+
+    \item[Pure declrative] programming langauges are those that forbid
+    side-effects.
+    The effect of executing any computation must be declrated in the
+    computation's signature.
+    Because all effects are declared, there are no side-effects.
+    This has numerous benifits, we are interested in the specific benifit
+    that this makes it easy for both compilers and programmers to understand
+    if it is safe to parallelise any particular computation.
+
+\end{description}
+
+\noindent
+Not all researchers agree on the definitions above.
+However these definitions are exactly what is required when discussing
+the safty of parallelism.
+Additionally a language clearly fits into one category or the other.
+
+There are many ways to introduce parallelism in computer programming.
+We find it useful to create the following classifications for these methods.
+
+\begin{description}
+    \item[Parallelism via concurrency]:
+    concurrency can be used to introduce parallelism.
+    While these concepts are related and often discussed together they are
+    orthogonal.
+    We will explain this and discuss the systems that use concurrency in
+    order to achieve parallelism (\emph{parallelism via concurrency})
+    (section \ref{sec:intro_concurrency}).
+
+    \item[Explicit parallelism] is safer and easier to use compared to
+    concurrency, however it is less expressive.
+    We will explain how explicit parallelism is distinct from and improves
+    upon \emph{concurrency for parallelism}.
+    
+    \item[Implicit parallelism] is a category that includes 
+    systems that attempt to make parallel execution the typical form of
+    execution.
+    We describe a number of systems and explain why the general approach is
+    flawed.
+    Some systems use do not fit cleanly into either of our explicit
+    or implicit parallelism definitions.
+    We will discuss both appaches together in section
+    \ref{sec:intro_par}i.
+
+    \item[Automatic parallelism] is our last category.
+    In these systems sequential execution is the typical form of execution
+    and parallel execution is used sparingly.
+    Many authors often group these systems with implicit parallelism systems.
+    We have chosen to separate them because the authors of the two systems
+    approach the same problem from different directions
+    (parallel as default vs.\ sequential as default).
+    Prior work in automatic parallelism is discussed in section
+    \ref{sec:intro_auto_par}.
+\end{description}    
+
+\noindent
+We explore the literature in this order as each successive category builds
+on the work of the previous category.
+Our own system is an automatic parallelism system;
+it makes use of concepts described in all four categories.
+Therefore
+we cannot discuss it meaningfully until we have explored the literature
+from giants upon whose shoulders we are standing.
+
+
+\section{Parallelism via concurrency}
 \label{sec:intro_concurrency}
 
 % Parallelism and concurrency.
@@ -54,8 +133,9 @@ If the concurrency uses parallelism provided by the hardware many programs
 will speed up due to this parallelism,
 but not all.
 
-Often programmers will use concurrency in order to speed up their programs;
-we call this \emph{parallelism through concurrency}.
+Often programmers will deliberatly use concurrency in order to speed up
+their programs;
+we call this \emph{parallelism via concurrency}.
 It often works when the program is easy to express using concurrency
 (but we think there are better methods).
 However when the problem cannot be expressed easily using concurrency,
@@ -143,7 +223,8 @@ and $b$ will send a message to $a$ but only after it has received its message.
 Most deadlocks are more subtle and harder to find than this trivial example.
 
 Notable examples of message passing application programming interfaces (APIs)
-for C and Fortran are MPI \citep{mpi} and PVM \citep{pvm}.
+for C and Fortran \citep{backus:1957:fortran} are
+MPI \citep{mpi} and PVM \citep{pvm}.
 Every process can send and receive messages with any other process,
 We can think of this in terms of \emph{mailboxes}:
 each process owns (and can read from) its own mailbox and can place messages
@@ -179,7 +260,7 @@ A process can also set up multiple channels for different types of message,
 the same benefit can be gained by tagging messages in the mailbox analogy.
 The first language based on CSP is occam \citep{occam1, occam3}.
 
-Similar to CSP is \citet{milner:pi}'s $\pi$-calculus.
+\citet{milner:pi}'s $\pi$-calculus is similar to CSP.
 The difference between the two process algebras is that in the $\pi$-calculus
 channels are first class, meaning that a channel can be sent in a channel.
 This allows programmers to compose a dynamic communication network.
@@ -257,84 +338,384 @@ be expressed.
 \citet{mika:mercury-stm} is an implementation for Mercury
 and \citet{harris:2005:haskell-stm} is an implementation for Haskell.
 
-
-\section{Explicit Parallelism}
-\label{sec:intro_explicit_par}
+\section{Explicit and implicit parallelism}
+\label{sec:intro_par}
 
 % Parallelism w/o concurrency in imperative languages.
-Parallelism can also be achieved without concurrency,
-a popular language and library for this is OpenMP~\citep{openmp},
-which allows programmers to annotate parts of their programs for parallel
-execution without describing \textbf{how} this parallelism should be achieved;
-making it much easier for programmers to use.
+Parallelism can also be achieved without concurrency.
+This is done with language annotations that do not affect the (declrative)
+semantics of the program.
+The annotations describe \emph{what} should be parallelised,
+and rarely describe \emph{how} to parallelise each computation.
 We will refer to this as \emph{explicit parallelism}
 since parallelism is expressed directly by the programmer by the explicit
 annotations.
+
+OpenMP \citep{openmp} is a library for C++ \citep{cplusplus} and Fortran
+that allows programmers to annotate parts of their programs for parallel
+execution.
 In OpenMP most parallelism is achieved by annotating loops.
-However,
-the programmer is responsible for guaranteeing that the iterations of the loops
-are independent,
+C++ is an imperative language and therefore the compiler cannot determine
+which computations are safe to parallelise.
+Therefore the programmer is responsible for guaranteeing that the iterations
+of the loops are independent,
 that is to say, that no iteration depends on the results of affects of any of
 the previous iterations.
 If an iteration makes a function call, then this guarantee must also be true for
 the callee all transitive callees.
-Explicit parallelism otherwise avoids the problems with threading and message
-passing.
+The programmer must also declare which variables are shared, local or used
+for reductions.
+This is necessary so that the compiled code is parallelised correctly.
+The programmer is invited to specify how the iterations of the loop may be
+combined into parallel tasks (known as \emph{chunking}).
+This means that to some extent the programmer still describes \emph{how} to
+parallelise the loop,
+although the programmer has much less control than with parallelism through
+concurrency systems.
+OpenMP is one of the two explicit parallelism systems that we review that
+does this.
+Describing how something should be parallelised is rare.
+Povided that the programmer can annotate their loops correctly,
+explicit parallelism with OpenMP avoids the problems
+with threading and message passing.  
 
 % Declarative languages.
-One of the easiest ways to make explicit parallelism easier is to prevent
-side-effects from occurring, usually by designing them out of the language.
-Pure declarative languages like Mercury~\citep{mercury_jlp},
-Haskell~\citep{haskell98} and Clean~\citep{1991:concurrent-clean} do not
-allow side-effects.
-\paul{I should be able to find a more useful citation for Clean.}
-This is done by ensuring that a function's declaration declares all of the
-functions effects.
-Therefore,
-the programmer or the compiler can read a function's declaration to see if it
-is safe to parallelise.
-Mercury and Haskell both support explicit parallelism,
-the programmer need only annotate their code, indicating that it should be
-executed in parallel.
+In pure declrative langauges
+a function has no side effects,
+all possible effects of calling a function are specified in the function's
+declaration, (this can be considered an upper bound).
+This is often done by expressing effects as part of the type system such as
+with:
+Monads \citep{haskell-monads}, which are used by Haskell \citep{haskell98}
+or
+uniquness-typing, which is used by 
+Mercury\footnote{
+    Mercury's uniqueness typing is part of its mode system.
+    dispite this it is still considered uniqueness typing.}
+\citep{mercury_jlp}
+and Clean \citep{brus:1987:clean}.
+There are also some very novel approaches such as effect-typing \citep{ddc}.
+In any of these systems both the programmer and compiler can trivially
+determine if parallel execution of a particular computation is safe.
+Furthermore,
+in Haskell, Mercury and Clean
+the concept of a variable is different from that in imperative programming,
+it is not a storage location that can be updated,
+but a binding of a name to a value.
+Therefore variables that are shared
+(those that we would have to declare as shared in OpenMP)
+are really shared immutable values\footnote{
+    We find it amusing that the misnomer ``variable'' is used at all.}.
+Explicit parallelism in declrative languages is much easier and safer to use
+than in imperative languages.
+The next two sub-sections describe parallelism in functional and logic
+langauges respectivly.
 
-Glasgow Parallel Haskell (GpH) allows programmers to request parallel
-evaluation of certain expressions by annotating them with a function
-whose operational semantics cause parallel
-evaluation~\citep{gph,loidi:2008:gph-semiexplicit-parallelism}.
-Unfortunately Haskell's lazy evaluation strategy interacts poorly with
+%Pure declarative languages like Mercury~\citep{mercury_jlp},
+%Haskell~\citep{haskell98} and Clean~\citep{1991:concurrent-clean} do not
+%allow side-effects.
+%\paul{I should be able to find a more useful citation for Clean.}
+%This is done by ensuring that a function's declaration declares all of the
+%functions effects.
+%Therefore,
+%the programmer or the compiler can read a function's declaration to see if it
+%is safe to parallelise.
+%Mercury and Haskell both support explicit parallelism,
+%the programmer need only annotate their code, indicating that it should be
+%executed in parallel.
+
+\subsection{Parallelism in functional languages}
+\label{sec:intro_par_func}
+
+% \paul{Concurrent Lisp}
+% Concurrent lisp clearly uses concurrency as in the previous section.
+
+Pure functional languages like Haskell and Clean can be evaluated using a
+process known as \emph{graph reduction}.
+Graph reduction works by starting with an expression and a program and
+applying reductions.
+Reductions use an equation in the program to replace part of the expression
+with a new expression.
+In a lazy language (or lazy implementation of a non-strict language) 
+each reduction step performs \emph{outermost reduction}.
+This means that the arguments of a function are not normally evaluated
+before a reduction replaces the function call with an equation for that
+function.
+Some reductions require the evaluation of an argument,
+these include primative operations and pattern matching.
+The system continues applying reductions until the espression is 
+a value;
+the value may have parameters which are still expressions (they have not
+been evaluated).
+This is called weak head normal form (WHNF);
+Graph reduction itself can be parallelised:
+If a subgraph (an argument in the expression) is known to be required in the
+future,
+then it can be evaluated in parallel using the same graph reduction process.
+Several projects experimented with this technique
+\citep{augustsson:1989:parallel-graph-reduction,burn:1989:parallel-reduction-machine,peyton-jones:1989:parallel-graph-reduction}.
+
+Because the programmer does not need to annotate their program this
+parallelism is implicit.
+While implicit parallelism is always safe there is a serious performance
+issue.
+The cost of creating a parallel evaluation is sagnificant,
+so is any communication between parallel tasks.
+There are also distributed costs throughout the execution of these systems,
+for example many parallel graph reduction systems introduce locking on every
+graph node.
+Such locking increases the overheads of evaluation even when no parallel
+tasks are created.
+Therefore parallelised computations should be large enough that the benifit
+of evaluating them in parallel outweighs the costs of doing so.
+Unfortunatly most parallelism in an implicit parallel system is very
+fine grained, meaning that it is not large enough to make parallel
+evaluation worthwhile.
+There is also a lot of this parallelism,
+this means that the system spends most of its time managing the parallel
+tasks rather than evaluating the program.
+This is called embarassing parallelism as the amount of fine-grained
+parallelism can cause the evaluation to perform \emph{more slowly} than
+sequential evaluation.
+We will discuss other implicitly parallel systems,
+most of them share the same problems.
+Many systems such as \citet{peyton-jones:1989:parallel-graph-reduction} go
+to lengths to exploit only course grained parallelism.
+In our oppionion the problem with implicit parallelism is that it approches
+the parallel programming challenge from the wrong direction:
+it makes everything execute in parallel \emph{by default} and then attempts
+to introduce sequential execution;
+we beleive that one should make sequential execution the default and then
+attempt to introduce parallel execution \emph{only where it is profitable}.
+
+In contrast explicit parallelism allows the programmer to introduce
+parallelism only where they beleive it would be profitable.
+This means that the default execution stratergy is sequential.
+
+Multilisp \citep{halstead:1984:multilisp,halstead:1985:multilisp} is an
+explicitly parallel implemntation of Scheme.
+Like scheme, Multilisp is not pure, it allows side effects.
+This means that as programmers introduce parallelism, they must be sure that
+parallel computations cannot be affected by side effects,
+and do not have side effects themselves.
+Therefore multilisp is not safe as side effects may cause inconsistent
+results or courrupt memory.
+Multilisp programmers create parallelism by creating delayed computations
+called \emph{futures}.
+These computations will be evaluated concurrently 
+(and potentially in parallel).
+When the value of a future is required,
+the thread blocks until the future's value is available.
+Many operations such as assignment and parameter parsing do not require the
+value of a future.
+
+Haskell is a pure functional language.
+Being pure it does not have the problem with side effects that multilisp
+does above.
+The Haskell language standard specifies that it is non-strict\footnote{
+    Non-strict evaluation is more boadly defined than lazy evaluation};
+in practice however, all implementations use lazy evaluation in most cases.
+Patterns and cases where a sub-expression's value is always required are
+evaluated eagerly.
+Haskell programmers can introduce explicit parallelism into their programs
+with two functions (\code{par} and \code{pseq}).
+Support for these functions first appeared in GUM
+\citep{gph:gum,loidi:2008:gph-semiexplicit-parallelism}.
+They later appeard in the Glasgow Haskell Compiler (GHC),
+arguably the most popular implementation of Haskell
+\citep{harris:2005:haskell-smp}.
+The \code{par} and \code{pseq} functions are have the types:
+
+\begin{verbatim}
+par :: a -> b -> b
+pseq :: a -> b -> b
+\end{verbatim}
+They both take two arguments and return their first;
+their declrative semantics are identical to the \emph{const} function.
+However their \emph{operational} semantics are different,
+the \code{par} function may spawn off a parallel task that evaluates its
+second argument to WHNF,
+before returning its first argument.
+While the \code{pseq} funtion will evaluate its second argument to WHNF
+\emph{and then} return its first argument.
+We can think of these functions as \code{const} with different evaulation
+stratergies.
+
+Unfortunately lazy evaluation strategy interacts poorly with
+parallel evaluation.
+Because parallel tasks are only evaluated to WHNF,
+most tasks do not create enough work to make parallelisation worthwhile.
+The developers tried to reduce this problem by allowing programmers to
+specify an evaluation stratergy,
+which describes how deeply to evaluate expressions \citep{trinder:98:strategies}.
+his description is written in Haskell itself,
+this allows it to be implemented as a library and describe higher order
+evaluation stratergies.
+This does not solve the problem,
+it only gives the programmer a way to deal with it when they encounter it;
+it is better to make it impossible for the problem to occur,
+for example by restricting parallel computations to eager evaluation.
+Similar problems occur with non-strict evaluation in sequential programs.
+Evaluation stratergies, in particular eager vs non-eager,
+are a matter of personal preference.
+
+An alternative Haskell library called Monad.Par \citep{marlow:monadpar}
+requires parallel computations to be evaluated in full.
+However the programmer must provide typeclass instances for each of their
+own types that describe how to completely evaluate each type.
+While this still requires a non-trivial amount of effort from the
+programmer,
+it is harder for the programmer to make mistakes.
+Their program will not compile if they forget to provide a typeclass
+instance.
+
+\subsection{Parallelism in logic languages}
+\label{sec:intro_par_logic}
+
+Prolog is the most well known logic programming language.
+Although logic programming has many sub-paradigms we will discuss
+those that use selective linear resolution with definite clauses
+(SLD resolution) \citep{kowalski_sld}.
+SLD resolution attempts to answer a query by finding a Horn clause whose
+head has the same atom name as the query,
+performing variable substitution and then performing a query on each
+conjunct in the clause's body.
+If a query of a conjunct fails then the clause fails and an alternative
+clause may be tried.
+As multiple clause heads may match the query there may be more than one
+solution,
+and as the query may fail there might be zero solutions.
+As such each query may have any number of solutions.
+
+OR-parallel Prolog implementations may attempt to resolve a query against
+multiple clauses in parallel.
+Like parallel graph reduction this form of implicit parallelism can create
+embarassingly parallel workloads.
+OR-parallelism has some additional problems.
+Not all programs will provide enough OR-parallelism as many do not perform
+non-determinstic searches.
+Furthermore OR-parallelism is speculative:
+the current goal may be executed in a context where only the first result
+will be used,
+therefore searching for more results in parallel is a waste of resources.
+Systems that exploit OR-parallelism include
+Aurora \citep{lusk:1990:aurora}
+and Muse \citep{ali:1990:muse}.
+
+AND-parallel Prolog implementations introduce parallelism by executing
+conjuncts within clauses in parallel.
+AND-parallelism comes in two vareities, independent and dependent.
+independent AND-parallelism is much simplier, it only parallelises goals
+whose executions are independent.
+\&-Prolog 
+\citep{Hermenegildo:1991:and-parallel,
+DBLP:journals/jlp/MuthukumarBBH99}.
+Independent AND-parallelism comes in two flavors, strict and non-strict.
+Strict (also called restricted) independent AND-parallelism is where
+conjoined goals that may be evaluated in parallel must have no variables in
+common, including input variables.
+It is trivial for a Prolog system to statically determine that the goals are
+independent.
+Non-strict (unrestricted) independent AND-parallelism is where some variables are shared
+but none of the goals performs any instantiation on these variables or anything
+they reference indirectly.
+As non-strict parallelism is more general it is desirable for a system to
+handle it.
+Determining which goals are independent is much more complicated and
+requires analysis 
+\citep{DBLP:journals/tcs/GrasH09, Hermenegildo1995}.
+Most of the analysis can be done at compile time,
+however it is incomplete.
+Many systems use a combination of compile time analysis and runtime checks,
+which adds to the cost of parallel execution.
+
+Many more systems support dependent AND-parallelism as more parts of a
+program are dependent,
+and any system that supports dependent parallelism can handle independent
 parallelism.
-A parallelised computation will be evaluated to weak-head-normal-form,
-that is to say that if it is a data term with parameters,
-the parameters will not be evaluated.
-This means that any parallelised work usually does not do enough work to
-make parallelisation worthwhile.
-The GpH implementors have tried to solve this problem by allowing
-the programmer to express how deep evaluation should
-continue~\citep{trinder:98:strategies}.
-An alternative Haskell library called Monad.Par~\citep{marlow:monadpar}
-fully evaluates the result of any spawned-off computation.
-However, the programmer must still describe how any of their own
-data types can be fully evaluated.
-These solutions do not really solve the problem,
-they still require the programmer to introduce strictness.
-\paul{I can add support to my argument by describing problems with
-space leaks, for example foldl, foldr, and foldl'.
-I want to avoid a rant or a religious war, but I do want to
-objectively assess the literature.}
-It is better to avoid these and many other problems completely by using
-a strict language.
+An example of such a system is Andorra \citep{haridi:1990:andorra}.
+
+
+\plan{Managing logic variables and retracting their values}
+Prolog supports \emph{logic variables},
+free variables may be unified with one another and any later successful
+unifications with either variable must update variables.
+This can make parallel Prolog systems very difficult to write.
+Allowing parallel computations to see the bindings made by other
+computations can help reduce the amount of wasted work,
+goals that eventually fail will fail earlier and therefore waste less time
+before they fail.
+However, when part of a proof tree fails, any variable bindings made in that
+part of the tree must be retracted.
+In OR-parallel systems the Prolog implementation must handle multiple
+potential bindings being produced for a variable at once.
+In dependent AND-parallel systems retractions must be handled, 
+
+
+Even
+OR-parallel and independent AND-parallel systems must manage this correctly.
+
+
+
+
+Many systems support both AND-parallelism and OR-parallelism such as:
+
+IDIOM
+
+PEPSys
+
+Reform Prolog
+
+Committed choice:
+
+\plan{Parlog}
+
+\plan{GHC}
+
+\plan{ACE}
+
+\plan{Atomic Herbrand}
+
+\plan{Ciao?}
+
+
+To avoid the problems with implicit OR-parallelism researchers concentrate
+on methods to select larger graularity tasks where possible.
+Such stratergies come at a runtime cost.
+For example \citet{hausman:1987:or} scans the search tree for parallelism
+nearer the top, which is a linear time traversal.
+
+Selection of which goal in a conjunction or disjunction to resolve at each
+step,
+usually selects the left-most goal as written by the programmer.
+However Mercury's purity (unlike Prolog) makes this selection irreleant to
+the programmer.
+
+
+Logic programs are groups of Horn clauses,
+an query may be evaluated by substitution  
+
+
+\plan{Mercury}
+
+\paul{TODO: Mercury's parallel conjunction is never speculative.}
 
 \label{ref:parallel_conjunction}
-Mercury allows programmers to request parallel evaluation of
-conjunctions by replacing the normal conjunction operator with the
-parallel conjunction operator introduced by Thomas Conway in
+Mercury is a pure logic/functional language,
+Programmers can request parallel evaluation of a conjunction by replacing
+the plain conjunction symbol (\samp{,})
+with the parallel conjunction symbol (\samp{\&})
 \citep{conway:2002:par,wang:2006:hons,wang:2011:dep-par}.
-Since Mercury is a strict language it does not have Haskell's
-lazyness problems,
-programmers simply annotate where parallel execution
-should be used.
-A more detailed description of parallelism in Mercury can be found in
-section \ref{sec:backgnd_merpar}
+This is called AND-parallelism as the parallelism is introduced within
+conjunctions.
+We will describe how this works in section \ref{sec:bacngnd_merpar}.
+Because Mercury uses a strict evaluation stratergy,
+parallelism in Mercury does not have the problems of parallelism in Haskell.
+No equivilient of the \code{pseq} function is required as every computation
+is evaluated completely.
+
+Other logic languages have used AND-parallelism and OR-parallelism before.
+
 
 When a problem is not naturally a concurrent problem 
 explicit parallelism such as in Mercury and Haskell
@@ -371,7 +752,7 @@ automatically;
 the programmer will not need to worry about parallel evaluation any more
 than they currently worry about inlining and register allocation.
 
-\section{Implicit Parallelism}
+\subsection{Implicit Parallelism}
 \label{sec:intro_implicit_par}
 
 Some computer languages support implicit parallelism,
@@ -433,6 +814,24 @@ than explicit parallelism.
 It is understood that carefully adding a few explicit parallelism annotations
 to a program with the aid of a profiler will produce a faster-running
 program than implicitly parallelising most independent computations.
+
+\subsection{Other language paradigms}
+\label{sec:intro_par_other}
+
+Sisal \citep{feo:1990:sisal-report} is a strict functional language that
+supports implicit dataflow parallelism.
+Sisal's inbuilt types include arrays and streams.
+Streams have the same form as cons-lists (Lisp style) except that as one
+computation produces results on the stream, another computation may be
+reading items from the stream.
+There may only be one producer, which is why streams are not the same as
+channels.
+The other source of parallelism is the parallel execution of independent
+loop iterations.
+Sisal's for loops include a reduction clause,
+a clause stating how the loop is transformed into a result which may be a
+scalar result or an array or stream.
+
 
 \section{Automatic Parallelisation}
 \label{sec:intro_auto_par}
