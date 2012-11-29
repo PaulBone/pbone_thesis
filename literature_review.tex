@@ -616,31 +616,43 @@ conjoined goals that may be evaluated in parallel must have no variables in
 common, including input variables.
 It is trivial for a Prolog system to statically determine that the goals are
 independent.
-Non-strict (unrestricted) independent AND-parallelism is where some variables are shared
-but none of the goals performs any instantiation on these variables or anything
-they reference indirectly.
+Non-strict (unrestricted) independent AND-parallelism is where some variables
+are shared but none of the goals performs any instantiation on these variables
+or anything they reference.
 As non-strict parallelism is more general it is desirable for a system to
 handle it.
 Determining which goals are independent is much more complicated and
 requires analysis 
 \citep{DBLP:journals/tcs/GrasH09, Hermenegildo1995}.
-Most of the analysis can be done at compile time,
-however it is incomplete.
-Many systems use a combination of compile time analysis and runtime checks,
-which adds to the cost of parallel execution.
-
-Many more systems support dependent AND-parallelism as more parts of a
-program are dependent,
-and any system that supports dependent parallelism can handle independent
-parallelism.
-An example of such a system is Andorra \citep{haridi:1990:andorra}.
-
+Some of the analysis can be done at compile time, however it is a whole program analysis shich means that seperate compilation cannot be used.
+Furthermore the analysis is often incomplete,
+in some cases checks need to be done at runtime and these checks may traverse
+large data structres.
+In some cases they are not worthwhile.
 
 \plan{Managing logic variables and retracting their values}
 Prolog supports \emph{logic variables},
-free variables may be unified with one another and any later successful
-unifications with either variable must update variables.
-This can make parallel Prolog systems very difficult to write.
+When two or more free variables are unified with one another they behave as one
+variable;
+any later successful unification on any of the variables implicitly modifies
+the state of the other variables.
+During squential execution multiple OR-branches may bind different values to
+the same variable before either failing (retracting the bindings) 
+or succeeding (keeping the bindings).
+With OR-parallelism a variable may have to have different values in different
+parts of the search tree at once.
+OR-parallel systems must handle the extra overheads caused by this.
+
+While it is straightforward to implement this correctly for OR-parallel
+and independent AND-parallel systems it is much more difficult for
+dependent AND-parallel systems.
+AND-parallel systems must handle communcation between parallel conjuncts.
+This can be implemented in a number of different ways.
+
+1. Delayed communcation.
+2. Guards and committed choice w/ suspention.
+3. ??? Are there other ways?
+
 Allowing parallel computations to see the bindings made by other
 computations can help reduce the amount of wasted work,
 goals that eventually fail will fail earlier and therefore waste less time
@@ -651,12 +663,16 @@ In OR-parallel systems the Prolog implementation must handle multiple
 potential bindings being produced for a variable at once.
 In dependent AND-parallel systems retractions must be handled, 
 
+Many more systems support dependent AND-parallelism as more parts of a
+program are dependent,
+and any system that supports dependent parallelism can handle independent
+parallelism.
+% An example of such a system is Andorra \citep{haridi:1990:andorra}.
+
+
 
 Even
 OR-parallel and independent AND-parallel systems must manage this correctly.
-
-
-
 
 Many systems support both AND-parallelism and OR-parallelism such as:
 
@@ -673,8 +689,6 @@ Committed choice:
 \plan{GHC}
 
 \plan{ACE}
-
-\plan{Atomic Herbrand}
 
 \plan{Ciao?}
 
