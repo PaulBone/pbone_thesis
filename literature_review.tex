@@ -636,22 +636,27 @@ When two or more free variables are unified with one another they behave as one
 variable;
 any later successful unification on any of the variables implicitly modifies
 the state of the other variables.
-During squential execution multiple OR-branches may bind different values to
-the same variable before either failing (retracting the bindings) 
-or succeeding (keeping the bindings).
-With OR-parallelism a variable may have to have different values in different
+During squential execution
+part of the search space may bind values to variables then,
+if it fails it must retract any bindings it made so that alternative
+branches of the search tree are free to bind other values to variables.
+With OR-parallelism a variable may be bound to distinct values in different
 parts of the search tree at once.
-OR-parallel systems must handle the extra overheads caused by this.
+There are many different ways to implement this,
+for example Muse stores variables for different parallel parts of the search
+tree in different address spaces \citep{ali:1990:muse}.
+This introduces extra work such as copying the states of computations as new
+work is executed in parallel.
+Similar techniques can be used with independent AND-parallel Prologs.
+
+This management of variables is simple compared to that required by
+dependent AND-parallel prologs.
 
 While it is straightforward to implement this correctly for OR-parallel
 and independent AND-parallel systems it is much more difficult for
 dependent AND-parallel systems.
 AND-parallel systems must handle communcation between parallel conjuncts.
 This can be implemented in a number of different ways.
-
-1. Delayed communcation.
-2. Guards and committed choice w/ suspention.
-3. ??? Are there other ways?
 
 Allowing parallel computations to see the bindings made by other
 computations can help reduce the amount of wasted work,
@@ -661,20 +666,65 @@ However, when part of a proof tree fails, any variable bindings made in that
 part of the tree must be retracted.
 In OR-parallel systems the Prolog implementation must handle multiple
 potential bindings being produced for a variable at once.
-In dependent AND-parallel systems retractions must be handled, 
+In dependent AND-parallel systems this is much more difficult.
+Andorra Prolog \citep{haridi:1990:andorra} handles this by modeling the
+logic program as a Herbrand constaint problem.
+It then solves that problem, introducing parallelism for
+determinstic\footnote{
+    Andorra uses a different definition for determinism than Mercury does
+    (section \ref{sec:backgnd_mercury} explains Mercury's definition}
+conjoined goals.
+For Andorra's purposes determinstic means ``succeeds at most once''.
 
-Many more systems support dependent AND-parallelism as more parts of a
-program are dependent,
-and any system that supports dependent parallelism can handle independent
-parallelism.
-% An example of such a system is Andorra \citep{haridi:1990:andorra}.
+Another solution to this problem involve restricting the Prolog language
+by removing backtracking.
+This creates a committed-choice logic language such as
+Concurrent Prolog \citep{saraswat86:concurrent_prolog_definition,
+shapiro:flat_concur_prolog};
+Parlog \citep{clark:84:parlog_sys_prog,clark:86:parlog}
+and Guarded Horn Clauses (GHC) \citep{ueda:ghc}.
+When these systems encounter mulitple clauses during execution they support
+committing to only one of the clauses.
+Each of these system uses guarded clauses \citep{guards}, which have the
+form:
+$H \leftarrow G_1 \wedge \ldots \wedge G_n : B_1 \wedge \ldots \wedge B_m$
+where $G_i$ and $B_i$ are atoms conjoined in the guard and body of the
+clause;
+$H$ is the head of the clause.
+The evaluation of the body is committed to if and only if the guard and any
+unfications in the head are all true.
+Each system handles this slightly differently.
+In Concurrent Prolog clauses may execute but only once a clause is commited
+to will any variables it has bound become visible to other parallel
+evaluations.
+This can cause the communcation of variable's values to be delayed,
+allowing other parallel evaluations to run ahead and possibly perform
+speculative execution.
+GHC solves this by suspending a computation if a unification in its guard
+would cause a variable visible outside the procedure to become more
+instantiated.
+When another parallel computation updates the variable such that the
+unification can proceed by only performing a simple test,
+then the execution of the clause is resumed.
+However suspending and resuming of tasks can be inefficient,
+especially when any unification with most variables can cause a task to
+suspend or resume.
+(Even unifications in clause bodys can cause a computation to be suspended
+as the predicate to which the clause body belongs may have been called from
+aother clause's guard.
+Parlog also uses suspention, however it does by introducing modes into the
+program.
+Goals that take a variable in an input mode are consumers, and may suspend
+until a producer has unified the variable with something representing a
+term, allowing the consumer to continue its execution.
+In some ways this is analogous to Concurrent Prolog and GHC's usage of
+variables,
+as variables intended for output should be unified in the body of a clause,
+and veriables intended for input should be unified in the head or guard:
+so a programmer in any of these three systems has to consider which of the
+variables are input and which are output.
 
-
-
-Even
-OR-parallel and independent AND-parallel systems must manage this correctly.
-
-Many systems support both AND-parallelism and OR-parallelism such as:
+\plan{modes}
 
 IDIOM
 
@@ -683,10 +733,6 @@ PEPSys
 Reform Prolog
 
 Committed choice:
-
-\plan{Parlog}
-
-\plan{GHC}
 
 \plan{ACE}
 
