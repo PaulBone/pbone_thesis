@@ -599,17 +599,15 @@ the current goal may be executed in a context where only the first result
 will be used,
 therefore searching for more results in parallel is a waste of resources.
 Systems that exploit OR-parallelism include
-Aurora \citep{lusk:1990:aurora}
-and Muse \citep{ali:1990:muse}.
+Aurora \citep{lusk:1990:aurora},
+Muse \citep{ali:1990:muse}
+and ACE \citep{gupta:1991:ace} (which also supports independent AND-parallelism).
 
 AND-parallel Prolog implementations introduce parallelism by executing
 conjuncts within clauses in parallel.
 AND-parallelism comes in two vareities, independent and dependent.
 independent AND-parallelism is much simplier, it only parallelises goals
 whose executions are independent.
-\&-Prolog 
-\citep{Hermenegildo:1991:and-parallel,
-DBLP:journals/jlp/MuthukumarBBH99}.
 Independent AND-parallelism comes in two flavors, strict and non-strict.
 Strict (also called restricted) independent AND-parallelism is where
 conjoined goals that may be evaluated in parallel must have no variables in
@@ -619,16 +617,25 @@ independent.
 Non-strict (unrestricted) independent AND-parallelism is where some variables
 are shared but none of the goals performs any instantiation on these variables
 or anything they reference.
+Examples non-strict independent AND-parallel Prolog systems include \&-Prolog 
+\citep{Hermenegildo:1991:and-parallel,
+DBLP:journals/jlp/MuthukumarBBH99}
+and ACE \citep{gupta:1991:ace}.
 As non-strict parallelism is more general it is desirable for a system to
 handle it.
 Determining which goals are independent is much more complicated and
-requires analysis 
-\citep{DBLP:journals/tcs/GrasH09, Hermenegildo1995}.
-Some of the analysis can be done at compile time, however it is a whole program analysis shich means that seperate compilation cannot be used.
-Furthermore the analysis is often incomplete,
-in some cases checks need to be done at runtime and these checks may traverse
+requires analysis;
+\citet{DBLP:journals/tcs/GrasH09} and \citet{Hermenegildo1995} describe
+suitable analyses.
+Some of the analysis can be done at compile time,
+however it is a whole program analysis shich means that seperate compilation
+cannot be used.
+Furthermore the analysis is often incomplete:
+in most systems, checks are needed at runtime and these checks may traverse
 large data structres.
-In some cases they are not worthwhile.
+The overheads of executing these checks
+(which must be execute regardless of their outcome)
+can overweigh the benifit of parallel execution.
 
 \plan{Managing logic variables and retracting their values}
 Prolog supports \emph{logic variables},
@@ -647,27 +654,24 @@ for example Muse stores variables for different parallel parts of the search
 tree in different address spaces \citep{ali:1990:muse}.
 This introduces extra work such as copying the states of computations as new
 work is executed in parallel.
-Similar techniques can be used with independent AND-parallel Prologs.
-
-This management of variables is simple compared to that required by
-dependent AND-parallel prologs.
+Often OR-parallelism is used together with independent AND-parallels
+such as in PEPSys \citep{baron:1988:pepsys},
+these systems can also manage variable bindings in a similar way.
 
 While it is straightforward to implement this correctly for OR-parallel
-and independent AND-parallel systems it is much more difficult for
-dependent AND-parallel systems.
-AND-parallel systems must handle communcation between parallel conjuncts.
-This can be implemented in a number of different ways.
-
-Allowing parallel computations to see the bindings made by other
-computations can help reduce the amount of wasted work,
-goals that eventually fail will fail earlier and therefore waste less time
-before they fail.
-However, when part of a proof tree fails, any variable bindings made in that
-part of the tree must be retracted.
-In OR-parallel systems the Prolog implementation must handle multiple
-potential bindings being produced for a variable at once.
-In dependent AND-parallel systems this is much more difficult.
-Andorra Prolog \citep{haridi:1990:andorra} handles this by modeling the
+and independent AND-parallel systems;
+it is much more difficult for dependent AND-parallel systems as
+they must handle communcation between parallel conjuncts.
+Most systems allow parallel conjuncts to communcate variable bindings as
+soon as they are produced.
+This allows non-determinstic search computations that consume those bindings to
+detect failure earlier and therefore execute more efficiently.
+However if the producer of a binding is also part of a non-determinstic
+search,
+then if it fails any variable bindings made in the failed part of the tree
+must be retracted.
+Implementing this efficently is difficult.
+Andorra Prolog \citep{haridi:1990:andorra} handles models the
 logic program as a Herbrand constaint problem.
 It then solves that problem, introducing parallelism for
 determinstic\footnote{
@@ -723,20 +727,17 @@ as variables intended for output should be unified in the body of a clause,
 and veriables intended for input should be unified in the head or guard:
 so a programmer in any of these three systems has to consider which of the
 variables are input and which are output.
-
-\plan{modes}
-
-IDIOM
-
-PEPSys
-
-Reform Prolog
-
-Committed choice:
-
-\plan{ACE}
+The programming style in committed choice languages is more imperative than
+in traditional Prolog systems as the guard, and which goals are placed in
+the guard, is extra-logical.
 
 \plan{Ciao?}
+Ciao uses non-strict independend AND-parallelism with granualrity control.
+Non-strictness information is provided by mode analysis.
+Ciao allows non-compulsory mode annotations.
+
+\plan{Reform Prolog}
+Reform Prolog handles loops cleverly, but I need to find a paper for it.
 
 
 To avoid the problems with implicit OR-parallelism researchers concentrate
