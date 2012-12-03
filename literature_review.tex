@@ -62,8 +62,8 @@ We find it useful to create the following classifications for these methods.
     concurrency, however it is less expressive.
     We will explain how explicit parallelism is distinct from and improves
     upon \emph{concurrency for parallelism}.
-    
-    \item[Implicit parallelism] is a category that includes 
+
+    \item[Implicit parallelism] is a category that includes
     systems that attempt to make parallel execution the typical form of
     execution.
     We describe a number of systems and explain why the general approach is
@@ -82,7 +82,7 @@ We find it useful to create the following classifications for these methods.
     (parallel as default vs.\ sequential as default).
     Prior work in automatic parallelism is discussed in section
     \ref{sec:intro_auto_par}.
-\end{description}    
+\end{description}
 
 \noindent
 We explore the literature in this order as each successive category builds
@@ -184,7 +184,7 @@ Frequent mistakes include: forgetting to synchronise access to a critical
 section,
 making the critical section too small, or too large,
 these can lead to incorrect program behaviour, inconsistent memory states and
-crashes. 
+crashes.
 When using multiple locks in a single critical section,
 because that critical section uses multiple resources,
 the locks must be acquired in the same order in each such critical section
@@ -377,7 +377,7 @@ does this.
 Describing how something should be parallelised is rare.
 Provided that the programmer can annotate their loops correctly,
 explicit parallelism with OpenMP avoids the problems
-with threading and message passing.  
+with threading and message passing.
 
 % Declarative languages.
 In pure declarative languages
@@ -388,7 +388,7 @@ This is often done by expressing effects as part of the type system such as
 with:
 Monads \citep{haskell-monads}, which are used by Haskell \citep{haskell98}
 or
-uniqueness-typing, which is used by 
+uniqueness-typing, which is used by
 Mercury\footnote{
     Mercury's uniqueness typing is part of its mode system.
     Despite this, it is still considered uniqueness typing.}
@@ -436,14 +436,14 @@ Graph reduction works by starting with an expression and a program and
 applying reductions.
 Reductions use an equation in the program to replace part of the expression
 with a new expression.
-In a lazy language (or lazy implementation of a non-strict language) 
+In a lazy language (or lazy implementation of a non-strict language)
 each reduction step performs \emph{outermost reduction}.
 This means that the arguments of a function are not normally evaluated
 before a reduction replaces the function call with an equation for that
 function.
 Some reductions require the evaluation of an argument,
 these include primitive operations and pattern matching.
-The system continues applying reductions until the expression is 
+The system continues applying reductions until the expression is
 a value;
 the value may have parameters which are still expressions (they have not
 been evaluated).
@@ -502,7 +502,7 @@ Therefore multilisp is not safe as side effects may cause inconsistent
 results or corrupt memory.
 Multilisp programmers create parallelism by creating delayed computations
 called \emph{futures}.
-These computations will be evaluated concurrently 
+These computations will be evaluated concurrently
 (and potentially in parallel).
 When the value of a future is required,
 the thread blocks until the future's value is available.
@@ -617,7 +617,7 @@ independent.
 Non-strict (unrestricted) independent AND-parallelism is where some variables
 are shared but none of the goals performs any instantiation on these variables
 or anything they reference.
-Examples non-strict independent AND-parallel Prolog systems include \&-Prolog 
+Examples non-strict independent AND-parallel Prolog systems include \&-Prolog
 \citep{Hermenegildo:1991:and-parallel,
 DBLP:journals/jlp/MuthukumarBBH99}
 and \&ACE \citep{gupta:1991:ace}.
@@ -740,7 +740,7 @@ to decide what is worth executing in parallel.
 This can vary from using OR-parallelism near the top of a nondeterministic
 search space \citep{hausman:1987:or},
 to the compile time analyses performed by Ciao Prolog
-\citep{hermenegildo_ciao} including \emph{granularity control} 
+\citep{hermenegildo_ciao} including \emph{granularity control}
 \citep{lopez96:distance_granularity} (mostly compile time).
 
 The concept of granularity control
@@ -752,7 +752,7 @@ There are numerous different ways to estimate the runtime of a task.
 %this may provide an estimate for the runtime in the future
 %\citep{sarkar:1989:feedback,harris,tannier};
 %our own system, including the system we implemented before commencing the
-%Ph.D.\ programme, \citet{bone:2001:honours} 
+%Ph.D.\ programme, \citet{bone:2001:honours}
 For example \citet{lopez96:distance_granularity} constructs cost functions
 at compile time which can be evaluated at runtime to give the cost of a
 goal given the values of certain terms.
@@ -841,7 +841,7 @@ than Haskell's;
 it does not require programmers to use an equivalent of
 the \code{pseq} function or describe evaluation strategies.
 
-\paul{XXX: Move this paragraph to the end of the next section}
+%\paul{XXX: Move this paragraph to the end of the next section}
 In this section we have described a lot of implicit parallelism work
 and some explicit parallelism work.
 Both of these solutions make parallelisation easier to introduce for the
@@ -870,86 +870,58 @@ We describe prior work on these problems in section
 % \plan{Reform Prolog}
 % Reform Prolog handles loops cleverly, but I need to find a paper for it.
 
-\subsection{Implicit Parallelism}
-\label{sec:intro_implicit_par}
-
-Some computer languages support implicit parallelism,
-in these languages many parts of programs are executed in parallel.
-Parallel execution is the normal mode of execution,
-it is used in most places within the program.
-
-% Implicitly parallel prologs. (and OR-parallelism)
-A number of parallel Prolog-like languages that were developed during the
-1980's are classified as implicitly parallel languages.
-These included Concurrent
-Prolog~\citep{saraswat85:probl_with_concur_prolog,saraswat86:concurrent_prolog_definition,shapiro:flat_concur_prolog},
-Parlog~\citep{clark:84:parlog_sys_prog,clark:86:parlog} and GHC~\citep{ueda:ghc}.
-Nearly all tasks in these languages were carried out in
-parallel,
-as a result the overheads of parallel execution are typically
-greater than the benefit of running most small tasks in parallel.
-Furthermore implicitly parallel programs have an \emph{embarrassingly
-  parallel} workload,
-this occurs when much more parallel work is available than the parallel
-processing capacity of the machine;
-thereby dramatically reducing the benefit of parallel execution while
-the cost remained the same.
-Both these effects often caused very poor performance.
-
-% Granularity control
-Granularity control was introduced in order to solve these
-problems~\citep{lopez96:distance_granularity,shen_98_granularity-control}.
-It attempts to reduce the amount of work being executed in parallel.
-There are a number of different methods, some incur a
-runtime cost in order to determine if there is already ample parallel
-work available while other static methods do not.
-All methods help improve the performance of parallel programs and are
-quite valuable, especially in recursive procedures.
-\paul{I need to point out cases where GC does not help or is not good
-enough,
-I am going to have to find this in the literature and come back to this
-paragraph and possibly the previous one.}
-
-Some languages allow for the parallelisation of data parallel
-tasks such as NESL~\citep{blelloch:95:nesl} and Data Parallel
-Haskell (DpH)~\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}.
-These languages use special data types to denote parallelism,
-sequences and parallel arrays in NESL and DpH respectively.
-Only operations on elements of these collections are parallelised.
-We have none-the-less classified these systems as implicitly parallel,
-since every action on these data types is executed in parallel.
-Because operations are data-parallel they are independent and suitable
-\paul{Define SMP in the introduction}
-for execution on vector machines as well as SMP machines.
-By transforming code and arranging for one thread to work on more than
-one data item at a time granularity can be improved.
-The drawback of these data-parallel approaches is that they can
-parallelise data parallel programs
---- only a small subset of computer programs.
-
-With the exception of DpH, implicit parallelism often performs worse
-than explicit parallelism.
-It is understood that carefully adding a few explicit parallelism annotations
-to a program with the aid of a profiler will produce a faster-running
-program than implicitly parallelising most independent computations.
-
 \subsection{Other language paradigms}
 \label{sec:intro_par_other}
 
-Sisal \citep{feo:1990:sisal-report} is a strict functional language that
-supports implicit dataflow parallelism.
+Some languages allow parallelism in other forms,
+or are created specifically to make parallelism easy to expose.
+Parallel languages that do not fall into one of the above paradigms are
+assessed here.
+
+Sisal \citep{feo:1990:sisal-report} is a data-flow language.
+In some respects its syntax looks like that of a functional language
+since has constructs for loops.
+However functions are referentially transparent.
+so it is also valid to call it a pure functional language.
+Sisal supports implicit data-flow parallelism.
 Sisal's inbuilt types include arrays and streams.
 Streams have the same form as cons-lists (Lisp style) except that as one
 computation produces results on the stream, another computation may be
 reading items from the stream.
-There may only be one producer, which is why streams are not the same as
-channels.
+The concept of streams is not new here,
+it has been seen in Scheme \citep{wizard-book} and probably other
+languages.
+A stream may have only one producer,
+which makes them different from channels.
 The other source of parallelism is the parallel execution of independent
 loop iterations.
-Sisal's for loops include a reduction clause,
-a clause stating how the loop is transformed into a result which may be a
-scalar result or an array or stream.
+Sisal's for loops include a reduction clause;
+this clause states how the loop is transformed into a result which may be a
+scalar result, an array or stream.
+The loop's body may not have any effects or make any variable bindings;
+so the loop's only result is the one described by the result clause.
+The Sisal project is unfortunately dead,
+and information about the system is hard to find and access.
+The Sisal language appears to be good for expressing data-flow
+parallel programs.
+It is more difficult to say anything about how well the system
+transformed programs into executable code and how well it performed.
 
+Data-parallel languages such as
+NESL \citep{blelloch:95:nesl} and
+Data Parallel Haskell (DpH)
+\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}
+parallelise operations on members of a data structure.
+For example,
+DpH's parallelises operations on its parallel array type.
+Any operations (including nested operations) on these arrays are
+executed in parallel.
+Data-parallel languages are especially good at targeting SIMD hardware
+including general purpose graphics processor units.
+They also work well on SMP hardware.
+While these systems are good at what they do,
+they do not handle non data parallel problems well,
+and data parallel programs are a very small subset of computer programs.
 
 \section{Automatic Parallelisation}
 \label{sec:intro_auto_par}
