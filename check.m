@@ -382,7 +382,9 @@ names = [
     "Mercury",
     "Forth",
     "Prolog",
-    "Haskell"
+    "Haskell",
+    "Fortran",
+    "Erlang"
     ].
 
 % Words that should be written with macros.
