@@ -1,5 +1,6 @@
 
 \chapter{Conclusion}
+\label{chap:conc}
 
 % Each research chapter contains a discussion of related work.
 \status{No plan for this chapter yet}
@@ -22,3 +23,39 @@ special case handling such as loop control}
 
 \paul{More special case handling such as D\&C}
 
+
+We believe that more can be done to improve the effectiveness of
+automatic parallelisation,
+In some cases it may be possible to transform common programming
+pasterns that lack parallelism into equivalent patterns with available
+parallelism.
+Furthermore, an advanced profiler --- such as Mercury's deep
+profiler~\citep{conway:2001:mercury-deep} --- can provide information
+that enables a compiler to make good parallelisation choices.
+However there are a number of challenges facing automatic
+parallelisation.
+When using profiler feedback the profiled execution of the program may
+not be a typical execution of the program, or there may be several
+typical executions of the program.
+We cannot control whether users profile typical executions of their
+programs, but we may be able to allow users to merge execution
+profiles to create a composite profile that is more representative of
+their program's usage.
+Another challenge can occur when a program has very little parallelism
+available in it, it may be difficult to parallelise effectively.
+We hope that in some cases the compiler can transform such a program
+into an equivalent program with more available parallelism.
+
+% XXX For conclusion?
+%Mercury's deep profiler~\citep{conway:2001:mercury-deep} provides
+%detailed and accurate profiling information,
+%This will make it easier to implement optimisations such as
+%parallel specialisation --- generating sequential and parallel
+%versions of one procedure and using the sequential version
+%in situations where parallelism is not an optimisation.
+%Extracting information from the deep profiler to guide compiler
+%optimisations is supported by the feedback framework developed by
+%\citet{bone:2008:hons}.
+%These are examples of the flexibility that the deep profiler provides,
+%describing other ideas is outside the context of a literature review.
+%

@@ -13,7 +13,7 @@
 %it is compared with my work.
 %}
 
-\status{Work in progress.}
+\status{Ready for proof reading.}
 
 In the rest of this chapter we will explore the literature concerning
 parallel programming.
@@ -77,7 +77,7 @@ We find it useful to create the following classifications for these methods.
     In these systems sequential execution is the typical form of execution
     and parallel execution is used sparingly.
     Many authors often group these systems with implicit parallelism systems.
-    We have chosen to separate them because the authors of the two systems
+    We have chosen to separate them because the two systems
     approach the same problem from different directions
     (parallel as default vs.\ sequential as default).
     Prior work in automatic parallelism is discussed in section
@@ -841,31 +841,6 @@ than Haskell's;
 it does not require programmers to use an equivalent of
 the \code{pseq} function or describe evaluation strategies.
 
-%\paul{XXX: Move this paragraph to the end of the next section}
-In this section we have described a lot of implicit parallelism work
-and some explicit parallelism work.
-Both of these solutions make parallelisation easier to introduce for the
-programmer and much more reliable.
-However they both suffer from embarrassing parallelism.
-We have described how this can happen in implicitly parallel systems.
-In explicitly parallel systems programmers are poor at estimating the
-costs of their program's computations and
-the overheads of parallelism such as:
-spawning parallel tasks,
-cleaning up completed parallel tasks,
-operating system scheduling and
-hardware behaviour such as cache effects.
-Furthermore programmers must know whether there will be enough
-processors free at runtime to execute the parallelised computation.
-This information is necessary for determining whether parallel execution
-is worthwhile.
-and for avoiding embarrassing parallelism.
-When parallel computations are dependent,
-such as when Futures are used in Multilisp or
-dependent parallelism is used in Mercury,
-estimating how the dependencies effect parallelism is also required.
-We describe prior work on these problems in section
-\ref{sec:intro_auto_par}.
 
 % \plan{Reform Prolog}
 % Reform Prolog handles loops cleverly, but I need to find a paper for it.
@@ -923,10 +898,60 @@ While these systems are good at what they do,
 they do not handle non data parallel problems well,
 and data parallel programs are a very small subset of computer programs.
 
+Data parallel and data-flow parallelism does not have the same
+problems as implicit parallelism.
+This is because data parallel and data-flow parallel programs have a
+more regular structure than logic and functional programs.
+Data parallel and data-flow parallel languages are able to take
+advantage of the program's structure and compile efficient parallel code.
+
+
 \section{Automatic Parallelisation}
 \label{sec:intro_auto_par}
 
-% Look at automatic parallelisation in Haskell.
+As we mentioned above,
+automatic parallelism is often grouped with implicit parallelism.
+However there is an important difference.
+Most implicit parallelism systems attempt to parallelise almost all
+computations against one another;
+parallel execution is the default form of execution.
+In contrast,
+automatic parallelism systems make sequential execution the default form
+of execution and then determine which, if any, computations should be
+executed in parallel.
+
+Programmers using an explicit parallelism system could work from the
+same principle;
+they can start with a sequential program and introduce parallelism to
+speed it up.
+However this requires programmers to know and keep track of a lot of
+information in order to determine if parallel execution is worthwhile
+for any given computation.
+In the context of profiling and optimisation,
+it is widely reported that programmers are poor at identifying the
+hot-spots in their programs or estimating the costs of their program's
+computations.
+Programmers who are parallelising programs must also understand the
+overheads of parallelism such as:
+spawning parallel tasks,
+cleaning up completed parallel tasks,
+operating system scheduling and
+hardware behaviour such as cache effects.
+Even if a programmer determines that parallel execution is worthwhile in
+a particular case,
+they must also be sure that adding parallel execution to their program
+does not create embarrassing parallelism.
+They must therefore understand whether there will be enough
+processors free at runtime to execute each parallelised computation.
+When parallel computations are dependent,
+such as when Futures are used in Multilisp or
+dependent parallelism is used in Mercury,
+programmers must also estimate how the dependencies effect parallelism.
+In practice programmers will attempt to use trial and error to find the
+best places to introduce parallelism,
+but an incorrect assumption of any of the above variables can prevent them
+from parallelising the program effectively.
+
 \citet{harris_07_feedback_imp_par} developed a profiler
 feedback directed automatic parallelisation approach for Haskell programs.
 They have reported speed ups of up to 80\% compared to the sequential
@@ -936,93 +961,88 @@ programs, they attributed this to a lack of parallelism
 available in these programs.
 They have shown that automatic parallelisation is a promising idea for
 improving the performance of software.
-
-We believe that more can be done to improve the effectiveness of
-automatic parallelisation,
-In some cases it may be possible to transform common programming
-pasterns that lack parallelism into equivalent patterns with available
-parallelism.
-Furthermore, an advanced profiler --- such as Mercury's deep
-profiler~\citep{conway:2001:mercury-deep} --- can provide information
-that enables a compiler to make good parallelisation choices.
-However there are a number of challenges facing automatic
-parallelisation.
-When using profiler feedback the profiled execution of the program may
-not be a typical execution of the program, or there may be several
-typical executions of the program.
-We cannot control whether users profile typical executions of their
-programs, but we may be able to allow users to merge execution
-profiles to create a composite profile that is more representative of
-their program's usage.
-Another challenge can occur when a program has very little parallelism
-available in it, it may be difficult to parallelise effectively.
-We hope that in some cases the compiler can transform such a program
-into an equivalent program with more available parallelism.
+Their system works by measuring the execution time of thunks and using
+thsi information to inform the compiler how to parallelise the program.
+Any thunk whose execution time is above a particular threshold is
+spawned off for parallel evaluation.
+This has two problems, both are due to Haskell's lazy evaluation.
+The first was mentioned above, all thunks are evaluated to WHNF,
+which means that most thunks represent very little parallel work
+(they will often create a structure which itself contains new thunks).
+The second problem is that thunk execution is speculative:
+when a thunk is created it is usually unknown whether the thunk's value
+will actually be used;
+and if it is known at compile time that the thunk will be used,
+the Glasgow Haskell Compiler (GHC) will optimise it so that the computation
+is not represented by a thunk at all and is evaluated eagerly.
 
 % Jerome's work.
 \citet{tannier:2007:parallel_mercury} previously attempted to automatically
-parallelise Mercury programs using profiler feedback
-information to automatically parallelise a program.
-\citet{tannier:2007:parallel_mercury} approach selects the most expensive predicates
+parallelise Mercury programs using profiler feedback.
+His approach selects the most expensive predicates
 of a program and attempts to parallelise conjunctions within them.
-Tannier also makes use of compile-time granularity
-control to reduce the over-parallelisation that can occur in recursive
-code.
-Unfortunately, he estimated the costs and benefits of parallelising
-dependant conjunctions based on the number of dependant variables that
-they shared.
-In practice most producers produce dependant variables late in their
-execution and most consumers consume them early.
-Therefore Tannier's calculation is na\"ive: the time that these
-variables are produced by one conjunct and consumed by the other may
-not correlate with the number of dependant variables.
-We believe that Tannier's algorithm is, in general, too optimistic
+This is one of the few peices of work that attempts to measure how
+dependencies affect the amount of parallelism available.
+Tannier's approach counts the number of shared variables in a parallel
+conjunction and uses this as an analogue for how restricted the
+parallelism may be.
+However in practice most producers produce dependant variables late in
+their execution and most consumers consume them early.
+Therefore Tannier's calculation is naive:
+the time that these variables are produced by one conjunct and consumed
+by the other may not correlate with the number of dependant variables.
+Tannier's algorithm is, in general, too optimistic
 about the parallelism available in dependant conjunctions.
+Tannier also makes use of compile-time granularity control to reduce the
+over-parallelisation that can occur in recursive code.
 
-% My honours thesis.
-\citet{bone:2008:hons} improved on this approach by using
-information from a modification of Mercury's deep profiler to
-calculate when the producing conjunct is most likely to produce the
-dependant values and when the consuming conjunct is likely to need
-them.
-This information can be used to estimate the parallel speedup of
-dependant conjunctions.
-The effectiveness of this approach is not yet clear.
+Mercury's deep profiler \citep{conway:2001:mercury-deep} provides
+detailed and accurate profiling information.
+Among other things,
+the deep profiler records separate profiling information for separate
+uses of the same code.
+To improve on Tannier's methods we aimed to calculate when the
+producing conjunct is most likely to produce the dependant values and
+when the consuming conjunct is likely to need them\footnote{
+    This work was part of my honours project}
+\citep{bone:2008:hons}.
+To do this we modified the profiler so that it could provide enough
+information so that we could calculate the likely production and
+consumption times.
+This early work was restricted to situations with a
+single dependent variable shared between two conjuncts.
+It is described in more detail in section \ref{sec:backgnd_autopar}.
+In this prior work and in this Ph.D.\ dissertation we make heavy use of the
+advanced features provided by Mercury's deep profiler.
+More information about the profiler is provided in section
+\ref{sec:backgnd_deep}.
+No equivalent profiler exists for Haskell or Clean.
+This and Mercury's purity make it the best environment for our research.
 
-Mercury's deep profiler~\citep{conway:2001:mercury-deep} provides
-detailed and accurate profiling information,
-among other things the deep profiler records separate profiling
-information for separate uses of the same code.
-This will make it easier to implement optimisations such as
-parallel specialisation --- generating sequential and parallel
-versions of one procedure and using the sequential version
-in situations where parallelism is not an optimisation.
-Extracting information from the deep profiler to guide compiler
-optimisations is supported by the feedback framework developed by
-\citet{bone:2008:hons}.
-These are examples of the flexibility that the deep profiler provides,
-describing other ideas is outside the context of a literature review.
-No equivalent profiler exists for Haskell or Clean, making Mercury an
-important choice for our implementation.
+We anticipate that automatic parallelisation will be easy to use and
+will parallelise programs more effectivly that most programmers can by
+hand.
+Furthermore as programs change costs of computations within them will 
+change,
+this may make manual parallelisations (using explicit parallelism) less
+effective.
+An automatic parallelisation system will make it easier to maintain
+program as the automatic parallelisation analysis can simply be
+re-executed to re-parallelise the program.
 
-There is another challenge with automatic parallelism: a lot of
-information about the execution of a program will not be recorded by the
-profiler, often recording information in infeasible.
-In these cases we must be careful to make safe, conservative
-assumptions when calculating estimates of this information.
-
-% Write about haskell's call centre stacks, maybe they provide enough
-% information to perform similar optimisations.
-
-% How does clean compare?
-
-We expect that automatic parallelisation will more easily and
-effectively parallelise declarative programs.
-Furthermore, it will be easier to maintain such programs, as
-characteristics of the program that are used to explicitly parallelise
-a program will not necessarily be true in future versions or uses of that
-program.
-Automatic parallelisation allows the programmer to re-parallelise
-their program quickly, based on a current execution profile of the
-program.
+The remainder of the dissertation is organised as follows.
+Chapter \ref{chap:backgnd} provides background information about
+Mercury and explicit and automatic parallelism in Mercury.
+Chapter \ref{chap:rts} discusses a number of improvements that we made to
+the runtime system.
+Chapter \ref{chap:overlap} describes our new automatic parallelism
+analysis.
+Chapter \ref{chap:loop_control} addresses a long standing problem in the
+parallel execution of most recursive code.
+Chapter \ref{chap:tscope} describes our use of the \tscope visual
+profiler that was developed for use with Haskell,
+we have adopted it for use with Mercury.
+Finally chapter \ref{chap:conc} concludes the dissertation, providing a
+discussion that unifies the work presented in the four main chapters and
+describes potential further work.
 
