@@ -807,7 +807,7 @@ matter.
 %avg\_part\_cost(D) = \frac{total\_part\_cost(D)}{num\_part\_calls(D)}
 %\end{equation*}
 %
-%\paul{This seems to approch 2 as D approches $\inf$.
+%\paul{This seems to approach 2 as D approaches $\inf$.
 %If I knew how to remove the recursive definition above I could prove this
 %and show that in a big enough tree inaccuracies does not matter.
 %Also the computed average cost is way different to the measured cost, which
@@ -2976,13 +2976,13 @@ This is normal for such a small example with simple parallelism.
 (We compare this to a more complicated example of the Mercury compiler
 below.)
 In an earlier version of our system,
-the version that was used in \citet{bone:2011:overlap},
+the version that was used in \citet*{bone:2011:overlap},
 the naive strategy parallelised matrixmult's main loop
 differently,
 it included an extra goal inside the parallel conjunct thereby creating
 a dependent parallel conjunction even though the parallelisation was
 independent.
-Therefore in \citet{bone:2011:overlap},
+Therefore in \citet*{bone:2011:overlap},
 naive performed worse than either indep or overlap.
 
 % For matrixmult, the bottleneck is almost certainly CPU-memory bandwidth.
@@ -3055,6 +3055,8 @@ is so small that it is not noticeable.
 \section{Related work}
 \label{sec:overlap_related}
 
+\status{I will proof read this section later}
+
 % Mercury's strong mode system
 % greatly simplifies the parallel execution of logic programs,
 % making the comparison of parallel Mercury with parallel Prolog difficult.
@@ -3074,17 +3076,13 @@ is so small that it is not noticeable.
 
 Mercury's strong mode and determinism systems
 greatly simplify the parallel execution of logic programs.
-The information gathered by semantic analysis in Mercury
-makes it easy to solve most of the problems faced by the
-designers of parallel versions of Prolog and Prolog-like languages.
-These include testing the independence of goals
-in systems that support only independent AND-parallelism such as
-and discovering producer-consumer relationships
-in systems that also support dependent AND-parallelism,
-such as \citet{DBLP:journals/tcs/GrasH09}.
-They also make it possible to \emph{avoid} having to solve some tough problems,
-the main example being how to execute nondeterministic conjuncts in parallel
-without excessive overhead.
+As we discussed in sections \ref{sec:intro_par_logic},
+\ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar},
+They make it easy to implement efficient explicit parallelism.
+The mode system provides complete information allowing us to identify
+shared variables at compile time.
+\citet*{DBLP:journals/tcs/GrasH09} and \citet{Hermenegildo1995} describe
+much less complete analyses in Prolog.
 
 % That is what they were \emph{designed} to do.
 % The information gathered by semantic analysis in Mercury
@@ -3098,6 +3096,11 @@ without excessive overhead.
 % with the answers to the problem being presented on a silver platter
 % Our group designed Mercury specifically to ensure this.
 
+% We know of no work in other logic programming languages such as Prolog that
+% is compareable to our overlap analysis.
+% This is probably because no other logic programming environment provides the
+% information necessary to attempt such an analysis.
+
 Most research in parallel logic programming so far
 has focused on trying to solve these problems
 of getting parallel execution to \emph{work} well,
@@ -3107,7 +3110,7 @@ Almost all previous work on automatic parallelisation
 has focused on granularity control:
 parallelising only computations that are expensive enough
 to make parallel execution
-worthwhile \citep{harris_07_feedback_imp_par,lopez96:distance_granularity},
+worthwhile \citep{lopez96:distance_granularity},
 and properly accounting for the overheads
 of parallelism itself \citep{shen_98_granularity-control}.
 Most of the rest has tried to find opportunities
@@ -3120,7 +3123,7 @@ for Mercury programs, this is far from enough.
 For most programs,
 it finds enough conjunctions with two or more expensive conjuncts,
 but almost all are dependent,
-and, as we mention in section~\ref{sec:perf},
+and, as we mention in section \ref{sec:overlap_perf},
 many of these have too little overlap to be worth parallelising.
 % For example, the Mercury compiler contains
 % 50 conjunctions with two or more expensive goals.
@@ -3129,11 +3132,44 @@ many of these have too little overlap to be worth parallelising.
 % and only for 31 does the overlap
 % lead to a predicted local speedup of more than 1\%.
 
-We know of only three attempts to estimate the overlap
-between parallel computations.
-One was in the context of speculative execution in imperative programs.
+We know of only four attempts to estimate the overlap
+between parallel computations,
+and two of these are in Mercury.
+
+The first is our earlier work in \citet*{bone:2008:hons}\footnote{
+    This earlier work was done as part of my honours project and contributed
+    to the degree of Batchelor of Computer Science Honours at The University of
+    Melbourne}
+which used mode and profiler feedback information to perform a much simpler
+analysis of the parallelism available in dependent parallel conjunctions.
+It could handle only conjunctions with two conjuncts and a single shared
+variable.
+It also did not use the ancestor context specific information provided by the
+deep profiler or perform the call graph traversal.
+The call graph traversal is important as it allows us to avoid parallelising
+a callee when the caller already provides enough parallelism.
+Most critically it did not attempt to calculate the costs of recursive
+calls,
+and therefore failed to find any parallelism in any of the test programs we
+used,
+including the raytracer from section \ref{sec:overlap_perf}.
+
+Prior to this,
+\citet*{tannier:2007:parallel_mercury} attempted to automatically parallelise
+Mercury programs.
+Tannier's approach was to use the number of shared variables in a parallel
+conjunction as an analogue for how dependent the conjunction was.
+While two conjuncts are indeed less likely
+to have useful parallel overlap if they have more shared variables,
+we have found this heuristic too inaccurate to be useful.
+Conjunctions with a single variable can significantly vary in
+their amount of overlap, which we have shown with the examples in this
+chapter.
+
+Another dependency aware auto-parallelisation effort
+was in the context of speculative execution in imperative programs.
 Given two successive blocks of instructions,
-\citet{von_Praun:2007:implicit_parallelism_with_ordered_transactions}
+\citet*{von_Praun:2007:implicit_parallelism_with_ordered_transactions}
 % estimates the likely speedup
 % from executing the two blocks in parallel
 % by using the difference between the addresses of two instructions
@@ -3145,20 +3181,11 @@ This works if instructions take a bounded time to execute,
 but in the presence of call instructions
 this heuristic will not be at all accurate.
 
-Another attempt was a previous auto-parallelisation project for
-Mercury \citep{tannier:2007:parallel_mercury}.
-% This did not use profiling data,
-% and instead used the number of shared variables between conjuncts
-This used the number of shared variables between conjuncts
-as a measure of the dependency between goals,
-and as a predictor of the likely overlap.
-While two conjuncts are indeed less likely
-to have useful parallel overlap if they have more shared variables,
-we have found this heuristic too inaccurate to be useful.
-
-The most closely related work to ours
-generated parallelism annotations for the ACE and/or-parallel system
-\citep{Pontelli97automaticcompile-time}.
+The most closely related work to ours is that of
+\citet*{Pontelli97automaticcompile-time}.
+They generated parallelism annotations for the \&ACE and/or-parallel system
+They recognised the varying amounts of parallelism that may be available in
+dependent AND-parallel code.
 This system used, much as we do,
 estimates of the costs of calls
 and of the times at which variables are produced and consumed.
@@ -3168,9 +3195,30 @@ where the call trees of the relevant calls can be quite small and regular.
 In large programs, the call trees of the expensive calls
 are almost certain to be both tall and wide,
 with a huge gulf between best-case and worst-case behaviour.
+\citeauthor{Pontelli97automaticcompile-time}'s analysis is a whole program
+analysis,
+which can also be troublesome for large programs.
+Our whole-program analysis covers only the parts of the call graph that are
+deemed costly enough to be worth exploring,
+which is another benefit of profiler feedback analysis.
+\citeauthor{Pontelli97automaticcompile-time}'s analysis of the variable use
+times is incomplete when analysing diverging code.
+We recognised the impact that diverging code may have and created coverage
+profiling so that we could gather information and analyse diverging code
+accurately \citep{bone:2008:hons}.
 Using profiling data is the only way
 for an automatic parallelisation system to find out
-what the \emph{typical} behaviour of such calls is.
+what the \emph{typical} cost and variable use times are.
+\citeauthor{Pontelli97automaticcompile-time}'s overlap calculation is
+pairwise, it considers the overlap of only two conjuncts at a time.
+We have found that one must consider the overlap of the whole parallel
+conjunction, as a delay in the production of a variable in one conjunct can
+affect the variable production times of other conjuncts.
+This is also related to our nondeterministic search for the most optimal
+parallelisation as changes anywhere within a conjunctions execution can
+affect other parts of the conjunction:
+the addition of an extra conjunct at the end of the conjunction can create a
+new shared variable which increases the costs of earlier conjuncts.
 
 % There is a risk that the program could have changed between the
 % profiling build and the parallelised build,
@@ -3217,50 +3265,9 @@ We also plan to modify our feedback tool
 to accept several profiling data files,
 with a priority scheme to resolve any conflicts.
 % between their advice.
-
-% \paragraph{Acknowledgements}
-We thank the rest of the Mercury team,
-and Tom Conway and Peter Wang in particular,
-for creating the infrastructure we build upon,
-and the anonymous referees for their suggestions.
-
-\section{Related work}
-
-\paul{Say how this work differs from my honours work.}
-
-The previous version of the tool did not use the call graph.
-Instead it looked at the most expensive procedures,
-considering only those whose cost was above its own threshold.
-The call graph traversal is better because it allows us to avoid parallelising
-a callee when the caller already provides enough parallelism.
-
-\paul{Throttle recursive parallelism based on the cost of each iteration.}
-\paul{Handle other recursion times intelligently.}
-
-\paul{XXX: Future work}
-As we stated above we do not currently handle recursive code specially other
-than putting in effort to calculate the cost of recursive calls.
-We assume that the recursive calls themselves call the sequential version of
-the procedure.
-A simple but imperfect solution for simply recursive code would be to
-calculate the \emph{time saving} of one iteration such as in the example
-above.
-Time saving is defined as:
-
-\begin{equation*}
-TimeSaving = SeqTime - ParTime
-\end{equation*}
-
-\noindent
-Time saving is the benefit of parallelism in absolute terms
-the related concept of \emph{speedup} which is the benefit of parallelism in
-relative terms.
-If we multiply time saving by the average maximum depth (number of
-iterations) this would give an indication of the amount of time we could
-save given an infinite number of CPUs.
-A better solution would be to construct and solve an equation for the
-speedup of the loop as a whole.
-The equation could be built using the overlap algorithms that we have shown.
+There is also potential further work in the handling of loops and recursion.
+We will talk about this in chapter \ref{chap:conc}
+after we present the work in the next chapter.
 
 % TODO Items.
 
