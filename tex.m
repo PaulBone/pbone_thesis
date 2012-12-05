@@ -35,12 +35,15 @@
 :- pred macro_is_ref_or_anchor(string::in, macro_is_ref::out(ref_or_anchor))
     is semidet.
 
-macro_is_ref_or_anchor("cite",      macro_is_reference).
-macro_is_ref_or_anchor("citep",     macro_is_reference).
-macro_is_ref_or_anchor("citet",     macro_is_reference).
-macro_is_ref_or_anchor("ref",       macro_is_reference).
-macro_is_ref_or_anchor("pageref",   macro_is_reference).
-macro_is_ref_or_anchor("label",     macro_is_anchor).
+macro_is_ref_or_anchor("cite",          macro_is_reference).
+macro_is_ref_or_anchor("citep",         macro_is_reference).
+macro_is_ref_or_anchor("citep*",        macro_is_reference).
+macro_is_ref_or_anchor("citet",         macro_is_reference).
+macro_is_ref_or_anchor("citet*",        macro_is_reference).
+macro_is_ref_or_anchor("citeauthor",    macro_is_reference).
+macro_is_ref_or_anchor("ref",           macro_is_reference).
+macro_is_ref_or_anchor("pageref",       macro_is_reference).
+macro_is_ref_or_anchor("label",         macro_is_anchor).
 
 :- pred macro_breaks_flow(string::in) is semidet.
 

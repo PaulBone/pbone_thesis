@@ -290,7 +290,9 @@ check_macro(macro(Name, Args, Locn)) = Errors :-
     some [!Errors] (
         !:Errors = empty,
         ( Name = "cite" ->
-            record_error(Locn, "Bad citation, use \\citep or \\citet", !Errors)
+            record_error(Locn,
+                "Bad citation, one of the natbib macros.",
+                !Errors)
         ;
             true
         ),
@@ -300,7 +302,7 @@ check_macro(macro(Name, Args, Locn)) = Errors :-
 check_macro(environment(_Name, Args, Macros, _Locn)) =
         ArgErrors ++ MacrosErrors :-
     ArgErrors = cord_concat(cord.map(check_macro_arg, Args)),
-    MacrosErrors = cord_concat(cord.map(check_macro, Macros)). 
+    MacrosErrors = cord_concat(cord.map(check_macro, Macros)).
 
 :- func check_macro_arg(macro_arg(macro_or_environment)) = cord(prose_error).
 
