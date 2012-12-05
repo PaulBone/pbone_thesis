@@ -13,7 +13,7 @@
 %it is compared with my work.
 %}
 
-\status{Ready for proof reading.}
+\plan{Literature review begins here.}
 
 In the rest of this chapter we will explore the literature concerning
 parallel programming.
@@ -25,16 +25,17 @@ We group languages into the following two classifications.
 
     \item[Imperative] programming languages are those that allow
     \emph{side-effects}.
-    A side effect is an action that a computation may perform without
-    where there is no declaration of the possibility of the action.
+    A side effect is an action that a computation may perform
+    without a declaration of the possibility of the action.
     This can include input/output (IO) and modification of data structures.
 
     \item[Pure declarative] programming languages are those that forbid
     side-effects.
     The effect of executing any computation must be declared in the
     computation's signature.
-    Because all effects are declared, there are no side-effects.
-    This has numerous benefits, we are interested in the specific benefit
+    Because all effects are declared, none of them are \emph{side}-effects.
+    This has numerous benefits,
+    but we will restrict our attention to the specific benefit
     that this makes it easy for both compilers and programmers to understand
     if it is safe to parallelise any particular computation.
 
@@ -44,24 +45,25 @@ We group languages into the following two classifications.
 Not all researchers agree on the definitions above.
 However these definitions are exactly what is required when discussing
 the safety of parallelism.
-Additionally a language clearly fits into one category or the other.
+Additionally our definitions allow us to classify all languages without any
+ambiguity.
 
 There are many ways to introduce parallelism in computer programming.
 We find it useful to create the following classifications for these methods.
 
 \begin{description}
-    \item[Parallelism via concurrency]:
+    \item[Parallelism via concurrency] describes how
     concurrency can be used to introduce parallelism.
     While these concepts are related and often discussed together they are
     orthogonal.
     We will explain this and discuss the systems that use concurrency in
-    order to achieve parallelism (\emph{parallelism via concurrency})
+    order to achieve parallelism
     (section \ref{sec:intro_concurrency}).
 
     \item[Explicit parallelism] is safer and easier to use compared to
-    concurrency, however it is less expressive.
+    \pvc, however it is less expressive.
     We will explain how explicit parallelism is distinct from and improves
-    upon \emph{concurrency for parallelism}.
+    upon \pvc.
 
     \item[Implicit parallelism] is a category that includes
     systems that attempt to make parallel execution the typical form of
@@ -79,7 +81,7 @@ We find it useful to create the following classifications for these methods.
     Many authors often group these systems with implicit parallelism systems.
     We have chosen to separate them because the two systems
     approach the same problem from different directions
-    (parallel as default vs.\ sequential as default).
+    (parallel as default versus sequential as default).
     Prior work in automatic parallelism is discussed in section
     \ref{sec:intro_auto_par}.
 \end{description}
@@ -91,7 +93,7 @@ Our own system is an automatic parallelism system;
 it makes use of concepts described in all four categories.
 Therefore
 we cannot discuss it meaningfully until we have explored the literature
-from giants upon whose shoulders we are standing.
+of giants upon whose shoulders we are standing.
 
 
 \section{Parallelism via concurrency}
@@ -103,7 +105,7 @@ It is important to distinguish between \emph{parallelism} and
 
 \begin{description}
     \item[Concurrency] is defined as multiple computations executing simultaneously,
-    which may communicate with one another \citep{hoare:1978:csp}.
+    which may communicate with one another.
     As an example consider a single-threaded web server which is required to
     handle multiple requests concurrently.
 
@@ -117,7 +119,7 @@ It is important to distinguish between \emph{parallelism} and
 
 \noindent
 Often parallelism is achieved through concurrency
-which leads to confusion among many programmers between the terms.
+which leads to many programmers to confuse the two terms.
 For example,
 multiple concurrent processes executing on a multicore processor in parallel
 is both concurrent and parallel.
@@ -129,19 +131,19 @@ provide the programmer with a natural way to express many problems,
 such as the web server example above.
 In these cases concurrency is (and should be) used to make the program
 easier to write.
-If the concurrency uses parallelism provided by the hardware many programs
+If concurrency uses parallelism provided by the hardware many programs
 will speed up due to this parallelism,
 but not all.
 
 Often programmers will deliberately use concurrency in order to speed up
 their programs;
 we call this \emph{parallelism via concurrency}.
-It often works when the program is easy to express using concurrency
-(but we think there are better methods).
+This can work well when the program is natural to express using concurrency,
+in which case it should probably be written using concurrency anyway.
 However when the problem cannot be expressed easily using concurrency,
 many programmers will attempt to \emph{force} their program into a concurrent
 model in the name of parallelism.
-Even if a programmer manages to profitably parallelise their program,
+Even if a programmer manages to profitably parallelise their program;
 they will usually find that the program is no longer easy to read, understand
 and debug.
 In this section we will discuss systems that encourage parallelism through
@@ -152,19 +154,20 @@ concurrency which in general is outside the scope of this dissertation.
 % Threading.
 The most common method of introducing concurrency is with \emph{threads}.
 Some languages support threads natively such as Java \citep{java-threads}
-and others such as C \citep{c} support it via a library.
-Libraries for using threads with C include
+and others such as C \citep{c} support it via a library
+such as
 POSIX Threads \citep{butenhof1997:pthreads} or Windows
 Threads \citep{winthreads}, depending on the operating system.
 These libraries tend to be low level;
 they simply provide an interface to the operating system.
 Different threads of execution run independently,
 sharing a heap and static data.
-Because they share these areas where data may be stored they can, and often do,
+Because they share these areas where data may be stored,
+they can and often do,
 use the same data (unlike CSP).
 Threads communicate by writing to and reading from the shard data.
 Regions of code that do this are called \emph{critical sections},
-and they must be protected from concurrent access:
+and they must protect the shared data from concurrent access:
 a thread reading shared data while another writes to it, will read
 inconsistent data;
 and when two threads write to the same data some of the changes to the data
@@ -185,16 +188,16 @@ section,
 making the critical section too small, or too large,
 these can lead to incorrect program behaviour, inconsistent memory states and
 crashes.
-When using multiple locks in a single critical section,
-because that critical section uses multiple resources,
-the locks must be acquired in the same order in each such critical section
+When a critical section uses multiple shared resources,
+it is normal to use multiple locks in the single critical section.
+The locks must be acquired in the same order in each such critical section
 otherwise deadlocks can occur.
 This also prevents critical sections from being nestable,
 causing significant problems for software composability.
 All of these problems are difficult to debug because their symptoms are
 intermittent.
 Often so intermittent that introducing tracing code or compiling with debugging
-support enabled can prevent the problem from occurring,
+support, can prevent the problem from occurring;
 this is humorously known as a \emph{heisenbug} ---
 a testament to just how frustrating it can be to find.
 While it is possible to deal with these problems,
@@ -211,8 +214,8 @@ are executing:
 they can be running all on one machine or spread-out across a network.
 Therefore, message passing is very popular for high performance computing,
 where shared memory systems are not feasible.
-Message passing also avoids the problems with threading and mutexes,
-however other synchronisation techniques can introduce a subset of the
+Message passing also avoids the problems with threading and mutexes.
+However other synchronisation techniques can introduce a subset of the
 problems that threading suffers.
 For example it is possible to create deadlocks with cyclic dependencies
 between messages:
@@ -229,14 +232,15 @@ Every process can send and receive messages with any other process,
 We can think of this in terms of \emph{mailboxes}:
 each process owns (and can read from) its own mailbox and can place messages
 in any other mailbox.
-MPI and to a lesser extent PVM support powerful addressing modes
+MPI and (to a lesser extent) PVM
+support powerful addressing modes
 such as broadcasting the same message to multiple processes, or
 distributing the contents of an array evenly between
 multiple processes.
 These features make MPI and PVM very powerful interfaces for high performance
 computing.
-However, the programmer is responsible for encoding and decoding messages,
-which adds extra flexibility can be very tedious.
+The programmer is responsible for encoding and decoding messages,
+while this adds extra flexibility it can also be very tedious.
 The Erlang language \citep{erlang} supports message passing natively and
 encoding and decoding is done for the programmer.
 Erlang allows processes to be created dynamically,
@@ -261,16 +265,19 @@ the same benefit can be gained by tagging messages in the mailbox analogy.
 The first language based on CSP is occam \citep{occam1, occam3}.
 
 \citet{milner:pi}'s $\pi$-calculus is similar to CSP.
-The difference between the two process algebras is that in the $\pi$-calculus
-channels are first class, meaning that a channel can be sent in a channel.
+The difference between the two process algebras is that in the
+$\pi$-calculus,
+channels are first class;
+this mean that a channel can be sent in a channel to another process.
 This allows programmers to compose a dynamic communication network.
 %The Jomel language \citep{jomel} (an ML \citep{ml}) is based on the $\pi$-calculus
 Jocaml \citep{jocaml} (an Ocaml
 \citep{ml-types, ocaml-modules, ocaml-bytecode, ocaml-native}
 derivative) is a language based on the related join-calculus
 \citep{join-calculus}.
-Join-calculus differs by using asynchronous communication and adding a number
-of restrictions, which are not important to our discussion.
+Join-calculus differs from $\pi$-calculus by using asynchronous
+communication and adding a number of restrictions,
+which are not important to our discussion.
 Jocaml differs from Occam in the same ways that the join-calculus differs
 from CSP.
 However Occam, in particular its first version \citep{occam1},
@@ -282,28 +289,28 @@ computing.
 
 There are many other languages and libraries based on these process algebra,
 one that is currently enjoying a lot of popularity is Go
-\citep{balbaert:2012:go}.
+\citep{google:2012:go}.
 Go appears to follow a model similar to the $\pi$-calculus and the
 join-calculus.
 However Go also uses shared memory without providing any synchronisation
 for communicating through shared memory.
-In particular data sent in messages is sent \emph{by reference},
-meaning that if one process modifies data that has been shared,
-other processes can see the modification and therefore read inconsistent data
-or write inconsistent data into memory.
-Programmers are discouraged from using shared memory for communication,
-however this makes several classes of bug possible through accidental use of
+In particular data sent in messages may contain pointers and therefore
+processes may end up referring to the same memory locations.
+If one process modifies such a memory location other processes can see the
+modification.
+This creates the possibility that modifications to this data can 
+cause a process to read inconsistent data or for updates to the data to get
+lost.
+This makes several classes of bug possible through accidental use of
 shared memory.
-We suspect that the developers made this decision to make Go perform faster on
-multicore systems.
-It is not clear if this is part of the language specification or simply
-Google's implementation.
+This is a result of the language specification's inclusion of pointers and
+the implementation of channels.
 
 % STM
 All the systems we have introduced so far are prone to deadlocks,
 and many are prone to other problems.
-Many problems can be avoided using software transactional memory (STM)
-\citep{stm}.
+Many problems including deadlocks can be avoided using software
+transactional memory (STM) \citep{stm}.
 STM is similar to the threading model, it includes the concept of critical
 sections.
 Critical sections are not protected by mutexes,
@@ -314,17 +321,17 @@ will enforce this.
 STM works by logging all the reads and writes to STM variables within a
 critical section, and not actually performing them until the end of the
 critical section.
-At that point the STM system acquires a mutex for each STM variable (in the
-order that they were accessed)
+At that point the STM system acquires a mutex for each STM variable
+(in a pre-defined order to avoid deadlocks)
 and checks for sequential consistency by comparing its log with the current
 values of the variables.
 If no inconsistencies are found
 it may go ahead and modify and unlock the variables.
 Otherwise it must retry the critical section or fail.
-Compared to the threading model,
+This is much safer than the threading model because
 the user does not need to use mutexes and critical sections are now
-nestable (two nested sections commit when the outer one commits).
-STM does not suffer from deadlocks.
+nestable.
+Two nested sections commit when the outer one commits.
 However, programmers must still place their critical sections correctly in
 their program.
 A common criticism of STM is that it performs poorly when there is a lot of
@@ -343,8 +350,8 @@ and \citet*{harris:2005:haskell-stm} is an implementation for Haskell.
 
 % Parallelism w/o concurrency in imperative languages.
 Parallelism can also be achieved without concurrency.
-This is done with language annotations that do not affect the (declarative)
-semantics of the program.
+This can be achieved with language annotations that do not affect the
+(declarative) semantics of the program.
 The annotations describe \emph{what} should be parallelised,
 and rarely describe \emph{how} to parallelise each computation.
 We will refer to this as \emph{explicit parallelism}
@@ -357,24 +364,21 @@ execution.
 In OpenMP most parallelism is achieved by annotating loops.
 C++ is an imperative language and therefore the compiler cannot determine
 which computations are safe to parallelise.
-Therefore the programmer is responsible for guaranteeing that the iterations
-of the loops are independent,
-that is to say, that no iteration depends on the results of affects of any of
+The programmer is responsible for guaranteeing that the iterations
+of the loops are independent.
+in other words, that no iteration depends on the results of affects of any of
 the previous iterations.
 If an iteration makes a function call, then this guarantee must also be true for
-the callee all transitive callees.
+the callee and all transitive callees.
 The programmer must also declare which variables are shared, local or used
 for reductions.
 This is necessary so that the compiled code is parallelised correctly.
-The programmer is invited to specify how the iterations of the loop may be
+The programmer may specify how the iterations of the loop may be
 combined into parallel tasks (known as \emph{chunking}).
 This means that to some extent the programmer still describes \emph{how} to
 parallelise the loop,
 although the programmer has much less control than with parallelism through
 concurrency systems.
-OpenMP is one of the two explicit parallelism systems that we review that
-does this.
-Describing how something should be parallelised is rare.
 Provided that the programmer can annotate their loops correctly,
 explicit parallelism with OpenMP avoids the problems
 with threading and message passing.
@@ -382,30 +386,29 @@ with threading and message passing.
 % Declarative languages.
 In pure declarative languages
 a function has no side effects,
-all possible effects of calling a function are specified in the function's
+all possible effects of calling a function are specified in its 
 declaration, (this can be considered an upper bound).
 This is often done by expressing effects as part of the type system such as
 with:
-Monads \citep{haskell-monads}, which are used by Haskell \citep{haskell98}
-or
+Monads \citep{haskell-monads}, which are used by Haskell \citep{haskell98};
 uniqueness-typing, which is used by
 Mercury\footnote{
     Mercury's uniqueness typing is part of its mode system.
     Despite this, it is still considered uniqueness typing.}
 \citep{mercury_jlp}
-and Clean \citep{brus:1987:clean}.
-There are also some very novel approaches such as effect-typing \citep{ddc}.
+and Clean \citep{brus:1987:clean};
+or effect-typing, which is used by DDC \citep{ddc}.
 In any of these systems both the programmer and compiler can trivially
 determine if parallel execution of a particular computation is safe.
-Furthermore,
-in Haskell, Mercury and Clean
+In Haskell, Mercury and Clean
 the concept of a variable is different from that in imperative programming,
 it is not a storage location that can be updated,
 but a binding of a name to a value.
 Therefore variables that are shared
 (those that we would have to declare as shared in OpenMP)
-are really shared immutable values\footnote{
-    We find it amusing that the misnomer ``variable'' is used at all.}.
+are really shared immutable values.
+%\footnote{
+%    We find it amusing that the misnomer ``variable'' is used at all.}.
 Explicit parallelism in declarative languages is much easier and safer to use
 than in imperative languages.
 The next two sub-sections describe parallelism in functional and logic
@@ -457,8 +460,14 @@ Several projects experimented with this technique
 
 Because the programmer does not need to annotate their program this
 parallelism is implicit.
-While implicit parallelism is always safe there is a serious performance
-issue.
+While implicit parallelism is always safe\footnote{
+    There are some systems that use explicit parallelism and allow
+    side-effects such as
+    Prolog implementations with extra-logical predicates and
+    Multilisp with destructive update. 
+    Nevertheless the \emph{intention} is that implicit parallelism should
+    always be safe}
+there is a serious performance issue.
 The cost of creating a parallel evaluation is significant,
 so is any communication between parallel tasks.
 There are also distributed costs throughout the execution of these systems,
@@ -478,7 +487,7 @@ This is called embarrassing parallelism as the amount of fine-grained
 parallelism can cause the evaluation to perform \emph{more slowly} than
 sequential evaluation.
 We will discuss other implicitly parallel systems,
-most of them share the same problems.
+most of them share these problems.
 Many systems such as \citet*{peyton-jones:1989:parallel-graph-reduction} go
 to lengths to exploit only course grained parallelism.
 In our opinion the problem with implicit parallelism is that it approaches
@@ -487,7 +496,6 @@ it makes everything execute in parallel \emph{by default} and then attempts
 to introduce sequential execution;
 we believe that one should make sequential execution the default and then
 attempt to introduce parallel execution \emph{only where it is profitable}.
-
 In contrast explicit parallelism allows the programmer to introduce
 parallelism only where they believe it would be profitable.
 This means that the default execution strategy is sequential.
@@ -510,59 +518,61 @@ Many operations such as assignment and parameter parsing do not require the
 value of a future.
 
 Haskell is a pure functional language.
-Being pure it does not have the problem with side effects that multilisp
-does above.
+Being pure it does not have the problem with side effects that Multilisp
+does.
 The Haskell language standard specifies that it is non-strict\footnote{
     Non-strict evaluation is more broadly defined than lazy evaluation};
-in practice however, all implementations use lazy evaluation in most cases.
-Patterns and cases where a sub-expression's value is always required are
-evaluated eagerly.
+in practice, all implementations use lazy evaluation most of the time.
+A subexpression may be evaluated eagerly if it is always require in a
+particular context.
 Haskell programmers can introduce explicit parallelism into their programs
 with two functions (\code{par} and \code{pseq}).
-\citet*{gph:gum,loidi:2008:gph-significant-parallelism} first added
-these functions to GUM (A parallel Haskell implementation).
+\citet*{gph:gum}
+%\citet*{loidi:2008:gph-semiexplicit-parallelism}
+first added these functions to GUM (A parallel Haskell implementation).
 Then \citet*{harris:2005:haskell-smp} added them to the
-Glasgow Haskell Compiler (GHC),
-arguably the most popular implementation of Haskell.
-The \code{par} and \code{pseq} functions are have the types:
+Glasgow Haskell Compiler (GHC).
+%arguably the most popular implementation of Haskell.
+The \code{par} and \code{pseq} functions have the types:
 
 \begin{verbatim}
 par :: a -> b -> b
 pseq :: a -> b -> b
 \end{verbatim}
-They both take two arguments and return their first;
-their declarative semantics are identical to the \emph{const} function.
-However their \emph{operational} semantics are different,
-the \code{par} function may spawn off a parallel task that evaluates its
+They both take two arguments and return their first.
+their declarative semantics are identical;
+however their \emph{operational} semantics are different.
+The \code{par} function may spawn off a parallel task that evaluates its
 second argument to WHNF,
-before returning its first argument.
-While the \code{pseq} function will evaluate its second argument to WHNF
+and returns its first argument.
+The \code{pseq} function will evaluate its second argument to WHNF
 \emph{and then} return its first argument.
 We can think of these functions as \code{const} with different evaluation
 strategies.
 
-Unfortunately lazy evaluation strategy interacts poorly with
+Unfortunately lazy evaluation interacts poorly with
 parallel evaluation.
 Because parallel tasks are only evaluated to WHNF,
 most tasks do not create enough work to make parallelisation worthwhile.
-The developers tried to reduce this problem by allowing programmers to
+\citet*{trinder:98:strategies}
+tried to reduce this problem by allowing programmers to
 specify an evaluation strategy,
-which describes how deeply to evaluate expressions \citep{trinder:98:strategies}.
-his description is written in Haskell itself,
-this allows it to be implemented as a library and describe higher order
+which describes how deeply to evaluate expressions.
+This description is written in Haskell itself,
+This support is implemented as a library and it can describe higher order
 evaluation strategies.
 This does not solve the problem,
 it only gives the programmer a way to deal with it when they encounter it;
-it is better to make it impossible for the problem to occur,
-for example by restricting parallel computations to eager evaluation.
-Similar problems occur with non-strict evaluation in sequential programs.
-Evaluation strategies, in particular eager vs non-eager,
+it is better to make it impossible for the problem to occur.
+Non-strict evaluation can cause other performance problems,
+including problems in sequential programs.
+Evaluation strategies, in particular eager versus non-eager,
 are a matter of personal preference.
 
 An alternative Haskell library called Monad.Par \citep{marlow:monadpar}
 requires parallel computations to be evaluated in full.
 However the programmer must provide typeclass instances for each of their
-own types that describe how to completely evaluate each type.
+own types that describe how to completely evaluate that type.
 While this still requires a non-trivial amount of effort from the
 programmer,
 it is harder for the programmer to make mistakes.
@@ -572,7 +582,6 @@ instance.
 \subsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
-Prolog is the most well known logic programming language.
 Although logic programming has many sub-paradigms we will discuss
 those that use selective linear resolution with definite clauses
 (SLD resolution) \citep{kowalski_sld}.
@@ -582,11 +591,11 @@ performing variable substitution and then performing a query on each
 conjunct in the clause's body.
 If a query of a conjunct fails then the clause fails and an alternative
 clause may be tried.
-As multiple clause heads may match the query there may be more than one
-solution,
+Multiple clauses may succeed meaning that there is more than one solution,
 and as the query may fail there might be zero solutions.
-As such each query may have any number of solutions.
 
+Prolog is the most well known logic programming language based on SLD
+resolution.
 OR-parallel Prolog implementations may attempt to resolve a query against
 multiple clauses in parallel.
 Like parallel graph reduction this form of implicit parallelism can create
@@ -594,14 +603,15 @@ embarrassingly parallel workloads.
 OR-parallelism has some additional problems.
 Not all programs will provide enough OR-parallelism as many do not perform
 non-deterministic searches.
-Furthermore OR-parallelism is speculative:
+OR-parallelism is speculative:
 the current goal may be executed in a context where only the first result
 will be used,
-therefore searching for more results in parallel is a waste of resources.
+therefore searching for more results in parallel may be a waste of
+resources.
 Systems that exploit OR-parallelism include
-Aurora \citep{lusk:1990:aurora},
-Muse \citep{ali:1990:muse}
-and \&ACE \citep{gupta:1991:ace} (which also supports independent AND-parallelism).
+Aurora \citep*{lusk:1990:aurora},
+Muse \citep*{ali:1990:muse}
+and \&ACE \citep*{gupta:1991:ace} (which also supports AND-parallelism).
 
 AND-parallel Prolog implementations introduce parallelism by executing
 conjuncts within clauses in parallel.
@@ -618,7 +628,7 @@ Non-strict (unrestricted) independent AND-parallelism is where some variables
 are shared but none of the goals performs any instantiation on these variables
 or anything they reference.
 Examples non-strict independent AND-parallel Prolog systems include \&-Prolog
-\citep{Hermenegildo:1991:and-parallel,
+\citep*{Hermenegildo:1991:and-parallel,
 DBLP:journals/jlp/MuthukumarBBH99}
 and \&ACE \citep{gupta:1991:ace}.
 As non-strict parallelism is more general it is desirable for a system to
@@ -630,9 +640,10 @@ suitable analyses.
 Some of the analysis can be done at compile time,
 however it is a whole program analysis which means that separate compilation
 cannot be used.
-Furthermore the analysis is often incomplete:
-in most systems, checks are needed at runtime and these checks may traverse
-large data structures.
+Furthermore the analysis is often incomplete,
+requiring runtime groundness tests that determine of the conjunctions are
+really independent.
+These tests may traverse arbitrarily large data structures.
 The overheads of executing these checks
 (which must be execute regardless of their outcome)
 can outweigh the benefit of parallel execution.
@@ -644,9 +655,12 @@ variable;
 any later successful unification on any of the variables implicitly modifies
 the state of the other variables.
 During sequential execution
-part of the search space may bind values to variables then,
-if it fails it must retract any bindings it made so that alternative
-branches of the search tree are free to bind other values to variables.
+part of the search space may bind variables to values.
+If this branch of the search fails,
+execution must bracktrack and retract any bindings that were made on the
+failed branch.
+This is required so that alternative
+branches of the search tree are free to bind the variables to other values.
 With OR-parallelism a variable may be bound to distinct values in different
 parts of the search tree at once.
 There are many different ways to implement this,
@@ -655,8 +669,8 @@ tree in different address spaces \citep{ali:1990:muse}.
 This introduces extra work such as copying the states of computations as new
 work is executed in parallel.
 Often OR-parallelism is used together with independent AND-parallels
-such as in PEPSys \citep{baron:1988:pepsys},
-these systems can also manage variable bindings in a similar way.
+such as in PEPSys \citep*{baron:1988:pepsys},
+such systems can also manage variable bindings in a similar way.
 
 While it is straightforward to implement this correctly for OR-parallel
 and independent AND-parallel systems;
@@ -666,27 +680,26 @@ Most systems allow parallel conjuncts to communicate variable bindings as
 soon as they are produced.
 This allows non-deterministic search computations that consume those bindings to
 detect failure earlier and therefore execute more efficiently.
-However if the producer of a binding is also part of a non-deterministic
-search,
-then if it fails any variable bindings made in the failed part of the tree
-must be retracted.
+However if the producer of a binding calls some non-deterministic code,
+then a failure may require it to retract variable bindings that are shared
+in the parallel conjunction.
 Implementing this efficiently is difficult.
-Andorra Prolog \citep{haridi:1990:andorra} handles models the
+Andorra Prolog \citep*{haridi:1990:andorra} models the
 logic program as a Herbrand constraint problem.
 It then solves that problem, introducing parallelism for
 deterministic\footnote{
-    Andorra uses a different definition for determinism than Mercury does
-    (section \ref{sec:backgnd_mercury} explains Mercury's definition}
+    Andorra uses a different definition for determinism than Mercury does.
+    Section \ref{sec:backgnd_mercury} explains Mercury's definition.}
 conjoined goals.
 For Andorra's purposes deterministic means ``succeeds at most once''.
 
-Another solution to this problem involve restricting the Prolog language
+Another solutions to this problem involve restricting the Prolog language
 by removing backtracking.
 This creates a committed-choice logic language such as
-Concurrent Prolog \citep{saraswat86:concurrent_prolog_definition,
+Concurrent Prolog \citep*{saraswat86:concurrent_prolog_definition,
 shapiro:flat_concur_prolog};
-Parlog \citep{clark:84:parlog_sys_prog,clark:86:parlog}
-and Guarded Horn Clauses (GHC) \citep{ueda:ghc}.
+Parlog \citep*{clark:84:parlog_sys_prog,clark:86:parlog}
+or Guarded Horn Clauses (GHC) \citep*{ueda:ghc}.
 When these systems encounter multiple clauses during execution they support
 committing to only one of the clauses.
 Each of these system uses guarded clauses, which have the
@@ -697,6 +710,7 @@ clause;
 $H$ is the head of the clause.
 The evaluation of the body is committed to if and only if the guard and any
 unifications in the head are all true.
+Declaratively the guard and body are conjoined.
 Each system handles this slightly differently.
 In Concurrent Prolog clauses may execute but only once a clause is committed
 to will any variables it has bound become visible to other parallel
@@ -716,23 +730,42 @@ suspend or resume.
 (Even unifications in clause bodies can cause a computation to be suspended
 as the predicate to which the clause body belongs may have been called from
 another clause's guard.
-Parlog also uses suspends computations,
+Parlog also suspends computations,
 however it determines when predicates should be suspended based on mode
 information.
-Goals that take a variable in an input mode are consumers, and may suspend
+Goals that take a variable in an input are consumers, and may suspend
 until a producer has unified the variable with something representing a
-term, allowing the consumer to continue its execution.
+term.
 In some ways this is analogous to Concurrent Prolog and GHC's usage of
 variables,
 as variables intended for output should be unified in the body of a clause,
 and variables intended for input should be unified in the head or guard:
 so a programmer in any of these three systems has to consider which of the
 variables are input and which are output.
-The programming style in committed choice languages is more imperative than
+The programming style in guarded languages is more imperative than
 in traditional Prolog systems as the guard, and which goals are placed in
 the guard, is extra-logical.
 
-\plan{DDAS}
+\citet*{pontelli:1996:ddas} describe a system that supports explicit
+dependent AND-parallelism in a non-deterministic language;
+it is based on \citet{gupta:1991:ace}.
+Analyses determine the conservative set of shared variables in dependent
+conjunctions and then \emph{guess} which conjunct produces each variable
+(usually the left most one in which the variable appears) and which consume it.
+The consumers of a variable are suspended if they attempt to bind it and the
+producer has not yet bound it.
+The compiler names apart all the potentially shared variables so
+that bindings made by the producer can be distinguished
+from bindings made by consumers.
+As these analysis are incomplete (in particular mode analysis),
+the predicted producer may not be the actual producer as execution may
+follow a different path,
+if this happens then the runtime system will dynamically change the guess
+about which conjunct is the producer.
+This system still requires plenty of runtime overhead and since it is
+non-deterministic it must handle backtracking over code that produces the
+values of shared variables,
+this is described by \citet{shen:1996:daswam}.
 
 Most of these systems use implicit parallelism, parallelising almost
 everything.
@@ -743,7 +776,7 @@ This can vary from using OR-parallelism near the top of a nondeterministic
 search space \citep{hausman:1987:or},
 to the compile time analyses performed by Ciao Prolog
 \citep{hermenegildo_ciao} including \emph{granularity control}
-\citep{lopez96:distance_granularity} (mostly compile time).
+\citep{lopez96:distance_granularity}.
 
 The concept of granularity control
 \citep{debray:1990:granularity} is that only tasks
@@ -755,7 +788,7 @@ There are numerous different ways to estimate the runtime of a task.
 %\citep{sarkar:1989:feedback,harris,tannier};
 %our own system, including the system we implemented before commencing the
 %Ph.D.\ programme, \citet*{bone:2001:honours}
-For example \citet*{lopez96:distance_granularity} constructs cost functions
+For example \citet*{lopez96:distance_granularity} construct cost functions
 at compile time which can be evaluated at runtime to give the cost of a
 goal given the values of certain terms.
 During compile time it uses the type, mode and determinism information that
@@ -767,50 +800,50 @@ They propose two methods for increasing the ``distance''
 between two parallel job creation events.
 The first method works at compile time and the second method works at
 runtime.
-The authors suggest they are used in cases where time complexity
-analysis is difficult.
 
 Granularity control and Ciao's conditional parallelism both help to
-solve the problem of embarrassing parallelism.
-However these systems tend to make parallel execution the \emph{default}
-form of execution then use analyses such as Granularity control to
-transform some of the parallel execution into sequential execution.
-This approaches the problem from the wrong direction.
-We believe that it is best to use sequential execution by default and
-introduce parallelism only where it is likely to be beneficial.
+reduce the amount of embarrassing parallelism.
+However parallel execution is still the \emph{default}
+form of execution.
+Granularity control only transforms some of the parallel execution into
+sequential execution.
+This means that embarrassing parallelism is still a problem.
+% This approaches the problem from the wrong direction.
+% We believe that it is best to use sequential execution by default and
+% introduce parallelism only where it is likely to be beneficial.
 
 Mercury,
 a pure logic/functional language,
 follows the principal of introducing parallelism only where it is
 estimated to be beneficial.
+We will discuss parallelism in Mercury in sections
+\ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar}.
+For now we will concentrate on the differences between Mercury
+and the Prolog and committed choice languages.
 \citet*{conway:2002:par} introduced independent AND-parallelism
 to Mercury.
-Independence is tested using Mercury's strong mode system,
-this system is much stronger than any of the systems mentioned above as
-each predicate must have at least one \emph{known and precise} mode before
-the compiler will accept it.
+Mercury's strong and static mode system allows us to test independence at
+compile time.
 Modes may be declared or inferred.
 Later \citet*{wang:2006:hons} relaxed the requirement of independent
 parallelism allowing Mercury to handle dependent AND-parallelism;
 this was later published as \citet*{wang:2011:dep-par}.
-We will provide more detail about how this works in sections
-\ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar},
-for now we will concentrate on the differences between Mercury
-and the Prolog and committed choice languages.
-Firstly
 Mercury allows parallelism only in deterministic code,
 code with exactly one solution.
 The strong determinism system provides this information.
+This means that variable bindings made by dependent conjuncts can never be
+retracted,
+allowing us to use a much simpler and more efficient implementation.
 Some of our critics (reviews of the paper \citet{bone:2011:overlap}
 on which chapter \ref{chap:overlap} is based)
-argue that this reduces the amount of parallelism that Mercury is able
-to exploit \emph{too much}.
+are concerned that this reduces the amount of parallelism that Mercury is
+able to exploit \emph{too much}.
 We disagree,
 roughly 75\% of Mercury code is deterministic\footnote{
-    This data was gathered by gathering determinism information for the
+    We gathered determinism information for the
     largest open source Mercury program, the Mercury compiler.
 }, and most of the rest is semi-deterministic
-(it produces either zero or one solution).
+(it produces either zero or one solutions).
 While we are missing out on parallelising 25\% of the
 program,
 the 75\% that we can parallelise accounts for 97\% of the cost of the
@@ -824,10 +857,11 @@ this adds a lot of runtime cost.
 In contrast, Mercury's simpler implementation allows it to handle a
 smaller number of predicates, \emph{much} more efficiently.
 
-The variable binding management in Prolog must also be applied to all
-variables,
-as most Prologs cannot determine which variables are shared in dependent
-AND-parallel goals.
+In Prolog, the management of variable bindings in dependent AND-parallel
+programs adds extra overhead to unifications of all variables
+as most Prologs cannot determine which variables are shared in parallel
+conjunctions,
+and none can determine this accurately.
 Mercury's implementation,
 which uses futures (section \ref{sec:backgnd_deppar},
 increases the costs of unification for the shared variables only.
@@ -856,12 +890,12 @@ Parallel languages that do not fall into one of the above paradigms are
 assessed here.
 
 Sisal \citep{feo:1990:sisal-report} is a data-flow language.
-In some respects its syntax looks like that of a functional language
+In some respects its syntax looks like that of a imperative language
 since has constructs for loops.
 However functions are referentially transparent.
-so it is also valid to call it a pure functional language.
+so it is a pure functional language (according to our definition above).
 Sisal supports implicit data-flow parallelism.
-Sisal's inbuilt types include arrays and streams.
+Sisal's builtin types include arrays and streams.
 Streams have the same form as cons-lists (Lisp style) except that as one
 computation produces results on the stream, another computation may be
 reading items from the stream.
@@ -890,7 +924,7 @@ Data Parallel Haskell (DpH)
 \citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}
 parallelise operations on members of a data structure.
 For example,
-DpH's parallelises operations on its parallel array type.
+DpH parallelises operations on its parallel array type.
 Any operations (including nested operations) on these arrays are
 executed in parallel.
 Data-parallel languages are especially good at targeting SIMD hardware
@@ -900,35 +934,28 @@ While these systems are good at what they do,
 they do not handle non data parallel problems well,
 and data parallel programs are a very small subset of computer programs.
 
-Data parallel and data-flow parallelism does not have the same
+Data parallel and data-flow parallelism do not have the same
 problems as implicit parallelism.
 This is because data parallel and data-flow parallel programs have a
 more regular structure than logic and functional programs.
 Data parallel and data-flow parallel languages are able to take
-advantage of the program's structure and compile efficient parallel code.
+advantage of the program's structure and generate much more efficient
+parallel code.
 
 
 \section{Automatic Parallelisation}
 \label{sec:intro_auto_par}
 
 As we mentioned above,
-automatic parallelism is often grouped with implicit parallelism.
-However there is an important difference.
-Most implicit parallelism systems attempt to parallelise almost all
-computations against one another;
-parallel execution is the default form of execution.
-In contrast,
-automatic parallelism systems make sequential execution the default form
-of execution and then determine which, if any, computations should be
-executed in parallel.
-
-Programmers using an explicit parallelism system could work from the
-same principle;
-they can start with a sequential program and introduce parallelism to
-speed it up.
-However this requires programmers to know and keep track of a lot of
-information in order to determine if parallel execution is worthwhile
-for any given computation.
+it is better to start with a sequential program and introduce parallelism
+only where it is beneficial,
+rather than parallelising almost all computations.
+Programmers using an explicit parallelism system could follow this
+principal.
+However 
+for each computation the programmer considers parallelising,
+they must know and keep track of a lot of
+information in order to determine if parallel execution is worthwhile.
 In the context of profiling and optimisation,
 it is widely reported that programmers are poor at identifying the
 hot-spots in their programs or estimating the costs of their program's
@@ -946,7 +973,7 @@ does not create embarrassing parallelism.
 They must therefore understand whether there will be enough
 processors free at runtime to execute each parallelised computation.
 When parallel computations are dependent,
-such as when Futures are used in Multilisp or
+such as when futures are used in Multilisp or
 dependent parallelism is used in Mercury,
 programmers must also estimate how the dependencies effect parallelism.
 In practice programmers will attempt to use trial and error to find the
@@ -956,7 +983,7 @@ from parallelising the program effectively.
 
 \citet*{harris_07_feedback_imp_par} developed a profiler
 feedback directed automatic parallelisation approach for Haskell programs.
-They have reported speed ups of up to 80\% compared to the sequential
+They reported speed ups of up to 80\% compared to the sequential
 execution of their test programs on a four core machine.
 However they were not able to improve the performance of some
 programs, they attributed this to a lack of parallelism
@@ -983,7 +1010,7 @@ is not represented by a thunk at all and is evaluated eagerly.
 parallelise Mercury programs using profiler feedback.
 His approach selects the most expensive predicates
 of a program and attempts to parallelise conjunctions within them.
-This is one of the few peices of work that attempts to measure how
+This is one of the few pieces of work that attempts to measure how
 dependencies affect the amount of parallelism available.
 Tannier's approach counts the number of shared variables in a parallel
 conjunction and uses this as an analogue for how restricted the
@@ -998,32 +1025,35 @@ about the parallelism available in dependant conjunctions.
 Tannier also makes use of compile-time granularity control to reduce the
 over-parallelisation that can occur in recursive code.
 
-Mercury's deep profiler \citep{conway:2001:mercury-deep} provides
-detailed and accurate profiling information.
-Among other things,
-the deep profiler records separate profiling information for separate
-uses of the same code.
 To improve on Tannier's methods we aimed to calculate when the
 producing conjunct is most likely to produce the dependant values and
 when the consuming conjunct is likely to need them\footnote{
     This work was part of my honours project}
 \citep*{bone:2008:hons}.
-To do this we modified the profiler so that it could provide enough
+To do this we modified Mercury's profiler so that it could provide enough
 information so that we could calculate the likely production and
 consumption times.
 This early work was restricted to situations with a
 single dependent variable shared between two conjuncts.
 It is described in more detail in section \ref{sec:backgnd_autopar}.
-In this prior work and in this Ph.D.\ dissertation we make heavy use of the
-advanced features provided by Mercury's deep profiler.
-More information about the profiler is provided in section
-\ref{sec:backgnd_deep}.
-No equivalent profiler exists for Haskell or Clean.
-This and Mercury's purity make it the best environment for our research.
+% Mercury's deep profiler \citep{conway:2001:mercury-deep} provides
+% detailed and accurate profiling information.
+% Among other things,
+% the deep profiler records separate profiling information for separate
+% uses of the same code.
+% In this prior work and in this Ph.D.\ dissertation we make heavy use of the
+% advanced features provided by Mercury's deep profiler.
+% More information about the profiler is provided in section
+% \ref{sec:backgnd_deep}.
+% No equivalent profiler exists for Haskell or Clean.
+% This and Mercury's purity make it the best environment for our research.
 
 We anticipate that automatic parallelisation will be easy to use and
-will parallelise programs more effectivly that most programmers can by
+will parallelise programs more effectively that most programmers can by
 hand.
+Most significantly,
+automatic parallelism will be much faster to use than parallelising a
+program manually.
 Furthermore as programs change costs of computations within them will 
 change,
 this may make manual parallelisations (using explicit parallelism) less
@@ -1042,8 +1072,8 @@ analysis.
 Chapter \ref{chap:loop_control} addresses a long standing problem in the
 parallel execution of most recursive code.
 Chapter \ref{chap:tscope} describes our use of the \tscope visual
-profiler that was developed for use with Haskell,
-we have adopted it for use with Mercury.
+profiler that was developed for use with Haskell and how we use it with
+Mercury.
 Finally chapter \ref{chap:conc} concludes the dissertation, providing a
 discussion that unifies the work presented in the four main chapters and
 describes potential further work.

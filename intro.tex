@@ -4,9 +4,8 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-\status{This section is a draft. I will re-read it before I ask for
-reviews}
-    
+\status{This chapter is ready for review by Zoltan.}
+
 \plan{Why multicore}
 In 1965 Moore \citep{moore} predicted that the transistor 
 density on processors would double roughly every two years,
@@ -14,7 +13,7 @@ and at the same time the manufacturing cost would fall.
 This is known as Moore's Law,
 it is often misquoted saying that processors' clock speeds would double
 roughly every two years.
-This is partly due to the strong relationship between transistor density and
+This is due, in part, to the strong relationship between transistor density and
 clock speeds that existed for about 40 years.
 Around 2005 it became clear that this relationship would be broken;
 processor clock speeds would no longer continue to increase
@@ -28,14 +27,37 @@ To continue to deliver performance without increasing clock speeds
 manufacturers now build processors that can do more work in parallel.
 There are a number of ways to achieve this including:
 Single Instruction Multiple Data (SIMD) instruction sets,
-pipelining,
-and executing multiple instructions in a single clock cycle.
-One of the most notable of these techniques is multicore execution.
+and super-scalar execution such as pipelining and reordering.
+One of the most notable improvements is multicore execution.
 Multiple processing cores can be placed in the same package,
 and usually on the same die.
 Individual cores work separately, communicating through the memory
 hierarchy.
 Multicore computing is only the latest form of multiprocessor computing.
+
+\plan{SMP \& programming}
+Prior forms of multiprocessor computing include
+symmetric multi processing (SMP) and non-uniform memory architectures
+(NUMA).
+SMP includes any collection of processors which share uniform access to
+memory,
+each processor can access any memory location,
+with the same or very similar bandwidth and latency as any other processor or
+memory location.
+Multicore computing is a specific example of SMP.
+SMP systems are also fully cache coherent.
+NUMA is defined as any system where processor's memory accesses are
+non-uniform.
+there may be multiple memory areas, some of which a processor cannot access
+or can access only with high latency and or low bandwidth.
+NUMA systems do not always support cache coherency.
+The benefit of NUMA is that it is easier to build large NUMA systems than
+large SMP systems.
+The drawback is that it is harder to program.
+In this dissertation we are only concerned with SMP systems as they are
+vastly more common,
+and therefore programmers are usually more interested in programming for SMP
+systems.
 
 \plan{We need parallelism}
 For a long time the software industry enjoyed the exponential growth of
@@ -45,8 +67,9 @@ clock-speed of a newer model processor.
 Now that manufacturers add performance by adding parallel processing
 features rather than increasing clock speeds,
 there is extra pressure on the software industry.
-We will consider one of the most powerful,
-and most difficult to use features, multicore execution.
+Multicore computing is one of the most powerful features,
+however it is arguably the most difficult to use feature;
+which is why we choose to concentrate our effort on making it easier to use.
 
 Normally programmers must parallelise their software into multiple
 threads of execution which execute in parallel with one another.
@@ -54,13 +77,13 @@ This is very difficult in imperative languages as the programmer is
 responsible for coordinating the threads.
 Few programmers have the skills necessary to accomplish this,
 and those that do, still make expensive mistakes as
-threaded programming and is inherently error prone. 
+threaded programming is inherently error prone. 
 Bugs such as data corruption, dead locks and race conditions
 can be extremely tedious to find and fix.
-We will explain these problems in section \ref{sec:intro_concurrency}.
-This increases the costs of software development.
+These bugs and their risks increase the costs of software development.
 Software companies who want their software to out-perform their competitors
 will usually take on the risks and inherent costs of multicore programming.
+We will explain these problems in section \ref{sec:intro_concurrency}.
 
 In contrast to parallelism in imperative languages,
 it is trivial to express parallelism in pure declarative languages.
@@ -74,7 +97,9 @@ loss.
 Even spawning off a task of a few thousand instructions is not a win;
 it should only be done for computations
 that take long enough to benefit from parallelism.
-It is often difficult for a programmer to determine if parallelisation of
+\paul{XXX: Still cannot find this citation}
+Programmers find these costs very difficult to estimate,
+making it difficult for them to determine if parallelisation of
 any particular computation is worthwhile.
 
 Even when the programmer finds a computation worth parallelising,
@@ -98,17 +123,15 @@ by creating fewer larger (more coarsely-grained) tasks most of the extra
 overheads can be avoided.
 In the raytracer example, this can be achieved by parallelising the
 rendering of whole rows against one another rather than individual pixels.
-
-All of this requires the programmer to have a strong understanding of the
-costs of parallel execution
-and the relative costs of their program's computations.
-The programmer must also keep track of how many processors are available at
-any given point in their program.
-Doing all this is infeasible,
-and we have not even considered dependent parallelism.
+On top of the programmer's understanding of their program's computations'
+costs,
+they must also avoid situations with embarrassing parallelism,
+in more complicated examples this means keeping track of how many processors
+are available at any given point in the program.
+When computations are dependent the situation becomes even more complex.
 
 Automatic parallelism promises to remove these problems.
-Companies will not need to hire experts,
+Software companies will not need to hire experts,
 programmers will not have to painstakingly find and fix race conditions.
 When programmers are using parallelism with pure declarative languages they
 will not need to tediously introduce parallelism.
@@ -122,50 +145,25 @@ it would need to be \emph{re-parallelised}.
 % an automatic parallelisation system will be able to trivially
 % \emph{re-parallelise} the program.
 Re-parallelising a program manually will be a tedious waste of time,
-automatic parallelisation will save programmers a lot of time in these
-situations.
+automatic parallelisation can simply be re-executed, saving programmers a
+lot of time.
 
 Unfortunately automatic parallelisation technology is yet to be developed to the
 point where it is generally useable.
 In this dissertation we have solved several critical issues with automatic
 parallelism.
-We are looking forward to toward a future where programmers think about
+We are looking forward to a future where programmers think about
 parallelism no more than they currently think about traditional compiler
-optimisations,
-and we think that this work is a step in the right direction.
+optimisations;
+we believe that our work is a step in the right direction.
 Our work is targeted towards Mercury \citep{mercury_jlp},
 a purely declarative logic programming language.
-We believe that our work could be adapted for other systems.
 Mercury provides a good framework for automatic parallelisation:
 Mercury already supports explicit parallelism of dependent conjunctions,
 as well as powerful profiling tools which generate data for our profile
 feedback analyses.
+We believe that our work could be adapted for other systems.
 
-% \plan{SMP \& programming}
-% Prior forms of multiprocessor computing include
-% symmetric multi processing (SMP) and non-uniform memory architectures
-% (NUMA).
-% SMP includes any collection of processors which share uniform access to
-% memory,
-% each processor can access any mamory location,
-% with the same or very similar bandwith and latecy as any other processor or
-% memory location.
-% Multicore computing is included within SMP.
-% The definition of SMP also specifies that the machine is fully cache
-% coherent.
-% NUMA is defined as any system where processor's memory accesses are
-% non-uniform.
-% there may be multiple memory areas, some of which a processor cannot access
-% or can only access with high latency and or low bandwith.
-% NUMA systems do not always support cache coherency.
-% The benifit of NUMA is that it is easier to build large NUMA systems than
-% large SMP systems.
-% The drawback is that it is harder to program.
-% In this thesis we are only concerned with SMP systems as they are vastly
-% more common,
-% and therefore programmers are usually more interested in programming for SMP
-% systems.
-% 
 % As processors have changed over the years,
 % high level languages have remained the same;
 % the same programming paradigms have been applicable to all processors.
