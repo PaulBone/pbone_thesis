@@ -122,9 +122,9 @@ For example,
 multiple concurrent processes executing on a multicore processor in parallel
 is both concurrent and parallel.
 
-Concurrency such as \citet{hoare:1978:csp}'s
+Concurrency such as \citet*{hoare:1978:csp}'s
 communicating sequential processes (CSP)
-or \citet{milner:pi}'s $\pi$-calculus
+or \citet*{milner:pi}'s $\pi$-calculus
 provide the programmer with a natural way to express many problems,
 such as the web server example above.
 In these cases concurrency is (and should be) used to make the program
@@ -335,8 +335,8 @@ be a problem.
 This can be avoided in a pure declarative language such as
 Mercury \citep{mercury_jlp} or Haskell \citep{haskell98} as side effects cannot
 be expressed.
-\citet{mika:mercury-stm} is an implementation for Mercury
-and \citet{harris:2005:haskell-stm} is an implementation for Haskell.
+\citet*{mika:mercury-stm} is an implementation for Mercury
+and \citet*{harris:2005:haskell-stm} is an implementation for Haskell.
 
 \section{Explicit and implicit parallelism}
 \label{sec:intro_par}
@@ -479,7 +479,7 @@ parallelism can cause the evaluation to perform \emph{more slowly} than
 sequential evaluation.
 We will discuss other implicitly parallel systems,
 most of them share the same problems.
-Many systems such as \citet{peyton-jones:1989:parallel-graph-reduction} go
+Many systems such as \citet*{peyton-jones:1989:parallel-graph-reduction} go
 to lengths to exploit only course grained parallelism.
 In our opinion the problem with implicit parallelism is that it approaches
 the parallel programming challenge from the wrong direction:
@@ -519,9 +519,9 @@ Patterns and cases where a sub-expression's value is always required are
 evaluated eagerly.
 Haskell programmers can introduce explicit parallelism into their programs
 with two functions (\code{par} and \code{pseq}).
-\citet{gph:gum,loidi:2008:gph-significant-parallelism} first added
+\citet*{gph:gum,loidi:2008:gph-significant-parallelism} first added
 these functions to GUM (A parallel Haskell implementation).
-Then \citet{harris:2005:haskell-smp} added them to the
+Then \citet*{harris:2005:haskell-smp} added them to the
 Glasgow Haskell Compiler (GHC),
 arguably the most popular implementation of Haskell.
 The \code{par} and \code{pseq} functions are have the types:
@@ -625,7 +625,7 @@ As non-strict parallelism is more general it is desirable for a system to
 handle it.
 Determining which goals are independent is much more complicated and
 requires analysis;
-\citet{DBLP:journals/tcs/GrasH09} and \citet{Hermenegildo1995} describe
+\citet*{DBLP:journals/tcs/GrasH09} and \citet*{Hermenegildo1995} describe
 suitable analyses.
 Some of the analysis can be done at compile time,
 however it is a whole program analysis which means that separate compilation
@@ -732,6 +732,8 @@ The programming style in committed choice languages is more imperative than
 in traditional Prolog systems as the guard, and which goals are placed in
 the guard, is extra-logical.
 
+\plan{DDAS}
+
 Most of these systems use implicit parallelism, parallelising almost
 everything.
 As we mentioned earlier this can lead to embarrassing parallelism.
@@ -752,13 +754,13 @@ There are numerous different ways to estimate the runtime of a task.
 %this may provide an estimate for the runtime in the future
 %\citep{sarkar:1989:feedback,harris,tannier};
 %our own system, including the system we implemented before commencing the
-%Ph.D.\ programme, \citet{bone:2001:honours}
-For example \citet{lopez96:distance_granularity} constructs cost functions
+%Ph.D.\ programme, \citet*{bone:2001:honours}
+For example \citet*{lopez96:distance_granularity} constructs cost functions
 at compile time which can be evaluated at runtime to give the cost of a
 goal given the values of certain terms.
 During compile time it uses the type, mode and determinism information that
 the Ciao compiler makes available.
-\citet{shen_98_granularity-control} created a different method for
+\citet*{shen_98_granularity-control} created a different method for
 granularity control.
 They propose two methods for increasing the ``distance''
 (and therefore runtime)
@@ -781,16 +783,16 @@ Mercury,
 a pure logic/functional language,
 follows the principal of introducing parallelism only where it is
 estimated to be beneficial.
-\citet{conway:2002:par} introduced independent AND-parallelism
+\citet*{conway:2002:par} introduced independent AND-parallelism
 to Mercury.
 Independence is tested using Mercury's strong mode system,
 this system is much stronger than any of the systems mentioned above as
 each predicate must have at least one \emph{known and precise} mode before
 the compiler will accept it.
 Modes may be declared or inferred.
-Later \citet{wang:2006:hons} relaxed the requirement of independent
+Later \citet*{wang:2006:hons} relaxed the requirement of independent
 parallelism allowing Mercury to handle dependent AND-parallelism;
-this was later published as \citet{wang:2011:dep-par}.
+this was later published as \citet*{wang:2011:dep-par}.
 We will provide more detail about how this works in sections
 \ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar},
 for now we will concentrate on the differences between Mercury
@@ -952,7 +954,7 @@ best places to introduce parallelism,
 but an incorrect assumption of any of the above variables can prevent them
 from parallelising the program effectively.
 
-\citet{harris_07_feedback_imp_par} developed a profiler
+\citet*{harris_07_feedback_imp_par} developed a profiler
 feedback directed automatic parallelisation approach for Haskell programs.
 They have reported speed ups of up to 80\% compared to the sequential
 execution of their test programs on a four core machine.
@@ -977,7 +979,7 @@ the Glasgow Haskell Compiler (GHC) will optimise it so that the computation
 is not represented by a thunk at all and is evaluated eagerly.
 
 % Jerome's work.
-\citet{tannier:2007:parallel_mercury} previously attempted to automatically
+\citet*{tannier:2007:parallel_mercury} previously attempted to automatically
 parallelise Mercury programs using profiler feedback.
 His approach selects the most expensive predicates
 of a program and attempts to parallelise conjunctions within them.
@@ -1005,7 +1007,7 @@ To improve on Tannier's methods we aimed to calculate when the
 producing conjunct is most likely to produce the dependant values and
 when the consuming conjunct is likely to need them\footnote{
     This work was part of my honours project}
-\citep{bone:2008:hons}.
+\citep*{bone:2008:hons}.
 To do this we modified the profiler so that it could provide enough
 information so that we could calculate the likely production and
 consumption times.

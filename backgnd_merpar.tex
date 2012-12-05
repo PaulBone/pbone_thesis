@@ -33,11 +33,11 @@ and the second points to the current stack frame.
 Mercury only supports parallel conjunctions in deterministic code,
 therefore the nondet stack and its two stack pointers are largely irrelevant
 for this dissertation.
-\citet{mercury_jlp} explains Mercury's execution algorithm in more detail.
+\citet*{mercury_jlp} explains Mercury's execution algorithm in more detail.
 
 \label{page:engine}
 To support parallel execution,
-\citet{conway:2002:par} grouped the variables used to implement the abstract
+\citet*{conway:2002:par} grouped the variables used to implement the abstract
 machine's registers into a structure called an \emph{engine}.
 Each engine corresponds to a POSIX Thread (pthread)
 \citep{butenhof1997:pthreads}.
@@ -86,10 +86,10 @@ a \emph{spark}.
 
 Sparks represent goals that have been spawned off
 but whose execution has not yet been started.
-\citet{wang:2006:hons} introduced sparks with the intention of
+\citet*{wang:2006:hons} introduced sparks with the intention of
 enabling work stealing as described by
-\citet{blumofe:1994:work-stealing,halstead:1985:multilisp}
-and \citet{kranz:1989:mul-t_article}.
+\citet*{blumofe:1994:work-stealing,halstead:1985:multilisp}
+and \citet*{kranz:1989:mul-t_article}.
 We did not implement work stealing until during my Ph.D.\ candidature
 and therefore it is not discussed here, in the background chapter.
 We discuss work stealing in sections \ref{sec:rts_work_stealing}
@@ -108,7 +108,7 @@ it allocates a new one
 (from the pool of free contexts if the pool is not empty,
 otherwise the engine creates a new one).
 We will often compare our use of sparks to that of
-\citet{simonmar_2009_multicore_rts} since GHC's runtime system has a
+\citet*{simonmar_2009_multicore_rts} since GHC's runtime system has a
 similar structure.
 One of the more significant differences
 is that since Haskell is non-strict and Mercury is eager,

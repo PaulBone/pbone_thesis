@@ -23,6 +23,34 @@ special case handling such as loop control}
 
 \paul{More special case handling such as D\&C}
 
+\paul{Throttle recursive parallelism based on the cost of each iteration.}
+\paul{Handle other recursion times intelligently.}
+
+\paul{XXX: Future work}
+As we stated above we do not currently handle recursive code specially other
+than putting in effort to calculate the cost of recursive calls.
+We assume that the recursive calls themselves call the sequential version of
+the procedure.
+A simple but imperfect solution for simply recursive code would be to
+calculate the \emph{time saving} of one iteration such as in the example
+above.
+Time saving is defined as:
+
+\begin{equation*}
+TimeSaving = SeqTime - ParTime
+\end{equation*}
+
+\noindent
+Time saving is the benefit of parallelism in absolute terms
+the related concept of \emph{speedup} which is the benefit of parallelism in
+relative terms.
+If we multiply time saving by the average maximum depth (number of
+iterations) this would give an indication of the amount of time we could
+save given an infinite number of CPUs.
+A better solution would be to construct and solve an equation for the
+speedup of the loop as a whole.
+The equation could be built using the overlap algorithms that we have shown.
+
 
 We believe that more can be done to improve the effectiveness of
 automatic parallelisation,

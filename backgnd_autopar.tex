@@ -20,7 +20,7 @@ and the feedback framework (section \ref{sec:feedback}).
 Other parts of this section include:
 The Mercury deep profiler \citep{conway:2001:mercury-deep} (section
 \ref{sec:backgnd_deep}) and
-\citet{tannier:2007:parallel_mercury}'s work on automatic parallelism
+\citet*{tannier:2007:parallel_mercury}'s work on automatic parallelism
 (section \ref{sec:backgnd_priorautopar}).
 
 Most compiler optimisations work on the representation of the program in
@@ -246,7 +246,7 @@ The profiling data is stored on disk using the same four structures that
 where used while capturing the data.
 When the profiling tool reads in this data,
 it will build the call graph and generate the list of SCCs
-(which \citet{conway:2001:mercury-deep} call \emph{cliques})
+(which \citet*{conway:2001:mercury-deep} call \emph{cliques})
 each SCC is used to create a \Clique data structure.
 It also constructs several indexes,
 these indexes together with the {\Clique}s make traversing the program's
@@ -1058,7 +1058,7 @@ leaving the other feedback items in the file unchanged.
 %call,
 %this cost is attributed to the cost of the call of that predicate which
 %is already active.
-%The automatic parallelism analysis described in \citet{paul_hons}
+%The automatic parallelism analysis described in \citet*{paul_hons}
 %treats recursive calls naively,
 %A solution to this is presented in section
 %\ref{sec:recursive_call_costs}.
