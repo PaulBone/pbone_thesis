@@ -3055,7 +3055,7 @@ is so small that it is not noticeable.
 \section{Related work}
 \label{sec:overlap_related}
 
-\status{I will proof read this section later}
+\status{Draft finished, This is ready for review by Zoltan.}
 
 % Mercury's strong mode system
 % greatly simplifies the parallel execution of logic programs,
@@ -3078,7 +3078,7 @@ Mercury's strong mode and determinism systems
 greatly simplify the parallel execution of logic programs.
 As we discussed in sections \ref{sec:intro_par_logic},
 \ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar},
-They make it easy to implement efficient explicit parallelism.
+They make it easy to implement efficient explicit dependent AND-parallelism.
 The mode system provides complete information allowing us to identify
 shared variables at compile time.
 \citet*{DBLP:journals/tcs/GrasH09} and \citet{Hermenegildo1995} describe
@@ -3108,9 +3108,8 @@ with only a small fraction trying to find
 when parallel execution would actually be \emph{worthwhile}.
 Almost all previous work on automatic parallelisation
 has focused on granularity control:
-parallelising only computations that are expensive enough
-to make parallel execution
-worthwhile \citep{lopez96:distance_granularity},
+reducing the number of parallel tasks while increasing their size
+\citep{lopez96:distance_granularity},
 and properly accounting for the overheads
 of parallelism itself \citep{shen_98_granularity-control}.
 Most of the rest has tried to find opportunities
@@ -3148,11 +3147,11 @@ It also did not use the ancestor context specific information provided by the
 deep profiler or perform the call graph traversal.
 The call graph traversal is important as it allows us to avoid parallelising
 a callee when the caller already provides enough parallelism.
-Most critically it did not attempt to calculate the costs of recursive
-calls,
+Most critically our earlier work did not attempt to calculate the costs of
+recursive calls,
 and therefore failed to find any parallelism in any of the test programs we
 used,
-including the raytracer from section \ref{sec:overlap_perf}.
+including the raytracer that we used in this chapter.
 
 Prior to this,
 \citet*{tannier:2007:parallel_mercury} attempted to automatically parallelise
@@ -3162,9 +3161,11 @@ conjunction as an analogue for how dependent the conjunction was.
 While two conjuncts are indeed less likely
 to have useful parallel overlap if they have more shared variables,
 we have found this heuristic too inaccurate to be useful.
-Conjunctions with a single variable can significantly vary in
-their amount of overlap, which we have shown with the examples in this
+Conjunctions with only a single variable can significantly vary in
+their amount of overlap,which we have shown with the examples in this
 chapter.
+Analysing overlap properly is important as most parallel conjunctions have
+very little overlap making their parallelisation wasteful.
 
 Another dependency aware auto-parallelisation effort
 was in the context of speculative execution in imperative programs.
@@ -3173,13 +3174,13 @@ Given two successive blocks of instructions,
 % estimates the likely speedup
 % from executing the two blocks in parallel
 % by using the difference between the addresses of two instructions
-decides whether the second block should be executed speculatively
+decide whether the second block should be executed speculatively
 based on the difference between the addresses of two instructions,
 one that writes a value to a register and one that reads from that register.
 % This is effectively a binary metric.
-This works if instructions take a bounded time to execute,
+This only works when instructions take a bounded time to execute,
 but in the presence of call instructions
-this heuristic will not be at all accurate.
+this heuristic will be inaccurate.
 
 The most closely related work to ours is that of
 \citet*{Pontelli97automaticcompile-time}.
@@ -3189,10 +3190,10 @@ dependent AND-parallel code.
 This system used, much as we do,
 estimates of the costs of calls
 and of the times at which variables are produced and consumed.
-However, it produced its estimates through static analysis of the program.
+It produced its estimates through static analysis of the program.
 This can work for small programs,
 where the call trees of the relevant calls can be quite small and regular.
-In large programs, the call trees of the expensive calls
+However, in large programs, the call trees of the expensive calls
 are almost certain to be both tall and wide,
 with a huge gulf between best-case and worst-case behaviour.
 \citeauthor{Pontelli97automaticcompile-time}'s analysis is a whole program
@@ -3209,14 +3210,16 @@ accurately \citep{bone:2008:hons}.
 Using profiling data is the only way
 for an automatic parallelisation system to find out
 what the \emph{typical} cost and variable use times are.
-\citeauthor{Pontelli97automaticcompile-time}'s overlap calculation is
+Finally, \citeauthor{Pontelli97automaticcompile-time}'s overlap calculation is
 pairwise, it considers the overlap of only two conjuncts at a time.
 We have found that one must consider the overlap of the whole parallel
 conjunction, as a delay in the production of a variable in one conjunct can
 affect the variable production times of other conjuncts.
-This is also related to our nondeterministic search for the most optimal
-parallelisation as changes anywhere within a conjunctions execution can
-affect other parts of the conjunction:
+This is also why we attempt to perform a complete search for the most optimal
+parallelisation.
+Changes anywhere within a conjunction's execution can affect other parts of
+the conjunction.
+For example,
 the addition of an extra conjunct at the end of the conjunction can create a
 new shared variable which increases the costs of earlier conjuncts.
 
@@ -3240,7 +3243,8 @@ are also fallible, since they currently ignore several relevant issues,
 including cache effects
 and the effects of bottlenecks
 such as CPU-memory buses and stop-the-world garbage collection.
-However, our system seems to be a sound basis for such further refinements.
+However, our system seems to be a sound basis for further refinements like
+these.
 % However, they come much closer
 % to predicting actual overlaps than previous attempts,
 % and our system seems to be a sound basis for further refinements.
@@ -3267,7 +3271,7 @@ with a priority scheme to resolve any conflicts.
 % between their advice.
 There is also potential further work in the handling of loops and recursion.
 We will talk about this in chapter \ref{chap:conc}
-after we present the work in the next chapter.
+after we improve the efficiency of some loops in the next chapter.
 
 % TODO Items.
 
