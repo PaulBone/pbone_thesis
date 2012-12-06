@@ -12,22 +12,22 @@ of it to place elsewhere, for example, in the background section.}
 
 %\begin{abstract}
 %Recently we built a system that uses profiling data
-%to automatically parallelize Mercury programs by
+%to automatically parallelise Mercury programs by
 %finding conjunctions with expensive conjuncts
-%that can run in parallel with minimal synchronization delays.
+%that can run in parallel with minimal synchronisation delays.
 %This worked very well in many cases, but in cases of tail recursion,
 %we got much lower speedups than we expected,
 %due to excessive memory usage.
 %In this paper, we present a novel program transformation
 %that eliminates this problem,
 %and also allows recursive calls inside parallel conjunctions
-%to take advantage of tail recursion optimization.
+%to take advantage of tail recursion optimisation.
 %Our benchmark results show that our new transformation
 %greatly increases the speedups we can get from parallel Mercury programs;
 %in one case, it changes no speedup into almost perfect speedup on four cores.
 %
 %% First and most obvious,
-%% it reduces the number of synchronization barriers needed
+%% it reduces the number of synchronisation barriers needed
 %% from one per loop iteration to one per loop.
 %% Second, it reduces peak memory consumption
 %% by putting a limit on how many stacks
@@ -83,9 +83,9 @@ it must be through taking advantage of multiple cores.
 Yet designing algorithms to effectively exploit multiple cores
 is notoriously difficult,
 and even among computation-intensive programs, few have been adapted to do so.
-If compilers were able to automatically parallelize programs,
+If compilers were able to automatically parallelise programs,
 this could lead to a significant improvement
-in the utilization of available computing power.
+in the utilisation of available computing power.
 
 One impediment to this goal is the control of the \emph{granularity}
 of the computations to be carried out in parallel.
@@ -94,7 +94,7 @@ so running small tasks in parallel actually slows the computation.
 In earlier work \citep{bone:2011:overlap},
 we presented our approach for using feedback from program profiling
 to select large-grained parts of a computation
-that can be run in parallel with minimal synchronization.
+that can be run in parallel with minimal synchronisation.
 For some sorts of computation,
 this is able to automatically introduce parallelism
 to achieve close to optimal speedups.
@@ -140,8 +140,8 @@ before the completion of the recursive call.
 This allows parallel tail recursive computations
 to run in constant stack space.
 The transformation is applied
-after the automatic parallelization transformation,
-so it benefits both manually and  automatically parallelized Mercury code.
+after the automatic parallelisation transformation,
+so it benefits both manually and  automatically parallelised Mercury code.
 
 Our benchmark results are very encouraging.
 Limiting the number of stacks
@@ -166,7 +166,7 @@ to control memory consumption by loops.
 % which the later sections fill in.
 % Section~\ref{sec:overlap} describes our algorithm for calculating
 % the execution overlap between two or more dependent conjuncts.
-% A conjunction with more than two conjuncts can be parallelized
+% A conjunction with more than two conjuncts can be parallelised
 % in several different ways;
 % section~\ref{sec:howto} shows how we choose the best way.
 % \tr{Section~\ref{sec:pragmatic} discusses some pragmatic issues.}
@@ -181,7 +181,7 @@ section~\ref{sec:conc} concludes with some related work.
 As Mercury is a declarative programming language,
 Mercury programs make heavy use of recursion.
 Like the compilers for most declarative languages,
-the Mercury compiler optimizes tail recursive procedures
+the Mercury compiler optimises tail recursive procedures
 into code that can run in constant stack space.
 Since this generally makes tail recursive computations
 more efficient than code using other forms of recursion,
@@ -193,7 +193,7 @@ Consider the \mapfoldl{} predicate in Figure \ref{fig:mapfoldl}.
 This code applies the map predicate \code{M} to each element of an input list,
 and then uses the fold predicate \code{F}
 to accumulate (in a left-to-right order) all the results produced by \code{M}.
-The best parallelization of \mapfoldl{} executes
+The best parallelisation of \mapfoldl{} executes
 \code{M} and \code{F} in parallel with the recursive call.
 \tr{
 \code{M(H, MappedH), F(MappedH, Acc0, Acc1)} in parallel with
@@ -212,7 +212,7 @@ by replacing the comma before the recursive call
 with the parallel conjunction operator \verb'&'.
 
 The problem is that the execution of a call to \mapfoldlpar{}
-has bad memory behavior.
+has bad memory behaviour.
 When a context begins execution of a call to \mapfoldl{},
 it begins by creating a spark for the second conjunct
 (which contains the recursive call),
@@ -385,7 +385,7 @@ we describe the loop control structure and the operations on it;
 in section \ref{sec:trans},
 we give the algorithm that does the transformation;
 while in section \ref{sec:tailrec},
-we discuss its interaction with tail recursion optimization.
+we discuss its interaction with tail recursion optimisation.
 
 \subsection{Loop control structures}
 \label{sec:structs}
@@ -420,7 +420,7 @@ A count of the number of slots that are currently in use.
 % neither optimal nor pessimal in other cases.}
 \item
 A boolean flag that says whether the loop has finished or not.
-It is initialized to false, and is set to true
+It is initialised to false, and is set to true
 as the first step of the \code{lc\_finish} operation.
 \item
 A possibly null pointer to the \emph{master} context,
@@ -430,7 +430,7 @@ This slot will point to the master context whenever it is sleeping,
 and will be null at all other times.
 \item
 A mutex that allows different engines
-to synchronize their accesses to the structure.
+to synchronise their accesses to the structure.
 % \zoltan{Should we explain how accesses to some fields
 % can dispense with the mutex?}
 % \paul{We decided not to explain this}
@@ -447,7 +447,7 @@ while \LCS{} is an index into the array of slots stored within \LC{}.
 \begin{description}
 \item[\code{LC = lc\_create\_loop\_control()}]
 This operation creates a new loop control structure,
-and initializes its fields.
+and initialises its fields.
 The number of slots in the array in the structure
 will be a small multiple of the number of cores in the system.
 The multiplier is configurable
@@ -488,7 +488,7 @@ where any engine looking for work can find it.
 % \paul{Possibly:
 % Setup consists of creating a stack frame on the context's stack and copying
 % the relevant values from the master's stack frame onto the worker-context's.
-% Also, the context's resume instruction pointer will be initialized to
+% Also, the context's resume instruction pointer will be initialised to
 % the value of \code{CodeLabel}.
 % }
 
@@ -544,7 +544,7 @@ for an example of how we use these operations.
 Note in particular that in this transformed version of \mapfoldl{},
 the spawned-off computation contains the calls to \texttt{M} and \texttt{F},
 with the main thread of execution making the recursive call.
-This is the first step in preserving tail recursion optimization.
+This is the first step in preserving tail recursion optimisation.
 
 % Some of these operations also perform some scheduling;
 % we will discuss that later.
@@ -688,7 +688,7 @@ we could not terminate the loop in base case code
 if the call that lead to that code
 was followed by any part of an earlier loop iteration.
 Second, allowing recursion to sometimes occur
-outside the parallel conjunctions we are trying to optimize
+outside the parallel conjunctions we are trying to optimise
 would unnecessarily complicate the algorithm.
 (We do believe that it should possible to extend our algorithm
 to handle recursive calls made outside of parallel conjunctions.)
@@ -709,7 +709,7 @@ by our algorithm for transforming recursive calls
 
 If the transformation is applicable, we apply it.
 The transformed original procedure has only one purpose:
-to initialize the loop control structure.
+to initialise the loop control structure.
 Once that is done, it passes a reference to that structure to \code{LoopProc},
 the procedure that does the actual work.
 
@@ -1053,8 +1053,8 @@ for rather longer than it takes this core to execute the base case.
 % \paul{The next sentence does not explain to me how we learnt this through
 % automatic parallelism, do you mean that it is the kind of decision that the
 % automatic parallelism system would make?}
-% We expect this because our automatic parallelization system
-% tries very hard not to parallelize (and thus to spawn off) cheap goals,
+% We expect this because our automatic parallelisation system
+% tries very hard not to parallelise (and thus to spawn off) cheap goals,
 % while most base cases \emph{are} cheap.
 By making this core do as much useful work as possible
 before must suspend to wait for the spawned-off goals to finish,
@@ -1093,7 +1093,7 @@ must be either that
 one takes the then part of an if-then-else and the other takes the else part,
 or that they take different arms of a switch.
 Such an if-then-else or switch must be det:
-if it were semidet, \code{LoopProc} would be too,
+if it were \dsemidet, \code{LoopProc} would be too,
 and if it were nondet or multi,
 then its extra solutions could be thrown away
 only by an existential quantification that quantifies away
@@ -1159,12 +1159,12 @@ whose space therefore cannot be reused until then.
 This means that even if
 a recursive call in the last conjunct of the parallel conjunction
 happens to be a tail call,
-it cannot have the usual tail call optimization applied to it.
+it cannot have the usual tail call optimisation applied to it.
 
 Before this work, this did not matter, because
-the barrier synchronization needed at the end of the parallel conjunction,
+the barrier synchronisation needed at the end of the parallel conjunction,
 which had to be executed at every level of recursion except the base case,
-prevented tail recursion optimization anyway.
+prevented tail recursion optimisation anyway.
 However, the loop control transformation eliminates that barrier,
 replacing it with the single call to \code{lc\_finish} in the base case.
 So now this limitation \emph{does} matter in cases
@@ -1209,7 +1209,7 @@ there cannot \emph{be} any output variables
 whose stack slots would need to be assigned to.
 
 The reason this is true has to do with the way
-the Mercury compiler handles synchronization between parallel conjuncts.
+the Mercury compiler handles synchronisation between parallel conjuncts.
 Any variable whose value is generated by one parallel conjunct
 and consumed by one or more other conjuncts in that conjunction
 will have a future created for it.
@@ -1265,8 +1265,8 @@ slots used only in the \emph{other} stack frame.
 This is trivial to implement,
 and we have not found the wasted space to be a problem.
 This may be because we have mostly been working with
-automatically parallelized programs,
-and our automatic parallelization tools
+automatically parallelised programs,
+and our automatic parallelisation tools
 put much effort into granularity control \citep{bone:2011:overlap}:
 the rarer spawning-off a goal is,
 the less the effect of any wasted space.
@@ -1282,7 +1282,7 @@ would not be difficult.
 % Discuss that tradeoff, and the possibility of staging the input vars
 % in the work package itself, AFTER we have relevant performance numbers.}
 
-% \section{Runtime support and optimizations}
+% \section{Runtime support and optimisations}
 % \label{sec:runtime}
 
 \section{Performance evaluation}
@@ -1441,7 +1441,7 @@ which means that in the presence of races,
 the limit can be exceeded by one or two contexts.
 Since different contexts can have different sized stacks,
 the limit is only an approximate control over memory consumption anyway,
-so this is an acceptable price to pay for reduced synchronization overhead.
+so this is an acceptable price to pay for reduced synchronisation overhead.
 %\zoltan{Paul, have you checked this?}
 %\paul{The cause is a case where I should have used < instead of <=,
 %However the limit is also not-thread-safe, which can also cause
@@ -1496,7 +1496,7 @@ Without loop control, the execution of
 three of our four dependent benchmarks (mandelbrot, matrixmult and raytracer)
 require the simultaneous existence of a context
 for every parallel task that the program can spawn off.
-For example, mandelbot generates an image with 600 rows,
+For example, mandelbrot generates an image with 600 rows,
 so the original context can never spawn off more than 600 other contexts.
 
 On one core, the nolc versions spawn off sparks,
@@ -1510,7 +1510,7 @@ but we can do it only because we know we will not create too many contexts.
 When executing on two or more cores,
 mandelbrot and raytracer use one more context that one would expect.
 Before the compiler applies the loop control transformation,
-it adds the synchronization operations
+it adds the synchronisation operations
 needed by dependent parallel conjunctions.
 As shown by Figure\ \ref{fig:map_foldl_sync},
 this duplicates the original procedure.
@@ -1619,7 +1619,7 @@ if runtime determinacy tests indicate it is safe to do so.
 While these tests usually succeed for loops,
 they can also succeed for other code,
 and (unlike our system) the ACE compiler does not identify in advance
-the places where the optimization may apply.
+the places where the optimisation may apply.
 The other main difference from our system is the motivation:
 the main motivation of this mechanism in the ACE system is
 neither throttling
@@ -1640,11 +1640,11 @@ and it cannot execute one parallel loop inside another).
 It also has significantly higher overheads than our system:
 it traverses the whole spine of the data structure being iterated over
 (typically a list) \emph{before} starting parallel execution;
-in some cases it synchronizes computations by busy waiting;
+in some cases it synchronises computations by busy waiting;
 and it requires variables stored on the heap to have a timestamp.
 To avoid even higher overheads,
 it imposes the same restriction we do:
-it parallelizes only deterministic code
+it parallelises only deterministic code
 (though the definition of ``deterministic'' it uses is a bit different).
 % not throttled,
 % no granularity control,
@@ -1679,11 +1679,11 @@ and it even helps the fourth and last benchmark,
 even though that was already close to the maximum possible speedup.
 
 The other main advantage of our system
-is that it allows procedures to keep exploiting tail recursion optimization.
+is that it allows procedures to keep exploiting tail recursion optimisation.
 If TRO is applicable to the sequential version of a procedure,
 then it will stay applicable to its parallel version.
 Many programs cannot handle large inputs without TRO,
-so they cannot be parallelized at all without this capability.
+so they cannot be parallelised at all without this capability.
 The previous advantage may be specific
 to systems that resemble the Mercury implementation,
 but this should apply to the implementation
@@ -1714,6 +1714,6 @@ We would like to thank
 Chris King for allowing us to use his spectralnorm benchmark.
 
 
-% LocalWords:  parallelize parallelization parallelized quantifications nondet
-% LocalWords:  det parallelizing syncterm mutex signalled nonrecursive labelled
-% LocalWords:  parallelizes Prolog's
+% LocalWords:  parallelise parallelisation parallelised quantifications nondet
+% LocalWords:  det parallelising syncterm mutex signalled nonecursive labelled
+% LocalWords:  parallelises Prolog's
