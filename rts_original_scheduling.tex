@@ -3,14 +3,15 @@
 \label{sec:original_scheduling}
 
 \plan{Introduction}
-We introduced parallelism in Mercury in sections \ref{sec:backgnd_merpar} and
-\ref{sec:backgnd_deppar};
-we described how the runtime system in generic terms.
+In sections \ref{sec:backgnd_merpar} and
+\ref{sec:backgnd_deppar},
+we introduced parallelism in Mercury and described the runtime system in
+generic terms.
 In this section we will explain how sparks were originally managed
 prior to 2009,
-when I begun my Ph.D.\ candidature.
+when I began my Ph.D.\ candidature.
 This will provide the background for the changes we have made to the
-runtime since.
+runtime system since then.
 
 \plan{Global spark queue and contention WRT global queue}
 Mercury (before 2009) uses a global spark queue.
@@ -72,50 +73,50 @@ last-in-first-out manner.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
-        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
-
-        MR_acquire_lock(&MR_SyncTermLock);
+ 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
+ 2      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
+ 3
+ 4      MR_acquire_lock(&MR_SyncTermLock);
  5      st->MR_st_num_outstanding--;
-        if (st->MR_st_num_outstanding == 0) {
-            if (st->MR_st_orig_context == current_context) {
-                MR_release_lock(&MR_SyncTermLock);
-                MR_GOTO(cont_label);
+ 5      if (st->MR_st_num_outstanding == 0) {
+ 6          if (st->MR_st_orig_context == current_context) {
+ 7              MR_release_lock(&MR_SyncTermLock);
+ 9              MR_GOTO(cont_label);
 10          } else {
-                st->MR_st_orig_context->MR_ctxt_resume_label = cont_label;
-                MR_schedule(st->MR_st_orig_context);
-                MR_release_lock(&MR_SyncTermLock);
-                MR_GOTO(MR_idle);
+11              st->MR_st_orig_context->MR_ctxt_resume_label = cont_label;
+12              MR_schedule(st->MR_st_orig_context);
+13              MR_release_lock(&MR_SyncTermLock);
+14              MR_GOTO(MR_idle);
 15          }
-        } else {
-            MR_Spark    spark;
-            MR_bool     popped;
-
+16      } else {
+17          MR_Spark    spark;
+18          MR_bool     popped;
+19
 20          popped = MR_pop_spark(current_context->MR_ctxt_spark_stack, &spark);
-            if (popped && (spark.MR_spark_parent_sp == MR_parent_sp)) {
-                /*
-                ** The spark at the top of the stack is part of the same
-                ** parallel conjunction, we can exuecute it immediately.
+21          if (popped && (spark.MR_spark_parent_sp == MR_parent_sp)) {
+22              /*
+23              ** The spark at the top of the stack is part of the same
+24              ** parallel conjunction, we can exuecute it immediately.
 25              */
-                MR_release_lock(&MR_SyncTermLock);
-                MR_GOTO(spark.MR_spark_code);
-            } else {
-                if (popped) {
+26              MR_release_lock(&MR_SyncTermLock);
+27              MR_GOTO(spark.MR_spark_code);
+28          } else {
+29              if (popped) {
 30                  /*
-                    ** The spark is part of a different parallel conjunction,
-                    ** put it back.
-                    */
-                    MR_push_spark(current_context->MR_ctxt_spark_stack, &spark);
+31                  ** The spark is part of a different parallel conjunction,
+32                  ** put it back.
+33                  */
+34                  MR_push_spark(current_context->MR_ctxt_spark_stack, &spark);
 35              }
-                if (st->MR_st_orig_context == current_context) {
-                    MR_save_context(current_context)
-                    MR_ENGINE(MR_eng_current_context) = NULL;
-                }
+36              if (st->MR_st_orig_context == current_context) {
+37                  MR_save_context(current_context)
+38                  MR_ENGINE(MR_eng_current_context) = NULL;
+39              }
 40              MR_release_lock(&MR_SyncTermLock);
-                MR_GOTO(MR\_idle);
-            }
-        }
-    }
+41              MR_GOTO(MR_idle);
+42          }
+43      }
+44  }
 \end{verbatim}
 \caption{\joinandcontinue --- original version}
 \label{alg:join_and_continue_peterw}
@@ -134,7 +135,7 @@ setting up the sync term,
 spawning off $G_2$,
 and executing $G_1$ (lines 1--4).
 Then it executes the barrier \joinandcontinue,
-whose is shown in
+shown in
 algorithm \ref{alg:join_and_continue_peterw}.
 The algorithms throughout this chapter use a macro named \code{MR\_ENGINE}
 to access the fields of the current engine structure.
@@ -148,20 +149,21 @@ there are three important scenarios:
 
     In this scenario $C_{Orig}$ placed the spark for $G_2$ on the top of its
     local spark stack.
-    Sparks placed on a context local spark stack cannot be executed by any
+    Sparks placed on a context's local spark stack cannot be executed by any
     other context.
     Therefore when $C_{Orig}$ reaches the \joinandcontinue barrier
-    (line 5 in the example),
+    (line 5 in the example, figure \ref{fig:par_conj_impl_only}),
     the context $G_2$ will be outstanding and
     \var{st->MR\_st\_num\_outstanding} will be non-zero.
-    $C_{Orig}$ will execute else branch on lines 17--42 of \joinandcontinue
+    $C_{Orig}$ will execute the else branch on lines 17--42 of
+    \joinandcontinue,
     where it will pop the spark for $G_2$ off the top of the spark stack.
     It is not possible for some other spark to be on the top of the stack;
     any sparks left on the stack by $G_1$ would have been popped off by
     the \joinandcontinue barriers of the conjunctions that spawned off the
     sparks.
 
-    The check that the sparks stack pointer is equal to the current
+    The check that the spark's stack pointer is equal to the current
     parent stack pointer\footnote{
         The code generator will ensure that \var{MR\_parent\_sp} is set
         before the parallel conjunction is executed,
@@ -189,7 +191,9 @@ there are three important scenarios:
     where another context, $C_{Other}$, picked it up and executed it
     in parallel.
     Also, as distinct from scenario three below,
-    $C_{Other}$ reaches the barrier on line 8 of the example \emph{before}
+    $C_{Other}$ reaches the barrier on line 8 of the example 
+    (figure \ref{fig:par_conj_impl_only})
+    \emph{before}
     $C_{Orig}$ reaches the barrier on line 5.
     Even if they both seem to reach the barrier at the same time,
     their barrier operations are performed in sequence because of the
@@ -229,13 +233,15 @@ there are three important scenarios:
 
     \item[Scenario three:]~
 
-    As in scenario two $C_{Orig}$ pl the spark for $G_2$ on the global spark
+    As in scenario two, $C_{Orig}$ put the spark for $G_2$ on the global spark
     queue,
     where another context, $C_{Other}$, picked it up and executed it
     in parallel.
     However,
     in this scenario
-    $C_{Orig}$ reaches the barrier on line 5 in the example \emph{before}
+    $C_{Orig}$ reaches the barrier on line 5 in the example
+    (figure \ref{fig:par_conj_impl_only})
+    \emph{before}
     $C_{Other}$ reaches its barrier on line 8.
 
     When $C_{Orig}$ executes \joinandcontinue,
@@ -259,16 +265,16 @@ there are three important scenarios:
     and will execute the then branch of the if-then-else.
     Within this branch it will test to see if it is the original
     context,
-    the test will fail and the else branch of the nested if-then-else
+    the test will fail, and the else branch of the nested if-then-else
     will be executed.
     At this point we know that $C_{Orig}$ must be suspended because
-    there where no outstanding conjuncts and the current context is not
+    there were no outstanding conjuncts and the current context is not
     the original context;
     this can only happen if $C_{Orig}$ is suspended.
     The code wakes $C_{Orig}$ up by
     setting its code pointer to the continuation label,
     placing it on the global run queue,
-    and then jumps to \idle.
+    and then jumping to \idle.
 
     When $C_{Orig}$ resumes execution it executes the code on line 9,
     which is the continuation label.
@@ -279,7 +285,7 @@ The algorithm includes an optimisation not shown here:
 if the parallel conjunction has been executed by only one context,
 then a version of the algorithm without locking is used.
 We have not shown the optimisation because it is equivalent and not relevant
-to our discussion,
+to our discussion;
 we mention it only for completeness.
 
 \begin{algorithm}[tbp]
@@ -349,18 +355,17 @@ then this thread releases the lock,
 and then destroys itself.
 If the system is not being shut down,
 the engine will search for a runnable context.
-If it finds a context it releases the run queue lock, loads the context
+If it finds a context, it releases the run queue lock, loads the context
 and jumps to the resume point for the context.
-If it already had a context then it first releases that context,
-doing so is safe as
-a precondition of an engine calling \idle is that if the engine has
-a context, the context must not contain a spark or represent a
-suspended computation.
+If it already had a context, then it first releases that context;
+doing so is safe because \idle has a precondition that if an engine has a
+context,
+the context must not contain a spark or represent a suspended computation.
 If no context was found, the engine attempts to take a spark from the global
 spark queue.
 If it finds a spark then it will need a context to execute that spark.
-It will try to get a context from the free list, if there is none it will
-create a new context.
+It will try to get a context from the free list;
+if there is none it will create a new context.
 Once it has a context,
 it copies the context's copies of registers into the engine.
 It also initialises the engine's parent stack pointer

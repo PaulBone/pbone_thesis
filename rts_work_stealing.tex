@@ -10,9 +10,9 @@ described in the previous section.
 \citet{wang:2006:hons} recognised this problem and proposed work stealing as
 its solution.
 In a work stealing system,
-sparks are placed on a context's local spark stack
-is not committed to running in that context;
-it may be executed in a different context if it is stolen.
+sparks placed on a context's local spark stack
+are not committed to running in that context;
+they may be executed in a different context if they are stolen.
 This delays the decision of where to execute a spark until the moment
 before it is executed.
 
@@ -29,7 +29,7 @@ compared to something like \emph{round-robin scheduling}.
 Each processor in Multilisp has a currently running task,
 and a stack of suspended tasks.
 If the current task is suspended on a future or finishes,
-the processor will execute task at the top of its task stack.
+the processor will execute the task at the top of its task stack.
 If there is no such task,
 it attempts to steal a task from the bottom of another processor's stack.
 
@@ -54,14 +54,14 @@ Work stealing's other benefits can be summarised as follows.
     than it can place sparks on the global spark queue.
     This is because there is less contention on a context's
     local spark stack.
-    The only source of contention is work stealing which is balanced all of
-    the contexts.
-    Assume each of the $C$ contexts' spark stacks contains sparks, then
-    contention on any one of these stacks is $1/C$ less than it would be on
-    a global queue.
+    The only source of contention is work stealing,
+    which is balanced among all of the contexts.
+    Assume each of the $C$ contexts' spark stacks contains sparks.
+    Contention on any one of these stacks is $1/C$ times less than it would be
+    on a global queue.
 
     \item
-    A idle worker can take work from its own queue quickly.
+    An idle worker can take work from its own queue quickly.
     Again, there is less contention on a local queue.
 
     \item
@@ -153,7 +153,7 @@ our implementation is heavily based.
 \end{figure}
 
 \plan{Mercury's needs for a deque}
-Until now each context has used a stack to manage sparks.
+Until now, each context has used a stack to manage sparks.
 The last item pushed onto the stack is the first to be popped off the
 stack.
 This \emph{last-in-first-out} order is important for Mercury's parallel
@@ -161,42 +161,42 @@ conjunctions.
 Parallel conjunctions may be nested, either in the same procedure or through
 procedure calls such as in figure
 \ref{fig:nested_par_conjunctions}.
-Consider a context whose spark stack's contents are initially undefined,
-the spark stack is represented by
+Consider a context whose spark stack's contents are initially undefined.
+The spark stack is represented by
 figure \ref{fig:spark_stack_step1}.
 When the context calls \code{p} it creates a spark
-for the second and third conjuncts \code{r(\ldots) \& q(\ldots)}
+for the second and third conjuncts \code{r(\ldots)~\&~q(\ldots)}
 and places the spark on its local stack (figure
 \ref{fig:spark_stack_step2}).
-It then calls \code{q} where it creates another spark,
-this spark represents the call to \code{u},
+It then calls \code{q}, where it creates another spark.
+This spark represents the call to \code{u},
 and now the spark stack looks like
-figure \ref{fig:spark_stack_step3}.
+figure~\ref{fig:spark_stack_step3}.
 Assuming that no work stealing has occurred,
 when the context finishes executing \code{t} it pops the spark from the top
 of its stack;
 the popped spark represents the call to \code{u} because
 the stack returns items in a last-in-first-out order.
 This is desirable because it follows the same execution order as sequential
-execution would,
-we call this left-to-right execution since by default the left operand of a
+execution would.
+We call this left-to-right execution since by default the left operand of a
 conjunction is executed first.
-The conjunction in \code{q} contains a shared variable named \code{X},
-This execution order ensures that the \signal operation for \code{X}'s future
+The conjunction in \code{q} contains a shared variable named \code{X};
+this execution order ensures that the \signal operation for \code{X}'s future
 occurs before the \wait operation;
 the context is not blocked by the call to \wait.
-Note that the mode annotations are illustrative,
-they not part of Mercury's syntax.
+(Note that the mode annotations are illustrative,
+they are not part of Mercury's syntax.)
 Once the spark for \code{u} is popped off the spark stack then the spark
 stack looks like figure \ref{fig:spark_stack_step4}.
 After the execution of \code{u}, \code{q} returns control to \code{p},
 which then continues the execution of its own parallel conjunction.
-\code{p} pops a spark off the spark stack,
+\code{p} pops a spark off the spark stack;
 the spark popped off is the parallel conjunction
 \code{r(\ldots) \& s(\ldots)}.
 This immediately creates a spark for \code{s} and pushes it onto the spark
-stack (figure \ref{fig:spark_stack_step5},
-it then executes \code{r}.
+stack (figure \ref{fig:spark_stack_step5}) and
+then executes \code{r}.
 The execution of \code{r} at this point is also the same as what would occur
 if sequential conjunctions were used.
 This is straightforward because
@@ -217,7 +217,7 @@ since stealing a spark may create a context which may not be permitted due
 to the context limit.
 Furthermore
 the original context would not be able to continue the execution in \code{p}
-without special stack handling routines,
+without special stack handling routines;
 this would make the implementation more complicated than necessary.
 %The system must be able to make progress by executing contexts from the
 %global context run queue or by executing sparks from a context's own local
@@ -225,7 +225,7 @@ this would make the implementation more complicated than necessary.
 Therefore from a context's perspective its local spark storage must behave
 like a stack.
 Keeping this sequential execution order for parallel conjunctions has
-an additional benefit,
+an additional benefit:
 it ensures that a popped spark's data has a good chance of being hot in the
 processor's cache.
 
@@ -249,7 +249,7 @@ it means that work is stolen from the bottom end of a context's local spark
 stack.
 Consider step 3 of the example above.
 If a thief removes the spark for \code{r \& s}
-then only the spark for \code{u} is on the stack,
+then only the spark for \code{u} is on the stack, and
 the original context can continue its execution by taking the spark to
 \code{u}.
 By comparison if the spark for \code{u} was stolen,
@@ -258,7 +258,8 @@ which, for the reasons above, is less optimal.
 Therefore a thief steals work from the bottom of a context local stack
 so that a first-in-first-out order is used for parallel tasks.
 
-\citet{halstead:1985:multilisp} also uses processor local task stacks,
+\paul{Check how many authors}
+\citet{halstead:1985:multilisp} also uses processor-local task stacks,
 so that when a processor executes a task from its own stack,
 a last-in-first-out order is used.
 He chose to have thieves steal work from the top of a task stack so
@@ -270,25 +271,25 @@ that we did:
 so that when a processor runs its own task,
 the task is executed in the same order as it would be if the program were
 running sequentially.
-We agree with his claim that this reduces resource usage overheads,
-we also agree with his speculation that it results in more efficient cache
+We agree with his claim that this reduces resource usage overheads.
+We also agree with his speculation that it results in more efficient cache
 usage.
 However,
 Halstead also claims that this can improve performance for
-embarrassingly parallel workloads,
-this claim is only true insofar as work stealing reduces runtime costs
+embarrassingly parallel workloads.
+This claim is only true insofar as work stealing reduces runtime costs
 \emph{in general}.
 No runtime method can completely eliminate the overheads of parallel
 execution.
 %therefore only during development or compile time can
 %embarrassing parallelism be addressed effectively.
-Furthermore,
-in our experience using sparks to represent computations whose execution has
-not begin has had a more significant improvement in reducing runtime costs.
+Furthermore, in our experience,
+using sparks to represent computations whose execution has
+not begun has had a more significant improvement in reducing runtime costs.
 
 \plan{Describe the data structure used to implement these stacks and its
 properties.}
-To preserve the last-in-first-out behaviour of context local spark
+To preserve the last-in-first-out behaviour of context-local spark
 stacks,
 and first-in-first-out behaviour of the global queue,
 we chose to use double ended queues (deques) for context local spark
@@ -307,7 +308,7 @@ therefore the stealing of work by another context is what creates the need
 for synchronisation.
 The deque described by \citet{Chase_2005_wsdeque} supports lock free,
 nonblocking
-operation, it has low overheads (especially for pop and push operations),
+operation, has low overheads (especially for pop and push operations),
 and is dynamically resizable;
 all of these qualities are very important to our runtime system's
 implementation.
@@ -336,7 +337,8 @@ The deque provides the following operations.
     \item[\code{MR\_bool MR\_pop\_spark(deque *d, spark *s)}]
     The deque's owner can call this to pop an item from the top of the
     queue.
-    In the case that the deque contains only one item a compare and swap
+    In the case that the deque contains only one item,
+    a compare and swap
     operation is used to determine if the thread lost a race to another
     thread attempting to steal the item from the deque (a \emph{thief}).
     When this happens, the single item was stolen by the thief and the
@@ -346,8 +348,8 @@ The deque provides the following operations.
     In all cases a memory barrier is also used (see below).
     Internally the deque is stored as an array of sparks, not spark
     pointers.
-    This is why the second argument in which the result is returned is not a
-    double pointer as one might expect.
+    This is why the second argument, in which the result is returned,
+    is not a double pointer as one might expect.
     This implementation detail avoids memory allocation for sparks inside
     the deque implementation.
     A callers of any of these functions temporarily stores the spark on
@@ -464,8 +466,8 @@ but we will now refer to it as a deque rather than a stack.
 We have removed the global spark queue,
 as work stealing does not use one.
 Consequently,
-when a context creates a spark that spark is always placed on the
-context's local spark deque.
+when a context creates a spark,
+that spark is always placed on the context's local spark deque.
 
 \paul{Is this bit clear?  This paragraph is new.}
 \citet{Chase_2005_wsdeque}'s paper uses Java to describe the deque structure
@@ -479,7 +481,7 @@ CPUs will generally reorder memory operations including executing
 several operations concurrently with one another and other instructions.
 Therefore, C's \code{volatile} keyword is insufficient when the order of
 memory operations is important.
-In contrast
+In contrast,
 Java's \code{volatile} keyword has the constraints of C's keyword
 plus it guarantees that memory operations become visible to other
 processors in the order that they appear in the program.
@@ -491,11 +493,11 @@ processors in the order that they appear in the program.
 \citet{Chase_2005_wsdeque} uses Java's \code{volatile} qualifier in the
 declaration for the \var{top} and \var{bottom} fields of the deque
 structure.
-When adding the deque algorithms to Mercury's runtime system we translated
-them to C.
+When adding the deque algorithms to Mercury's runtime system,
+we translated them to C.
 To maintain correctness we had to introduce two \emph{memory barriers},\footnote{
     Memory barriers are also known as memory fences.
-    In particular the x86/x86\_64 instructions contain the word fence.}.
+    In particular the x86/x86\_64 instructions contain the word fence.}
 CPU instructions which place ordering constraints on memory operations.
 First, we placed a store barrier in the \push procedure
 (the inline assembly\footnote{
@@ -570,28 +572,28 @@ used}
 A context accesses its own local spark queue in the \joinandcontinue barrier
 introduced in section \ref{sec:original_scheduling}.
 The introduction of work stealing has allowed us to optimise
-\joinandcontinue,
-the new version of \joinandcontinue is shown in algorithm
-\ref{alg:join_and_continue_ws1}.
-The previous version is shown in
+\joinandcontinue.
+The new version of \joinandcontinue is shown in algorithm
+\ref{alg:join_and_continue_ws1}, and
+the previous version is shown in
 algorithm \ref{alg:join_and_continue_peterw}
 on page \pageref{alg:join_and_continue_peterw}.
-The first change to this algorithm,
+The first change to this algorithm
 is that this version is lock free.
 All the synchronisation is performed by atomic CPU instructions, memory
 write ordering and one spin loop.
 The number of outstanding contexts in the synchronisation term is
 decremented and the result is checked for zero atomically.\footnote{
-    On x86/x86\_64 this is a \instruction{lock dec} instruction, we read the
-    zero flag to determine if the decrement caused the value to become
-    zero.}
+    On x86/x86\_64 this is a \instruction{lock dec} instruction.
+    We read the zero flag to determine if the decrement caused the value to
+    become zero.}
 This optimisation could have been made without introducing work stealing,
-it was convenient to make both changes at the same time.
+but it was convenient to make both changes at the same time.
 Note that in the previous version, a single lock was shared between all of
 the synchronisation terms in the system.
 
 The next change prevents a race condition that would otherwise be possible
-without locking, and occur as follows.
+without locking, which could occur as follows.
 A conjunction of two conjuncts is executed in parallel.
 The original context, $C_{Orig}$,
 enters the barrier, decrements the counter from two to one,
@@ -615,14 +617,16 @@ memory traffic and allow the loop to exit without a pipeline stall
 \citep{intel:pause}.
 Lines 24--25 also include memory write ordering (not shown).
 
-The other change is around line 20,
+The other change is around line 20:
 when the context pops a spark off its stack, it does not check if the spark
 was created by a callee's parallel conjunction.
-Because all sparks are placed on the context local spark deques and
-thieves never steal work from the hot end of the deque,
-then if there is an outstanding conjunct then either
+This check can be avoided
+because all sparks are placed on the context local spark deques and
+thieves never steal work from the hot end of the deque.
+Hence if there is an outstanding conjunct then either
 its spark will be at the hot end of the deque
 or the deque will be empty and the spark will have been stolen.
+Therefore any spark at the hot end of the deque cannot possibly be created by a callee's parallel conjunction.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
@@ -682,21 +686,22 @@ or the deque will be empty and the spark will have been stolen.
 \end{algorithm}
 
 \plan{Other changes to the idle loop?}
-We have also modified \idle to use spark stealing,
+We have also modified \idle to use spark stealing;
 its new code is shown in algorithm \ref{alg:MR_idle_wsinitial}.
 We have replaced the old code which dequeued a spark from the global spark
 queue
 with a call to \trystealspark (see below).
-Before attempting to steal a spark \idle must ensure that the context limit
-will not be exceeded
+Before attempting to steal a spark,
+\idle must ensure that the context limit will not be exceeded
 (this was previously done when choosing where to place a new spark).
-This check is on lines 28--29; it is true of either,
+This check is on lines 28--29; it is true if either
 the engine already has a context (which is guaranteed to be available for a
 new spark),
-or that the current number of contexts is lower than the limit.
-When sparks are placed on a contexts local stack the run queue's condition
-variable is not signalled,
-doing so would be wasteful.
+or the current number of contexts is lower than the limit.
+\paul{Stack or deque?!}
+When sparks are placed on a context's local stack,
+the run queue's condition variable is not signalled,
+as doing so would be wasteful.
 Therefore engines must wake up periodically to check if there is any
 parallel work available.
 This is done on line 48 using a call to \code{MR\_timed\_wait} with a
@@ -714,10 +719,10 @@ one containing a null pointer,
 and writing the pointer to the context's deque to that index in the array.
 If there is no unused slot in this array, the runtime system will resize the
 array.
-When the runtime system destroys a context it writes \NULL to that context's
-index in the deque array.
-To prevent concurrent access from corrupting the array these operations are
-protected by \code{MR\_spark\_deques\_lock}.
+When the runtime system destroys a context,
+it writes \NULL to that context's index in the deque array.
+To prevent concurrent access from corrupting the array,
+these operations are protected by \code{MR\_spark\_deques\_lock}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
@@ -753,7 +758,7 @@ A thief may need to make several attempts before it successfully finds a
 deque with work it can steal.
 Line 6 sets the number of attempts to make, which is either the user
 configurable \var{MR\_worksteal\_max\_attempts} or the size of the array,
-whichever is smallest.
+whichever is smaller.
 A loop (beginning on line 7) attempts to steal work until it succeeds or it
 has made \var{max\_attempts}.
 We use a global variable, \var{MR\_victim\_counter},
@@ -768,8 +773,8 @@ Eventually \trystealspark may give up (lines 17--18).
 If it does so it will release the lock and return false.
 Whether or not a thief steals work or gives up,
 the next thief will resume the round-robin selection where the previous
-thief left off,
-this is guaranteed because \var{MR\_victim\_counter} is protected by the
+thief left off.
+This is guaranteed because \var{MR\_victim\_counter} is protected by the
 lock acquired on line 5.
 
 \plan{Work stealing fixes the premature scheduling decision problem}
@@ -834,7 +839,7 @@ engine will attempt to steal work when it is ready ---
 delaying the decision to run the spark in parallel.
 This suggests that the premature scheduling problem was also affecting right
 recursion.
-But the effect was minor compared to the pathological case was saw with left
+But the effect was minor compared to the pathological case we saw with left
 recursion.
 
 There is a second observation we can make about right recursion.

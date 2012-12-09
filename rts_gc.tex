@@ -13,14 +13,12 @@ Mercury does not allow destructive update.
 %    The compiler will not parallelise impure goals.}
 Therefore a call usually returns its value in newly allocated memory
 rather than modifying the memory of its parameters.
-Likewise, a call cannot modify global memory.
+Likewise, a call cannot modify data that may be aliased.
 This means that Mercury programs often have a high rate of allocation,
 which places significant stress on the garbage collector.
 Therefore,
 allocation and garbage collection can reduce a program's
-performance.
-This usually becomes more significant when parallelism is introduced into a
-program.
+performance as we will show in this section.
 
 \plan{Introduce Boehm, \& details: conservative, mark and sweep, stop the
 world, parallel marking.}
@@ -36,7 +34,7 @@ it will use its own set of pthreads to do parallel marking.
 \plan{Introduce collector time, mutator time.}
 For the purposes of this section
 we separate the program's execution time into two alternating phases:
-Collection time, which is when Boehm GC performs marking,
+Collector time, which is when Boehm GC performs marking,
 and mutator time, which is when the Mercury program runs.
 The name `mutator time' refers to time that mutations (changes) to memory
 structures are permitted.
@@ -95,13 +93,15 @@ Therefore,
 during memory allocation,
 a thread uses its own free lists rather than locking a global structure.
 From time to time, a thread will have to retrieve new free lists
-from a global structure and will need to lock the structure.
-The costs of locking will be amortised across several memory allocations.
+from a global structure and will need to lock the structure,
+but the costs of locking will be amortised across several memory allocations.
 
 \plan{Describe icfp2000, mandelbrot\_lowalloc and mandelbrot\_highalloc
 programs.}
-To how well Mercury and Boehm GC scale to multiple cores we used several
+To test how well Mercury and Boehm GC scale to multiple cores we used several
 benchmark programs with different memory allocation requirements.
+We wanted to determine how memory allocation rates affect
+performance of parallel programs.
 Our first benchmark is a raytracer developed for the
 ICFP programming contest in 2000.
 For each pixel in the image,
@@ -109,18 +109,19 @@ the raytracer casts a ray into the scene to determine what colour to paint that 
 Two nested loops build the pixels for the image:
 the outer loop iterates over the rows in the image and
 the inner loop iterates over the pixels in each row.
-We manually parallelised the program by introducing an parallel
-conjunction into the outer loop;
+We manually parallelised the program by introducing a parallel
+conjunction into the outer loop,
 indicating that rows should be drawn in parallel.
 This parallelisation is independent.
 The raytracer uses many small structures to represent vectors and a pixel's
 colour.
 It is therefore memory allocation intensive.
-Since we suspected that garbage collection was having a negative affect on
-performance,
+Since we suspected that garbage collection in memory allocation intensive
+programs was having a negative affect on performance,
 we developed a mandelbrot image generator.
-The mandelbrot image generator has a similar structure to the raytracer:
-it draws an image using two nested loops as above.
+The mandelbrot image generator has a similar structure to the raytracer,
+but is desiged so that we can test programs with different allocation rates.
+It draws an image using two nested loops as above.
 The mandelbrot image is drawn on the complex number plane.
 A complex number $C$ is in the mandelbrot set if
 $\forall i \cdot |N_i| < 2$ where $N_0 = 0$ and $N_{i+1} = N_{i}^2 + C$.
@@ -148,11 +149,16 @@ We benchmarked these three programs with different numbers of Mercury
 engines and garbage collector threads.
 We show the results in table \ref{tab:gc}.
 All benchmarks have an initial heap size of 16MB.
-Each result is measured in seconds and represents the mean of eight samples.
+Each result is measured in seconds and represents the mean of eight test runs.
 The first column is the number of garbage collector threads used.
 The second and third columns give sequential execution times
-without and with thread safety enabled.
-In these columns the programs where executed in such a way so that they did
+without and with thread safety\footnote{
+    A thread safe build of a Mercury program enables thread safety in the
+    garbage collector and runtime system.
+    It also requires that one less CPU register is available to Mercury
+    programs (see section \ref{backgnd_merpar})}
+enabled.
+In these columns the programs were compiled in such a way so that they did
 not execute a parallel conjunction.
 The remaining four columns give parallel execution times using one to four
 Mercury engines.
@@ -161,7 +167,7 @@ sequential thread safe result for the same program.
 \label{cabsav}
 We ran our benchmarks on
 \paul{Find a brand name i7 I can borrow for some weeks}
-a Intel i7-2600K system
+a four-core Intel i7-2600K system
 with 16GB of memory,
 running Debian/GNU Linux 6
 with a 2.6.32-5-amd64 Linux kernel and GCC 4.4.5-8.
@@ -252,7 +258,7 @@ However, in the raytracer,
 the GC time decreases slightly as Mercury engines are added.
 To understand why this happens we would need to understand the collector in
 detail,
-however Boehm GC's sources are notorious for being difficult to read and
+however Boehm GC's sources are notoriously difficult to read and
 understand.
 
 \plan{Compare performance with Amdahl's predictions.}
@@ -276,7 +282,7 @@ Like raytracer above, the elapsed time speedups are lower than the mutator
 time speedups.
 Similarly,
 when we increase the number of threads used by the collector,
-it improves collection time more than it does elapsed time.
+it improves collector time more than it does elapsed time.
 
 When we increased both the number of threads used by the collector and the
 number of Mercury engines
@@ -319,7 +325,7 @@ mandelbrot\_lowalloc
 \end{table}
 
 \plan{Allocation intensity}
-table \ref{tab:gc_amdahl} also shows that raytracer spends more of its
+Table \ref{tab:gc_amdahl} also shows that raytracer spends more of its
 elapsed time doing garbage collection than mandelbrot\_highalloc does.
 This matches the results in table \ref{tab:gc},
 where mandelbrot\_highalloc has better speedups because of parallelism in
@@ -334,10 +340,10 @@ Using Mercury's deep profiler we measured the number and total size of memory
 allocations.
 This is shown in table \ref{tab:mem_alloc_rate}.
 The rightmost column in this table gives the allocation rate
-measured in million allocations per second.
+measured in millions of allocations per second.
 It is calculated by dividing the number of allocations in the second column
 by the average mutator time reported in table \ref{tab:gc_amdahl}.
-Therefore, it represents the allocation rate during mutation time.
+Therefore, it represents the allocation rate during mutator time.
 This is deliberate because,
 by definition,
 allocation cannot occur during collector time.
@@ -467,18 +473,19 @@ There are two reasons for this
     the marking phase.
     This requires synchronisation which reduces the performance of parallel
     programs.
-    Therefore, the less often collection occurs, the less stop-the-world's
-    synchronisation affects performance.
+    Therefore, the less often collection occurs, the rarer stop-the-world
+    events are, and the less their synchronisation affects performance.
 
     \item[Reason 2]
     Another reason was suggested by Simon Marlow:
     Because Boehm GC uses its own threads for marking and not Mercury's,
     it cannot mark objects with the same thread that allocated the objects.
-    Unless Mercury and Boehm GC both mapped and pinned their threads to
+    Unless Mercury and Boehm GC both map and pin their threads to
     processors,
-    and agreed on the mapping then making will cause a large number of cache
-    misses.
-    For example, during collection, processor one (P1) marks one of processor two's
+    and agree on the mapping,
+    then marking will cause a large number of cache misses.
+    For example, during collection, processor one (P1) marks one of processor
+    two's
     (P2) objects,
     causing a cache miss in P1's cache and invalidating the corresponding cache
     line in P2's cache.

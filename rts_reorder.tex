@@ -15,7 +15,7 @@ takes longer to execute than the first conjunct;
 the first conjunct becomes blocked on the later conjunct(s).
 
 \plan{Describe the intuition for the transformation.}
-On the other hand left recursion works well,
+On the other hand left recursion works well:
 using work stealing we are able to get very good speedups (3.96 for
 mandelbrot when using four Mercury engines).
 When the conjunction is independent,
@@ -65,12 +65,12 @@ and reorder them,
 but we have not needed to.
 \reorder is invoked on parallel conjunctions without shared variables;
 its code is shown in algorithm \ref{alg:reorder_conjunction}.
-Its arguments are a reference to the current SCC and a list of the parallel
-conjunction's conjuncts.
+Its arguments are a reference to the current strongly connected component (SCC)
+and a list of the parallel conjunction's conjuncts.
 \reorder iterates over these goals in reverse order by means of the
 recursive call on line 6.
 For each goal it tests if that goal makes a call to the current SCC.
-If so it leaves the goal where it is,
+If so, it leaves the goal where it is,
 if not \reorder will attempt to push the goal towards the end of the
 list using \trypushconjlater.
 \trypushconjlater takes the current goal (\var{Goal}) and the list
@@ -83,8 +83,9 @@ therefore \trypushconjlater may not always push a goal all the way to the
 end of the list.
 
 \plan{Discuss reasoning for not showing results}.
-We have benchmarked and tested this,
-however the benchmark results are not interesting:
-independent right recursion is transformed into independent left
-recursion and therefore performs the same as independent left recursion.
+We have benchmarked and tested this to confirm that independent right recursion
+now performs the same as independent left recursion.
+This is because independent right recursion is transformed into independent
+left recursion.
+
 

@@ -406,9 +406,13 @@ bad_ngrams = [
         ["can", "not"],
         ["round", "robin"],
         ["worth", "while"],
+        ["left", "most"],
 
         % Hypenate this.
         ["if", "then", "else"]
+       
+        %["collection", "time"],
+        %["mutation", "time"]
     ].
 
 % Convert the document into different data structures.
