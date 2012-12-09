@@ -585,7 +585,6 @@ runtime were shutting down\footnote{
 
 There are several different actions that a sender can specify when notifying
 another engine.
-\paul{Currently here.}
 
 \begin{description}
 
@@ -597,6 +596,9 @@ another engine.
     this engine is capable of executing the context.
     However this notification cannot be ignored as that would cause the
     context to be leaked.
+    Leaking a context means not dropping or loosing the context;
+    a context that must be executed may not be leaked as the computation it
+    represents would get lost.
     Therefore we only ever send \code{MR\_ACTION\_CONTEXT} messages to engines in
     the \code{MR\_SLEEPING} state,
     the only state that does not have an owner-initiated transition from 
@@ -633,7 +635,8 @@ another engine.
 The code for \idle in algorithm \ref{alg:idle} shows several of these
 transitions,
 including the transition to the \code{MR\_STEALING} state on lines 28--29.
-If this compare and swap fails it indicates that the current engine should 
+If this compare and swap fails,
+it indicates that the current engine should 
 wait for \code{MR\_es\_state} to become a value other than \code{MR\_BUSY} and then,
 depending on the action closure,
 either re-check the run queue or exit.
@@ -641,8 +644,8 @@ We have not shown the code that interprets and acts on the action closure,
 however it is similar to the switch statement in \sleep (algorithm
 \ref{alg:sleep}).
 
-When an engine creates a spark it attempts to notify other engines of
-the new spark.
+When an engine creates a spark,
+it attempts to notify other engines of the new spark.
 However, looking for and notifying an idle engine on every spark creation
 would be prohibitively expensive.
 Therefore we maintain a counter of the number of engines in an \emph{idle}
@@ -715,7 +718,7 @@ creation.
 An engine that executes \idle and cannot find any work will jump to the
 \sleep procedure,
 which is shown in algorithm \ref{alg:sleep}.
-\sleep is another Mercury procedure written in C,
+\sleep is another Mercury procedure written in C;
 it starts by attempting to put the engine into the sleeping state,
 checking for any notifications using a compare and swap as we saw in \idle.
 If there are no notifications it will wait on the sleep semaphore in the
@@ -728,25 +731,26 @@ The implied switch/case statement in \idle is similar,
 except that it does not need to cover some actions.
 When polling is enabled the call to \code{MR\_sem\_wait} is used with a
 timeout.
-If the timeout expires then the engine will acquire the lock and attempt to
+If the timeout expires,
+then the engine will acquire the lock and attempt to
 steal a spark from any other engine, if it finds a spark it moves to the
 \code{MR\_WORKING} state.
 It holds the lock until it either decides to sleep again or sets its state
-so that it a context notification is not lost in the meantime,
+so that, in the meantime, no context notification is lost,
 as contexts always use notification rather than polling.
 
 When an engine receives a \code{MR\_ACTION\_WORKSTEAL} message it executes
-the code at lines 18--31,
-note the loop on lines 19--23.
-As we said in section \ref{sec:rts_work_stealing},
+the code at lines 18--31.
+As mentioned in section \ref{sec:rts_work_stealing},
 a data race when attempting to steal a spark will result in
 \steal returning an error.
 In \trystealspark this error is ignored and the algorithm moves to the next
 deque.
 However,
 when an engine has received a message telling it that there is a spark on
-this deque the engine will use this loop to retry when a collision occurs.
-It stops once it has either been successful or the queue is empty.
+this deque, the engine will use the loop on lines 19--23 to retry when a
+collision occurs.
+It stops once either it has been successful or the queue is empty.
 We made this decision because it is possible that many sparks may be placed
 on the deque at the same time,
 and even though our engine lost a race to another thief, there may be more
@@ -755,7 +759,8 @@ If the engine fails to steal a spark from this deque,
 the engine will jump to \idle where it will check the run queue and then
 recheck all the spark deques.
 The other actions performed when receiving a message are simple to
-understand from the figure and algorithm.
+understand from figure \ref{fig:engine_states} and algorithm
+\ref{alg:sleep}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
@@ -814,10 +819,11 @@ then the previous version of the algorithm would schedule the original
 context by placing it on the run queue and then execute \idle as its current
 context had finished.
 Since we know that the current context is finished and the original one is
-runnable we now resume the original context's execution directly.
+runnable,
+we now resume the original context's execution directly.
 
-The second change is on lines 19--28,
-this new if statement checks whether the context that the engine holds is
+The second change is on lines 19--28.
+This new if statement checks whether the context that the engine holds is
 compatible with the spark it has just popped from the deque.
 A context is incompatible if it contains stack frames of a computation that
 is not a parent of the computation the spark represents.
@@ -855,7 +861,7 @@ It is still important to test right recursion such as in this example,
 as the conjunct reordering transformation cannot reorder dependent parallel
 conjunctions so right recursion can still occur.
 
-The differences between the old and new results are minimal,
+The differences between the old and new results are minimal;
 we have shown the standard deviation for each result to make it easier to
 see where comparisons are valid.
 In both left and right recursive mandelbrot programs using one Mercury
@@ -969,19 +975,20 @@ We are hesitant to draw any conclusions from these results.
 \end{center}
 \end{figure}
 
-Because the mandelbrot results are so inconclusive we created a new
-benchmark named fibs.
+Because the mandelbrot results are inconclusive,
+we created a new benchmark named fibs.
 Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 using the naive algorithm:
 summing the previous two Fibonacci numbers where these are defined
 recursively.
 This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
     (The arity of a Mercury function is written as \code{N+1}.
-    The \code{+1} refers the return value while \code{N} refers to the
-    function's input arguments.)
+    The \code{+1} refers to the return value,
+    while \code{N} refers to the function's input arguments.)
 The naive fibs program is an excellent micro-benchmark for work stealing.
 It creates many small tasks whose overheads dominate the program's execution
-time which allows us easily measure the overheads of work stealing.
+time,
+allowing us easily measure the overheads of work stealing.
 Results for this version of \fibs
 are shown in the ``without GC'' (fifth) row group of table
 \ref{tab:work_stealing_revised_fibs}.
@@ -1015,14 +1022,15 @@ demonstrating how granularity control improves performance.
 In parallelised divide and conquer code such as this the context limit does
 not affect performance as badly as it does with right single recursive code.
 This is because both conjuncts have similar costs compared to the different
-costs in singly recursive code,
-the original context is less likely to block on the completion of the second
-conjunct and if it does it will not need to block for as long as it would
+costs in singly recursive code.
+The original context is less likely to block on the completion of the second
+conjunct,
+and if it does it will not need to block for as long as it would
 with right recursive code.
 We do not compare the context limit behaviour of divide and conquer with that
 of left recursion,
 as work stealing solved the context limit problems in left recursive code
-(section \ref{sec:rts_work_stealing}.
+(section \ref{sec:rts_work_stealing}).
 The coarse grained fibs results (smaller values for \Depth)
 show little difference between the different work stealing implementations.
 However,
@@ -1031,9 +1039,9 @@ system has much higher overheads,
 both with notifications and with polling.
 This makes sense for the notification tests
 as each time an engine creates a spark it may need to notify another
-engine,
-even when no notification is made the test to determine if a notification is
-needed adds overhead.
+engine.
+Even when no notification is made,
+the test to determine if a notification is needed adds overhead.
 But the new results with polling are also slower than the old runtime
 system.
 In fact,
@@ -1075,8 +1083,10 @@ the sequential execution times for fibs with a \Depth of 40
 are \emph{faster} than those with a \Depth of 10
 and those without granularity control.
 We are not sure of the cause,
-one hypothesis is that of the two procedures used in the granularity control
-code (\fibsseq and \fibsgc) that \fibsgc is faster due to
+however one hypothesis is that of the two procedures used in the granularity control
+code,
+\fibsseq and \fibsgc,
+one is faster, namely \fibsgc, due to
 some strange interaction of the processor's branch predictor and the code's
 alignment.
 This type of effect can be common with micro-benchmarks,
@@ -1086,8 +1096,8 @@ This could be tested by running several tests with randomised code layout
 
 \plan{Further potential work}
 \plan{Steal half}
-We have noticed that in many workloads such as a left recursive parallel
-loop,
+We have noticed that in many workloads,
+such as a left recursive parallel loop,
 one engine creates all the sparks.
 In situations like this,
 work stealing is more common than executing sparks from an engine's own
@@ -1096,8 +1106,10 @@ One processor would execute its own sparks while $P - 1$ processors act as
 thieves,
 and the original engine's work queue can become a bottleneck.
 To avoid this behaviour,
-a thief could steal more than one spark from a victim and put all of
-the sparks on its own deque except one, which it executes immediately.
+a thief could steal more than one spark from a victim and put all but one of
+the stolen sparks 
+onto its own deque, then it immediatly executes the single spark which was
+not placed on the deque.
 With each stealing operation, 
 sparks becomes distributed among more of the engines,
 which improves the probability that a given victim has work on its own deque.
