@@ -258,7 +258,6 @@ which, for the reasons above, is less optimal.
 Therefore a thief steals work from the bottom of a context local stack
 so that a first-in-first-out order is used for parallel tasks.
 
-\paul{Check how many authors}
 \citet{halstead:1985:multilisp} also uses processor-local task stacks,
 so that when a processor executes a task from its own stack,
 a last-in-first-out order is used.
@@ -469,7 +468,6 @@ Consequently,
 when a context creates a spark,
 that spark is always placed on the context's local spark deque.
 
-\paul{Is this bit clear?  This paragraph is new.}
 \citet{Chase_2005_wsdeque}'s paper uses Java to describe the deque structure
 and algorithms.
 Java has a strong memory model compared to C (the implementation language of
@@ -532,37 +530,37 @@ model and the new C++0x\footnote{C++0x is also known as C++11} memory model.
 \paul{XXX: Place these environments once we know what pagination will be
 used}
 \begin{verbatim}
-    void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
-        MR_bool     finished, got_spark;
-        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
-        MR_Context  *orig_context = st->MR_st_orig_context;
+ 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
+ 2      MR_bool     finished, got_spark;
+ 3      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
+ 4      MR_Context  *orig_context = st->MR_st_orig_context;
  5      MR_Spark    spark;
-
-        finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
-        if (finished) {
-            if (orig_context == current_context) {
+ 6
+ 7      finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
+ 8      if (finished) {
+ 9          if (orig_context == current_context) {
 10              MR_GOTO(cont_label)
-            } else {
-                while (orig_context->MR_ctxt_resume != cont_label) {
-                    CPU_spin_loop_hint();
-                }
+11          } else {
+12              while (orig_context->MR_ctxt_resume != cont_label) {
+13                  CPU_spin_loop_hint();
+14              }
 15              MR_schedule_context(orig_context);
-                MR_GOTO{MR_idle};
-            }
-        } else {
-            got_spark = MR_pop_spark(current_context->MR_ctxt_spark_deque, &spark);
+16              MR_GOTO{MR_idle};
+17          }
+18      } else {
+19          got_spark = MR_pop_spark(current_context->MR_ctxt_spark_deque, &spark);
 20          if (got_spark) {
-                MR_GOTO(spark.MR_spark_code);
-            } else {
-                if (orig_context == current_context) {
-                     MR_save_context(current_context);
+21              MR_GOTO(spark.MR_spark_code);
+22          } else {
+23              if (orig_context == current_context) {
+24                   MR_save_context(current_context);
 25                   current_context->MR_ctxt_resume = cont_label;
-                     MR_ENGINE(MR_eng_current_context) = NULL;
-                }
-                MR_GOTO(MR_idle);
-            }
+26                   MR_ENGINE(MR_eng_current_context) = NULL;
+27              }
+28              MR_GOTO(MR_idle);
+29          }
 30      }
-    }    
+31  }    
 \end{verbatim}
 \caption{\joinandcontinue --- initial work stealing version}
 \label{alg:join_and_continue_ws1}
@@ -626,59 +624,60 @@ thieves never steal work from the hot end of the deque.
 Hence if there is an outstanding conjunct then either
 its spark will be at the hot end of the deque
 or the deque will be empty and the spark will have been stolen.
-Therefore any spark at the hot end of the deque cannot possibly be created by a callee's parallel conjunction.
+Therefore any spark at the hot end of the deque cannot possibly be created
+by a callee's parallel conjunction.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_idle() {
-        MR_Context  *ctxt;
-        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
-        MR_Code     *resume;
+ 1  void MR_idle() {
+ 2      MR_Context  *ctxt;
+ 3      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
+ 4      MR_Code     *resume;
  5      MR_Spark    spark;
-
-        MR_acquire_lock(&MR_runqueue_lock);
-        while(MR_True) {
-            if (MR_exit_now) {
+ 6
+ 7      MR_acquire_lock(&MR_runqueue_lock);
+ 8      while(MR_True) {
+ 9          if (MR_exit_now) {
 10              MR_release_lock(MR_runqueue_lock);
-                MR_destroy_thread();                        // does not return.
-            }
-
-            // Try to run a context
+11              MR_destroy_thread();                        // does not return.
+12          }
+13
+14          // Try to run a context
 15          ctxt = MR_get_runnable_context();
-            if (ctxt != NULL) { 
-                MR_release_lock(&MR_runqueue_lock);
-                if (current_context != NULL) {
-                    MR_release_context(current_context);
+16          if (ctxt != NULL) { 
+17              MR_release_lock(&MR_runqueue_lock);
+18              if (current_context != NULL) {
+19                  MR_release_context(current_context);
 20              }
-                MR_load_context(ctxt);
-                resume = ctxt->MR_ctxt_resume;
-                ctxt->MR_ctxt_resume = NULL;
-                MR_GOTO(resume);
+21              MR_load_context(ctxt);
+22              resume = ctxt->MR_ctxt_resume;
+23              ctxt->MR_ctxt_resume = NULL;
+24              MR_GOTO(resume);
 25          }
-        
-            // Try to run a spark.
-            if ((current_context != NULL) ||
-                    (MR_num_outstanding_contexts < MR_max_contexts))
+26      
+27          // Try to run a spark.
+28          if ((current_context != NULL) ||
+29                  (MR_num_outstanding_contexts < MR_max_contexts))
 30          {
-                if (MR_try_steal_spark(&spark)) {
-                    MR_release_lock(&MR_runqueue_lock);
-                    if (current_context == NULL) {
-                        ctxt = MR_get_free_context();
+31              if (MR_try_steal_spark(&spark)) {
+32                  MR_release_lock(&MR_runqueue_lock);
+33                  if (current_context == NULL) {
+34                      ctxt = MR_get_free_context();
 35                      if (ctxt == NULL) {
-                            ctxt = MR_create_context();
-                        }
-                        MR_load_context(ctxt);
-                        current_context = ctxt;
+36                          ctxt = MR_create_context();
+37                      }
+38                      MR_load_context(ctxt);
+39                      current_context = ctxt;
 40                  }
-                    MR_parent_sp = spark.MR_spark_parent_sp;
-                    current_context->MR_ctxt_thread_local_mutables =
-                        spark.MR_spark_thread_local_mutables;
-                    MR_GOTO(spark.MR_spark_code);
+41                  MR_parent_sp = spark.MR_spark_parent_sp;
+42                  current_context->MR_ctxt_thread_local_mutables =
+43                      spark.MR_spark_thread_local_mutables;
+44                  MR_GOTO(spark.MR_spark_code);
 45              }
-            }
-  
-            MR_timed_wait(&MR_runqueue_cond, &MR_runqueue_lock);
-        }
+46          }
+47
+48          MR_timed_wait(&MR_runqueue_cond, &MR_runqueue_lock);
+49      }
 50  }
 \end{verbatim}
 \caption{\idle --- initial work stealing version}
@@ -698,8 +697,7 @@ This check is on lines 28--29; it is true if either
 the engine already has a context (which is guaranteed to be available for a
 new spark),
 or the current number of contexts is lower than the limit.
-\paul{Stack or deque?!}
-When sparks are placed on a context's local stack,
+When sparks are placed on a context's local deque,
 the run queue's condition variable is not signalled,
 as doing so would be wasteful.
 Therefore engines must wake up periodically to check if there is any
@@ -726,25 +724,25 @@ these operations are protected by \code{MR\_spark\_deques\_lock}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    MR_bool MR_try_steal_spark(MR_Spark *spark) {
-        int         max_attempts;
-        MR_Deque    *deque;
-  
+ 1  MR_bool MR_try_steal_spark(MR_Spark *spark) {
+ 2      int         max_attempts;
+ 3      MR_Deque    *deque;
+ 4
  5      MR_acquire_lock(&MR_spark_deques_lock);
-        max_attempts = MR_MIN(MR_max_spark_deques, MR_worksteal_max_attempts);
-        for (int attempt = 0; attempts < max_attempts; attempt++) {
-            MR_victim_counter++;
-            deque = MR_spark_deques[MR_victim_counter % MR_max_spark_deques];
+ 6      max_attempts = MR_MIN(MR_max_spark_deques, MR_worksteal_max_attempts);
+ 7      for (int attempt = 0; attempts < max_attempts; attempt++) {
+ 8          MR_victim_counter++;
+ 9          deque = MR_spark_deques[MR_victim_counter % MR_max_spark_deques];
 10          if (deque != NULL) {
-                if (MR_steal_spark(deque, spark));
-                    MR_release_lock(&MR_spark_deques_lock);
-                    return MR_true;
-                }
+11              if (MR_steal_spark(deque, spark));
+12                  MR_release_lock(&MR_spark_deques_lock);
+13                  return MR_true;
+14              }
 15          }
-        }
-        MR_release_lock(&MR_spark_deques_lock);
-        return MR_false;
-    }
+16      }
+17      MR_release_lock(&MR_spark_deques_lock);
+18      return MR_false;
+19  }
 \end{verbatim}
 \caption{\trystealspark --- initial work stealing version} 
 \label{alg:try_steal_spark_initial}

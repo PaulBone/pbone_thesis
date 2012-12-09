@@ -96,29 +96,29 @@ rather than the number of contexts.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    MR_Code* MR_try_steal_spark(void) {
-        int         victim_incex;
-        MR_Deque    *deque;
-        MR_Spark    spark
+ 1  MR_Code* MR_try_steal_spark(void) {
+ 2      int         victim_incex;
+ 3      MR_Deque    *deque;
+ 4      MR_Spark    spark
  5
-        if ((MR_ENGINE(MR_eng_current_context) != NULL) ||
-                (MR_num_outstanding_contexts < MR_max_contexts))
-        {
-            for (int attempt = 0; attempts < MR_num_engines; attempt++) {
+ 6      if ((MR_ENGINE(MR_eng_current_context) != NULL) ||
+ 7              (MR_num_outstanding_contexts < MR_max_contexts))
+ 8      {
+ 9          for (int attempt = 0; attempts < MR_num_engines; attempt++) {
 10              victim_index = (MR_ENGINE(MR_eng_victim_counter) + attempt)
-                    % MR_num_engines;
-                if (victim_index == MR_ENGINE(MR_eng_id)) {
-                    continue;
-                }
+11                  % MR_num_engines;
+12              if (victim_index == MR_ENGINE(MR_eng_id)) {
+13                  continue;
+14              }
 15              if(MR_steal_spark(MR_spark_deques[victim_index], &spark)) {
-                    MR_ENGINE(MR_eng_victim_counter) = victim_index;
-                    MR_prepare_engine_for_spark(&spark)
-                    return spark.MR_spark_code;
-                }
+16                  MR_ENGINE(MR_eng_victim_counter) = victim_index;
+17                  MR_prepare_engine_for_spark(&spark)
+18                  return spark.MR_spark_code;
+19              }
 20          }
-            MR_ENGINE(MR_eng_victim_counter) = victim_index;
-            return NULL;
-    }
+21          MR_ENGINE(MR_eng_victim_counter) = victim_index;
+22          return NULL;
+23  }
 \end{verbatim}
 \caption{\trystealspark --- revised work stealing version}
 \label{alg:try_steal_spark_revised}
@@ -183,45 +183,45 @@ both are now unnecessary.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_idle(void) {
-        int                 engine_id = MR_ENGINE(MR_eng_id);
-        MR_EngineSleepSync  *eng_data = MR_engine_sleep_data[engine_id];
-        MR_Context          *ctxt;
+ 1  void MR_idle(void) {
+ 2      int                 engine_id = MR_ENGINE(MR_eng_id);
+ 3      MR_EngineSleepSync  *eng_data = MR_engine_sleep_data[engine_id];
+ 4      MR_Context          *ctxt;
  5      MR_Context          *current_context = MR_ENGINE(MR_eng_current_context);
-        MR_Code             *resume;
-        MR_Spark            spark;
-
-        eng_data->MR_es_state = MR_LOOKING_FOR_WORK;
+ 6      MR_Code             *resume;
+ 7      MR_Spark            spark;
+ 8
+ 9      eng_data->MR_es_state = MR_LOOKING_FOR_WORK;
 10
-        // Try to find a runnable context.
-        MR_acquire_lock(&MR_runqueue_lock);
-        ctxt = MR_get_runnable_context();
-        MR_release_lock(&MR_runnable_lock);
+11      // Try to find a runnable context.
+12      MR_acquire_lock(&MR_runqueue_lock);
+13      ctxt = MR_get_runnable_context();
+14      MR_release_lock(&MR_runnable_lock);
 15      if (ctxt != NULL) {
-            eng_data->MR_es_state = MR_WORKING;
-            resume = MR_prepare_engine_for_context(ctxt);
-            MR_GOTO(resume);
-        }
+16          eng_data->MR_es_state = MR_WORKING;
+17          resume = MR_prepare_engine_for_context(ctxt);
+18          MR_GOTO(resume);
+19      }
 20
-        // Try to run a spark from our local spark deque.
-        if (MR_pop_spark(MR_ENGINE(MR_eng_spark_deque), &spark)) {
-            eng_data->MR_es_state = MR_WORKING;
-            MR_prepare_engine_for_spark(&spark);
+21      // Try to run a spark from our local spark deque.
+22      if (MR_pop_spark(MR_ENGINE(MR_eng_spark_deque), &spark)) {
+23          eng_data->MR_es_state = MR_WORKING;
+24          MR_prepare_engine_for_spark(&spark);
 25          MR_GOTO(spark->resume);
-        }
-
-        if (!(MR_compare_and_swap(&(eng_data->MR_es_state),
-                MR_LOOKING_FOR_WORK, MR_STEALING)))
+26      }
+27
+28      if (!(MR_compare_and_swap(&(eng_data->MR_es_state),
+29              MR_LOOKING_FOR_WORK, MR_STEALING)))
 30      {
-            // Handle the notification that we have received.
-        }
-        // Try to steal a spark
-        resume = MR_try_steal_spark();
+31          // Handle the notification that we have received.
+32      }
+33      // Try to steal a spark
+34      resume = MR_try_steal_spark();
 35      if (resume != NULL) {
-            eng_data->MR_es_state = MR_WORKING;
-            MR_GOTO(resume);
-        }
-        MR_GOTO(MR_sleep);
+36          eng_data->MR_es_state = MR_WORKING;
+37          MR_GOTO(resume);
+38      }
+39      MR_GOTO(MR_sleep);
 40  }
 \end{verbatim}
 \caption{\idle --- improved work stealing version}
@@ -670,45 +670,45 @@ creation.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_sleep(void) {
-        int                 engine_id = MR_ENGINE(MR_eng_id);
-        int                 victim_id;
-        MR_EngineSleepSync  *eng_data = MR_engine_sleep_data[engine_id];
+ 1  void MR_sleep(void) {
+ 2      int                 engine_id = MR_ENGINE(MR_eng_id);
+ 3      int                 victim_id;
+ 4      MR_EngineSleepSync  *eng_data = MR_engine_sleep_data[engine_id];
  5      MR_bool             got_spark;
-        MR_Spark            spark;
-        MR_Code             *resume;
-
-        if (!MR_compare_and_swap(&(eng_data->MR\_es\_state),
+ 6      MR_Spark            spark;
+ 7      MR_Code             *resume;
+ 8
+ 9      if (!MR_compare_and_swap(&(eng_data->MR\_es\_state),
 10              MR_STEALING, MR_SLEEPING)) {
-            // Handle the notification that we have received.
-        }
-        MR_sem_wait(&(eng_data->MR_es_sleep_sem));
-        switch(eng_data->MR_es_action) {
+11          // Handle the notification that we have received.
+12      }
+13      MR_sem_wait(&(eng_data->MR_es_sleep_sem));
+14      switch(eng_data->MR_es_action) {
 15          case MR_ACTION_SHUTDOWN:
-                MR_GOTO(MR_do_shutdown);
-            case MR_ACTION_WORKSTEAL:
-                victim_id = eng_data->MR_es_action_data.MR_ewa_worksteal_engine;
-                do {
+16              MR_GOTO(MR_do_shutdown);
+17          case MR_ACTION_WORKSTEAL:
+18              victim_id = eng_data->MR_es_action_data.MR_ewa_worksteal_engine;
+19              do {
 20                  MR_spin_loop_hint();
-                    got_spark = MR_steal_spark(MR_spark_deques[victim_id],
-                        &spark);
-                } while (got_spark == BUSY);
-                if (got_spark == SUCCESS) {
+21                  got_spark = MR_steal_spark(MR_spark_deques[victim_id],
+22                      &spark);
+23              } while (got_spark == BUSY);
+24              if (got_spark == SUCCESS) {
 25                  eng_data->MR_es_state = MR_WORKING;
-                    MR_ENGINE(MR_eng_victim_counter) = victim_id;
-                    MR_prepare_engine_for_spark(&spark);
-                    MR_GOTO(spark->MR_spark_code);
-                } else {
+26                  MR_ENGINE(MR_eng_victim_counter) = victim_id;
+27                  MR_prepare_engine_for_spark(&spark);
+28                  MR_GOTO(spark->MR_spark_code);
+29              } else {
 30                  MR_ENGINE(MR_eng_victim_counter) = victim_id + 1;
-                    MR_GOTO(MR_idle);
-                }
-            case MR_ACTION_CONTEXT:
-                eng_data->state = MR_WORKING;
+31                  MR_GOTO(MR_idle);
+32              }
+33          case MR_ACTION_CONTEXT:
+34              eng_data->state = MR_WORKING;
 35              ctxt = eng_data->MR_es_action_data.MR_ewa_context;
-                MR_GOTO(MR_prepare_engine_for_context());
-            case MR_ACTION_RUNQUEUE_CHECK:
-                MR_GOTO(MR_idle);
-        }
+36              MR_GOTO(MR_prepare_engine_for_context());
+37          case MR_ACTION_RUNQUEUE_CHECK:
+38              MR_GOTO(MR_idle);
+39      }
 40  }
 \end{verbatim}
 \caption{\sleep}
@@ -764,45 +764,45 @@ Algorithm~\ref{alg:sleep}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
-    void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
-        MR_bool     finished, got_spark;
-        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
-        MR_Context  *orig_context = st->MR_st_orig_context;
+ 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
+ 2      MR_bool     finished, got_spark;
+ 3      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
+ 4      MR_Context  *orig_context = st->MR_st_orig_context;
  5      MR_Spark    spark;
-
-        finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
-        if (finished) {
-            if (orig_context != current_context) {
+ 6
+ 7      finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
+ 8      if (finished) {
+ 9          if (orig_context != current_context) {
 10              while (orig_context->MR_ctxt_resume != cont_label) {
-                    CPU_spin_loop_hint();
-                }
-                MR_release_context(current_context);
-                MR_load_context(orig_context);
+11                  CPU_spin_loop_hint();
+12              }
+13              MR_release_context(current_context);
+14              MR_load_context(orig_context);
 15          }
-            MR_GOTO(cont_label);
-        } else {
-            if (MR_pop_spark(MR_ENGINE(MR_eng_spark_deque), &spark)) {
-                if ((orig_context == current_context) &&
+16          MR_GOTO(cont_label);
+17      } else {
+18          if (MR_pop_spark(MR_ENGINE(MR_eng_spark_deque), &spark)) {
+19              if ((orig_context == current_context) &&
 20                      (spark.MR_spark_sync_term != st)) {
-                    MR_save_context(current_context);
-                    current_context->MR_ctxt_resume = cont_label;
-                    MR_ENGINE(MR_eng_current_context) = NULL;
-                    if (nonempty(MR_context_runqueue)) {
+21                  MR_save_context(current_context);
+22                  current_context->MR_ctxt_resume = cont_label;
+23                  MR_ENGINE(MR_eng_current_context) = NULL;
+24                  if (nonempty(MR_context_runqueue)) {
 25                      MR_push_spark(MR_ENGINE(MR_eng_spark_deque), &spark);
-                        MR_GOTO(MR_idle);
-                    }
-                }
-                MR_prepare_engine_for_spark(&spark);
+26                      MR_GOTO(MR_idle);
+27                  }
+28              }
+29              MR_prepare_engine_for_spark(&spark);
 30              MR_GOTO(spark.MR_spark_code);
-            } else {
-                if (orig_context == current_context) {
-                    MR_save_context(current_context);
-                    current_context->MR_ctxt_resume = cont_label;
+31          } else {
+32              if (orig_context == current_context) {
+33                  MR_save_context(current_context);
+34                  current_context->MR_ctxt_resume = cont_label;
 35                  MR_ENGINE(MR_eng_current_context) = NULL;
-                }
-                MR_GOTO(MR_idle);
-            }
-        }
+36              }
+37              MR_GOTO(MR_idle);
+38          }
+39      }
 40  }
 \end{verbatim}
 \caption{\joinandcontinue --- improved work stealing version}
