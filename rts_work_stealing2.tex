@@ -14,8 +14,8 @@ we also found it useful to change how idle engines behave.
 Although these two changes are conceptually distinct,
 they were made together and their implementations are interlinked.
 Therefore we will present and benchmark them together as one set of changes.
-While our changes are an improvment in terms of design,
-they are not always yeild an improvement in performance.
+While our changes are an improvement in terms of design,
+they do not always yield an improvement in performance.
 
 \plan{Describe problems with associating stacks with contexts}
 Sparks were originally stored on context-local deques.
@@ -1108,7 +1108,7 @@ and the original engine's work queue can become a bottleneck.
 To avoid this behaviour,
 a thief could steal more than one spark from a victim and put all but one of
 the stolen sparks 
-onto its own deque, then it immediatly executes the single spark which was
+onto its own deque, then it immediately executes the single spark which was
 not placed on the deque.
 With each stealing operation, 
 sparks becomes distributed among more of the engines,
