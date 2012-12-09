@@ -34,7 +34,6 @@
 :- import_module list.
 :- import_module maybe.
 :- import_module parsing_utils.
-:- import_module pretty_printer.
 :- import_module require.
 :- import_module string.
 :- import_module unit.
@@ -184,8 +183,12 @@ check_bad_words(Word, Locn, BadWord, Message, MaybeError) :-
 
 check_ngrams(Tokens, Errors) :-
     tokens_to_consecutive_words(Tokens, Words, counter.init(0), _),
-    cord.map_pred(check_ngrams_words, Words, Errorss),
-    Errors = cord_concat(Errorss).
+    cord.map_pred(check_ngrams_words, Words, NgramErrorss),
+    NgramErrors = cord_concat(NgramErrorss),
+    tokens_to_references(Tokens, References),
+    cord.map_pred(check_reference, References, ReferenceErrorss),
+    ReferenceErrors = cord_concat(ReferenceErrorss),
+    Errors = NgramErrors ++ ReferenceErrors.
 
 :- pred check_ngrams_words(cord(word)::in, cord(prose_error)::out) is det.
 
@@ -309,6 +312,74 @@ check_macro(environment(_Name, Args, Macros, _Locn)) =
 check_macro_arg(macro_arg(Contents, _Locn)) =
     cord_concat(cord.map(check_macro, Contents)).
 
+% Checking of references.
+%------------------------------------------------------------------------%
+
+:- pred check_reference(reference::in, cord(prose_error)::out) is det. 
+
+check_reference(reference(MaybeWordPart, _Label, MaybePrefix, Type, SawNBSP, Locn),
+        Errors) :-
+    some [!Errors] (
+        !:Errors = empty,
+        (
+            MaybeWordPart = no,
+            record_error(Locn,
+                "Reference without word before it",
+                !Errors)
+        ;
+            MaybeWordPart = yes(WordPart),
+            (
+                word_part_matches_type(WordPart, Type)
+            ->
+                true
+            ;
+                record_error(Locn,
+                    "Word part of reference does not match reference type",
+                    !Errors)
+            ),
+            (
+                SawNBSP = saw_nbsp
+            ;
+                SawNBSP = did_not_see_nbsp,
+                record_error(Locn,
+                    "Missing NBSP between word and reference",
+                    !Errors)
+            )
+        ),
+        (
+            MaybePrefix = yes(Prefix),
+            Type = rt_unknown
+        ->
+            record_error(Locn,
+                format("Unknown reference prefix %s", [s(Prefix)]),
+                !Errors)
+        ;
+            true
+        ),
+        Errors = !.Errors
+    ).
+
+:- pred word_part_matches_type(string, reference_type).
+:- mode word_part_matches_type(in, in) is semidet.
+
+word_part_matches_type(_, rt_unknown).
+word_part_matches_type("page", rt_page_of(_Type)).
+word_part_matches_type("Page", rt_page_of(_Type)).
+word_part_matches_type("Chapter", rt_chapter).
+word_part_matches_type("Chapters", rt_chapter).
+word_part_matches_type("Section", rt_section).
+word_part_matches_type("Sections", rt_section).
+word_part_matches_type("Figure", rt_figure).
+word_part_matches_type("Figures", rt_figure).
+word_part_matches_type("Table", rt_table).
+word_part_matches_type("Tables", rt_table).
+word_part_matches_type("Algorithm", rt_algorithm).
+word_part_matches_type("Algorithms", rt_algorithm).
+word_part_matches_type("Equation", rt_equation).
+word_part_matches_type("Equaiions", rt_equation).
+word_part_matches_type("and", Type) :-
+    Type \= rt_page_of(_).
+
 % Data
 %------------------------------------------------------------------------%
 
@@ -424,8 +495,7 @@ bad_ngrams = [
     % is something like \emph or \code.
     %
 :- pred tokens_to_consecutive_words(cord(token)::in, cord(cord(word))::out,
-    counter::in, counter::out)
-    is det.
+    counter::in, counter::out) is det.
 
 tokens_to_consecutive_words(Tokens, Words, !IDs) :-
     list.foldl3(token_to_consecutive_words, list(Tokens), cord.empty, LastGroup,
@@ -548,6 +618,222 @@ maybe_end_group(macro_does_not_break_flow, !LastGroup, !Groups).
 end_group(!LastGroup, !Groups) :-
     !:Groups = snoc(!.Groups, !.LastGroup),
     !:LastGroup = cord.empty.
+
+%------------------------------------------------------------------------%
+
+:- type reference
+    --->    reference(
+                r_word_part     :: maybe(string),
+                r_label         :: string,
+                r_label_prefix  :: maybe(string),
+                r_type          :: reference_type,
+                r_nbsp          :: saw_nbsp,
+                r_locn          :: locn
+            ).
+
+:- type reference_type
+    --->    rt_unknown
+    ;       rt_chapter
+    ;       rt_section
+    ;       rt_figure
+    ;       rt_table
+    ;       rt_algorithm
+    ;       rt_equation
+    ;       rt_page_of(reference_type).
+
+:- type saw_nbsp
+    --->    saw_nbsp
+    ;       did_not_see_nbsp.
+
+:- pred tokens_to_references(cord(token)::in, cord(reference)::out) is det.
+
+tokens_to_references(Tokens, References) :-
+    tokens_to_references(Tokens, no, did_not_see_nbsp, empty, References).
+
+:- pred tokens_to_references(cord(token)::in, maybe(string)::in, saw_nbsp::in,
+    cord(reference)::in, cord(reference)::out) is det.
+
+tokens_to_references(Tokens0, MaybeWord0, SawNBSP0, !References) :-
+    ( cord.head_tail(Tokens0, Token, Tokens) ->
+        (
+            (
+                Token = word(Word, _),
+                MaybeWord = yes(Word),
+                SeenNBSP = did_not_see_nbsp
+            ;
+                Token = punct(_, _),
+                MaybeWord = no,
+                SeenNBSP = did_not_see_nbsp
+            ),
+            tokens_to_references(Tokens, MaybeWord, SeenNBSP, !References) 
+        ;
+            Token = macro(Name, Args, Locn),
+            ( Name = "~" ->
+                SeenNBSP = saw_nbsp,
+                MaybeWord = MaybeWord0,
+                tokens_to_references(Tokens, MaybeWord, SeenNBSP, !References) 
+            ;
+                ( Name = "ref"
+                ; Name = "pageref"
+                )
+            ->
+                start_reference(Name, Args, Locn, MaybeWord0, SawNBSP0,
+                    Tokens, !References)
+            ;
+                macro_to_references(Name, Args, Tokens, MaybeWord0,
+                    SawNBSP0, !References)
+            )
+        ;
+            Token = environment(_Name, _Args, EnvTokens, _Locn),
+            environment_to_references(EnvTokens, Tokens, !References)
+        )
+    ;
+        true
+    ).
+
+:- pred start_reference(string::in, cord(macro_arg(token))::in, locn::in,
+    maybe(string)::in, saw_nbsp::in, cord(token)::in,
+    cord(reference)::in, cord(reference)::out) is det.
+
+start_reference(Name, Args, Locn, MaybeWord, SawNBSP, Tokens, !References) :-
+    ref_macro_to_reference(Name, Args, Locn, MaybeWord, SawNBSP, Reference),
+    !:References = snoc(!.References, Reference),
+    % We parse any following references by modeling a state machine, each
+    % predicate represents a state.
+    continue_reference(Tokens, Reference, did_not_see_nbsp, !References).
+
+:- pred continue_reference(cord(token)::in, reference::in,
+    saw_nbsp::in, cord(reference)::in, cord(reference)::out) is det.
+
+continue_reference(Tokens0, FirstReference, SawNBSP0, !References) :-
+    ( cord.head_tail(Tokens0, Token, Tokens) ->
+        (
+            Token = word(Word, _),
+            ( Word = "and" ->
+                continue_reference(Tokens, FirstReference, did_not_see_nbsp,
+                    !References)
+            ;
+                tokens_to_references(Tokens, yes(Word), did_not_see_nbsp, 
+                    !References)
+            )
+        ;
+            Token = punct(Punct, _),
+            ( Punct = "," ->
+                continue_reference(Tokens, FirstReference, did_not_see_nbsp,
+                    !References)
+            ;
+                tokens_to_references(Tokens, no, did_not_see_nbsp,
+                    !References)
+            )
+        ;
+            Token = macro(Name, Args, Locn),
+            ( Name = "~" ->
+                continue_reference(Tokens, FirstReference, saw_nbsp,
+                    !References)
+            ;
+                ( Name = "ref"
+                ; Name = "pageref"
+                )
+            ->
+                ref_macro_to_reference(Name, Args, Locn,
+                    FirstReference ^ r_word_part, SawNBSP0, Reference),
+                !:References = snoc(!.References, Reference),
+                continue_reference(Tokens, FirstReference, did_not_see_nbsp,
+                    !References)
+            ;
+                macro_to_references(Name, Args, Tokens, no,
+                    did_not_see_nbsp, !References)
+            )
+        ;
+            Token = environment(_Name, _Args, EnvTokens, _Locn),
+            environment_to_references(EnvTokens, Tokens, !References)
+        )
+    ;
+        true
+    ).
+
+:- pred ref_macro_to_reference(string::in, cord(macro_arg(token))::in, locn::in,
+    maybe(string)::in, saw_nbsp::in, reference::out) is det.
+
+ref_macro_to_reference(Name, Args, Locn, MaybeWord, SawNBSP, Reference) :-
+    ( cord.head_tail(Args, FirstArg, _) ->
+        FirstArg = macro_arg(ArgTokens, _),
+        LabelStrings = pretty_tokens(ArgTokens),
+        Label = strip(append_list(list(LabelStrings)))
+    ;
+        Label = ""
+    ),
+    (
+        LabelParts = split_at_char(':', Label),
+        LabelParts = [LabelPrefix | _LabelRest],
+        length(LabelParts) > 1
+    ->
+        MaybeLabelPrefix = yes(LabelPrefix),
+        (
+            ref_type(LabelPrefix, TypePrime)
+        -> 
+            Type0 = TypePrime
+        ;
+            Type0 = rt_unknown
+        )
+    ;
+        MaybeLabelPrefix = no,
+        Type0 = rt_unknown
+    ),
+    ( Name = "pageref" ->
+        Type = rt_page_of(Type0)
+    ;
+        Type = Type0
+    ),
+    Reference = reference(MaybeWord, Label, MaybeLabelPrefix, Type,
+        SawNBSP, Locn).
+
+:- pred macro_to_references(string::in, cord(macro_arg(token))::in,
+    cord(token)::in, maybe(string)::in, saw_nbsp::in, 
+    cord(reference)::in, cord(reference)::out) is det.
+
+macro_to_references(Name, Args, Tokens, MaybeWord, SeenNBSP, !References) :-
+    conservative_macro_info(Name, _, BreaksFlow, ContainsProse),
+    (
+        ContainsProse = contains_prose,
+        ArgsTokens = cord_concat(map((func(A) = A ^ ma_contents),
+            Args))
+    ;
+        ( ContainsProse = replace_with_noun
+        ; ContainsProse = does_not_contain_prose
+        ),
+        ArgsTokens = empty
+    ),
+    (
+        BreaksFlow = macro_breaks_flow,
+        tokens_to_references(ArgsTokens, no, did_not_see_nbsp,
+            !References),
+        tokens_to_references(Tokens, no, did_not_see_nbsp,
+            !References)
+    ;
+        BreaksFlow = macro_does_not_break_flow,
+        tokens_to_references(ArgsTokens ++ Tokens, MaybeWord,
+            SeenNBSP, !References)
+    ).
+
+:- pred environment_to_references(cord(token)::in, cord(token)::in,
+    cord(reference)::in, cord(reference)::out) is det.
+
+environment_to_references(EnvTokens, Tokens, !References) :-
+    tokens_to_references(EnvTokens, no, did_not_see_nbsp,
+        !References),
+    tokens_to_references(Tokens, no, did_not_see_nbsp,
+        !References).
+
+:- pred ref_type(string, reference_type).
+:- mode ref_type(in, out) is semidet.
+
+ref_type("chap", rt_chapter).
+ref_type("sec", rt_section).
+ref_type("fig", rt_figure).
+ref_type("tab", rt_table).
+ref_type("alg", rt_algorithm).
+ref_type("eqn", rt_equation).
 
 % Errors.
 %------------------------------------------------------------------------%

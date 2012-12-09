@@ -9,7 +9,6 @@
 :- import_module cord.
 :- import_module int.
 :- import_module parsing_utils.
-:- import_module pretty_printer.
 :- import_module string.
 
 %----------------------------------------------------------------------------%
@@ -80,7 +79,7 @@
 
 %----------------------------------------------------------------------------%
 
-:- func pretty_tokens(cord(token)) = doc.
+:- func pretty_tokens(cord(token)) = cord(string).
 
 %----------------------------------------------------------------------------%
 %----------------------------------------------------------------------------%
@@ -582,51 +581,36 @@ macro_char_short('~').
 %----------------------------------------------------------------------------%
 % Pretty printing.
 
-pretty_tokens(Tokens) = Doc :-
-    Docs0 = map(pretty_token, Tokens), 
-    Doc = docs(intersperse(docs([str(" "), nl]), list(Docs0))).
+pretty_tokens(Tokens) = Strings :-
+    Strings0 = map(pretty_token, Tokens), 
+    Strings = cord_concat(Strings0).
 
-:- func pretty_token(token) = doc.
+:- func pretty_token(token) = cord(string).
 
-pretty_token(word(Word, _)) = str(Word).
-pretty_token(punct(Punct, _)) = str(Punct).
-pretty_token(macro(Name, Args, _)) = Doc :-
-    ArgsDocs = pretty_macro_args(Args),
-    Docs = [str("\\"), str(Name), indent(ArgsDocs)], 
-    Doc = group(Docs).
-pretty_token(environment(Name, Args, Tokens, _)) = Doc :-
-    ArgsDocs = pretty_macro_args(Args),
-    TokenDocs = [pretty_tokens(Tokens)],
-    Docs = [hard_nl, 
-        str("\\begin{"), str(Name), str("}"), nl, indent(ArgsDocs), hard_nl,
-        indent(TokenDocs), hard_nl,
-        str("\\end{"), str(Name), str("}"), hard_nl],
-    Doc = group(Docs).
+pretty_token(word(Word, _)) = from_list([" ", Word]).
+pretty_token(punct(Punct, _)) = singleton(Punct).
+pretty_token(macro(Name, Args, _)) = Strings :-
+    ArgsStrings = pretty_macro_args(Args),
+    Strings = cord.from_list([" \\", Name]) ++ ArgsStrings.
+pretty_token(environment(Name, Args, Tokens, _)) = Strings :-
+    ArgsStrings = pretty_macro_args(Args),
+    TokenStrings = pretty_tokens(Tokens),
+    Strings = cord.from_list(
+            ["\n", "\\begin{", Name, "}"]) ++ ArgsStrings ++
+        singleton("\n") ++
+        TokenStrings ++
+        cord.from_list(["\n", "\\end{", Name, "}\n"]).
 
-:- func pretty_macro_args(cord(macro_arg(token))) = docs.
+:- func pretty_macro_args(cord(macro_arg(token))) = cord(string).
 
-pretty_macro_args(Args) = Docs :-
-    ArgsDocs0 = map(pretty_macro_arg, list(Args)),
-    Docs = intersperse(nl, ArgsDocs0).
+pretty_macro_args(Args) = Strings :-
+    Strings = cord_concat(map(pretty_macro_arg, Args)).
 
-:- func pretty_macro_arg(macro_arg(token)) = doc.
+:- func pretty_macro_arg(macro_arg(token)) = cord(string).
 
-pretty_macro_arg(macro_arg(Tokens, _)) = Doc :-
-    TokenDocs = pretty_tokens(Tokens),
-    Doc = docs([str("{"), indent([TokenDocs]), str("}")]).
-
-:- func intersperse(doc, docs) = docs.
-
-intersperse(_, []) = [].
-intersperse(Delim, [X | Xs0]) = Result :-
-    Xs = intersperse(Delim, Xs0),
-    (
-        Xs = [],
-        Result = [X | Xs]
-    ;
-        Xs = [_ | _],
-        Result = [X, Delim | Xs]
-    ).
+pretty_macro_arg(macro_arg(Tokens, _)) = Strings :-
+    TokenStrings = pretty_tokens(Tokens),
+    Strings = singleton("{") ++ TokenStrings ++ singleton("}").
 
 %----------------------------------------------------------------------------%
 %----------------------------------------------------------------------------%

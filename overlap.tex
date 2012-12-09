@@ -84,26 +84,26 @@ while requiring nothing more from the programmer
 than representative input data for the profiling run.
 
 The structure of this chapter is as follows.
-Section \ref{sec:overlap_aims} states our two aims for this chapter.
-Then Section \ref{sec:overlap_approach} outlines our general approach
+Section~\ref{sec:overlap_aims} states our two aims for this chapter.
+Then Section~\ref{sec:overlap_approach} outlines our general approach
 including information about the call graph search for parallelisation
 opportunities.
-Section \ref{sec:overlap_reccalls}
+Section~\ref{sec:overlap_reccalls}
 describes how we calculate information about recursive calls missing from
 the profiling data.
-Section \ref{sec:overlap_coverage}
+Section~\ref{sec:overlap_coverage}
 describes our change to coverage profiling which provides more accurate
 coverage data for the new call graph based search for parallelisation
 opportunities.
-Section \ref{sec:overlap_overlap_alg} describes our algorithm for
+Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
 calculating the execution overlap between two or more dependent conjuncts.
 A conjunction with more than two conjuncts can be parallelised
 in several different ways;
-section \ref{sec:overlap_howto} shows how we choose the best way.
-Section \ref{sec:overlap_pragmatic} discusses some pragmatic issues.
-Section \ref{sec:overlap_perf} evaluates
+Section~\ref{sec:overlap_howto} shows how we choose the best way.
+Section~\ref{sec:overlap_pragmatic} discusses some pragmatic issues.
+Section~\ref{sec:overlap_perf} evaluates
 how our system works in practice on some example programs, and
-section \ref{sec:overlap_conc} concludes
+Section~\ref{sec:overlap_related} concludes
 with comparisons to related work.
 
 \section{Aims}
@@ -125,7 +125,7 @@ goals with a cost above 10,000csc,
 but in only three of those conjunctions are the expensive goals independent.
 This is why Mercury supports the parallel execution of dependent conjunctions
 through the use of futures and a compiler transformation
-\citep{wang:2006:hons, wang:2011:dep-par} (section \ref{sec:backgnd_deppar}).
+\citep{wang:2006:hons, wang:2011:dep-par} (Section~\ref{sec:backgnd_deppar}).
 If the \emph{consumer} of the variable attempts to retrieve the variable's value
 before it has been produced, then its execution is blocked
 until the \emph{producer} makes the variable available.
@@ -137,13 +137,13 @@ in the amount of parallelism they have available.
 Consider a parallel conjunction with two similarly-sized conjuncts,
 \code{p} and \code{q}, that share a single variable \code{A}.
 If \code{p} produces \code{A} late but \code{q} consumes it early,
-as shown on the right side of figure \ref{fig:overlap_compare},
+as shown on the right side of Figure~\ref{fig:overlap_compare},
 there will be little parallelism,
 since \code{q} will be blocked soon after it starts,
 and will be unblocked only when \code{p} is about to finish.
 Alternatively, if \code{p} produces \code{A} early
 and \code{q} consumes it late,
-as shown on the left side of in figure \ref{fig:overlap_compare},
+as shown on the left side of in Figure~\ref{fig:overlap_compare},
 we would get much more parallelism.
 The top part of each scenario
 shows the execution of the sequential form of the conjunction.
@@ -203,12 +203,12 @@ The first purpose of this chapter is to show how one can find these conjunctions
 %\vspace{-2\baselineskip}
 \end{figure}
 
-\picfigure{mapfoldl-overlap}{Overlap of \mapfoldl (figure
-\ref{fig:map_foldl_par})}
+\picfigure{mapfoldl-overlap}{Overlap of \mapfoldl 
+(Figure~\ref{fig:map_foldl_par})}
 
 The second purpose of this chapter is to find the best way to parallelise
 these conjunctions.
-Consider the \mapfoldl predicate in figure~\ref{fig:map_foldl_seq}.
+Consider the \mapfoldl predicate in Figure~\ref{fig:map_foldl_seq}.
 The body of the recursive clause has three conjuncts.
 We could make each conjunct execute in parallel,
 or we could execute two conjuncts in sequence
@@ -230,10 +230,10 @@ The recursive call processing the second element of the list
 will have significant execution overlap (mainly the cost of \M)
 with its parent processing the first element of the list
 even if (as is typical) the fold predicate generates \code{Acc1} very late.
-This parallel version of \mapfoldl is shown in figure
-\ref{fig:map_foldl_par}.
+This parallel version of \mapfoldl is shown in
+Figure~\ref{fig:map_foldl_par}.
 A representation of the first three iterations of it
-is shown in figure \ref{fig:mapfoldl-overlap}.
+is shown in Figure~\ref{fig:mapfoldl-overlap}.
 (This is the kind of computation that
 Reform Prolog \citep{bevemyr:reform} was designed to parallelise.)
 
@@ -275,7 +275,7 @@ However, this will not be accurate;
 static analysis cannot take into account sizes of data terms,
 or other values that are only available at runtime.
 Therefore, we use profiler feedback information in our implementation.
-This was introduced in section \ref{sec:backgnd_autopar}
+This was introduced in Section~\ref{sec:backgnd_autopar}
 which also includes a description of Mercury's deep profiler.
 To generate the profiler feedback data,
 we require programmers to follow this sequence of actions after they have
@@ -307,8 +307,8 @@ the speedups you get from them can be strikingly different.
 \end{enumerate}
 
 \noindent
-A visual representation of such a workflow is shown in figure
-\ref{fig:prof_fb} on page \pageref{fig:prof_fb}.
+A visual representation of such a workflow is shown in 
+Figure~\ref{fig:prof_fb} on page~\pageref{fig:prof_fb}.
 It is up to the programmer using our system
 to select training input for the profiling run in step 2.
 Obviously, programmers should pick input that is as representative as
@@ -366,13 +366,13 @@ Most conjunctions can be partitioned into several alternative candidate
 parallelisations,
 for example, we showed above that \mapfoldl has three alternative
 parallelisations of its recursive branch.
-We use the algorithms of section \ref{sec:overlap_overlap_alg}
+We use the algorithms of Section~\ref{sec:overlap_overlap_alg}
 to compute the expected parallel execution time of each parallelisation.
 These algorithms take into account the runtime overheads of parallel execution.
 Large conjunctions can have a very large number of
 candidate parallelisations ($2^{n-1}$ for $n$ conjuncts).
 Therefore,
-we use the algorithms of section \ref{sec:overlap_howto}
+we use the algorithms of Section~\ref{sec:overlap_howto}
 to heuristically reduce the number of parallelisations whose expected
 execution time we calculate.
 If the best-performing parallelisation we find
@@ -386,7 +386,7 @@ The same procedure may also appear more than once in the call graph,
 and therefore multiple parallelisations may be generated for the same
 conjunctions within the procedure.
 We discuss how we resolve conflicting recommendations for the same procedure
-in section \ref{sec:overlap_pragmatic}.
+in Section~\ref{sec:overlap_pragmatic}.
 
 % \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
@@ -495,7 +495,7 @@ The first pattern consists of procedures whose bodies
 have just two types of execution path through them:
 base cases, and recursive cases containing a single recursive call site.
 Our example for this category is \code{map\_foldl},
-whose code is shown in figure \ref{fig:map_foldl}.
+whose code is shown in Figure~\ref{fig:map_foldl}.
 
 Let us say that of the 100 calls to the procedure,
 90 were from the recursive call site
@@ -516,7 +516,7 @@ AvgMaxDepth = Calls_{RecCallSites} / Calls_{ParentCallSite} + 1
 The deepest recursive call site executes only the non-recursive path,
 and incurs only its costs ($CostNonRec$).
 We measure the costs of calls in \emph{call sequence counts} (csc),
-a unit defined in section \ref{sec:backgnd_deep}.
+a unit defined in Section~\ref{sec:backgnd_deep}.
 The next deepest would take the recursive path,
 and incur one copy of the non-recursive call costs along the recursive path
 ($CostNonRec$)
@@ -598,14 +598,14 @@ The third pattern consists of procedures whose bodies
 that also have just two types of execution path through them:
 base cases, and recursive cases containing \emph{two} recursive call sites.
 Our example for this category is an accumulator version of \quicksortacc,
-whose code is shown in figure~\ref{fig:quicksort_acc}.
+whose code is shown in Figure~\ref{fig:quicksort_acc}.
 
 Calculating the recursion depth of \quicksortacc can be more
 problematic.
 We know that if a good value for \code{Pivot} is chosen \quicksortacc runs
 optimally,
 dividing the list in half with each recursion.
-Figure \ref{fig:quicksort_acc_callgraph} shows the call graph for such an
+Figure~\ref{fig:quicksort_acc_callgraph} shows the call graph for such an
 invocation of \quicksortacc.
 There are 15 nodes in ``qs'''s call tree,
 each node has exactly one call leading to it;
@@ -653,7 +653,7 @@ Non-complete binary trees can be divided into two cases:
     \item[Slightly imbalanced trees] are more common,
     such situations fall into the same class as those where the profiling
     data is not quite representative of the optimised program's future.
-    In section \ref{sec:overlap_approach} we explained that these variations
+    In Section~\ref{sec:overlap_approach} we explained that these variations
     are harmless.
 \end{description}
 
@@ -862,7 +862,7 @@ If several branches have different numbers of recursive calls they are all
 added to the result set.
 This means that the result of traversing a goal might include data for
 several different recursion counts.
-Consider the example in figure \ref{fig:2_reccalls_4_paths}.
+Consider the example in Figure~\ref{fig:2_reccalls_4_paths}.
 The example code has been annotated with coverage information (in the
 third column) and with cost information where it is available (fourth
 column).
@@ -1038,7 +1038,7 @@ Therefore,
 we ran our analysis across all the SCCs in the Mercury compiler,
 the largest open source Mercury program,
 to determine which types of recursion are most common.
-Table \ref{tab:recursion_types} summarises the results.
+Table~\ref{tab:recursion_types} summarises the results.
 We can see that most SCCs are not recursive,
 and the next biggest group is the simply recursive SCCs,
 accounting for nearly 13\% of the profile's SCCs.
@@ -1064,7 +1064,7 @@ understanding this procedure may provide information needed to
 decide if a parallelisation in the procedure's caller is profitable or not.
 
 The profiler represents each procedure in the program's source code as a \PS
-structure (section \ref{sec:backgnd_deep}).
+structure (Section~\ref{sec:backgnd_deep}).
 Each procedure may be used multiple times and therefore have multiple \PD
 structures appearing in different SCCs.
 Each SCC may have a different recursion type depending on how it was called.
@@ -1109,7 +1109,7 @@ In many cases these are the same code running on a tree without any 4-nodes.
 \plan{Mutual recursion}
 It may be possible to handle simple cases of mutual recursion by a process
 of hypothetical inlining.
-Consider the call graph in figure \ref{fig:mutrec1}.
+Consider the call graph in Figure~\ref{fig:mutrec1}.
 In this example $f$, $g$ and $h$ represent an SCC,
 $f$ calls $g$, which calls $h$, which calls $f$.
 These calls are recursive, they create a loop between all three procedures.
@@ -1126,7 +1126,7 @@ therefore this discussion is a thought experiment and not part of our
 analysis tool.
 
 We believe that we can handle some other forms of mutually recursive code.
-One example of this is  the graph in figure \ref{fig:mutrec2},
+One example of this is  the graph in Figure~\ref{fig:mutrec2},
 which has two loops, one mutually recursive loop and one loop within $g$.
 We cannot inline $g$ into $f$ because $g$ has a recursive call whose
 entry point would disappear after inlining.
@@ -1135,7 +1135,7 @@ to $f$ as a call to $f\prime$.
 This allows us to inline $f\prime$ into $g$ without an issue, and $f$'s call
 to $g$ is no longer recursive.
 
-The graph in figure \ref{fig:mutrec3} is more complicated,
+The graph in Figure~\ref{fig:mutrec3} is more complicated,
 it has three loops.
 In this case we cannot inline $g$ into $f$ because of the loop within $g$,
 and we cannot inline $f$ into $g$ because of the loop within $f$.
@@ -1149,7 +1149,7 @@ conquer code.
 However, generating efficient parallel divide and conquer code is slightly
 more complicated,
 as Granularity Control is needed to prevent embarrassingly parallel
-workloads (section \ref{sec:rts_work_stealing2}).
+workloads (Section~\ref{sec:rts_work_stealing2}).
 This is less true with simply recursive code as a non-recursive call that is
 parallelised against will usually have a non-trivial cost in all levels of
 the recursion.
@@ -1160,9 +1160,9 @@ the recursion.
 \status{This section is ready for proofreading by Peter S. or Micheal R.}
 
 \plan{Explain the shallow coverage information.}
-In section \ref{sec:backgnd_deep} we introduced the deep profiler,
+In Section~\ref{sec:backgnd_deep} we introduced the deep profiler,
 a profiler that can gather \emph{ancestor context} specific profiling data.
-We also introduced coverage profiling in section \ref{sec:backgnd_coverage},
+We also introduced coverage profiling in Section~\ref{sec:backgnd_coverage},
 which can gather the \emph{coverage} of any program point.
 Before we started this project the coverage data gathered was not ancestor
 context specific.
@@ -1176,8 +1176,8 @@ context specific.
 We want to use deep profiling data for automatic parallelisation,
 which requires using analyses that in turn require coverage data such as
 the calculation of recursive call sites' costs
-(section \ref{sec:overlap_reccalls}),
-and variable use time analysis (section \ref{sec:backgnd_var_use_analysis}).
+(Section~\ref{sec:overlap_reccalls}),
+and variable use time analysis (Section~\ref{sec:backgnd_var_use_analysis}).
 Therefore we have changed the way coverage data is collected and stored;
 this section describes our changes.
 
@@ -1217,7 +1217,7 @@ this section describes our changes.
 Our automatic parallelisation tool uses deep profiling data throughout.
 However, using deep profiling data and static coverage data creates
 inconsistencies that can result in erroneous results.
-Figure \ref{fig:static_and_deep_coverage} shows \listfoldlthree from
+Figure~\ref{fig:static_and_deep_coverage} shows \listfoldlthree from
 Mercury's standard library;
 it is annotated with data collected from a profiling run of the Mercury
 compiler.
@@ -1367,7 +1367,7 @@ deep coverage   & 37.6s & 33,628K & 32,630K & 5,646K & 370,288K & 30,901K \\
 \end{table}
 
 \plan{Benchmark coverage profiling.}
-Table \ref{tab:coverage_prof_overheads} shows the overheads of profiling
+Table~\ref{tab:coverage_prof_overheads} shows the overheads of profiling
 the Mercury compiler, including coverage profiling.
 We compiled the Mercury compiler with seven different sets of options for
 profiling.
@@ -1457,7 +1457,7 @@ available.
 Our goal is to determine if a dependent parallel conjunction exposes enough
 parallelism to be profitable.
 We show this as the amount that the boxes overlap
-in diagrams such as figure~\ref{fig:overlap_compare};
+in diagrams such as Figure~\ref{fig:overlap_compare};
 this \emph{overlap} specifically represents the amount of elapsed time that can be
 saved by parallel execution.
 Estimating this overlap
@@ -1468,7 +1468,7 @@ when it is first consumed by the second conjunct.
 The two algorithms for calculating estimates of when variables are produced and
 consumed
 (variable use times)
-are described in section \ref{sec:backgnd_var_use_analysis}.
+are described in Section~\ref{sec:backgnd_var_use_analysis}.
 The implementations of both algorithms has been updated since my honours
 candidature;
 the algorithms now make use of the deep coverage information described in
@@ -1483,7 +1483,7 @@ we ignore overheads for now but will come back to them later.
 Whilst the parallel execution time of $q$, namely $ParTime_q$, may be
 different from its sequential execution time as $q$ may block on futures
 that $p$ may not have signalled yet.
-In section \ref{sec:backgnd_priorautopar} we showed how to calculate
+In Section~\ref{sec:backgnd_priorautopar} we showed how to calculate
 $ParTime_q$ in cases where there is a single shared variable between $p$ and
 $q$.
 Then we use $ParTime_p$ and $ParTime_q$ to calculate the speedup due to
@@ -1512,7 +1512,7 @@ parallelism.
 \end{algorithm}
 
 When there are multiple shared variables we must use a different algorithm
-such as the one shown in algorithm~\ref{alg:dep_par_conj_overlap_simple},
+such as the one shown in Algorithm~\ref{alg:dep_par_conj_overlap_simple},
 which is a part of the full algorithm shown below.
 It calculates $ParTime_q$ from its arguments $SeqTime_q$, $VarUsesList_q$ and
 $ProdTimeMap_p$.
@@ -1578,8 +1578,7 @@ conjunction: 6.
 
 When there is more than two conjuncts in the parallel conjunction our
 algorithm requires an order loop.
-An example of such parallel conjunction is shown in figure
-\ref{fig:overlap3}.
+An example of such parallel conjunction is shown in Figure~\ref{fig:overlap3}.
 We can see that the third conjunct's execution depends on the second's,
 which depends upon the first's.
 Dependencies can only exist in the left to right direction,
@@ -1588,8 +1587,8 @@ cyclic dependencies.
 This is part of Mercury's mode system for both parallel and sequential
 conjunctions.
 The new algorithm therefore iterates over the conjuncts from left to right,
-processing each conjunct with a loop similar to the one in algorithm
-\ref{alg:dep_par_conj_overlap_simple}.
+processing each conjunct with a loop similar to the one in
+Algorithm~\ref{alg:dep_par_conj_overlap_simple}.
 
 \begin{algorithm}[tbp]
 \begin{algorithmic}[5]
@@ -1626,7 +1625,7 @@ processing each conjunct with a loop similar to the one in algorithm
 %\vspace{-2\baselineskip}
 \end{algorithm}
 
-Algorithm \ref{alg:dep_par_conj_overlap_middle} shows a more complete
+Algorithm~\ref{alg:dep_par_conj_overlap_middle} shows a more complete
 version of our algorithm;
 this version handles multiple conjuncts and variables,
 but does not account for overheads.
@@ -1657,7 +1656,7 @@ will always be in $ProdTimeMap$ when we look for it,
 because it must have been produced by an earlier conjunct
 and therefore processed by an earlier iteration of the loop over the
 conjuncts.
-We can see this in figure \ref{fig:overlap3}:
+We can see this in Figure~\ref{fig:overlap3}:
 $r$ blocks for longer on \var{B} than it normally would because $q$ blocks
 on \var{A}.
 The only new code outside the inner loop is the use of the $TotalParTime$
@@ -1696,7 +1695,7 @@ times.
 %at the correct point in the algorithm.
 
 In many cases,
-the conjunction given to algorithm \ref{alg:dep_par_conj_overlap_middle}
+the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 will contain a recursive call.
 In these cases the recursive call's cost at its average recursion depth is
 used by the algorithm.
@@ -1711,9 +1710,9 @@ We do not currently do any further analysis when parallelising recursive
 code.
 However, our current approach handles the majority (78\%) of cases correctly,
 and a further 13\% of cases (single recursion) reasonably well
-(Section \ref{sec:overlap_reccalls}).
+(Section~\ref{sec:overlap_reccalls}).
 Note that even better results for singly recursive procedures can be
-achieved because of the work in chapter \ref{chap:loop_control}.
+achieved because of the work in Chapter~\ref{chap:loop_control}.
 
 So far, we have assumed an unlimited number of CPUs,
 which of course is unrealistic.
@@ -1823,8 +1822,8 @@ we assume that the start of that chunk is delayed until a CPU becomes free.
 % \end{figure}
 
 To see how the algorithm works on realistic data,
-consider the \mapfoldl example from figure \ref{fig:map_foldl}.
-Table \ref{tab:prof_data_map_foldl} gives
+consider the \mapfoldl example from Figure~\ref{fig:map_foldl}.
+Table~\ref{tab:prof_data_map_foldl} gives
 the approximate costs of the calls in the recursive clause of \mapfoldl
 when used in a Mandelbrot image generator.
 Each call to \code{M} draws a row,
@@ -1835,7 +1834,7 @@ and when the recursive call consumes \var{Acc1}.
 The costs were collected from a real execution using Mercury's deep profiler
 and then rounded to make mental arithmetic easier.
 
-Figure \ref{fig:map_foldl_par} shows the best parallelisation of
+Figure~\ref{fig:map_foldl_par} shows the best parallelisation of
 \mapfoldl.
 When evaluating the speedup for this parallelisation,
 the production time for \var{Acc1} in the first conjunct
@@ -1849,7 +1848,7 @@ In this example we are assuming that the recursive call calls a sequential
 version of the code and that the recursive case will be executed,
 and in turn the recursive case calls the base case.
 The first iteration of
-algorithm~\ref{alg:dep_par_conj_overlap_middle}'s outer loop processes the
+Algorithm~\ref{alg:dep_par_conj_overlap_middle}'s outer loop processes the
 first conjunct,
 breaking it into two chunks separated by the production of \var{Acc1},
 which is added to $ProdTimeMap$.
@@ -1939,13 +1938,13 @@ at the end of the conjunction.
 %though users can easily override this.
 
 Our runtime system is now quite efficient so that these
-costs are kept low (chapter \ref{chap:rts}).
+costs are kept low (Chapter~\ref{chap:rts}).
 This does not eliminate the overheads, and cannot ever hope to,
 instead we wish to parallelise only those conjunctions that are still
 profitable despite overheads.
 This is why our system actually uses
-algorithm~\ref{alg:dep_par_conj_overlap_complete},
-a version of algorithm~\ref{alg:dep_par_conj_overlap_middle}
+Algorithm~\ref{alg:dep_par_conj_overlap_complete},
+a version of Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 that accounts for overheads.
 
 \begin{algorithm}[tbp]
@@ -2033,7 +2032,7 @@ in these cases $ContextWakeupDelay$ accounts for this.
 On line 26 the algorithm accounts for the $BarrierCost$ overhead,
 which is paid at the end of every parallel conjunct.
 
-Throughout chapter \ref{chap:rts} we saw the problems that right recursion
+Throughout Chapter~\ref{chap:rts} we saw the problems that right recursion
 can create.
 These problems were caused because the leftmost conjunct of a parallel
 conjunction will be executed by the context that started the execution of
@@ -2081,7 +2080,7 @@ Executing such conjuncts in their own threads
 costs far more in overheads than can be gained by running in parallel.
 To see just how big conjunctions can be,
 let us consider the quadratic equation example
-from section \ref{sec:backgnd_mercury},
+from Section~\ref{sec:backgnd_mercury},
 which we have repeated here.
 The quadratic equation is often written as a single conjunct:
 
@@ -2187,7 +2186,7 @@ this is in the Mercury compiler itself.
 The prerequisite for a profitable parallel conjunction is two or more
 expensive conjuncts (conjuncts whose per-call cost is above a certain
 threshold)
-(section~\ref{sec:overlap_approach}).
+(Section~\ref{sec:overlap_approach}).
 In such conjunctions we create a list of goals from the first expensive
 conjunct to the last,
 which we dub the ``middle goals''.
@@ -2199,7 +2198,7 @@ is exactly the set of conjuncts in the middle.
 A post-processing step then removes that assumption.
 
 The initial search space is explored by
-algorithm \ref{alg:best_par_search}, which processes the middle goals.
+Algorithm~\ref{alg:best_par_search}, which processes the middle goals.
 % That is a large space to search for the \emph{best} parallelisation,
 % and it would be larger still if we allowed code reordering,
 % that is, parallel conjuncts consisting of
@@ -2214,7 +2213,7 @@ to the last existing parallel conjunct ($Extend$) (line 6),
 or to put it into a new parallel conjunct ($AddNew$) (line 7).
 the calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
 estimating their parallel overlap using
-algorithm \ref{alg:dep_par_conj_overlap_complete}.
+Algorithm~\ref{alg:dep_par_conj_overlap_complete}.
 %from section \ref{sec:overlap_overlap_alg}.
 If $Extend$ is more profitable than $AddNew$,
 then the recursive call in line 11 searches for the best parallel
@@ -2242,7 +2241,7 @@ If the threshold has been reached the least profitable alternative is not
 explored (line 24).
 
 The actual algorithm is more complex than
-algorithm~\ref{alg:best_par_search}:
+Algorithm~\ref{alg:best_par_search}:
 our algorithm will also test each partial parallelisation against the best
 solution found so far,
 If the expected execution time for the candidate currently being considered
@@ -2378,7 +2377,7 @@ We also discuss several directions for further research.
 
 We search the program's
 call graph for parallelisation opportunities
-(section \ref{sec:overlap_approach}).
+(Section~\ref{sec:overlap_approach}).
 This means that we may visit the same procedure multiple times from
 different ancestor contexts.
 In a different context a procedure may have a different optimal
@@ -2418,7 +2417,7 @@ This will of course require the creation of specialised versions
 of its parent, grandparent etc procedures,
 until we get to an ancestor procedure
 which does not occur in the common prefix of all the conflicting ancestor contexts.
-This is shown in figure \ref{fig:par_specialisation}, in the figure $j$ is
+This is shown in Figure~\ref{fig:par_specialisation}, in the figure $j$ is
 being parallelised when it is called from the
 $main \calls f \calls h \calls i \calls j$ ancestor context,
 but not when it is called from the $main \calls f \calls g \calls i \calls j$
@@ -2592,7 +2591,7 @@ expensive\_call\_2(...)
 \label{sec:overlap_pragma_gc}
 
 We described the garbage collector's effects on parallel performance in
-detail in section \ref{sec:rts_gc}.
+detail in Section~\ref{sec:rts_gc}.
 In this section we will describe how it relates to automatic parallelism in
 particular.
 
@@ -2621,7 +2620,7 @@ triggered by the unifications between those calls.
 For a sequential program, this view works very well.
 For a parallel program, it works less well,
 because the performance of the mutator and the collector scale differently
-(section \ref{sec:rts_gc}).
+(Section~\ref{sec:rts_gc}).
 
 We could take allocations into account in the algorithms above in a couple
 of different ways.
@@ -2699,12 +2698,12 @@ such as having to refill the cache after the collector trashes it.
 
 We tested our system on four benchmark programs:
 the first three are modified versions of the raytracer and mandelbrot
-program from chapter \ref{chap:rts},
+program from Chapter~\ref{chap:rts},
 the fourth is a matrix multiplication program.
 The two versions of the raytracer and the mandelbrot program only have
 dependent parallelism available.
 %Mandelbrot's modifications make it use dependent AND-parallelism
-Mandelbrot uses the \mapfoldl predicate in figure~\ref{fig:map_foldl}.
+Mandelbrot uses the \mapfoldl predicate in Figure~\ref{fig:map_foldl}.
 \mapfoldl is used to iterate over the rows of pixels in the image.
 Raytracer does not use \code{map\_foldl},
 but does use a similar code structure to perform a similar task.
@@ -2731,8 +2730,8 @@ We ran all four programs
 with one set of input parameters to collect profiling data,
 and with a \emph{different} set of input parameters to produce
 the timing results in the following table.
-All tests were run on the same system as throughout chapter \ref{chap:rts},
-the system is described on page \pageref{cabsav}.
+All tests were run on the same system as throughout Chapter~\ref{chap:rts},
+the system is described on page~\pageref{cabsav}.
 % taura
 % a Dell Optiplex 755 PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
 % running Linux 2.6.31.
@@ -2843,7 +2842,7 @@ overlap  &    - &    - & 7.69 (1.00) & 3.87 (1.99) & 2.60 (2.96) & 1.97 (3.90) \
 \label{tab:autopar}
 \end{table}
 
-Table \ref{tab:autopar} presents these results.
+Table~\ref{tab:autopar} presents these results.
 Each group of three rows reports the results for one benchmark.
 We auto-parallelised each program three different ways:
 executing expensive goals in parallel
@@ -2871,8 +2870,8 @@ There are two reasons for this.
 The first reason is that the runtime system, and in particular the garbage
 collector, must be thread safe.
 We tested how the garbage collector affected parallel performance
-extensively in section \ref{sec:rts_gc}.
-The results shown in table \ref{tab:autopar} were collected using one marker
+extensively in Section~\ref{sec:rts_gc}.
+The results shown in Table~\ref{tab:autopar} were collected using one marker
 thread in the garbage collector.
 The second reason for a slowdown in thread safe grades comes from how we
 compile Mercury code.
@@ -2882,8 +2881,8 @@ Mercury uses four\footnote{
     and we do not want to over-constrain the C compiler's register
     allocator.}
 of the x86\_64's six callee-save registers~\citep{sysv-abi} to implement
-four of the Mercury abstract machine registers (section
-\ref{sec:backgnd_merpar}).
+four of the Mercury abstract machine registers
+(Section~\ref{sec:backgnd_merpar}).
 The four abstract machine registers that use real registers are:
 the stack pointer,
 the success instruction pointer (continuation pointer),
@@ -2892,7 +2891,7 @@ The parallel version of the Mercury system
 needs to use a real machine register
 to point to thread-specific data,
 such as each engine's other abstract machine registers
-(section \ref{sec:backgnd_merpar}).
+(Section~\ref{sec:backgnd_merpar}).
 On x86\_64, this means that only the first abstract general purpose register
 is implemented using a real machine register.
 
@@ -2909,7 +2908,7 @@ which is why indep gets no speedup for them as it refuses to create
 dependent parallel conjunctions.
 The non-chunking raytracer achieves a speedups of 1.90 and 1.89 with four Mercury engines.
 We might expect better results with four engines, but as we discussed in
-section \ref{sec:rts_gc} the raytracer's performance is limited due to how
+Section~\ref{sec:rts_gc} the raytracer's performance is limited due to how
 much time it spends in the garbage collector.
 For mandelbrot, overlap gets a speedup
 that is as good as one can reasonably expect: 3.85 on four engines.
@@ -2925,7 +2924,7 @@ handled.
 Both the implementation of futures,
 and the right recursive problem is probably affecting the performance.
 
-In section \ref{sec:rts_reorder} we introduced a work around for the
+In Section~\ref{sec:rts_reorder} we introduced a work around for the
 right recursive problem.
 The work around reorders the conjuncts of a parallel conjunction to
 transform right recursion into left recursion.
@@ -2961,7 +2960,7 @@ already runs very optimally.
 This shows that
 program transformations that cause more work to be done in each context
 are likely to be an optimisation,
-this includes the work in chapter \ref{chap:loop_control}.
+this includes the work in Chapter~\ref{chap:loop_control}.
 % We thus expect that applying throttling
 % (as described in section~\ref{sec:overlap})
 % should significantly improve these results.
@@ -3076,8 +3075,8 @@ is so small that it is not noticeable.
 
 Mercury's strong mode and determinism systems
 greatly simplify the parallel execution of logic programs.
-As we discussed in sections \ref{sec:intro_par_logic},
-\ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar},
+As we discussed in
+Sections~\ref{sec:intro_par_logic},~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar},
 They make it easy to implement efficient explicit dependent AND-parallelism.
 The mode system provides complete information allowing us to identify
 shared variables at compile time.
@@ -3122,7 +3121,7 @@ for Mercury programs, this is far from enough.
 For most programs,
 it finds enough conjunctions with two or more expensive conjuncts,
 but almost all are dependent,
-and, as we mention in section \ref{sec:overlap_perf},
+and, as we mention in Section~\ref{sec:overlap_perf},
 many of these have too little overlap to be worth parallelising.
 % For example, the Mercury compiler contains
 % 50 conjunctions with two or more expensive goals.
@@ -3270,7 +3269,7 @@ to accept several profiling data files,
 with a priority scheme to resolve any conflicts.
 % between their advice.
 There is also potential further work in the handling of loops and recursion.
-We will talk about this in chapter \ref{chap:conc}
+We will talk about this in Chapter~\ref{chap:conc}
 after we improve the efficiency of some loops in the next chapter.
 
 % TODO Items.

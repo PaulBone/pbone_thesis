@@ -57,7 +57,7 @@ Communication was not allowed between conjunctions.
 now parallel conjunctions have the same mode constraints as sequential
 conjunctions.
 Parallel conjunctions,
-such as the one in figure \ref{fig:mapfoldl},
+such as the one in Figure~\ref{fig:mapfoldl},
 may now
 communicate through \emph{shared variables} such as \code{Acc1}.
 A shared variable is a variable that is bound within the parallel
@@ -71,7 +71,7 @@ The compiler replaces each shared variable with a \emph{future}
 \citep{halstead:1984:multilisp},
 which is used to safely communicate the variable's value among conjuncts.
 
-Figure \ref{fig:future} shows the future data structure,
+Figure~\ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,
 a flag indicating whether the variable has been produced yet,
 a queue of consumer contexts waiting for the value, and a mutex.
@@ -223,8 +223,8 @@ map_foldl_par(M, F, L, FutureAcc0, Acc) :-
 %\vspace{-1\baselineskip}
 \end{figure}
 
-Given the \mapfoldl predicate in figure \ref{fig:mapfoldl},
+Given the \mapfoldl predicate in Figure~\ref{fig:mapfoldl},
 this synchronisation transformation
-generates the code in figure \ref{fig:map_foldl_sync}.
+generates the code in Figure~\ref{fig:map_foldl_sync}.
 
 

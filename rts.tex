@@ -18,20 +18,20 @@ we chose to address the performance problems
 before we worked on automatic parallelism.
 
 In this chapter we investigate and correct these performance problems.
-We start with the garbage collector in section \ref{sec:rts_gc};
+We start with the garbage collector in Section~\ref{sec:rts_gc};
 we analyse the collector's effects on performance and tune its parameters
 to improve performance.
-In section \ref{sec:original_scheduling} we describe how the existing runtime
+In Section~\ref{sec:rts_original_scheduling} we describe how the existing runtime
 system schedules sparks,
 and provide background material for
-section \ref{sec:original_scheduling_performance},
+Section~\ref{sec:rts_original_scheduling_performance},
 which benchmarks the runtime system and describes two significant problems with
 spark scheduling.
-We address one of these problems by introducing work stealing in section
-\ref{sec:rts_work_stealing}.
-Then in section \ref{sec:rts_reorder} we reorder conjuncts in independent
+We address one of these problems by introducing work stealing in
+Section~\ref{sec:rts_work_stealing}.
+Then in Section~\ref{sec:rts_reorder} we reorder conjuncts in independent
 parallel conjunctions to work around the other spark scheduling problem.
-Finally, in section \ref{sec:rts_work_stealing2} we make further improvements to
+Finally, in Section~\ref{sec:rts_work_stealing2} we make further improvements to
 work stealing and change how idle engines look for work, sleep and are
 woken up.
 

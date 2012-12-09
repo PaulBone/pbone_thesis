@@ -19,7 +19,7 @@ This is because the way Mercury must execute depedent conjunctions,
 and the way programmers typically write logic programs are at ends.
 We introduced this as
 ``the right recursion problem''
-in section \ref{sec:rts_original_scheduling_performance}.
+in Section~\ref{sec:rts_original_scheduling_performance}.
 The implementation of a parallel conjunction
 has to execute the first conjunct and spawn off the later conjuncts.
 For dependent conjunctions, it cannot be done the other way around,
@@ -31,7 +31,7 @@ which happens often,
 since in logic programming languages,
 tail recursive code has long been the preferred way to write a loop.
 In independent code we can workarround the issue by reordering the conjuncts
-in a conjunction (see section \ref{sec:rts_reorder},
+in a conjunction (see Section~\ref{sec:rts_reorder},
 but in a dependent conjunction this is not possible.
 The problem is that
 \begin{itemize}
@@ -71,7 +71,7 @@ If we allow the number of contexts, and therefore their stacks, to grow
 unbounded, then the program very quickly runs out of memory, often bringing
 the operating system to its knees.
 Which is why we introduced the context limit work around 
-(described in chapter \ref{chap:rts})
+(described in Chapter~\ref{chap:rts})
 which can prevent a program from crashing,
 but which limits the amount of parallel execution.
 
@@ -171,7 +171,7 @@ to control memory consumption by loops.
 Section~\ref{sec:perf} evaluates
 how our system works in practice on some benchmarks,
 and
-section~\ref{sec:conc} concludes with some related work.
+Section~\ref{sec:conc} concludes with some related work.
 
 \section{The main problem}
 \label{sec:problem}
@@ -187,7 +187,7 @@ typical Mercury code makes heavy use of tail recursion in particular.
 
 Unfortunately, tail recursive computations are not naturally handled well
 by Mercury's implementation of parallel conjunctions.
-Consider the \mapfoldl{} predicate in Figure \ref{fig:mapfoldl}.
+Consider the \mapfoldl{} predicate in Figure~\ref{fig:mapfoldl}.
 This code applies the map predicate \code{M} to each element of an input list,
 and then uses the fold predicate \code{F}
 to accumulate (in a left-to-right order) all the results produced by \code{M}.
@@ -378,11 +378,11 @@ The rest of the program knows only about the first predicate;
 the second predicate is only ever called from the first predicate
 and from itself.
 Figure~\ref{fig:map_foldl_transformed} shows what these predicates look like.
-In section \ref{sec:structs},
+In Section~\ref{sec:structs},
 we describe the loop control structure and the operations on it;
-in section \ref{sec:trans},
+in Section~\ref{sec:trans},
 we give the algorithm that does the transformation;
-while in section \ref{sec:tailrec},
+while in Section~\ref{sec:tailrec},
 we discuss its interaction with tail recursion optimisation.
 
 \subsection{Loop control structures}
@@ -554,8 +554,8 @@ This is the first step in preserving tail recursion optimisation.
 \label{sec:trans}
 
 Our algorithm for transforming procedures to use loop control
-is shown in Figures~\ref{fig:transform_alg},
-\ref{fig:reccases_alg} and \ref{fig:basecases_alg}.
+is shown in
+Figures~\ref{fig:transform_alg},~\ref{fig:reccases_alg} and~\ref{fig:basecases_alg}.
 
 \begin{figure}[tb]
 \begin{center}
@@ -700,10 +700,10 @@ to handle recursive calls made outside of parallel conjunctions.)
 
 We impose condition (7) to ensure that
 our algorithm for transforming base cases
-(in Figure \ref{fig:basecases_alg})
+(in Figure~\ref{fig:basecases_alg})
 does not have to process goals that have already been processed
 by our algorithm for transforming recursive calls
-(in Figure \ref{fig:reccases_alg}).
+(in Figure~\ref{fig:reccases_alg}).
 
 If the transformation is applicable, we apply it.
 The transformed original procedure has only one purpose:
@@ -717,11 +717,11 @@ plus the \LC variable that holds the reference to the loop control structure.
 The code of \code{LoopProc} is derived from the code of \code{OrigProc}.
 Some execution paths in this code include a recursive call; some do not.
 The execution paths that contain a recursive call
-are transformed by the algorithm in Figure \ref{fig:reccases_alg};
+are transformed by the algorithm in Figure~\ref{fig:reccases_alg};
 the execution paths that do not
-are transformed by the algorithm in Figure \ref{fig:basecases_alg}.
+are transformed by the algorithm in Figure~\ref{fig:basecases_alg}.
 
-We start with the code in Figure \ref{fig:reccases_alg}.
+We start with the code in Figure~\ref{fig:reccases_alg}.
 Due to condition (6),
 every recursive call in \code{OrigGoal}
 will be inside the last conjunct a parallel conjunction,
@@ -752,7 +752,7 @@ We make the spawned-off computation free that slot when it finishes.
 To implement the spawning off process,
 we extended the internal representation of Mercury goals
 with a new kind of scope.
-The only one shown in the abstract syntax in section~\ref{sec:background}
+The only one shown in the abstract syntax in Section~\ref{sec:background}
 was the existential quantification scope,
 but the Mercury implementation had several other kinds of scopes already,
 though none of those are relevant for this paper.
@@ -883,7 +883,7 @@ that is shown in Figure~\ref{fig:basecases_alg}
 to transform the base cases of the goal
 that will later become the body of \code{LoopProc}.
 This function recurses on the structure of \code{LoopGoal},
-as updated by the main loop in Figure \ref{fig:reccases_alg}.
+as updated by the main loop in Figure~\ref{fig:reccases_alg}.
 
 When \putbarriers is called,
 its caller knows that \code{Loop\-Goal} may contain
@@ -1354,7 +1354,7 @@ while it is in the last parallel conjunct in the dependent versions.
 % Only the dependent parallel tests use loop control.
 % \paul{We might want to show independent code using loop control}
 
-Tables \ref{tab:mem} and \ref{tab:times}
+Tables~\ref{tab:mem} and~\ref{tab:times}
 presents our memory consumption and timing results respectively.
 In both tables,
 the columns list the benchmark programs,
@@ -1365,11 +1365,11 @@ each table shows only a subset of the rows,
 those with the most interesting results.
 These subsets are different for the two tables.
 
-In Table \ref{tab:mem}, each box has two numbers.
+In Table~\ref{tab:mem}, each box has two numbers.
 The first reports the maximum number of contexts alive at the same time,
 while the second reports the maximum number of megabytes
 ever used to store the stacks of these contexts.
-In Table \ref{tab:times}, each box has three numbers.
+In Table~\ref{tab:times}, each box has three numbers.
 The first is the execution time of that benchmark in seconds
 when it is compiled and executed in the manner prescribed by the row.
 The second and third numbers (the ones in parentheses)
@@ -1428,7 +1428,7 @@ The rows marked nolc are the controls.
 They do not use the loop control mechanism described in this paper;
 instead, they rely on our system's overall limit
 on the number of contexts that may be created,
-as we described at the end of Section \ref{sec:context_limit}.
+as we described at the end of Section~\ref{sec:context_limit}.
 The actual limit is the number of engines
 multiplied by a specified parameter,
 which we have set to 128 in c128 rows and to 512 in c512 rows.
@@ -1476,11 +1476,11 @@ the parallel, non-loop control ones,
 and loop control ones without tail recursion.
 Since the other benchmarks are not naturally tail recursive,
 they will not be tail recursive however they are compiled.
-There are no such rows in Table \ref{tab:mem}
+There are no such rows in Table~\ref{tab:mem}
 since the results in each lcN,tr row
 would be identical to the corresponding lcN row.
 
-There are several things to note in Table \ref{tab:mem}.
+There are several things to note in Table~\ref{tab:mem}.
 The most important is that when the programs are run on more than one core,
 switching on loop control yields a dramatic reduction
 in the maximum number of contexts used at any one time,
@@ -1510,14 +1510,14 @@ mandelbrot and raytracer use one more context that one would expect.
 Before the compiler applies the loop control transformation,
 it adds the synchronisation operations
 needed by dependent parallel conjunctions.
-As shown by Figure\ \ref{fig:map_foldl_sync},
+As shown by Figure~\ref{fig:map_foldl_sync},
 this duplicates the original procedure.
 Only the inner procedure is recursive,
 so the compiler performs the loop control transformation only on it.
 The extra context is
 the conjunct spawned off by the parallel conjunction in the outer procedure.
 
-There are several things to note in Table \ref{tab:times} as well.
+There are several things to note in Table~\ref{tab:times} as well.
 The first is that in the absence of loop control,
 increasing the per-engine context limit from 128 to 512
 yields significant speedups for three out of four the dependent benchmarks.
@@ -1570,7 +1570,7 @@ For matrix multiplication, the loop control dependent version is faster,
 while for spectral-norm, the independent version is faster,
 but in both cases the difference is small.
 This shows that on these benchmarks, loop control completely avoids
-the problems described in Section \ref{sec:problem}.
+the problems described in Section~\ref{sec:problem}.
 
 Fourth, preserving tail recursion has a mixed effect on speed:
 of the six relevant cases (mandelbrot and raytracer on 2, 3 and 4 cores),

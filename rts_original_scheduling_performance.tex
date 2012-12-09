@@ -1,6 +1,6 @@
 
 \section{Original Spark Scheduling Performance}
-\label{sec:original_scheduling_performance}
+\label{sec:rts_original_scheduling_performance}
 
 \begin{figure}
 \begin{center}
@@ -27,22 +27,22 @@
 \label{fig:map_right_and_left_recursive}
 \end{figure}
 
-In section \ref{sec:rts_gc} we ran our benchmarks with a recent version of the
+In Section~\ref{sec:rts_gc} we ran our benchmarks with a recent version of the
 runtime system.
 In the rest of this chapter we describe many of the improvements to the
 runtime system that improved parallel performance.
 
 \plan{Introduce right recursion.}
-Figure \ref{fig:map_right_and_left_recursive} shows two alternative, parallel
+Figure~\ref{fig:map_right_and_left_recursive} shows two alternative, parallel
 implementations of \code{map/3}.
 While their declarative semantics are identical,
 their operational semantics are very different.
-In section \ref{sec:backgnd_merpar} we explained that parallel conjunctions
+In Section~\ref{sec:backgnd_merpar} we explained that parallel conjunctions
 are implemented by spawning off the second and later conjuncts and executing
 the first conjunct directly.
-In the right recursive case (figure \ref{fig:map_right_recursive}),
+In the right recursive case (Figure~\ref{fig:map_right_recursive}),
 the recursive call is spawned off as a spark,
-and in the left recursive case (figure \ref{fig:map_left_recursive}),
+and in the left recursive case (Figure~\ref{fig:map_left_recursive}),
 the recursive call is executed directly, and the loop \emph{body} is
 spawned off.
 Declarative programmers are taught to prefer tail recursion,
@@ -71,15 +71,15 @@ and therefore tend to write right recursive code.
 \end{table}
 
 \plan{Show performance figures.}
-Table \ref{tab:right} shows average elapsed time in seconds for the
+Table~\ref{tab:right} shows average elapsed time in seconds for the
 mandelbrot\_lowalloc program from 20 test runs.
-We use the mandelbrot\_lowalloc program from section \ref{sec:rts_gc}.
+We use the mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
 Using this program we can easily observe the
 speedup due to parallelism in Mercury without the effects of the garbage
 collector.
 The loop that iterates over the rows in the image uses right recursion.
 It is similar to \code{map/3}
-in figure \ref{fig:map_right_recursive}.
+in Figure~\ref{fig:map_right_recursive}.
 The leftmost column shows the maximum number of contexts permitted at
 any time.
 This is the limit that was mentioned in the previous section.
@@ -120,7 +120,7 @@ parallelism.
 %Right recursion uses a context for each iteration of the loop,
 %and then suspends that context.
 To understand this problem we must consider how parallel conjunctions are
-executed (see section \ref{sec:backgnd_merpar}).
+executed (see Section~\ref{sec:backgnd_merpar}).
 The original context creates a spark for the second and later conjuncts and
 puts it on the global spark queue.
 It then executes the first conjunct \code{P/2}.
@@ -160,7 +160,7 @@ parallelism.
 
 \plan{Diagram from the loop control talk}
 An example of context usage over time using four engines is shown in
-figure \ref{fig:linear_context_usage}.
+Figure~\ref{fig:linear_context_usage}.
 Time is shown on the Y axis and contexts are drawn so that each additional
 context is further along the X axis.
 At the top left,
@@ -175,9 +175,9 @@ each of the blocked contexts resumes execution and immediately exits,
 indicated by the horizontal line at the bottom of each of the vertical
 lines.
 Later in the project we developed a solution to this problem
-(see chapter \ref{chap:loop_control}).
-Before developing the solution, we developed a work around (see section
-\ref{sec:rts_reorder}.
+(see Chapter~\ref{chap:loop_control}).
+Before developing the solution, we developed a work around
+(see Section~\ref{sec:rts_reorder}.
 
 \plan{Extra engines require more contexts}
 When using either 128 or 256 contexts,
@@ -188,7 +188,7 @@ the more Mercury engines there are, the more often at least one engine is
 idle.
 When creating a spark, the runtime system checks for an idle engine,
 if there is one then the spark may be placed on the global queue, subject to
-    the context limit (see section \ref{sec:original_scheduling}).
+    the context limit (see Section~\ref{sec:rts_original_scheduling}).
 If there is no idle engine,
 a spark is placed on the context's local queue regardless of the current
 number of contexts.
@@ -204,7 +204,7 @@ and achieves better speedups.
 \plan{Suggest that left recursion might fix this,
 (This is what we thought at the time).}
 Only right recursion uses one context for each iteration of a loop. 
-A left recursive predicate (figure \ref{fig:map_left_recursive}) has its
+A left recursive predicate (Figure~\ref{fig:map_left_recursive}) has its
 recursive call on the left of the parallel conjunction.
 The context executing the conjunction sparks off the body of the loop
 (in the figure this is \code{P}),
@@ -261,10 +261,10 @@ Right and Left recursion shown with standard deviation}
 \end{table}
 
 \plan{Show performance figures for left recursion.}
-Table \ref{tab:2009_left_nolimit} shows benchmark results using left
+Table~\ref{tab:2009_left_nolimit} shows benchmark results using left
 recursion.
 The table is broken into three sections:
-a copy of the right recursion data from table \ref{tab:right},
+a copy of the right recursion data from Table~\ref{tab:right},
 which is presented again for comparison;
 the left recursion data,
 which we will discuss now;
@@ -294,7 +294,7 @@ which enters the left recursive parallel conjunction and spawns off a spark,
 adding it to the global spark queue.
 The original context then executes the recursive call and
 continues to spawn off sparks.
-As we described in section \ref{sec:original_scheduling},
+As we described in Section~\ref{sec:rts_original_scheduling},
 each spark on the global spark queue may be converted into a new
 context,
 and therefore sparks on the global queue contribute towards the context
@@ -330,7 +330,7 @@ The context limit is one of the two things used to make this scheduling
 decision;
 the other is: if there is no idle engine then the spark is always
 placed on the context local spark stack
-(section \ref{sec:original_scheduling}).
+(Section~\ref{sec:rts_original_scheduling}).
 At the time when the parallel conjunction in \code{map/3} is executed,
 the other engines will initially be idle but will quickly become busy,
 and once they are busy the original context will not place sparks on the
@@ -357,8 +357,9 @@ scheduled sparks do not count towards the context limit.
 We did test 
 that a low context limit prevents the majority of sparks from being placed on
 the global queue and being eligible for parallel execution.
-The final row group in table
-\ref{tab:2009_left_nolimit} shows results for the left recursive test
+The final row group in
+Table~\ref{tab:2009_left_nolimit}
+shows results for the left recursive test
 where sparks in the global queue do not count towards the context limit.
 As expected, we got similar results for different values of the context
 limit.
@@ -411,7 +412,7 @@ parallel or in sequence.
 %right recursion,
 %namely that since contexts are reused, the number of contexts wouldn't climb
 %and prevent parallelism from being exploited.
-%As table \ref{tab:right_v_left} shows, we were wrong:
+%As Table~\ref{tab:right_v_left} shows, we were wrong:
 %the context limit is affecting performance.
 %As discussed, a left-recursive loop spawns of calls to \code{P} as sparks
 %and executes its recursive call directly.

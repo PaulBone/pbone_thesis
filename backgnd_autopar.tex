@@ -14,14 +14,14 @@ the Degree of Bachelor of Computer Science Honours.
 I have improved these contributions during my Ph.D.\
 candidature.
 The following were part of my honours project:
-the coverage profiling transformation (section \ref{sec:backgnd_coverage}),
-the related variable use analysis (section \ref{sec:backgnd_var_use_analysis})
-and the feedback framework (section \ref{sec:feedback}).
+the coverage profiling transformation (Section~\ref{sec:backgnd_coverage}),
+the related variable use analysis (Section~\ref{sec:backgnd_var_use_analysis})
+and the feedback framework (Section~\ref{sec:feedback}).
 Other parts of this section include:
-The Mercury deep profiler \citep{conway:2001:mercury-deep} (section
-\ref{sec:backgnd_deep}) and
+The Mercury deep profiler \citep{conway:2001:mercury-deep}
+(Section~\ref{sec:backgnd_deep}) and
 \citet*{tannier:2007:parallel_mercury}'s work on automatic parallelism
-(section \ref{sec:backgnd_priorautopar}).
+(Section~\ref{sec:backgnd_priorautopar}).
 
 Most compiler optimisations work on the representation of the program in
 the compiler's memory alone.
@@ -66,7 +66,7 @@ this time with auto-parallelism enabled.
 During compilation,
 the compiler reads the feedback file and introduces parallelism into the
 resulting program at the places indicated by the feedback file.
-Figure \ref{fig:prof_fb} shows this workflow.
+Figure~\ref{fig:prof_fb} shows this workflow.
 
 \picfigure{prof_fb}{Profiler feedback loop}
 
@@ -163,14 +163,14 @@ the calls from $h$ to $i$ took on average twice as long
 from the $main \calls g \calls h$ context as from $main \calls f \calls h$,
 so that despite making fewer calls to $i$,
 $main \calls g \calls h \calls i$ took more time than $main \calls f \calls h \calls i$.
-This is shown in figure \ref{fig:call_tree5}.
+This is shown in Figure~\ref{fig:call_tree5}.
 
 \picfigure{call_tree5}{Example call graph}
 
 It can be difficult to locate a single goal within the body of a procedure.
 This is made more difficult as nested unifications are flattened into super
 homogeneous form
-(section \ref{superhomogeneous} page \pageref{superhomogeneous}),
+(Section~\ref{superhomogeneous} on page~\pageref{superhomogeneous}),
 meaning that what might be a single line of code in a source file
 can be a conjunction of dozens of goals.
 Therefore the profiler uses \emph{goal paths} to uniquely identify a sub
@@ -339,7 +339,7 @@ making it possible to measure to the times at which variables are produced
 and consumed within parallel conjuncts.
 The analysis uses this to calculate how much parallelism is available,
 for conjunctions with a single shared variable.
-Consider the timeline shown in figure \ref{fig:overlap4},
+Consider the timeline shown in Figure~\ref{fig:overlap4},
 In the sequential case the computations \code{p} and \code{q} are shown
 side-by-side.
 Below this, \code{q} is parallelised against \code{p}.
@@ -371,14 +371,14 @@ accounts for the \code{q}'s dependency on \code{A}.
 Except for this small difference,
 the calculation of parallel execution time and speedup are the commonly
 used formulas for many parallel execution cost models.
-We will greatly expand and generalise this calculation in chapter
-\ref{chap:overlap}.
+We will greatly expand and generalise this calculation in
+Chapter~\ref{chap:overlap}.
 
 This cost model requires information about when a shared variable is
 produced by the first conjunct and when it is consumed by the second.
 To provide this information,
 we introduced a variable use time analysis
-(section \ref{sec:backgnd_var_use_analysis}),
+(Section~\ref{sec:backgnd_var_use_analysis}),
 that depends upon information about how often different goals are executed,
 called \emph{coverage}.
 The deep profiler provides coverage information for most goals,
@@ -549,7 +549,7 @@ coverage cannot be inferred.
 \label{fig:map_coverage}
 \end{figure}
 
-Figure \ref{fig:map_coverage} shows \code{map/3} annotated with a
+Figure~\ref{fig:map_coverage} shows \code{map/3} annotated with a
 coverage point.
 The forward pass of the coverage inference algorithm cannot infer
 coverage at the beginning of this switch arm,
@@ -565,7 +565,7 @@ Coverage profiling adds a small cost to profiling
 it is not a high priority to optimise this further.
 
 During my honours project I added three new fields to the \PS structure,
-which we introduced in section \ref{sec:backgnd_deep}.
+which we introduced in Section~\ref{sec:backgnd_deep}.
 These fields are:
 a constant integer representing the number of coverage points in this
 procedure;
@@ -589,7 +589,7 @@ that other profiling data is.
 The auto-parallelisation work described in my honours report
 did not expect to use ancestor context specific coverage information.
 
-The coverage point in figure \ref{fig:map_coverage}
+The coverage point in Figure~\ref{fig:map_coverage}
 has two arguments,
 the first points to the \PS containing this procedure's coverage points,
 the second is the index within this procedure's coverage point arrays
@@ -710,7 +710,7 @@ to, the unification that binds the variable.
 
 The algorithm for computing the expected production time
 of a shared variable looks at the form of the conjunct that produces it,
-this is shown in algorithm \ref{alg:var_prod_time}.
+this is shown in Algorithm~\ref{alg:var_prod_time}.
 This algorithm is only invoked on goals that are either \ddet or \dccmulti,
 and that produce the variable $V$.
 For each goal type,
@@ -904,7 +904,7 @@ variable, and therefore the inner goal must be \ddet.
 The algorithm we use for computing the time
 at which a shared variable is first consumed by the second conjunct
 is similar,
-it is shown in algorithm \ref{alg:var_cons_time}.
+it is shown in Algorithm~\ref{alg:var_cons_time}.
 The main differences are that
 negated goals, conditions and disjunctions are allowed to consume variables,
 and some arms of a switch or if-then-else
@@ -1022,7 +1022,7 @@ leaving the other feedback items in the file unchanged.
 %program and how its conjuncts should be constructed of smaller goals.
 %However, at the completion of my honours project the implementation was incomplete
 %and no feedback data was actually given to the compiler.
-%Figure \ref{fig:prof_fb} closely describes the workflow for our feedback
+%Figure~\ref{fig:prof_fb} closely describes the workflow for our feedback
 %analysis.
 %
 %% call graph traversal.
@@ -1060,5 +1060,4 @@ leaving the other feedback items in the file unchanged.
 %is already active.
 %The automatic parallelism analysis described in \citet*{paul_hons}
 %treats recursive calls naively,
-%A solution to this is presented in section
-%\ref{sec:recursive_call_costs}.
+%A solution to this is presented in section~\ref{sec:recursive_call_costs}.

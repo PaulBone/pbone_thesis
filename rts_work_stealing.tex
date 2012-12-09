@@ -159,19 +159,19 @@ stack.
 This \emph{last-in-first-out} order is important for Mercury's parallel
 conjunctions.
 Parallel conjunctions may be nested, either in the same procedure or through
-procedure calls such as in figure
-\ref{fig:nested_par_conjunctions}.
+procedure calls such as in
+Figure~\ref{fig:nested_par_conjunctions}.
 Consider a context whose spark stack's contents are initially undefined.
 The spark stack is represented by
-figure \ref{fig:spark_stack_step1}.
+Figure~\ref{fig:spark_stack_step1}.
 When the context calls \code{p} it creates a spark
 for the second and third conjuncts \code{r(\ldots)~\&~q(\ldots)}
-and places the spark on its local stack (figure
-\ref{fig:spark_stack_step2}).
+and places the spark on its local stack
+(Figure~\ref{fig:spark_stack_step2}).
 It then calls \code{q}, where it creates another spark.
 This spark represents the call to \code{u},
 and now the spark stack looks like
-figure~\ref{fig:spark_stack_step3}.
+Figure~\ref{fig:spark_stack_step3}.
 Assuming that no work stealing has occurred,
 when the context finishes executing \code{t} it pops the spark from the top
 of its stack;
@@ -188,14 +188,14 @@ the context is not blocked by the call to \wait.
 (Note that the mode annotations are illustrative,
 they are not part of Mercury's syntax.)
 Once the spark for \code{u} is popped off the spark stack then the spark
-stack looks like figure \ref{fig:spark_stack_step4}.
+stack looks like Figure~\ref{fig:spark_stack_step4}.
 After the execution of \code{u}, \code{q} returns control to \code{p},
 which then continues the execution of its own parallel conjunction.
 \code{p} pops a spark off the spark stack;
 the spark popped off is the parallel conjunction
 \code{r(\ldots) \& s(\ldots)}.
 This immediately creates a spark for \code{s} and pushes it onto the spark
-stack (figure \ref{fig:spark_stack_step5}) and
+stack (Figure~\ref{fig:spark_stack_step5}) and
 then executes \code{r}.
 The execution of \code{r} at this point is also the same as what would occur
 if sequential conjunctions were used.
@@ -204,8 +204,8 @@ the spark represented the \emph{rest} of the parallel
 conjunction.
 Finally \code{r} returns and \code{p} pops the spark for \code{s} off of the
 spark stack and executes it.
-At this point the contest's spark stack looks like figure
-\ref{fig:spark_stack_step6}.
+At this point the contest's spark stack looks like
+Figure~\ref{fig:spark_stack_step6}.
 
 If at step 3,
 the context executed the spark for \code{r(\ldots) \& s(\ldots)} then
@@ -504,12 +504,12 @@ First, we placed a store barrier in the \push procedure
     In our implementation a C macro is used to abstract away the assembly
     code for different architectures;
     we have shown our figures without the macro to aid the reader.}
-in algorithm \ref{alg:MR_push_spark}).
+in Algorithm~\ref{alg:MR_push_spark}).
 This barrier ensures that the spark is written into the array before the pointer to
 the top of the array is updated,
 indicating that the spark is available.
 Second, we placed a full barrier in the \pop procedure
-(the inline assembly in algorithm \ref{alg:MR_pop_spark}).
+(the inline assembly in Algorithm~\ref{alg:MR_pop_spark}).
 This barrier requires that the procedure updates the pointer to the top of the
 deque before it reads the pointer to the bottom (which it uses to
 calculate the size).
@@ -570,14 +570,14 @@ used}
 
 \plan{Barrier code}
 A context accesses its own local spark queue in the \joinandcontinue barrier
-introduced in section \ref{sec:original_scheduling}.
+introduced in Section~\ref{sec:rts_original_scheduling}.
 The introduction of work stealing has allowed us to optimise
 \joinandcontinue.
-The new version of \joinandcontinue is shown in algorithm
-\ref{alg:join_and_continue_ws1}, and
+The new version of \joinandcontinue is shown in
+Algorithm~\ref{alg:join_and_continue_ws1}, and
 the previous version is shown in
-algorithm \ref{alg:join_and_continue_peterw}
-on page \pageref{alg:join_and_continue_peterw}.
+Algorithm~\ref{alg:join_and_continue_peterw}
+on page~\pageref{alg:join_and_continue_peterw}.
 The first change to this algorithm
 is that this version is lock free.
 All the synchronisation is performed by atomic CPU instructions, memory
@@ -687,7 +687,7 @@ Therefore any spark at the hot end of the deque cannot possibly be created by a 
 
 \plan{Other changes to the idle loop?}
 We have also modified \idle to use spark stealing;
-its new code is shown in algorithm \ref{alg:MR_idle_wsinitial}.
+its new code is shown in Algorithm~\ref{alg:MR_idle_wsinitial}.
 We have replaced the old code which dequeued a spark from the global spark
 queue
 with a call to \trystealspark (see below).
@@ -706,7 +706,7 @@ Therefore engines must wake up periodically to check if there is any
 parallel work available.
 This is done on line 48 using a call to \code{MR\_timed\_wait} with a
 configurable timeout (it defaults to 2ms).
-We discuss this timeout later in section \ref{sec:rts_work_stealing2}.
+We discuss this timeout later in Section~\ref{sec:rts_work_stealing2}.
 
 \plan{Accessing the array of deques}
 Engines that attempt to steal a spark must have access to all the spark
@@ -752,7 +752,7 @@ these operations are protected by \code{MR\_spark\_deques\_lock}.
 
 \plan{Thief behaviour}
 The algorithm for \trystealspark is shown in
-algorithm \ref{alg:try_steal_spark_initial}.
+Algorithm~\ref{alg:try_steal_spark_initial}.
 It must also acquire the lock before using the array.
 A thief may need to make several attempts before it successfully finds a
 deque with work it can steal.
@@ -785,16 +785,16 @@ Therefore
 the decision to execute a spark in parallel is only made once an engine is
 idle and able to run the spark.
 We expect this to correct the premature scheduling decision problem we
-described in section \ref{sec:original_scheduling_performance}.
+described in Section~\ref{sec:rts_original_scheduling_performance}.
 
 \input{tab_work_stealing_initial3}
 
 \plan{Benchmark}
 We benchmarked our initial work stealing implementation with the mandelbrot
 program from previous sections.
-Table \ref{tab:work_stealing_initial} shows the results of our benchmarks.
+Table~\ref{tab:work_stealing_initial} shows the results of our benchmarks.
 The first and third row groups are the same results as the first and second
-row groups from table \ref{tab:2009_left_nolimit} respectively.
+row groups from Table~\ref{tab:2009_left_nolimit} respectively.
 They are included to allow for easy comparison.
 The second and fourth row groups were generated with a newer version of
 Mercury that implements work stealing as described above.\footnote{

@@ -58,7 +58,7 @@ We find it useful to create the following classifications for these methods.
     orthogonal.
     We will explain this and discuss the systems that use concurrency in
     order to achieve parallelism
-    (section \ref{sec:intro_concurrency}).
+    (Section~\ref{sec:intro_concurrency}).
 
     \item[Explicit parallelism] is safer and easier to use compared to
     \pvc, however it is less expressive.
@@ -72,8 +72,7 @@ We find it useful to create the following classifications for these methods.
     flawed.
     Some systems use do not fit cleanly into either of our explicit
     or implicit parallelism definitions.
-    We will discuss both approaches together in section
-    \ref{sec:intro_par}i.
+    We will discuss both approaches together in Section~\ref{sec:intro_par}.
 
     \item[Automatic parallelism] is our last category.
     In these systems sequential execution is the typical form of execution
@@ -82,8 +81,8 @@ We find it useful to create the following classifications for these methods.
     We have chosen to separate them because the two systems
     approach the same problem from different directions
     (parallel as default versus sequential as default).
-    Prior work in automatic parallelism is discussed in section
-    \ref{sec:intro_auto_par}.
+    Prior work in automatic parallelism is discussed in
+    Section~\ref{sec:intro_auto_par}.
 \end{description}
 
 \noindent
@@ -689,7 +688,7 @@ logic program as a Herbrand constraint problem.
 It then solves that problem, introducing parallelism for
 deterministic\footnote{
     Andorra uses a different definition for determinism than Mercury does.
-    Section \ref{sec:backgnd_mercury} explains Mercury's definition.}
+    Section~\ref{sec:backgnd_mercury} explains Mercury's definition.}
 conjoined goals.
 For Andorra's purposes deterministic means ``succeeds at most once''.
 
@@ -816,8 +815,8 @@ Mercury,
 a pure logic/functional language,
 follows the principal of introducing parallelism only where it is
 estimated to be beneficial.
-We will discuss parallelism in Mercury in sections
-\ref{sec:backgnd_merpar} and \ref{sec:backgnd_deppar}.
+We will discuss parallelism in Mercury in
+Sections~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar}.
 For now we will concentrate on the differences between Mercury
 and the Prolog and committed choice languages.
 \citet*{conway:2002:par} introduced independent AND-parallelism
@@ -835,7 +834,7 @@ This means that variable bindings made by dependent conjuncts can never be
 retracted,
 allowing us to use a much simpler and more efficient implementation.
 Some of our critics (reviews of the paper \citet{bone:2011:overlap}
-on which chapter \ref{chap:overlap} is based)
+on which Chapter~\ref{chap:overlap} is based)
 are concerned that this reduces the amount of parallelism that Mercury is
 able to exploit \emph{too much}.
 We disagree,
@@ -847,7 +846,7 @@ roughly 75\% of Mercury code is deterministic\footnote{
 While we are missing out on parallelising 25\% of the
 program,
 the 75\% that we can parallelise accounts for 97\% of the cost of the
-program (table \ref{tab:recursion_types}).
+program (Table~\ref{tab:recursion_types}).
 Supporting parallelism in non-deterministic code to parallelise the
 remaining 3\% of the program's cost is also prohibitively expensive.
 The Prolog systems that support parallelism in goals that can fail and
@@ -863,7 +862,7 @@ as most Prologs cannot determine which variables are shared in parallel
 conjunctions,
 and none can determine this accurately.
 Mercury's implementation,
-which uses futures (section \ref{sec:backgnd_deppar},
+which uses futures (Section~\ref{sec:backgnd_deppar},
 increases the costs of unification for the shared variables only.
 A related comparison, although it is not specific to parallelism,
 is that unification is orders of magnitude simpler in Mercury than in
@@ -1035,7 +1034,7 @@ information so that we could calculate the likely production and
 consumption times.
 This early work was restricted to situations with a
 single dependent variable shared between two conjuncts.
-It is described in more detail in section \ref{sec:backgnd_autopar}.
+It is described in more detail in Section~\ref{sec:backgnd_autopar}.
 % Mercury's deep profiler \citep{conway:2001:mercury-deep} provides
 % detailed and accurate profiling information.
 % Among other things,
@@ -1063,18 +1062,18 @@ program as the automatic parallelisation analysis can simply be
 re-executed to re-parallelise the program.
 
 The remainder of the dissertation is organised as follows.
-Chapter \ref{chap:backgnd} provides background information about
+Chapter~\ref{chap:backgnd} provides background information about
 Mercury and explicit and automatic parallelism in Mercury.
-Chapter \ref{chap:rts} discusses a number of improvements that we made to
+Chapter~\ref{chap:rts} discusses a number of improvements that we made to
 the runtime system.
-Chapter \ref{chap:overlap} describes our new automatic parallelism
+Chapter~\ref{chap:overlap} describes our new automatic parallelism
 analysis.
-Chapter \ref{chap:loop_control} addresses a long standing problem in the
+Chapter~\ref{chap:loop_control} addresses a long standing problem in the
 parallel execution of most recursive code.
-Chapter \ref{chap:tscope} describes our use of the \tscope visual
+Chapter~\ref{chap:tscope} describes our use of the \tscope visual
 profiler that was developed for use with Haskell and how we use it with
 Mercury.
-Finally chapter \ref{chap:conc} concludes the dissertation, providing a
+Finally Chapter~\ref{chap:conc} concludes the dissertation, providing a
 discussion that unifies the work presented in the four main chapters and
 describes potential further work.
 

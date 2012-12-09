@@ -85,7 +85,7 @@ G
 \end{figure}
 
 \noindent
-Mercury's goal types are shown in figure \ref{fig:abstractsyntax}.
+Mercury's goal types are shown in Figure~\ref{fig:abstractsyntax}.
 The atomic goals are unifications
 (which the compiler breaks down until each one contains
 at most one function symbol),
@@ -108,19 +108,19 @@ to the names of the variables that stand for them in the foreign code.
 The composite goals include
 sequential and parallel conjunctions,
 disjunctions, if-then-elses, negations and existential quantifications.
-Section \ref{sec:backgnd_merpar} contains a detailed description of parallel
+Section~\ref{sec:backgnd_merpar} contains a detailed description of parallel
 conjunctions.
 
 The abstract syntax does not include universal quantifications:
 they are allowed at the source level,
 but are transformed into a combination of two negations and an existential
 quantification
-(equation \ref{eqn:expand_univ_quant}).
+(Equation~\ref{eqn:expand_univ_quant}).
 Universal quantifications do not appear in the compiler's internal goal
 representation.
 Similarly,
 a negation can be simplified using the constants $true$ and $false$,
-and an if-then-else (equation \ref{eqn:expand_neg}).
+and an if-then-else (Equation~\ref{eqn:expand_neg}).
 However the compiler does not make this transformation and
 negations may appear in the compiler's goal representation.
 Nevertheless, we will not discuss negations in this dissertation,
@@ -143,10 +143,10 @@ Switches in Mercury are thus analogous to switches in languages like C.
 If the switch contains a case for each function symbol in the
 switched-on value's type, then the switch is said to be \emph{complete}.
 Otherwise the switch is \emph{incomplete}.
-Note that the representation of switches in Figure \ref{fig:abstractsyntax}
+Note that the representation of switches in Figure~\ref{fig:abstractsyntax}
 is not the same as their source code representation;
 Their source code syntax is the same as a disjunction.
-See page \pageref{page:purity} for a description of the purity promises.
+See page~\pageref{page:purity} for a description of the purity promises.
 
 \label{superhomogeneous}
 Note that because a unification goal contains at most one function symbol
@@ -224,8 +224,8 @@ append([X | Xs], Ys, [X | Zs]) :-
 \end{figure}
 
 \noindent
-\code{append/3}'s type signature and definition are shown in figure
-\ref{fig:append_type_and_defn}.
+\code{append/3}'s type signature and definition are shown in
+Figure~\ref{fig:append_type_and_defn}.
 Mercury also has a strong mode system.
 At any given point in the program a variable has an \emph{instantiation
 state},
@@ -435,7 +435,7 @@ it runs a switch detection algorithm that looks for disjunctions
 in which each disjunct unifies the same input variable
 (a variable that is already bound when the disjunction is entered)
 with any number of different function symbols.
-Figure \ref{fig:switch_detect} shows an example.
+Figure~\ref{fig:switch_detect} shows an example.
 When the same variable is used with multiple levels of unification in a
 disjunction switch detection will rely on
 a form of common subexpression elimination
@@ -511,8 +511,8 @@ main(S0, S) :-
 \label{fig:hello}
 \end{figure}
 
-As an example, a version of ``Hello world'' is shown in figure
-\ref{fig:hello}.
+As an example, a version of ``Hello world'' is shown in
+Figure~\ref{fig:hello}.
 \code{S0} is the initial state of the world,
 \code{S1} is the state of the world after printing ``\code{Hello }'',
 and \code{S} is the state of the world
@@ -535,8 +535,8 @@ but this sugar does not affect
 the compiler's internal representation of the program.
 This syntactic sugar is shown below, along with the convention of naming
 the I/O state \code{!IO}.
-The compiler will transform the example below into the example in figure
-\ref{fig:hello}.
+The compiler will transform the example below into the example in
+Figure~\ref{fig:hello}.
 
 \begin{verbatim}
 :- pred main(io::di, io::uo) is det.

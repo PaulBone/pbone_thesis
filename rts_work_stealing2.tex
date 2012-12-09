@@ -8,7 +8,7 @@
 }
 
 In this section we attempt to improve on our work stealing
-implementation from section \ref{sec:rts_work_stealing}.
+implementation from Section~\ref{sec:rts_work_stealing}.
 While we made these improvements,
 we also found it useful to change how idle engines behave.
 Although these two changes are conceptually distinct,
@@ -52,7 +52,7 @@ at least $M-N$ contexts suspended (blocked and waiting to run).
 A context can become suspended in one of two ways:
 by blocking on a future's value in a call to \wait,
 or by blocking on an incomplete conjunct in a call to \joinandcontinue.
-We attempt to minimise the former case (see chapter \ref{chap:overlap})
+We attempt to minimise the former case (see Chapter~\ref{chap:overlap})
 and the latter case cannot occur
 if the context has a spark on its local spark deque (it would run the
 spark rather than block).
@@ -69,8 +69,8 @@ a spark may be placed on a deque after the engine has already attempted
 to steal from it.
 Upon exhausting all its attempts or all the deques,
 the engine will sleep before making another round of attempts
-(see \trystealspark in algorithm \ref{alg:try_steal_spark_initial} on
-page \pageref{alg:try_steal_spark_initial}).
+(see \trystealspark in Algorithm~\ref{alg:try_steal_spark_initial} on
+page~\pageref{alg:try_steal_spark_initial}).
 Each round of attempts (regardless of success or failure) has a
 complexity of $O(M)$.
 
@@ -86,8 +86,8 @@ This makes context creation and destruction much simpler.
 It also removes the need for the lock protecting the global array of spark
 deques.
 We can also remove the locking code in \trystealspark
-(whose original version was shown in algorithm
-\ref{alg:try_steal_spark_initial})
+(whose original version was shown in
+Algorithm~\ref{alg:try_steal_spark_initial})
 which was used to
 ensure that the array is not changed while a thief is trying to steal a
 spark.
@@ -148,14 +148,14 @@ void MR_prepare_engine_for_spark(MR_Spark *spark) {
 
 \plan{Show new \trystealspark}
 We have made some other changes to \trystealspark,
-whose new code is shown in algorithm \ref{alg:try_steal_spark_revised}.
+whose new code is shown in Algorithm~\ref{alg:try_steal_spark_revised}.
 Previously \trystealspark required its caller to check that stealing a spark
 would not exceed the context limit;
 this check has been moved into \trystealspark (lines 6--7).
 Another change is that \trystealspark
 will now call \prepareengineforspark (line 12)
 which will load a context into the engine if it does not already have one
-(algorithm \ref{alg:prepare_engine_for_spark}).
+(Algorithm~\ref{alg:prepare_engine_for_spark}).
 Finally \trystealspark will return the address of the spark's code;
 the caller will jump to this address.
 If \trystealspark could not find a spark it will return NULL,
@@ -202,7 +202,7 @@ both are now unnecessary.
             resume = MR_prepare_engine_for_context(ctxt);
             MR_GOTO(resume);
         }
-20     
+20
         // Try to run a spark from our local spark deque.
         if (MR_pop_spark(MR_ENGINE(MR_eng_spark_deque), &spark)) {
             eng_data->MR_es_state = MR_WORKING;
@@ -232,7 +232,7 @@ We have also made changes to the code that idle engines execute.
 An idle engine with a context that is free (it can be used for any spark) or
 without a context will call \idle to acquire new work.
 \idle has changed significantly;
-the new version is shown in algorithm \ref{alg:idle}.
+the new version is shown in Algorithm~\ref{alg:idle}.
 This algorithm uses a structure pointed to by \var{eng\_data} to receive
 notifications;
 we will discuss this structure and notifications this later in this section.
@@ -242,7 +242,7 @@ For now we will discuss how \idle looks for work in lieu of any notification.
 spark (lines 12--19).
 A context that has already been created usually represents work that is
 \emph{to the left of}
-any work that is still a spark (section \ref{sec:rts_work_stealing}).
+any work that is still a spark (Section~\ref{sec:rts_work_stealing}).
 Executing $G_1$ of a parallel conjunction $G_1~\&~G_2$ can signal futures
 that $G_2$ may otherwise block on.
 Executing $G_1$ may also create sparks leading to more parallelism.
@@ -277,8 +277,8 @@ MR_Code* MR_prepare_engine_for_context(MR_Context *ctxt) {
 \idle tries to run a context by attempting to take a context from the
 context run queue while holding the context run queue lock (lines 12--14).
 If it finds a context,
-it will execute \prepareengineforcontext (algorithm
-\ref{alg:prepare_engine_for_context}),
+it will execute \prepareengineforcontext
+(Algorithm~\ref{alg:prepare_engine_for_context}),
 which checks for and unloads the engine's current context,
 and then loads a new context.
 It also clears the context's resume field and returns the field's previous
@@ -298,7 +298,7 @@ nested_par(...) ;-
     &
         (
             q(X, ...)
-        & 
+        &
             r(..., Y)
         ),
         s(...)
@@ -319,7 +319,7 @@ this is handled by \prepareengineforspark above.
 We considered creating a context and executing the spark only if the
 context limit had not been reached,
 however this can create a problem, which we explain using an example.
-Consider figure \ref{fig:nested_dep_par},
+Consider Figure~\ref{fig:nested_dep_par},
 which shows two nested parallel conjunctions and
 two futures that create dependencies between the parallel
 computations.
@@ -452,11 +452,11 @@ contexts would time out every two milliseconds and attempt to steal work.
 The system did not support selecting which engine would be woken when a
 context became runnable.
 The decision between polling and notification can be hard to make,
-and it may depend on the application and its work load. 
+and it may depend on the application and its work load.
 We have chosen to support both methods in our new work stealing code;
 notification is used by default when a spark is created,
 but the user may elect to use polling.
-Notification is always used when a context becomes runnable. 
+Notification is always used when a context becomes runnable.
 
 \begin{figure}
 XXX: Use MR prefix.
@@ -480,7 +480,7 @@ union MR_engine_wake_action_data {
 
 \plan{Normal state transitions and the \enginesleepsync structure.}
 Notifications are implemented using the \enginesleepsync structure shown in
-figure \ref{fig:engine_sleep_sync}.
+Figure~\ref{fig:engine_sleep_sync}.
 A global array allows engines to access one another's \enginesleepsync
 structures.
 Each structure contains the following fields:
@@ -524,7 +524,7 @@ which is pointed to by \code{eng\_data}.
 \end{figure}
 
 \noindent
-The states are shown in figure \ref{fig:engine_states} as oval-shaped nodes
+The states are shown in Figure~\ref{fig:engine_states} as oval-shaped nodes
 in the graph except for \code{MR\_NOTIFIED},
 which is a single value that represents all the notification types,
 depicted as rectangular nodes in the graph.
@@ -550,7 +550,7 @@ such transitions are shown with red and green edges in the graph.
 Red edges denote transitions from the sleeping state:
 the sender acquires the \code{MR\_es\_lock} in the
 \enginesleepsync structure while updating the structures contents and
-signalling the sleep semaphore. 
+signalling the sleep semaphore.
 Green edges denote transitions from other states:
 the sender uses a compare and swap to write the \code{MR\_BUSY} value to the
 \code{MR\_es\_state} field,
@@ -561,9 +561,9 @@ Using compare and swap with the state field allows the recipient to also
 use compare and swap, and in some cases to simply write to the field,
 when changing states.
 This allows us to make the busy transitions more efficient.
-These are the transitions from 
+These are the transitions from
 \code{MR\_LOOKING\_FOR\_WORK} to
-\code{MR\_STEALING} and 
+\code{MR\_STEALING} and
 \code{MR\_WORKING}.
 Note that in the diagram all but one of the transitions from
 \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
@@ -580,7 +580,7 @@ runtime were shutting down\footnote{
     Mercury supports exceptions and it is conceivable that an exception may
     make the system abort.
     Supporting exceptions in the context of parallel Mercury is discussed in
-    as further work (section \ref{sec:further_work}).
+    as further work (Section~\ref{sec:further_work}).
 }.
 
 There are several different actions that a sender can specify when notifying
@@ -601,7 +601,7 @@ another engine.
     represents would get lost.
     Therefore we only ever send \code{MR\_ACTION\_CONTEXT} messages to engines in
     the \code{MR\_SLEEPING} state,
-    the only state that does not have an owner-initiated transition from 
+    the only state that does not have an owner-initiated transition from
     it.
 
     \item[\code{MR\_ACTION\_RUNQUEUE\_CHECK}:]
@@ -632,17 +632,17 @@ another engine.
 
 \noindent
 \plan{Behaviour of \idle WRT notifications.}
-The code for \idle in algorithm \ref{alg:idle} shows several of these
+The code for \idle in Algorithm~\ref{alg:idle} shows several of these
 transitions,
 including the transition to the \code{MR\_STEALING} state on lines 28--29.
 If this compare and swap fails,
-it indicates that the current engine should 
+it indicates that the current engine should
 wait for \code{MR\_es\_state} to become a value other than \code{MR\_BUSY} and then,
 depending on the action closure,
 either re-check the run queue or exit.
 We have not shown the code that interprets and acts on the action closure,
-however it is similar to the switch statement in \sleep (algorithm
-\ref{alg:sleep}).
+however it is similar to the switch statement in \sleep
+(Algorithm~\ref{alg:sleep}).
 
 When an engine creates a spark,
 it attempts to notify other engines of the new spark.
@@ -653,7 +653,7 @@ state.
 When this counter is zero, an engine creating a spark will not attempt to
 notify any other engine.
 Idle states are \code{MR\_STEALING} and \code{MR\_SLEEPING}
-and are shown in figure \ref{fig:engine_states} as shaded ovals.
+and are shown in Figure~\ref{fig:engine_states} as shaded ovals.
 Only engines in these states are sent the \code{MR\_ACTION\_WORKSTEAL} message.
 We considered including the \code{MR\_LOOKING\_FOR\_WORK} state as an idle
 state and allowing engines in this state to receive the
@@ -717,7 +717,7 @@ creation.
 
 An engine that executes \idle and cannot find any work will jump to the
 \sleep procedure,
-which is shown in algorithm \ref{alg:sleep}.
+which is shown in Algorithm~\ref{alg:sleep}.
 \sleep is another Mercury procedure written in C;
 it starts by attempting to put the engine into the sleeping state,
 checking for any notifications using a compare and swap as we saw in \idle.
@@ -741,7 +741,7 @@ as contexts always use notification rather than polling.
 
 When an engine receives a \code{MR\_ACTION\_WORKSTEAL} message it executes
 the code at lines 18--31.
-As mentioned in section \ref{sec:rts_work_stealing},
+As mentioned in Section~\ref{sec:rts_work_stealing},
 a data race when attempting to steal a spark will result in
 \steal returning an error.
 In \trystealspark this error is ignored and the algorithm moves to the next
@@ -759,14 +759,14 @@ If the engine fails to steal a spark from this deque,
 the engine will jump to \idle where it will check the run queue and then
 recheck all the spark deques.
 The other actions performed when receiving a message are simple to
-understand from figure \ref{fig:engine_states} and algorithm
-\ref{alg:sleep}.
+understand from Figure~\ref{fig:engine_states} and
+Algorithm~\ref{alg:sleep}.
 
 \begin{algorithm}[tbp]
 \begin{verbatim}
     void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
         MR_bool     finished, got_spark;
-        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
+        MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
         MR_Context  *orig_context = st->MR_st_orig_context;
  5      MR_Spark    spark;
 
@@ -810,7 +810,7 @@ understand from figure \ref{fig:engine_states} and algorithm
 \end{algorithm}
 
 We have also had to make two changes to \joinandcontinue,
-as shown in algorithm \ref{alg:join_and_continue_ws2}.
+as shown in Algorithm~\ref{alg:join_and_continue_ws2}.
 The first change is an optimisation on lines 13--14,
 when the parallel conjunction's original context is suspended
 and the engine's current context executes the last conjunct in the parallel
@@ -843,7 +843,7 @@ otherwise we execute the spark.
 \input{tab_work_stealing_revised2pt1}
 
 \plan{Benchmark}
-Table \ref{tab:work_stealing_revised_mandelbrot} shows a comparison of the previous
+Table~\ref{tab:work_stealing_revised_mandelbrot} shows a comparison of the previous
 work stealing implementation with this one using mandelbrot.
 There are two row groups with three rows each.
 The first group shows the results for right recursive mandelbrot while the
@@ -854,7 +854,7 @@ the second and third rows in each group show the results for the current
 system using notifications (second row) and polling (third row).
 Each result is presented with its standard deviation in parentheses.
 We compiled the right recursive mandelbrot program with the conjunct
-reordering transformation from section \ref{sec:rts_reorder} disabled,
+reordering transformation from Section~\ref{sec:rts_reorder} disabled,
 otherwise it would have had the same results as the left recursive version
 of the same program.
 It is still important to test right recursion such as in this example,
@@ -981,7 +981,7 @@ Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 using the naive algorithm:
 summing the previous two Fibonacci numbers where these are defined
 recursively.
-This calculation is shown as the function \fibs in figure \ref{fig:fibs}.
+This calculation is shown as the function \fibs in Figure~\ref{fig:fibs}.
     (The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers to the return value,
     while \code{N} refers to the function's input arguments.)
@@ -990,8 +990,8 @@ It creates many small tasks whose overheads dominate the program's execution
 time,
 allowing us easily measure the overheads of work stealing.
 Results for this version of \fibs
-are shown in the ``without GC'' (fifth) row group of table
-\ref{tab:work_stealing_revised_fibs}.
+are shown in the ``without GC'' (fifth) row group of 
+Table~\ref{tab:work_stealing_revised_fibs}.
 
 %making the program slower than its sequential version;
 %this can be seen in the table.
@@ -1001,17 +1001,17 @@ we have also shown results for fibs using \emph{granularity control} (GC) to
 create fewer but larger parallel tasks
 (parallelism with coarser grains).
 We can achieve this by introducing a new function \fibsgc,
-which is shown in figure \ref{fig:fibsgc}.
+which is shown in Figure~\ref{fig:fibsgc}.
 \fibsgc takes an additional argument named \Depth which is
 the number of recursion levels near the top of the call graph in
 which parallel execution should be used,
 below this depth sequential execution is used.
 The first four rows of
-table \ref{tab:work_stealing_revised_fibs} show results using \fibsgc,
+Table~\ref{tab:work_stealing_revised_fibs} show results using \fibsgc,
 with varying initial values for \Depth.
 %This is just one type of granularity control.
 %Granularity control is any method used to avoid
-%embarrassing parallelism by turning a computation with 
+%embarrassing parallelism by turning a computation with
 %many small parallel tasks into one with fewer larger parallel tasks.
 
 \input{tab_work_stealing_revised2pt2}
@@ -1030,7 +1030,7 @@ with right recursive code.
 We do not compare the context limit behaviour of divide and conquer with that
 of left recursion,
 as work stealing solved the context limit problems in left recursive code
-(section \ref{sec:rts_work_stealing}).
+(Section~\ref{sec:rts_work_stealing}).
 The coarse grained fibs results (smaller values for \Depth)
 show little difference between the different work stealing implementations.
 However,
@@ -1107,10 +1107,10 @@ thieves,
 and the original engine's work queue can become a bottleneck.
 To avoid this behaviour,
 a thief could steal more than one spark from a victim and put all but one of
-the stolen sparks 
+the stolen sparks
 onto its own deque, then it immediately executes the single spark which was
 not placed on the deque.
-With each stealing operation, 
+With each stealing operation,
 sparks becomes distributed among more of the engines,
 which improves the probability that a given victim has work on its own deque.
 Work stealing will become less frequent as engines try to execute their own
@@ -1120,17 +1120,17 @@ this should improve the efficiency of the program as a whole.
 We are currently using the deque data structure and algorithms described by
 \citet{Chase_2005_wsdeque} (C.L.\ Deque).
 It is a circular resizable array whose operations
-(section \ref{sec:rts_work_stealing})
+(Section~\ref{sec:rts_work_stealing})
 allow us to steal one item at a time.
 It is based on \citet{arora:1998:work-stealing}.
 We have considered using the deque described by
 \citet{hendler:2002:stealhalf} (H.S.\ Deque),
-this is also a deque using a circular array 
+this is also a deque using a circular array
 based on \citet{arora:1998:work-stealing}.
 It allows a thief to steal up to half the items on a victim's deque
 in a single operation.
 However, the H.S.\ Deque does not automatically resize,
-a feature that we identified as important (section \ref{sec:rts_work_stealing}).
+a feature that we identified as important (Section~\ref{sec:rts_work_stealing}).
 We should investigate using a deque similar to the H.S.\ Deque with resizing
 support in the future.
 At that time we will also have to carefully consider spark execution order.

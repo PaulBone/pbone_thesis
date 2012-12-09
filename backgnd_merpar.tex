@@ -92,8 +92,8 @@ enabling work stealing as described by
 and \citet*{kranz:1989:mul-t_article}.
 We did not implement work stealing until during my Ph.D.\ candidature
 and therefore it is not discussed here, in the background chapter.
-We discuss work stealing in sections \ref{sec:rts_work_stealing}
-and \ref{sec:rts_work_stealing2}.
+We discuss work stealing in Sections~\ref{sec:rts_work_stealing}
+and~\ref{sec:rts_work_stealing2}.
 Sparks are very light weight,
 being three words in size.
 Therefore, compared with contexts,
@@ -199,20 +199,20 @@ and another pointer to a set of thread local mutables.\footnote{
     Mercury has a module-local mutable feature that supports
     per thread mutables.
     This is not relevant to the dissertation.}
-Figure \ref{fig:spark_and_syncterm} shows these two data structures,
+Figure~\ref{fig:spark_and_syncterm} shows these two data structures,
 the \code{MR\_} prefixes on symbol names are used for Mercury runtime
 symbols,
 preventing their names from clashing with any symbols in C code linked with
 a Mercury program.
-Chapter \ref{chap:rts} describes how sparks are managed.
+Chapter~\ref{chap:rts} describes how sparks are managed.
 
 When the engine finishes the execution of the first conjunct ($G_1$)
 it executes the barrier code \joinandcontinue at the end of the conjunct.
 The barrier prevents the original context from executing the code that
 follows the parallel conjunction
 until each of the conjuncts has been executed.
-The barrier also makes several scheduling decisions, see chapter
-\ref{chap:rts}.
+The barrier also makes several scheduling decisions, see
+Chapter~\ref{chap:rts}.
 
 \begin{figure}
 \begin{center}
@@ -250,7 +250,7 @@ consists only of the final conjunct, $G_n$,
 and the context just executes it.
 Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
-Figure \ref{fig:par_conj} shows an example of the code generated to execute
+Figure~\ref{fig:par_conj} shows an example of the code generated to execute
 a parallel conjunction.
 In this example the first conjunct creates a spark that represents the
 execution of the second and third conjuncts,

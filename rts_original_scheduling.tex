@@ -1,10 +1,9 @@
 
 \section{Original Spark Scheduling Algorithm}
-\label{sec:original_scheduling}
+\label{sec:rts_original_scheduling}
 
 \plan{Introduction}
-In sections \ref{sec:backgnd_merpar} and
-\ref{sec:backgnd_deppar},
+In Sections~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar},
 we introduced parallelism in Mercury and described the runtime system in
 generic terms.
 In this section we will explain how sparks were originally managed
@@ -48,7 +47,7 @@ as contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts,
 so they are also included in this limit.
 We explain this limit on the number of context in more detail
-in section \ref{sec:original_scheduling_performance},
+in Section~\ref{sec:rts_original_scheduling_performance},
 after covering the background information in the current section.
 Note that sparks placed on the global queue are executed in a
 first-in-first-out manner;
@@ -123,11 +122,11 @@ last-in-first-out manner.
 \end{algorithm}
 
 \plan{barrier code, this is used to explain the right recursion problem.}
-In section \ref{sec:backgnd_merpar} we described how parallel
+In Section~\ref{sec:backgnd_merpar} we described how parallel
 conjunctions are compiled
-(figure \ref{fig:par_conj} shows an example).
-Consider the compiled parallel conjunction in figure
-\ref{fig:par_conj_impl_only}.
+(Figure~\ref{fig:par_conj} shows an example).
+Consider the compiled parallel conjunction in
+Figure~\ref{fig:par_conj_impl_only}.
 The context that executes the parallel conjunction,
 let us call it $C_{Orig}$,
 begins by
@@ -136,7 +135,7 @@ spawning off $G_2$,
 and executing $G_1$ (lines 1--4).
 Then it executes the barrier \joinandcontinue,
 shown in
-algorithm \ref{alg:join_and_continue_peterw}.
+Algorithm~\ref{alg:join_and_continue_peterw}.
 The algorithms throughout this chapter use a macro named \code{MR\_ENGINE}
 to access the fields of the current engine structure.
 Depending on how full the global run queue is,
@@ -152,7 +151,7 @@ there are three important scenarios:
     Sparks placed on a context's local spark stack cannot be executed by any
     other context.
     Therefore when $C_{Orig}$ reaches the \joinandcontinue barrier
-    (line 5 in the example, figure \ref{fig:par_conj_impl_only}),
+    (line 5 in the example, Figure~\ref{fig:par_conj_impl_only}),
     the context $G_2$ will be outstanding and
     \var{st->MR\_st\_num\_outstanding} will be non-zero.
     $C_{Orig}$ will execute the else branch on lines 17--42 of
@@ -192,7 +191,7 @@ there are three important scenarios:
     in parallel.
     Also, as distinct from scenario three below,
     $C_{Other}$ reaches the barrier on line 8 of the example 
-    (figure \ref{fig:par_conj_impl_only})
+    (Figure~\ref{fig:par_conj_impl_only})
     \emph{before}
     $C_{Orig}$ reaches the barrier on line 5.
     Even if they both seem to reach the barrier at the same time,
@@ -240,7 +239,7 @@ there are three important scenarios:
     However,
     in this scenario
     $C_{Orig}$ reaches the barrier on line 5 in the example
-    (figure \ref{fig:par_conj_impl_only})
+    (Figure~\ref{fig:par_conj_impl_only})
     \emph{before}
     $C_{Other}$ reaches its barrier on line 8.
 
@@ -341,7 +340,7 @@ void MR_idle() {
 When an engine cannot get any local work it must search for global work.
 Newly created engines, except for the first, also search for global work.
 They do this by calling \idle,
-whose code is shown in algorithm \ref{alg:MR_idle_initial}.
+whose code is shown in Algorithm~\ref{alg:MR_idle_initial}.
 Only one of the idle engines can execute \idle at a time.
 \var{MR\_runqueue\_lock} protects the context run queue and the
 global context queue from concurrent access.
