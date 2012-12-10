@@ -150,10 +150,17 @@
 % 	- the caption
 % note that the filename will be used to form the label "fig:filename"
 \newcommand{\picfigure}[2]{
+    \picfigurelabel{#1}{fig:#1}{#2}
+}
+% 3 arguments
+%   - the figure filename
+%   - the figure label
+%   - the caption
+\newcommand{\picfigurelabel}[3]{
 	\begin{figure}[t]
 	\picfigurenofloat{#1}
-    \caption{#2}
-	\label{fig:#1}
+    \caption{#3}
+	\label{#2}
 	\end{figure}
 }
 

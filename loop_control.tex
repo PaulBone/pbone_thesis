@@ -14,12 +14,57 @@ finding conjunctions with expensive conjuncts
 that can run in parallel with minimal synchronisation delays.
 This worked very well in some programs but not as well as we had hoped for
 others,
-such as the raytracer.
+including as the raytracer.
 This is because the way Mercury must execute depedent conjunctions,
-and the way programmers typically write logic programs are at ends.
+and the way programmers typically write logic programs are at odds.
 We introduced this as
 ``the right recursion problem''
 in Section~\ref{sec:rts_original_scheduling_performance}.
+
+In this chapter we present a novel program transformation that elimiates
+this problem in all situations.
+The transformation has several benifits:
+First, it reduces peak memory consumption
+by putting a limit on how many stacks
+a conjunction will need to be alive at the same time.
+Second, 
+it reduces the number of synchronisation barriers needed
+from one per loop iteration to one per loop.
+Third, it allows recursive calls inside parallel conjunctions to take
+advantage of tail recursion optimisation.
+Finally, it obsoletes the conjunct reordering transformation.
+Our benchmark results show that our new transformation
+greatly increases the speedups we can get from parallel Mercury programs;
+in one case, it changes no speedup into almost perfect speedup on four cores.
+
+We have written about the problem elsewhere in the dissertation,
+however we have found that this problem is sometimes difficult to
+understand.
+Therefore
+the introduction section
+(Section~\ref{sec:lc_intro})
+briefly describes the problem,
+providing only the details necessary to understand and evaluate the rest of
+this chapter.
+\paul{It also motivates the reader correctly, but I do not say this.}
+For more details about the problem see
+Sections~\ref{sec:rts_original_scheduling}
+and~\ref{sec:rts_original_scheduling_performance},
+see also \citet{bone:2012:loop_control}, the paper on which this chapter is
+based.
+The rest of the chapter is organised as follows.
+The structure of the remainder of this chapter is as follows.
+Section~\ref{sec:lc_transformation} describes
+the program transformation we have developed
+to control memory consumption by loops.
+Section~\ref{sec:lc_perf} evaluates
+how our system works in practice on some benchmarks,
+and
+Section~\ref{sec:lc_conc} concludes with some related work.
+
+\section{Introduction}
+\label{sec:lc_intro}
+
 The implementation of a parallel conjunction
 has to execute the first conjunct and spawn off the later conjuncts.
 For dependent conjunctions, it cannot be done the other way around,
@@ -30,9 +75,10 @@ This poses a problem when the last conjunct contains a recursive call,
 which happens often,
 since in logic programming languages,
 tail recursive code has long been the preferred way to write a loop.
-In independent code we can workarround the issue by reordering the conjuncts
-in a conjunction (see Section~\ref{sec:rts_reorder},
-but in a dependent conjunction this is not possible.
+In independent code,
+we can workarround the issue by reordering the conjuncts
+in a conjunction (see Section~\ref{sec:rts_reorder}),
+but in dependent code this is not possible.
 The problem is that
 \begin{itemize}
 \item
@@ -67,69 +113,38 @@ and do not free them until the recursive call returns.
 This means that the each iteration effectively requires memory
 to store an entire stack, not just a stack frame.
 
+\picfigurelabel{linear_context_usage}{fig:linear_context_usage2}{Linear context usage in right recursion}
+
+Figure~\ref{fig:linear_context_usage2} shows a visualisation of this stack
+usage.
+At the top left,
+four contexts are created and they execute four iterations of a loop;
+this execution is indicated by boxes.
+Once each of these iterations finishes,
+its context stays in memory but is suspended,
+indicated by the long vertical lines.
+Another four iterations of the loop create another four contexts, and so on.
+Later, when all iterations of the loop have been executed,
+each of the blocked contexts resumes execution and immediately exits,
+indicated by the horizontal line at the bottom of each of the vertical
+lines.
+
 If we allow the number of contexts, and therefore their stacks, to grow
-unbounded, then the program very quickly runs out of memory, often bringing
-the operating system to its knees.
+unbounded, then the program will very quickly run out of memory,
+often bringing the operating system to its knees.
 Which is why we introduced the context limit work around 
-(described in Chapter~\ref{chap:rts})
+(described in Section~\ref{sec:rts_original_scheduling_performance})
 which can prevent a program from crashing,
 but which limits the amount of parallel execution.
-
-In this chapter we present a novel program transformation that elimiates
-this problem in all situations.
-The transformation has several benifits:
-First, it reduces peak memory consumption
-by putting a limit on how many stacks
-a conjunction will need to be alive at the same time.
-Second, 
-it reduces the number of synchronisation barriers needed
-from one per loop iteration to one per loop.
-Third, it allows recursive calls inside parallel conjunctions to take
-advantage of tail recursion optimisation.
-Finally, it obsoletes the conjunct reordering transformation.
-Our benchmark results show that our new transformation
-greatly increases the speedups we can get from parallel Mercury programs;
-in one case, it changes no speedup into almost perfect speedup on four cores.
-
-
-\section{Overview}
-\label{sec:lc_overview}
 
 % The natural way to execute a parallel version of such a loop
 % is to keep spawning off the task of performing each iteration
 % until all the available cores are busy
 % 
-% When a tail recursive parallel computation begins, it
-% first creates a \emph{spark} (a record of a task to be executed) for
-% the recursive call,
-% and then executes the rest of the computation directly.
-% When a CPU is available to carry out a computation,
-% it allocates stack space and begins to execute the recursive call in
-% parallel, which likewise creates a spark and begins to execute the
-% other goals in the recursive case, and so on.
-% When each of these computations finish,
-% however, it must wait for the result from its recursive call
-% before it can produce its own result.
-% Thus all these computations, each with its own stack,
-% must be preserved until the base case is reached,
-% whereupon these stacks can start to be reclaimed.
-% A tail recursive sequential computation, which runs in constant stack space,
-% has thus been transformed into a parallel computation
-% that allocates a complete stack for each recursive call.
-% This would quickly exhaust memory,
-% so we have to place a limit on the number of stacks allocated.
-% % Unfortunately,
-% When this limit is reached,
-% Mercury effectively reverts to sequential execution
-% for the remainder of the tail recursive computation.
 
-
-In this paper, we propose a transformation
-for tail recursive and nearly tail recursive parallel procedures
-to limit the number of stacks allocated for their execution.
-The transformation explicitly limits
+Our transformation explicitly limits
 the number of stacks allocated to recursive calls
-to a small multiple of the number of available cores in the system.
+to a small multiple of the number of available processors in the system.
 This transformation can also be asked
 to remove the dependency of a parallel loop iteration
 on the parent stack frame from which it was spawned,
@@ -139,157 +154,138 @@ This allows parallel tail recursive computations
 to run in constant stack space.
 The transformation is applied
 after the automatic parallelisation transformation,
-so it benefits both manually and  automatically parallelised Mercury code.
+so it benefits both manually and automatically parallelised Mercury code.
 
-Our benchmark results are very encouraging.
-Limiting the number of stacks
-not only permits deep tail recursions to take advantage of multiple cores,
-but it also significantly improves performance.
-For most of our benchmarks, we get near-optimal speedups.
-% The second
-% transformation does not produce a speed improvement; in some cases it
-% causes a slight slow-down.  However, this small price is well worth
-% paying to allow parallel tail recursive computations to run in
-% constant stack space.
+% Our benchmark results are very encouraging.
+% Limiting the number of stacks
+% not only permits deep tail recursions to take advantage of multiple cores,
+% but it also significantly improves performance.
+% For most of our benchmarks, we get near-optimal speedups.
+% % The second
+% % transformation does not produce a speed improvement; in some cases it
+% % causes a slight slow-down.  However, this small price is well worth
+% % paying to allow parallel tail recursive computations to run in
+% % constant stack space.
 
-The structure of the remainder of this paper is as follows.
-Section~\ref{sec:background} gives
-the background needed for the rest of the paper.
-Section~\ref{sec:problem} describes in more detail
-the problem that previously caused parallel Mercury programs with loops
-to use much more memory than one would expect.
-Section~\ref{sec:transformation} describes
-the program transformation we have developed
-to control memory consumption by loops.
-% which the later sections fill in.
-% Section~\ref{sec:overlap} describes our algorithm for calculating
-% the execution overlap between two or more dependent conjuncts.
-% A conjunction with more than two conjuncts can be parallelised
-% in several different ways;
-% section~\ref{sec:howto} shows how we choose the best way.
-% \tr{Section~\ref{sec:pragmatic} discusses some pragmatic issues.}
-Section~\ref{sec:perf} evaluates
-how our system works in practice on some benchmarks,
-and
-Section~\ref{sec:conc} concludes with some related work.
+% % This is the old explaination, which is now covered in Ch3.
+% \section{The main problem}
+% \label{sec:problem}
+% 
+% As Mercury is a declarative programming language,
+% Mercury programs make heavy use of recursion.
+% Like the compilers for most declarative languages,
+% the Mercury compiler optimises tail recursive procedures
+% into code that can run in constant stack space.
+% Since this generally makes tail recursive computations
+% more efficient than code using other forms of recursion,
+% typical Mercury code makes heavy use of tail recursion in particular.
+% 
+% Unfortunately, tail recursive computations are not naturally handled well
+% by Mercury's implementation of parallel conjunctions.
+% Consider the \mapfoldl{} predicate in Figure~\ref{fig:mapfoldl}.
+% This code applies the map predicate \code{M} to each element of an input list,
+% and then uses the fold predicate \code{F}
+% to accumulate (in a left-to-right order) all the results produced by \code{M}.
+% The best parallelisation of \mapfoldl{} executes
+% \code{M} and \code{F} in parallel with the recursive call.
+% \tr{
+% \code{M(H, MappedH), F(MappedH, Acc0, Acc1)} in parallel with
+% Although all executions of \code{M} are independent
+% and need not wait for anything to begin their computation,
+% each call to \code{F} must wait until
+% the call to \code{M} generates the value of \code{MappedH}.
+% Thus there would be no point in executing \code{M} and \code{F} in parallel:
+% \code{F} would immediately suspend until \code{M} had produced its result.
+% However, the recursive call to \mapfoldl \emph{can} begin in parallel,
+% allowing the next call to \code{M} to run in parallel with this iteration.
+% }
+% The programmer (or an automatic tool) can make this happen
+% in the original sequential version of \mapfoldl
+% by replacing the comma before the recursive call
+% with the parallel conjunction operator \verb'&'.
 
-\section{The main problem}
-\label{sec:problem}
-
-As Mercury is a declarative programming language,
-Mercury programs make heavy use of recursion.
-Like the compilers for most declarative languages,
-the Mercury compiler optimises tail recursive procedures
-into code that can run in constant stack space.
-Since this generally makes tail recursive computations
-more efficient than code using other forms of recursion,
-typical Mercury code makes heavy use of tail recursion in particular.
-
-Unfortunately, tail recursive computations are not naturally handled well
-by Mercury's implementation of parallel conjunctions.
-Consider the \mapfoldl{} predicate in Figure~\ref{fig:mapfoldl}.
-This code applies the map predicate \code{M} to each element of an input list,
-and then uses the fold predicate \code{F}
-to accumulate (in a left-to-right order) all the results produced by \code{M}.
-The best parallelisation of \mapfoldl{} executes
-\code{M} and \code{F} in parallel with the recursive call.
-\tr{
-\code{M(H, MappedH), F(MappedH, Acc0, Acc1)} in parallel with
-Although all executions of \code{M} are independent
-and need not wait for anything to begin their computation,
-each call to \code{F} must wait until
-the call to \code{M} generates the value of \code{MappedH}.
-Thus there would be no point in executing \code{M} and \code{F} in parallel:
-\code{F} would immediately suspend until \code{M} had produced its result.
-However, the recursive call to \mapfoldl \emph{can} begin in parallel,
-allowing the next call to \code{M} to run in parallel with this iteration.
-}
-The programmer (or an automatic tool) can make this happen
-in the original sequential version of \mapfoldl
-by replacing the comma before the recursive call
-with the parallel conjunction operator \verb'&'.
-
-The problem is that the execution of a call to \mapfoldlpar{}
-has bad memory behaviour.
-When a context begins execution of a call to \mapfoldl{},
-it begins by creating a spark for the second conjunct
-(which contains the recursive call),
-and executes the first conjunct (which starts with the call to \code{M}).
-If another Mercury engine is available at that time,
-it will pick up and execute the spark for the recursive call,
-itself creating a spark for another recursive call
-and executing the \emph{next} call to \code{M}.
-This will continue until all Mercury engines are in use
-and the newest spark for a recursive call % to \mapfoldlpar{}
-must wait for an % available
-engine.
-When an engine completes execution of \code{M} and \code{F},
-it posts the value of \code{Acc1} into \code{FutureAcc1}.
-Any computations waiting for \code{Acc1} will then be woken up;
-these will be the calls that wait for \code{Acc0} in the next iteration.
-In this case, the woken code will resume execution
-immediately before the call to \code{F}
-in the recursive invocation of \mapfoldlpar{}.
-
-One might hope that after a spark for the recursive call has been created,
-and once \code{M} and \code{F} had completed execution
-and \code{Acc1} has been signalled,
-the context used to execute the first conjunct could be released.
-Unfortunately, it cannot because this context is the one that was running
-when execution entered the parallel conjunction,
-and therefore this is the context whose stacks
-contain the state of the computation outside the parallel conjunction.
-If we allowed this context to be reused,
-then all this state would be lost.
-
-This means that until the base case of the recursion is reached,
-\emph{every} recursive call must have its own complete execution context.
-Since each context contains two stacks,
-it can occupy a rather large amount of memory,
-so it is not practical to simultaneously preserve an execution context
-for each and every recursive call to a tail-recursive predicate.
-Originally, programs which bumped into this problem
-often ran themselves and the operating system out of memory rather quickly,
-because the default size of every det stack was several megabytes.
-To reduce the scope of the problem,
-we made stacks dynamically expandable,
-which allowed us to reduce their initial size,
-but programs with the problem can still run out of memory,
-it just takes more iterations to do so.
-\label{sec:context_limit}
-Our runtime system prevents such crashes
-by imposing a global limit on the number of contexts
-that can be running or suspended at any point:
-if a context is needed to execute a spark
-and allocating the context would breach this limit,
-then the spark will not be executed.
-Eventually, the context that created the spark will execute it on its
-own stack, but this limits the remainder of the recursive computation
-to use only that context, so parallelism is curtailed at that point.
-
-A much better solution is to swap the order of the conjuncts
-in the parallel conjunction
-so that the conjunct containing the recursive call is executed first.
-This means that we will spawn off the nonrecursive conjuncts,
-whose contexts \emph{can} be freed when their execution is complete.
-However, since the Mercury mode system requires that
-the producer of a variable precede all its consumers,
-this is possible only if the conjuncts are independent.
-The approach we have taken in this paper
-is to spawn off the nonrecursive conjuncts,
-and continue execution of the recursive call
-without swapping the order of the conjuncts.
-We also directly limit the number of contexts that are used in a loop
-to a small multiple of the number of available CPUs.
-Finally, we can arrange for
-the inputs and outputs of the nonrecursive conjuncts
-to be stored outside the stack frame of a tail recursive procedure,
-which allows such procedures to run in fixed stack space
-even when executed in parallel.
-In the next section, we explain all of these improvements.
-% If they are dependent, this solution is not applicable,
-% so for such conjunctions we need a completely different solution.
-% We present one in the next section.
+% % Example.
+% The problem is that the execution of a call to \mapfoldlpar{}
+% has bad memory behaviour.
+% When a context begins execution of a call to \mapfoldl{},
+% it begins by creating a spark for the second conjunct
+% (which contains the recursive call),
+% and executes the first conjunct (which starts with the call to \code{M}).
+% If another Mercury engine is available at that time,
+% it will pick up and execute the spark for the recursive call,
+% itself creating a spark for another recursive call
+% and executing the \emph{next} call to \code{M}.
+% This will continue until all Mercury engines are in use
+% and the newest spark for a recursive call % to \mapfoldlpar{}
+% must wait for an % available
+% engine.
+% When an engine completes execution of \code{M} and \code{F},
+% it posts the value of \code{Acc1} into \code{FutureAcc1}.
+% Any computations waiting for \code{Acc1} will then be woken up;
+% these will be the calls that wait for \code{Acc0} in the next iteration.
+% In this case, the woken code will resume execution
+% immediately before the call to \code{F}
+% in the recursive invocation of \mapfoldlpar{}.
+% 
+% One might hope that after a spark for the recursive call has been created,
+% and once \code{M} and \code{F} had completed execution
+% and \code{Acc1} has been signalled,
+% the context used to execute the first conjunct could be released.
+% Unfortunately, it cannot because this context is the one that was running
+% when execution entered the parallel conjunction,
+% and therefore this is the context whose stacks
+% contain the state of the computation outside the parallel conjunction.
+% If we allowed this context to be reused,
+% then all this state would be lost.
+% 
+% This means that until the base case of the recursion is reached,
+% \emph{every} recursive call must have its own complete execution context.
+% Since each context contains two stacks,
+% it can occupy a rather large amount of memory,
+% so it is not practical to simultaneously preserve an execution context
+% for each and every recursive call to a tail-recursive predicate.
+% Originally, programs which bumped into this problem
+% often ran themselves and the operating system out of memory rather quickly,
+% because the default size of every det stack was several megabytes.
+% To reduce the scope of the problem,
+% we made stacks dynamically expandable,
+% which allowed us to reduce their initial size,
+% but programs with the problem can still run out of memory,
+% it just takes more iterations to do so.
+% \label{sec:context_limit}
+% Our runtime system prevents such crashes
+% by imposing a global limit on the number of contexts
+% that can be running or suspended at any point:
+% if a context is needed to execute a spark
+% and allocating the context would breach this limit,
+% then the spark will not be executed.
+% Eventually, the context that created the spark will execute it on its
+% own stack, but this limits the remainder of the recursive computation
+% to use only that context, so parallelism is curtailed at that point.
+% 
+% A much better solution is to swap the order of the conjuncts
+% in the parallel conjunction
+% so that the conjunct containing the recursive call is executed first.
+% This means that we will spawn off the nonrecursive conjuncts,
+% whose contexts \emph{can} be freed when their execution is complete.
+% However, since the Mercury mode system requires that
+% the producer of a variable precede all its consumers,
+% this is possible only if the conjuncts are independent.
+% The approach we have taken in this paper
+% is to spawn off the nonrecursive conjuncts,
+% and continue execution of the recursive call
+% without swapping the order of the conjuncts.
+% We also directly limit the number of contexts that are used in a loop
+% to a small multiple of the number of available CPUs.
+% Finally, we can arrange for
+% the inputs and outputs of the nonrecursive conjuncts
+% to be stored outside the stack frame of a tail recursive procedure,
+% which allows such procedures to run in fixed stack space
+% even when executed in parallel.
+% In the next section, we explain all of these improvements.
+% % If they are dependent, this solution is not applicable,
+% % so for such conjunctions we need a completely different solution.
+% % We present one in the next section.
 
 % \peter{Not sure how to cover this:}
 % \paul{This is not as important as other issues,
@@ -306,7 +302,7 @@ In the next section, we explain all of these improvements.
 % overhead than parallel conjunctions.
 
 \section{The loop control transformation}
-\label{sec:transformation}
+\label{sec:lc_transformation}
 
 \begin{figure}[tb]
 \begin{verbatim}
@@ -337,7 +333,7 @@ map_foldl_par_lc(LC, M, F, L, FutureAcc0, Acc) :-
     ).
 \end{verbatim}
 %\vspace{2mm}
-\caption{\mapfoldl{} after the loop control transformation}
+\caption{\mapfoldlpar after the loop control transformation}
 \label{fig:map_foldl_transformed}
 %\vspace{-1\baselineskip}
 \end{figure}
@@ -347,19 +343,21 @@ on the number of contexts that a loop may use,
 regardless of how many iterations of the loop may be executed,
 without limiting the amount of parallelism available.
 The loops we are concerned about
-are predicates that we call right recursive:
-predicates in which the recursive execution path
+are procedures that we call right recursive:
+procedures in which the recursive execution path
 ends in a parallel conjunction,
-whose last conjunct contains the recursive call.\footnote{
+whose last conjunct contains the recursive call.
 A right recursive procedure may be tail recursive, or it may not be:
 the recursive call could be followed by other code
-either within the last conjunct, or after the whole parallel conjunction.}
-Most parallel conjunctions that occur in recursive predicates
-occur in such predicates,
-because programmers have long tended to write loops in this way
-in order to benefit from tail recursion.
-Such predicates also tend to
-suffer the most from the problem we described in the previous section.
+either within the last conjunct, or after the whole parallel conjunction.
+Programmers have long tended to write loops whose last call is a recursive
+call in order to benefit from tail recursion.
+\paul{My recursion type analysis does not yet seperate right and left
+recursion,
+so I cannot actually say how common it is.}
+Therefore,
+right recursion is very common;
+most parallel conjunctions in recursive procedures are right recursive.
 
 To guarantee the imposition of an upper bound
 on the number of contexts created during one of these loops,
@@ -378,15 +376,15 @@ The rest of the program knows only about the first predicate;
 the second predicate is only ever called from the first predicate
 and from itself.
 Figure~\ref{fig:map_foldl_transformed} shows what these predicates look like.
-In Section~\ref{sec:structs},
+In Section~\ref{sec:lc_structs},
 we describe the loop control structure and the operations on it;
-in Section~\ref{sec:trans},
+in Section~\ref{sec:lc_trans},
 we give the algorithm that does the transformation;
-while in Section~\ref{sec:tailrec},
+while in Section~\ref{sec:lc_tailrec},
 we discuss its interaction with tail recursion optimisation.
 
 \subsection{Loop control structures}
-\label{sec:structs}
+\label{sec:lc_structs}
 
 The loop control structure contains the following fields:
 \begin{itemize}
@@ -551,7 +549,7 @@ This is the first step in preserving tail recursion optimisation.
 % \paul{I think the descriptions are pretty clear}
 
 \subsection{The loop control transformation}
-\label{sec:trans}
+\label{sec:lc_trans}
 
 Our algorithm for transforming procedures to use loop control
 is shown in
@@ -752,7 +750,8 @@ We make the spawned-off computation free that slot when it finishes.
 To implement the spawning off process,
 we extended the internal representation of Mercury goals
 with a new kind of scope.
-The only one shown in the abstract syntax in Section~\ref{sec:background}
+The only one shown in the abstract syntax in
+Section~\ref{sec:backgnd_mercury}
 was the existential quantification scope,
 but the Mercury implementation had several other kinds of scopes already,
 though none of those are relevant for this paper.
@@ -1119,7 +1118,7 @@ is guaranteed to be executed exactly once.
 % No: cannot happen: argument is above
 
 \subsection{Loop control and tail recursion}
-\label{sec:tailrec}
+\label{sec:lc_tailrec}
 
 When a parallel conjunction spawns off a conjunct
 as a work package that other cores can pick up,
@@ -1226,7 +1225,7 @@ does \emph{not} go through the stack frame.
 \caption[Peak number of contexts used,
 and peak memory usage for stacks]{Peak number of contexts used,
 and peak memory usage for stacks, measured in megabytes}
-\label{tab:mem}
+\label{tab:lc_mem}
 \end{center}
 %\vspace{-1\baselineskip}
 \end{table*}
@@ -1236,7 +1235,7 @@ and peak memory usage for stacks, measured in megabytes}
 \input{times_table}
 %\vspace{3mm}
 \caption{Execution times measured in seconds, and speedups}
-\label{tab:times}
+\label{tab:lc_times}
 \end{center}
 %\vspace{-1\baselineskip}
 \end{table*}
@@ -1284,7 +1283,7 @@ would not be difficult.
 % \label{sec:runtime}
 
 \section{Performance evaluation}
-\label{sec:perf}
+\label{sec:lc_perf}
 
 We ran all our benchmarks on
 % taura
@@ -1354,7 +1353,7 @@ while it is in the last parallel conjunct in the dependent versions.
 % Only the dependent parallel tests use loop control.
 % \paul{We might want to show independent code using loop control}
 
-Tables~\ref{tab:mem} and~\ref{tab:times}
+Tables~\ref{tab:lc_mem} and~\ref{tab:lc_times}
 presents our memory consumption and timing results respectively.
 In both tables,
 the columns list the benchmark programs,
@@ -1365,11 +1364,11 @@ each table shows only a subset of the rows,
 those with the most interesting results.
 These subsets are different for the two tables.
 
-In Table~\ref{tab:mem}, each box has two numbers.
+In Table~\ref{tab:lc_mem}, each box has two numbers.
 The first reports the maximum number of contexts alive at the same time,
 while the second reports the maximum number of megabytes
 ever used to store the stacks of these contexts.
-In Table~\ref{tab:times}, each box has three numbers.
+In Table~\ref{tab:lc_times}, each box has three numbers.
 The first is the execution time of that benchmark in seconds
 when it is compiled and executed in the manner prescribed by the row.
 The second and third numbers (the ones in parentheses)
@@ -1476,11 +1475,11 @@ the parallel, non-loop control ones,
 and loop control ones without tail recursion.
 Since the other benchmarks are not naturally tail recursive,
 they will not be tail recursive however they are compiled.
-There are no such rows in Table~\ref{tab:mem}
+There are no such rows in Table~\ref{tab:lc_mem}
 since the results in each lcN,tr row
 would be identical to the corresponding lcN row.
 
-There are several things to note in Table~\ref{tab:mem}.
+There are several things to note in Table~\ref{tab:lc_mem}.
 The most important is that when the programs are run on more than one core,
 switching on loop control yields a dramatic reduction
 in the maximum number of contexts used at any one time,
@@ -1517,7 +1516,7 @@ so the compiler performs the loop control transformation only on it.
 The extra context is
 the conjunct spawned off by the parallel conjunction in the outer procedure.
 
-There are several things to note in Table~\ref{tab:times} as well.
+There are several things to note in Table~\ref{tab:lc_times} as well.
 The first is that in the absence of loop control,
 increasing the per-engine context limit from 128 to 512
 yields significant speedups for three out of four the dependent benchmarks.
@@ -1570,7 +1569,7 @@ For matrix multiplication, the loop control dependent version is faster,
 while for spectral-norm, the independent version is faster,
 but in both cases the difference is small.
 This shows that on these benchmarks, loop control completely avoids
-the problems described in Section~\ref{sec:problem}.
+the problems described in Section~\ref{sec:lc_problem}.
 
 Fourth, preserving tail recursion has a mixed effect on speed:
 of the six relevant cases (mandelbrot and raytracer on 2, 3 and 4 cores),
@@ -1587,7 +1586,7 @@ for allowing parallel code to recurse arbitrarily deeply
 while using constant stack space.
 
 \section{Conclusion}
-\label{sec:conc}
+\label{sec:lc_conc}
 
 Ever since the first parallel implementations
 of declarative languages in the 1980s,
