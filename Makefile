@@ -31,7 +31,7 @@ TEX_PROSE = \
 		tscope.tex \
 		conc.tex
 
-TEXFILES = 	$(TEX_PROSE) macros.tex
+TEXFILES = 	$(TEX_PROSE) macros.tex alg_macros.tex
 TABLES_TEX = $(GEN_TABLES_TEX) \
 		tab_gc.tex \
 		tab_gc_amdahl.tex \

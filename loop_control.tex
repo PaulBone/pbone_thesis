@@ -27,7 +27,7 @@ The transformation has several benifits:
 First, it reduces peak memory consumption
 by putting a limit on how many stacks
 a conjunction will need to be alive at the same time.
-Second, 
+Second,
 it reduces the number of synchronisation barriers needed
 from one per loop iteration to one per loop.
 Third, it allows recursive calls inside parallel conjunctions to take
@@ -99,7 +99,7 @@ the first iteration of a loop from the second, third etc,
 so we must preserve the original stack on \emph{every} iteration.
 
 We call this the ``right recursion problem'' because its effects are at
-their worst when the recursive call is on the right hand side of a 
+their worst when the recursive call is on the right hand side of a
 parallel conjunction operator.
 Unfortunatly,
 this is a natural way to (manually or automatically) parallelise programs
@@ -108,7 +108,7 @@ Thus, parallelisation often
 transforms tail recursive sequential computations,
 which run in constant stack space,
 into parallel computations
-that allocate a complete stack for each recursive call 
+that allocate a complete stack for each recursive call
 and do not free them until the recursive call returns.
 This means that the each iteration effectively requires memory
 to store an entire stack, not just a stack frame.
@@ -132,7 +132,7 @@ lines.
 If we allow the number of contexts, and therefore their stacks, to grow
 unbounded, then the program will very quickly run out of memory,
 often bringing the operating system to its knees.
-Which is why we introduced the context limit work around 
+Which is why we introduced the context limit work around
 (described in Section~\ref{sec:rts_original_scheduling_performance})
 which can prevent a program from crashing,
 but which limits the amount of parallel execution.
@@ -140,7 +140,7 @@ but which limits the amount of parallel execution.
 % The natural way to execute a parallel version of such a loop
 % is to keep spawning off the task of performing each iteration
 % until all the available cores are busy
-% 
+%
 
 Our transformation explicitly limits
 the number of stacks allocated to recursive calls
@@ -170,7 +170,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 % % This is the old explaination, which is now covered in Ch3.
 % \section{The main problem}
 % \label{sec:problem}
-% 
+%
 % As Mercury is a declarative programming language,
 % Mercury programs make heavy use of recursion.
 % Like the compilers for most declarative languages,
@@ -179,7 +179,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 % Since this generally makes tail recursive computations
 % more efficient than code using other forms of recursion,
 % typical Mercury code makes heavy use of tail recursion in particular.
-% 
+%
 % Unfortunately, tail recursive computations are not naturally handled well
 % by Mercury's implementation of parallel conjunctions.
 % Consider the \mapfoldl{} predicate in Figure~\ref{fig:mapfoldl}.
@@ -226,7 +226,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 % In this case, the woken code will resume execution
 % immediately before the call to \code{F}
 % in the recursive invocation of \mapfoldlpar{}.
-% 
+%
 % One might hope that after a spark for the recursive call has been created,
 % and once \code{M} and \code{F} had completed execution
 % and \code{Acc1} has been signalled,
@@ -237,7 +237,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 % contain the state of the computation outside the parallel conjunction.
 % If we allowed this context to be reused,
 % then all this state would be lost.
-% 
+%
 % This means that until the base case of the recursion is reached,
 % \emph{every} recursive call must have its own complete execution context.
 % Since each context contains two stacks,
@@ -262,7 +262,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 % Eventually, the context that created the spark will execute it on its
 % own stack, but this limits the remainder of the recursive computation
 % to use only that context, so parallelism is curtailed at that point.
-% 
+%
 % A much better solution is to swap the order of the conjuncts
 % in the parallel conjunction
 % so that the conjunct containing the recursive call is executed first.
@@ -386,10 +386,49 @@ we discuss its interaction with tail recursion optimisation.
 \subsection{Loop control structures}
 \label{sec:lc_structs}
 
-The loop control structure contains the following fields:
-\begin{itemize}
-\item
-An array of slots, each of which contains a boolean and a pointer.
+\begin{figure}
+\begin{verbatim}
+typedef struct MR_LoopControl_Struct        MR_LoopControl;
+typedef struct MR_LoopControlSlot_Struct    MR_LoopControlSlot;
+
+struct MR_LoopControlSlot_Struct
+{
+    MR_Context                *MR_lcs_context;
+    MR_bool                   MR_lcs_is_free;
+};
+
+struct MR_LoopControl_Struct
+{
+    volatile MR_Integer       MR_lc_outstanding_workers;
+
+    MR_Context* volatile      MR_lc_master_context;
+    volatile MR_Lock          MR_lc_master_context_lock;
+
+    volatile MR_bool          MR_lc_finished;
+
+    unsigned                  MR_lc_free_slot_hint;
+
+    /*
+    ** MR_lc_slots MUST be the last field, since in practice, we treat
+    ** the array as having as many slots as we need, adding the size of
+    ** all the elements except the first to sizeof(MR_LoopControl) when
+    ** we allocate memory for the structure.
+    */
+    unsigned                  MR_lc_num_slots;
+    MR_LoopControlSlot        MR_lc_slots[1];
+};
+\end{verbatim}
+\caption{Loop control structure}
+\label{fig:loop_control_structure}
+\end{figure}
+
+The loop control structure
+(shown in Figure~\ref{fig:loop_control_structure})
+contains the following fields:
+\begin{description}
+
+\item[\code{MR\_lc\_slots}]
+is an array of slots, each of which contains a boolean and a pointer.
 The boolean says whether the slot is free,
 and if it is not,
 the pointer points to the context that is currently occupying it.
@@ -398,47 +437,61 @@ the slot is marked as free again,
 but the pointer remains in the slot
 to make it easier (and faster) for the next computation that uses that slot
 to find a free context to reuse.
+Therefore we cannot encode the boolean in the pointer being \NULL or non-\NULL.
+Although this is the most sagnificant field in the structure it is last so that
+the array can be stored with the data structure, and an extra memory
+dereference can be avoided.
+This is the last field in the structure even though it is the most sagnificant field.
 % (The description of the \code{lc\_wait\_free\_slot(LC)} operation below
 % will show why cannot we encode the boolean
 % in the pointer being null/non-null.)
-\item
-The number of slots in the array.
-\item
-A count of the number of slots that are currently in use.
-% \item
-% An integer that hints which slot may be free.
-% We use it to speed up the search for a free slot in the average case.
-% \zoltan{we need an argument for WHY this is a speedup,
-% but that argument does not belong here,
-% since it depends on the behavior of operations we have not described yet.
-% Alternatively, we can completely avoid mentioning the hint field.}
-% \paul{I think it is easier to not mention it, it is optimal in some cases and
-% neither optimal nor pessimal in other cases.}
-\item
-A boolean flag that says whether the loop has finished or not.
-It is initialised to false, and is set to true
-as the first step of the \code{lc\_finish} operation.
-\item
-A possibly null pointer to the \emph{master} context,
+
+\item[\code{MR\_lc\_num\_slots}]
+stores the number of slots in the array.
+
+\item[\code{MR\_lc\_outstanding\_workers}]
+is the count of the number of slots that are currently in use.
+
+\item[\code{MR\_lc\_master\_context}]
+is a possibly null pointer to the \emph{master} context,
 the context that created this structure,
 and the context that will spawn of all of the iterations.
 This slot will point to the master context whenever it is sleeping,
-and will be null at all other times.
-\item
-A mutex that allows different engines
-to synchronise their accesses to the structure.
+and will be \NULL at all other times.
+
+\item[\code{MR\_lc\_master\_context\_lock}]
+a mutex that is used to protect access to MR\_lc\_master\_context.
+The other fields are protected using atomic instructions;
+we will describe them when we show the code for the loop control procedures.
 % \zoltan{Should we explain how accesses to some fields
 % can dispense with the mutex?}
 % \paul{We decided not to explain this}
-\end{itemize}
+
+\item[\code{MR\_lc\_finished}]
+A boolean flag that says whether the loop has finished or not.
+It is initialised to false, and is set to true
+as the first step of the \lcfinish operation.
+
+\item[\code{MR\_lc\_free\_slot\_hint}]
+contains an index into the array of free slots.
+It indicates which slot may be free;
+we use it to speed up the search for a free slot in the average case.
+\zoltan{we need an argument for WHY this is a speedup,
+but that argument does not belong here,
+since it depends on the behavior of operations we have not described yet.
+Alternatively, we can completely avoid mentioning the hint field.}
+\paul{I think it is easier to not mention it, it is optimal in some cases and
+neither optimal nor pessimal in other cases.}
+
+\end{description}
 
 \noindent
 The finished flag
 is not strictly needed for the correctness of the following operations,
-but it does help the runtime system make better scheduling decisions.
+but it can help the loop control code cleanup at the end of a loop more quickly.
 In our description of these operations,
-\LC{} is a reference to the whole of a loop control structure,
-while \LCS{} is an index into the array of slots stored within \LC{}.
+\LC is a reference to the whole of a loop control structure,
+while \LCS is an index into the array of slots stored within \LC.
 
 \begin{description}
 \item[\code{LC = lc\_create\_loop\_control()}]
@@ -448,11 +501,69 @@ The number of slots in the array in the structure
 will be a small multiple of the number of cores in the system.
 The multiplier is configurable
 by setting an environment variable when the program is run.
+
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{MR\_lc\_wait\_free\_slot}{$lc$, $retry\_label$}
+    %unsigned    hint, offset, i;
+
+    \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
+        \State MR\_aquire\_lock($lc.MR\_lc\_master\_context\_lock$)
+        \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
+            %MR\_Context *ctxt;
+            \State /* Only commit to sleeping while holding the lock. */
+            %so retest the outstanding worker count.
+            \State $ctxt \gets$ MR\_ENGINE($MR\_eng\_this\_context$)
+            \State MR\_save\_context($ctxt$)
+            \State $ctxt.MR\_ctxt\_resume \gets retry\_label$
+            %\State $ctxt.MR\_ctxt\_resume\_owner\_engine \gets$ MR\_ENGINE($MR_eng_id$)
+            \State $lc.MR\_lc\_master\_context \gets ctxt$
+            %MR_CPU_SFENCE;
+            \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
+            \State MR\_ENGINE($MR\_eng\_this\_context$) $\gets$ \NULL
+            \State MR\_idle()
+        \EndIf 
+        \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
+    \EndIf
+
+    \State $hint \gets lc.MR\_lc\_free\_slot\_hint$
+
+    \For{$offset \gets 0$ to $lc.MR\_lc\_num\_slots$}
+        \State $i \gets (hint + offset) \bmod lc.MR\_lc\_num\_slots$
+        \If{$lc.MR\_lc\_slots[i].MR\_lcs\_is\_free$}
+            \State $lc.MR\_lc\_slots[i].MR\_lcs\_is\_free \gets false$
+            \State $lc.MR\_lc\_free\_slot\_hint \gets
+                (i + 1) \bmod lc.MR\_lc\_num\_slots$
+            \State MR\_atomic\_inc\_int($lc.MR\_lc\_outstanding\_workers$)
+            \State $lcs\_idx \gets i$
+            \State \Break
+        \EndIf 
+    \EndFor 
+
+    \If{$lc.MR\_lc\_slots[i].MR\_lcs\_context = $\NULL}
+        %\Comment Allocate a new context.
+        \State $lc.MR\_lc\_slots[i].MR\_lcs\_context \gets$
+            MR\_create\_context()
+        %\State
+        %    $lc.MR\_lc\_slots[i].MR\_lcs\_context.MR\_ctxt\_thread\_local\_mutables
+        %    \gets MR\_THREAD\_LOCAL\_MUTABLES$
+    \EndIf
+
+    \State reset\_context\_stack\_ptr($lc.MR\_lc\_slots[i].MR\_lcs\_context$)
+
+    \State \Return $lcs\_idx$
+\EndProcedure
+\end{algorithmic}
+\caption{\lcwaitfreeslot}
+\label{alg:lc_free_slot}
+\end{algorithm}
+
 \item[\code{LCslot = lc\_wait\_free\_slot(LC)}]
 % This operation tests \linebreak[3] whether \LC{} has any free slots.
 % This hyphenation improves this paragraph, I have swapped one evil for
 % another.
-This operation tests whe\-ther \LC{} has any free slots.
+% This operation tests whe\-ther \LC{} has any free slots.
+This operation tests whether \LC{} has any free slots.
 If it does not, the operation suspends until a slot becomes available.
 When some slots are available, either immediately or after a wait,
 the operation chooses one of the free slots, marks it in use,
@@ -464,23 +575,19 @@ from a global list of free contexts,
 by computations that have terminated earlier),
 or by allocating a new context
 (which typically happens only soon after startup).
-% \zoltan{Possibly:
-% This operation tests whether \LC{} has any free slots.
-% When some slots are available, either immediately or after a wait,
-% the operation chooses one of the free slots, marks it in use,
-% fills in its context pointer and returns its index.
-% }
+\paul{Keep the algorithm? Add algorithms for other operations?}
 
 % I have edited this so that it does not refer to sparks, since they are not used
 % with loop control.
 \item[\code{lc\_spawn\_off(LC, LCslot, CodeLabel)}]
 This operation sets up the context in the loop control slot,
-and then puts it on a queue of ready contexts,
+and then puts it on the global runqueue,
 where any engine looking for work can find it.
-% Setup consists of initializing the context's parent stack pointer ---
-% which is a pointer to point to its master's stack frame,
-% and the context's resume instruction pointer ---
-% the value of \code{CodeLabel}.
+Setup of the context consists of initializing the context's parent stack
+pointer to point to its master's stack frame,
+and the context's resume instruction pointer to the value of \code{CodeLabel}.
+\paul{XXX: Check that we address how TCO works elsewhere, as the above
+precludes TCO.}
 % \paul{Possibly:
 % Setup consists of creating a stack frame on the context's stack and copying
 % the relevant values from the master's stack frame onto the worker-context's.
@@ -488,27 +595,11 @@ where any engine looking for work can find it.
 % the value of \code{CodeLabel}.
 % }
 
-% \zoltan{Possibly:
-% The relevant part of the stack frame should be part of the spark.
-% We cannot have lc\_wait\_free\_slot allocate a context,
-% since that would reintroduce a smaller version
-% of the same excessive memory consumption problem
-% we are trying to avoid.
-% (Smaller because the number of stacks we need at any one time
-% is limited not by the number of iterations,
-% but by the number of slots in the \LC{}.
-% This will typically still be worse than the number of cores.
-% }
-%
-% In practice this is not a problem, since the number of slots is bounded
-% and the number of iterations is not.
-% It is the unbounded-ness of the number of iterations that really kills
-% performance of pre-loop-control right recursive code.
-
 \item[\code{lc\_join\_and\_terminate(LC, LCslot)}]
 This operation marks the slot named by \LCS{} in \LC{} as available again.
 It then terminates the context executing it,
 allowing the engine that was running it to look for other work.
+
 \item[\code{lc\_finish(LC)}]
 This operation is executed by the master context when we know
 that this loop will not spawn off any more work packages.
@@ -526,9 +617,9 @@ but if the variable is consumed only by code after the parallel conjunction,
 then it is made available by writing its value directly in its stack
 slot.
 Therefore such variables can exist
-only if the original predicate had code after the parallel conjunction.
-% for example, map over lists
-% must perform a construction after the recursive call.
+only if the original predicate had code after the parallel conjunction;
+for example, map over lists
+must perform a construction after the recursive call.
 This barrier is the only barrier in the loop and it is executed just once;
 in comparison, the normal parallel conjunction execution mechanism
 executes one barrier in each iteration of the loop.
@@ -538,7 +629,7 @@ executes one barrier in each iteration of the loop.
 See Figure~\ref{fig:map_foldl_transformed}
 for an example of how we use these operations.
 Note in particular that in this transformed version of \mapfoldl{},
-the spawned-off computation contains the calls to \texttt{M} and \texttt{F},
+the spawned-off computation contains the calls to \var{M} and \var{F},
 with the main thread of execution making the recursive call.
 This is the first step in preserving tail recursion optimisation.
 
@@ -553,59 +644,58 @@ This is the first step in preserving tail recursion optimisation.
 
 Our algorithm for transforming procedures to use loop control
 is shown in
-Figures~\ref{fig:transform_alg},~\ref{fig:reccases_alg} and~\ref{fig:basecases_alg}.
+Algorithms~\ref{alg:transform_alg},~\ref{alg:reccases_alg} and~\ref{alg:basecases_alg}.
 
-\begin{figure}[tb]
-\begin{center}
-{\small
-\begin{verbatim}
-loop_control_transform(OrigProc) returns NewProcs:
-  let OrigGoal be OrigProc's body
-  let RecParConjs be the set of parallel conjunctions
-    in OrigGoal that contain recursive calls
-  if
-    (1) OrigProc is directly but not mutually recursive
-    (2) OrigGoal has at most one recursive call
-      on all possible execution paths,
-    (3) OrigGoal has determinism 'det',
-    (4) no recursive call is within a disjunction,
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{loop\_control\_transform}{$OrigProc$}
+  \State $OrigGoal \gets$ body($OrigProc$)
+  \State $RecParConjs \gets$ set of parallel conjunctions
+    in $OrigGoal$ that contain recursive calls
+  \BigIf
+    \algcondition{1}{$OrigProc$ is directly but not mutually recursive, and}
+    \algcondition{2}{$OrigGoal$ has at most one recursive call
+      on all possible execution paths, and}
+    \algcondition{3}{$OrigGoal$ has determinism \ddet, and}
+    \algcondition{4}{no recursive call is within a disjunction,
       a scope that changes the determinism of a goal,
-      a negation, or the condition of a if-then-else,
-    (5) no member of RecParConjs is within
-      another parallel conjunction,
-    (6) every recursive call is inside
-      the last conjunct of a member of RecParConjs,
-    (7) every execution path through
+      a negation, or the condition of a if-then-else, and}
+    \algcondition{5}{no member of $RecParConjs$ is within
+      another parallel conjunction, and}
+    \algcondition{6}{every recursive call is inside
+      the last conjunct of a member of $RecParConjs$, and}
+    \algcondition{7}{every execution path through
       one of these last conjuncts
-      makes exactly one recursive call
-  then:
-    let LC be a new variable
-    let LCGoal be the call
-      <lc_create_loop_control(LC)>
-    let LoopProcName be a unique new predicate name
-    let OrigArgs be OrigProc's argument list
-    LoopArgs := [LC] ++ OrigArgs
-    let CallLoopGoal be the call
-      <LoopProcName(LoopArgs)>
-    let OrigProc' be OrigProc with its body replaced
-      by the conjunction <LCGoal, CallLoopGoal>
-
-    LoopGoal := create_loop_goal(OrigGoal,
-      OrigProcName, LoopProcName, RecParConjs, LC),
-    let LoopProc be a new procedure
-      with name LoopProcName, arguments LoopArgs
-      and body LoopGoal
-    NewProcs := [OrigProc', LoopProc]
-  else:
-    NewProcs := [OrigProc]
-\end{verbatim}
-}
-\end{center}
+      makes exactly one recursive call}
+  \BigIfThen
+    \State $LC \gets$ create\_new\_variable()
+    \State $LCGoal \gets$ the call
+      `lc\_create\_loop\_control($LC$)'
+    \State $LoopProcName \gets$ a new unique predicate name
+    \State $OrigArgs \gets$ arg\_list($OrigProc$)
+    \State $LoopArgs \gets$ [$LC$] ++ $OrigArgs$
+    \State $CallLoopGoal \gets$ the call
+      `LoopProcName($LoopArgs$)'
+    \State $NewProcBody \gets$ the conjunction `$LCGoal,~CallLoopGoal$'
+    \State $NewProc \gets OrigProc$ with its body replaced
+      by $NewProcBody$
+    \State $LoopGoal \gets$ \parbox{0.7\textwidth}{create\_loop\_goal($OrigGoal$,
+      $OrigProcName$, $LoopProcName$,\\
+        $~~~~RecParConjs$, $LC$)}
+    \State $LoopProc \gets$ new\_procedure(name: $LoopProcName$, args:
+    $LoopArgs$, body: $LoopGoal$)
+    \State $NewProcs \gets$ [$OrigProc',~LoopProc$]
+  \BigIfElse
+    \State $NewProcs \gets$ [$OrigProc$]
+  \EndBigIfElse
+  \State \Return $NewProcs$
+\EndProcedure
+\end{algorithmic}
 %\vspace{2mm}
 \caption{The top level of the transformation algorithm}
-\label{fig:transform_alg}
+\label{alg:transform_alg}
 %\vspace{-1\baselineskip}
-\end{figure}
+\end{algorithm}
 
 \begin{figure}[tb]
 \begin{center}

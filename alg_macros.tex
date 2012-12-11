@@ -1,0 +1,39 @@
+
+% Extra control-flow code for algorithmic
+\algloopdefx[Goto]{Goto}[1]{\textbf{goto} #1}
+\algloopdefx[Continue]{Continue}[0]{\textbf{continue}}
+\newcommand{\Break}{\textbf{break}}
+
+% Don't print closing statments in algorithmic examples.
+\algnotext{EndIf}
+\algnotext{EndProcedure}
+\algnotext{EndLoop}
+\algnotext{EndFor}
+
+% Switches.
+% New definitions
+\algnewcommand\algorithmicswitch{\textbf{switch}}
+\algnewcommand\algorithmiccase{\textbf{case}}
+\algnewcommand\algorithmicassert{\texttt{assert}}
+%\algnewcommand\Assert[1]{\State \algorithmicassert(#1)}%
+% New "environments"
+\algdef{SE}[SWITCH]{Switch}{EndSwitch}[1]{\algorithmicswitch\ #1\
+    \algorithmicdo}{\algorithmicend\ \algorithmicswitch}%
+\algdef{SE}[CASE]{Case}{EndCase}[1]{\algorithmiccase\ #1}{\algorithmicend\
+\algorithmiccase}%
+\algtext*{EndSwitch}%
+\algtext*{EndCase}%
+
+\algblockdefx[BIGIFCOND]{BigIf}{}%
+    [0]{\textbf{if}}
+\algcblockdefx[BIGIFTHEN]{BIGIFCOND}{BigIfThen}{EndBigIfThen}%
+    [0]{\textbf{then}}%
+    [0]{}
+\algcblockdefx[BIGIFELSE]{BIGIFTHEN}{BigIfElse}{EndBigIfElse}%
+    [0]{\textbf{else}}%
+    [0]{}
+\algtext*{EndBigIfThen}
+\algtext*{EndBigIfElse}
+\newcommand{\algcondition}[2]{\State \parbox{0.8\textwidth}{#2} \Comment (#1)
+    \vspace{1ex}}
+
