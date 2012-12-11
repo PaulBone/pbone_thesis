@@ -15,15 +15,15 @@ that can run in parallel with minimal synchronisation delays.
 This worked very well in some programs but not as well as we had hoped for
 others,
 including as the raytracer.
-This is because the way Mercury must execute depedent conjunctions,
+This is because the way Mercury must execute dependent conjunctions,
 and the way programmers typically write logic programs are at odds.
 We introduced this as
 ``the right recursion problem''
 in Section~\ref{sec:rts_original_scheduling_performance}.
 
-In this chapter we present a novel program transformation that elimiates
+In this chapter we present a novel program transformation that eliminates
 this problem in all situations.
-The transformation has several benifits:
+The transformation has several benefits:
 First, it reduces peak memory consumption
 by putting a limit on how many stacks
 a conjunction will need to be alive at the same time.
@@ -266,19 +266,19 @@ so it benefits both manually and automatically parallelised Mercury code.
 % A much better solution is to swap the order of the conjuncts
 % in the parallel conjunction
 % so that the conjunct containing the recursive call is executed first.
-% This means that we will spawn off the nonrecursive conjuncts,
+% This means that we will spawn off the non-recursive conjuncts,
 % whose contexts \emph{can} be freed when their execution is complete.
 % However, since the Mercury mode system requires that
 % the producer of a variable precede all its consumers,
 % this is possible only if the conjuncts are independent.
 % The approach we have taken in this paper
-% is to spawn off the nonrecursive conjuncts,
+% is to spawn off the non-recursive conjuncts,
 % and continue execution of the recursive call
 % without swapping the order of the conjuncts.
 % We also directly limit the number of contexts that are used in a loop
 % to a small multiple of the number of available CPUs.
 % Finally, we can arrange for
-% the inputs and outputs of the nonrecursive conjuncts
+% the inputs and outputs of the non-recursive conjuncts
 % to be stored outside the stack frame of a tail recursive procedure,
 % which allows such procedures to run in fixed stack space
 % even when executed in parallel.
@@ -352,7 +352,7 @@ the recursive call could be followed by other code
 either within the last conjunct, or after the whole parallel conjunction.
 Programmers have long tended to write loops whose last call is a recursive
 call in order to benefit from tail recursion.
-\paul{My recursion type analysis does not yet seperate right and left
+\paul{My recursion type analysis does not yet separate right and left
 recursion,
 so I cannot actually say how common it is.}
 Therefore,
@@ -438,10 +438,10 @@ but the pointer remains in the slot
 to make it easier (and faster) for the next computation that uses that slot
 to find a free context to reuse.
 Therefore we cannot encode the boolean in the pointer being \NULL or non-\NULL.
-Although this is the most sagnificant field in the structure it is last so that
+Although this is the most significant field in the structure it is last so that
 the array can be stored with the data structure, and an extra memory
 dereference can be avoided.
-This is the last field in the structure even though it is the most sagnificant field.
+This is the last field in the structure even though it is the most significant field.
 % (The description of the \code{lc\_wait\_free\_slot(LC)} operation below
 % will show why cannot we encode the boolean
 % in the pointer being null/non-null.)
@@ -478,10 +478,10 @@ It indicates which slot may be free;
 we use it to speed up the search for a free slot in the average case.
 \zoltan{we need an argument for WHY this is a speedup,
 but that argument does not belong here,
-since it depends on the behavior of operations we have not described yet.
+since it depends on the behaviour of operations we have not described yet.
 Alternatively, we can completely avoid mentioning the hint field.}
 \paul{I think it is easier to not mention it, it is optimal in some cases and
-neither optimal nor pessimal in other cases.}
+neither optimal nor Pessimal in other cases.}
 
 \end{description}
 
@@ -583,11 +583,9 @@ or by allocating a new context
 This operation sets up the context in the loop control slot,
 and then puts it on the global runqueue,
 where any engine looking for work can find it.
-Setup of the context consists of initializing the context's parent stack
+Setup of the context consists of initialising the context's parent stack
 pointer to point to its master's stack frame,
 and the context's resume instruction pointer to the value of \code{CodeLabel}.
-\paul{XXX: Check that we address how TCO works elsewhere, as the above
-precludes TCO.}
 % \paul{Possibly:
 % Setup consists of creating a stack frame on the context's stack and copying
 % the relevant values from the master's stack frame onto the worker-context's.
@@ -636,8 +634,9 @@ This is the first step in preserving tail recursion optimisation.
 % Some of these operations also perform some scheduling;
 % we will discuss that later.
 
-% \zoltan{Should we give the pseudo-code of the operations?}
-% \paul{I think the descriptions are pretty clear}
+\zoltan{Should we give the pseudo-code of the operations?}
+\paul{XXX: I have given the pseudo-code for one of these, if I have time I'll add
+pseudo-code for the others.}
 
 \subsection{The loop control transformation}
 \label{sec:lc_trans}
@@ -653,7 +652,8 @@ Algorithms~\ref{alg:transform_alg},~\ref{alg:reccases_alg} and~\ref{alg:basecase
   \State $RecParConjs \gets$ set of parallel conjunctions
     in $OrigGoal$ that contain recursive calls
   \BigIf
-    \algcondition{1}{$OrigProc$ is directly but not mutually recursive, and}
+    \algcondition{1}{$OrigProc$ is directly but not mutually recursive
+        (HO calls are assumed not to create recursion), and}
     \algcondition{2}{$OrigGoal$ has at most one recursive call
       on all possible execution paths, and}
     \algcondition{3}{$OrigGoal$ has determinism \ddet, and}
@@ -684,7 +684,7 @@ Algorithms~\ref{alg:transform_alg},~\ref{alg:reccases_alg} and~\ref{alg:basecase
         $~~~~RecParConjs$, $LC$)}
     \State $LoopProc \gets$ new\_procedure(name: $LoopProcName$, args:
     $LoopArgs$, body: $LoopGoal$)
-    \State $NewProcs \gets$ [$OrigProc',~LoopProc$]
+    \State $NewProcs \gets$ [$NewProc,~LoopProc$]
   \BigIfElse
     \State $NewProcs \gets$ [$OrigProc$]
   \EndBigIfElse
@@ -697,70 +697,73 @@ Algorithms~\ref{alg:transform_alg},~\ref{alg:reccases_alg} and~\ref{alg:basecase
 %\vspace{-1\baselineskip}
 \end{algorithm}
 
-\begin{figure}[tb]
-\begin{center}
-{\small
-\begin{verbatim}
-create_loop_goal(OrigGoal, OrigProcName, LoopProcName,
-  RecParConjs, LC) returns LoopGoal:
-LoopGoal := OrigGoal
-for RecParConj in RecParConjs do:
-  let RecParConj be <Conjunct_1 & ... & Conjunct_n>
-  for i := 1 to n-1:
-    let LCSlot_i be a new variable
-    let WaitGoal_i be the call
-      <lc_wait_free_slot(LC, LCSlot_i)>
-    let JoinGoal_i be the call
-      <lc_join_and_terminate(LC, LCSlot_i)>
-    let SpawnGoal_i be a goal
-      that spawns off the sequential conjunction
-      <Conjunct_i, JoinGoal_i> as a work package
-    let Conjunct_i' be the sequential conjunction
-      <WaitGoal_i, SpawnGoal_i>
-  Conjunct_n' := Conjunct_n
-  for each recursive call RecCall in Conjunct_n':
-    RecCall has the form
-      <OrigProcName(Args)>
-    let RecCall' be the call
-      <LoopProcName([LC] ++ Args)>
-    replace RecCall with RecCall' in Conjunct_n'
-  let Replacement be the flattened form
-    of the sequential conjunction
-    <Conjunct_1', ..., Conjunct_n'>
-  replace RecParConj in LoopGoal with Replacement
-LoopGoal := put_barriers_in_base_cases(LoopGoal,
-  RecParConjs, LoopProcName, LC)
-\end{verbatim}
-}
-\end{center}
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{create\_loop\_goal}{$OrigGoal$, $OrigProcName$, $LoopProcName$,
+    $RecParConjs$, $LC$}
+  \State $LoopGoal \gets OrigGoal$
+  \For{$RecParConj \in RecParConjs$}
+    \State $RecParConj$ has the form $`Conjunct_1~\&~\ldots~\&~Conjunct_n$'
+        for sone $n$
+    \For{$i \gets 1 to n-1$}
+      \Comment This does not visit the last goal in $RecParConj$
+      \State $LCSlot_i \gets$ create\_new\_variable()
+      \State $WaitGoal_i \gets$ the call
+        `lc\_wait\_free\_slot($LC$, $LCSlot_i$)'
+      \State $JoinGoal_i \gets$ the call
+        `lc\_join\_and\_terminate($LC$, $LCSlot_i$)'
+      \State $SpawnGoal_i \gets$ \parbox{0.7\textwidth}{a goal
+        that spawns off the sequential conjunction \\
+        `$Conjunct_i, JoinGoal_i$' as a work package}
+      \State $Conjunct_i \gets$ the sequential conjunction
+        `$WaitGoal_i, SpawnGoal_i$'
+    \EndFor
+    \State $Conjunct_n' \gets Conjunct_n$
+    \For{each recursive call $RecCall$ in $Conjunct_n'$}:
+      \State $RecCall$ has the form `$OrigProcName(Args)$'
+      \State $RecCall' \gets$ the call
+        `$LoopProcName$([$LC$] ++ $Args$)'
+      \State \textbf{replace} $RecCall$ with $RecCall'$ in $Conjunct_n'$
+    \EndFor
+    \State $Replacement \gets$ \parbox{0.7\textwidth}{the flattened form
+      of the sequential conjunction \\
+      `$Conjunct_1',~\ldots,~Conjunct_n'$'}
+    \State \textbf{replace} $RecParConj$ in $LoopGoal$ with $Replacement$
+  \EndFor
+  \State $LoopGoal \gets$ put\_barriers\_in\_base\_cases($LoopGoal$,
+    $RecParConjs$, $LoopProcName$, $LC$)
+  \State \Return $LoopGoal$
+\EndProcedure
+\end{algorithmic}
 %\vspace{2mm}
 \caption{Algorithm for transforming the recursive cases}
-\label{fig:reccases_alg}
+\label{alg:reccases_alg}
 %\vspace{-1\baselineskip}
-\end{figure}
+\end{algorithm}
 
-Figure~\ref{fig:transform_alg} shows the top level of the algorithm,
+Algorithm~\ref{alg:transform_alg} shows the top level of the algorithm,
 which is mainly concerned with testing
 whether the loop control transformation is applicable to a given procedure,
 and creating the interface procedure if it is.
 
 We impose conditions (1) and (2) because we need to ensure
-that every loop we start for \code{OrigProc} is finished exactly once,
-by the call to \code{lc\_finish} we insert into its base cases.
-If \code{OrigProc} is mutually recursive with some other procedure,
+that every loop we start for \var{OrigProc} is finished exactly once,
+by the call to \lcfinish we insert into its base cases.
+If \var{OrigProc} is mutually recursive with some other procedure,
 then the recursion may terminate in a base case of the other procedure,
 which our algorithm does not transform.
-And if \code{OrigProc} has some execution path on which it calls itself twice,
+Additionally, if \var{OrigProc} has some execution path on which it calls
+itself twice,
 then the second call may continue executing loop iterations
 after a base case reached through the first call has finished the loop.
 
 We impose conditions (3) and (4) because the Mercury implementation
 does not support the parallel execution of code that is not deterministic.
 We do not want a recursive call to be called twice because
-some code between the entry point of \code{OrigProc} and the recursive call
+some code between the entry point of \var{OrigProc} and the recursive call
 succeeded twice,
 and we do not want a recursive call to be backtracked into because
-some code between the recursive call and the exit point of \code{OrigProc}
+some code between the recursive call and the exit point of \var{OrigProc}
 has failed.
 These conditions prevent both of those situations.
 
@@ -788,30 +791,30 @@ to handle recursive calls made outside of parallel conjunctions.)
 
 We impose condition (7) to ensure that
 our algorithm for transforming base cases
-(in Figure~\ref{fig:basecases_alg})
+(Algorithm~\ref{alg:basecases_alg})
 does not have to process goals that have already been processed
 by our algorithm for transforming recursive calls
-(in Figure~\ref{fig:reccases_alg}).
+(Algorithm~\ref{alg:reccases_alg}).
 
 If the transformation is applicable, we apply it.
 The transformed original procedure has only one purpose:
 to initialise the loop control structure.
-Once that is done, it passes a reference to that structure to \code{LoopProc},
+Once that is done, it passes a reference to that structure to \var{LoopProc},
 the procedure that does the actual work.
 
-The argument list of \code{Loop\-Proc}
-is the argument list of \code{Orig\-Proc}
+The argument list of \var{LoopProc}
+is the argument list of \var{OrigProc}
 plus the \LC variable that holds the reference to the loop control structure.
-The code of \code{LoopProc} is derived from the code of \code{OrigProc}.
+The code of \var{LoopProc} is derived from the code of \var{OrigProc}.
 Some execution paths in this code include a recursive call; some do not.
 The execution paths that contain a recursive call
-are transformed by the algorithm in Figure~\ref{fig:reccases_alg};
+are transformed by Algorithm~\ref{alg:reccases_alg};
 the execution paths that do not
-are transformed by the algorithm in Figure~\ref{fig:basecases_alg}.
+are transformed by Algorithm~\ref{alg:basecases_alg}.
 
-We start with the code in Figure~\ref{fig:reccases_alg}.
+We start with Algorithm~\ref{alg:reccases_alg}.
 Due to condition (6),
-every recursive call in \code{OrigGoal}
+every recursive call in \var{OrigGoal}
 will be inside the last conjunct a parallel conjunction,
 and the main task of \createloopgoal
 is to iterate over and transform these parallel conjunctions.
@@ -828,9 +831,9 @@ The main aim of the loop control transformation is
 to limit the number of work packages spawned off by the loop at any one time,
 in order to limit memory consumption.
 The goals we want to spawn off
-as work packages that other cores can pick up and execute
+%as work packages that other cores can pick up and execute
 are all the conjuncts before the final recursive conjunct.
-(Without loop control, we would spawn off all the \emph{later} disjuncts.)
+(Without loop control, we would spawn off all the \emph{later} conjuncts.)
 The first half of the main loop in \createloopgoal
 therefore generates code that creates and makes available each work package
 only after it obtains a slot for it in the loop control structure,
@@ -841,18 +844,20 @@ To implement the spawning off process,
 we extended the internal representation of Mercury goals
 with a new kind of scope.
 The only one shown in the abstract syntax in
-Section~\ref{sec:backgnd_mercury}
-was the existential quantification scope,
+Figure~\ref{fig:abstractsyntax}
+%Section~\ref{sec:backgnd_mercury}
+was the existential quantification scope
+($some~[X_1,\ldots,X_n]~G$),
 but the Mercury implementation had several other kinds of scopes already,
-though none of those are relevant for this paper.
+though none of those are relevant for the dissertation.
 We call the new kind of scope the spawn-off scope,
-and we make \code{SpawnGoal\_i} be a scope goal of this kind.
+and we make $SpawnGoal_i$ be a scope goal of this kind.
 When the code generator processes such scopes,
 it
 \begin{itemize}
 \item
 generates code for the goal inside the scope
-(which will end with a call to \code{lc\_join\_and\_terminate}),
+(which will end with a call to \lcjoinandterminate),
 \item
 allocates a new label,
 \item
@@ -861,14 +866,14 @@ puts the new label in front of that code,
 puts this labelled code aside so that
 later it can be added to the end of the current procedure's code, and
 \item
-inserts into the instruction stream a call to \code{lc\_spawn\_off}
+inserts into the instruction stream a call to \lcspawnoff
 that specifies that the spawned-off computation should start execution
 at the label of the set-aside code.
-The other arguments of \code{lc\_spawn\_off} come from the scope kind.
+The other arguments of \lcspawnoff come from the scope kind.
 \end{itemize}
 
 \noindent
-Since we allocate a loop slot \code{LCSlot}
+Since we allocate a loop slot \var{LCSlot}
 just before we spawn off this computation,
 waiting for a slot to become available if needed,
 and free the slot once this computation has finished executing,
@@ -876,68 +881,71 @@ the number of computations that have been spawned-off by this loop
 and which have not yet been terminated
 cannot exceed the number of slots in the loop control structure.
 
-\begin{figure}[tb]
-\begin{center}
-{\small
-\begin{verbatim}
-put_barriers_in_base_cases(LoopGoal,
-  RecParConjs, LoopProcName, LC) returns LoopGoal':
-if LoopGoal is a parallel conjunction in RecParConjs:
-  # case 1
-  LoopGoal' := LoopGoal
-else if there no call to LoopProcName in LoopGoal:
-  # case 2
-  let FinishGoal be the call <lc_finish(LC)>
-  let LoopGoal' be the sequential conjunction
-    <LoopGoal, FinishGoal>
-else:
-  # case 3
-  switch on LoopGoal's goal type:
-    case LoopGoal is an if-then-else:
-      let LoopGoal be <ite(C, T, E)>
-      T' := put_barriers_in_base_cases(T,
-        RecParConjs, LoopProcName, LC)
-      E' := put_barriers_in_base_cases(E,
-        RecParConjs, LoopProcName, LC)
-      let LoopGoal' be <ite(C, T', E')>
-    case LoopGoal is a switch:
-      let LoopGoal be
-        <switch(V, [Case_1, ..., Case_N])>
-      for i := 1 to N:
-        let Case_i be <case(FunctionSymbol_i, Goal_i>
-        Goal_i' := put_barriers_in_base_cases(Goal_i,
-          RecParConjs, LoopProcName, LC)
-        let Case_i' be <case(FunctionSymbol_i, Goal_i'>
-      let LoopGoal' be
-        <switch(V, [Case_1', ..., Case_N'])>
-    case LoopGoal is a sequential conjunction:
-      let LoopGoal be <Conj_1, ... Conj_N>
-      i := 1
-      while Conj_i does not contain a call
-        to LoopProcName:
-        i := i + 1
-      Conj_i' := put_barriers_in_base_cases(Conj_i,
-        RecParConjs, LoopProcName, LC)
-      let LoopGoal' be LoopGoal with
-        Conj_i replaced with Conj_i'
-    case LoopGoal is a quantification:
-      let LoopGoal be <some(Vars, SubGoal)>
-      SubGoal' := put_barriers_in_base_cases(SubGoal,
-        RecParConjs, LoopProcName, LC)
-      let LoopGoal' be <some(Vars, SubGoal')>
-\end{verbatim}
-%   case LoopGoal is a call <ProcName(Args)>:
-%     if ProcName = OrigProcName:
-%       let LoopGoal' be the call <LoopProcName([LC] ++ Args)>
-%     else:
-%       LoopGoal' := LoopGoal
-}
-\end{center}
+\begin{algorithm}[tbp]
+\begin{algorithmic}
+\Procedure{put\_barriers\_in\_base\_cases}{$LoopGoal$,
+    $RecParConjs$, $LoopProcName$, $LC$}
+  \If{$LoopGoal$ is a parallel conjunction in $RecParConjs$}
+    \Comment{case 1}
+    \State $LoopGoal' \gets LoopGoal$
+  \ElsIf{there no call to $LoopProcName$ in $LoopGoal$}
+    \Comment{case 2}
+    \State $FinishGoal \gets$ the call `lc\_finish($LC$)'
+    \State $LoopGoal' \gets$ the sequential conjunction
+      `$LoopGoal,~FinishGoal$'
+  \Else
+    \Comment{case 3}
+    \Switch{goal\_type($LoopGoal$)}
+      \Case{`ite($C$, $T$, $E$)'}
+        \State $T' \gets$ put\_barriers\_in\_base\_cases($T$,
+          $RecParConjs$, $LoopProcName$, $LC$)
+        \State $E' \gets$ put\_barriers\_in\_base\_cases($E$,
+          $RecParConjs$, $LoopProcName$, $LC$)
+        \State $LoopGoal' \gets$ `ite($C$, $T'$, $E'$)'
+      \EndCase
+      \Case{`switch($V$, [$Case_1$, \ldots, $Case_N$])'}
+        \For{$i \gets 1 to N$}
+          \State $Case_i \gets$ `case($FunctionSymbol_i$, $Goal_i$)'
+          \State $Goal_i' \gets$ \parbox{0.7\textwidth}{put\_barriers\_in\_base\_cases($Goal_i$,
+            $RecParConjs$, $LoopProcName$,\\$~~~~LC$)}
+          \State $Case_i' \gets$ `case($FunctionSymbol_i$, $Goal_i'$)'
+        \EndFor
+        \State $LoopGoal' \gets$ `switch($V$, [$Case_1'$, \ldots, $Case_N'$])'
+      \EndCase
+      \Case{`$Conj_1$, \ldots $Conj_N$'}
+        \Comment Sequential conjunction
+        \State $i \gets 1$
+        \While{$Conj_i$ does not contain a call to $LoopProcName$}
+          \State $i \gets i + 1$
+        \EndWhile
+        \State $Conj_i' \gets$ put\_barriers\_in\_base\_cases($Conj_i$,
+          $RecParConjs$, $LoopProcName$, $LC$)
+        \State $LoopGoal' \gets LoopGoal$ with
+          $Conj_i$ replaced with $Conj_i'$
+      \EndCase
+      \Case{`some($Vars$, $SubGoal$)'}
+        \Comment Existential quantification
+        \State $SubGoal' \gets$ \parbox{0.7\textwidth}{put\_barriers\_in\_base\_cases($SubGoal$,
+          $RecParConjs$,\\$~~~~LoopProcName$, $LC$)}
+        \State $LoopGoal' \gets$ `some($Vars$, $SubGoal'$)'
+      \EndCase
+      \Case{a call `$ProcName$($Args$)'}
+        \If{$ProcName = OrigProcName$}
+          \State $LoopGoal' \gets$ the call `$LoopProcName$([$LC$] ++ $Args$)'
+        \Else
+          \State $LoopGoal' \gets LoopGoal$
+        \EndIf
+      \EndCase
+    \EndSwitch
+  \EndIf
+  \State \Return $LoopGoal'$
+\EndProcedure
+\end{algorithmic}
 %\vspace{2mm}
 \caption{Algorithm for transforming the base cases}
-\label{fig:basecases_alg}
+\label{alg:basecases_alg}
 %\vspace{-1\baselineskip}
-\end{figure}
+\end{algorithm}
 
 The second half of the main loop in \createloopgoal
 transforms the last conjunct in the parallel conjunction
@@ -950,14 +958,14 @@ the loop procedure's formal parameters
 by adding the variable referring to the loop control structure
 to the argument list.
 Due to condition (6),
-there can be no recursive call in \code{OrigGoal} that is left untransformed
+there can be no recursive call in \var{OrigGoal} that is left untransformed
 when the main loop of \createloopgoal finishes.
 
 In some cases, the last conjunct may simply \emph{be} a recursive call.
 In some other cases, the last conjunct may be a sequential conjunction
 consisting of some unifications and/or some non-recursive calls
 as well as a recursive call,
-with the unifications and nonrecursive calls
+with the unifications and non-recursive calls
 usually constructing and computing some of the arguments of the recursive call.
 And in yet other cases,
 the last conjunct may be an if-then-else or a switch,
@@ -968,64 +976,61 @@ on all its possible execution paths.
 
 The last task of \createloopgoal is to invoke the
 \putbarriers function
-that is shown in Figure~\ref{fig:basecases_alg}
+that is shown in Algorithm~\ref{alg:basecases_alg}
 to transform the base cases of the goal
-that will later become the body of \code{LoopProc}.
-This function recurses on the structure of \code{LoopGoal},
-as updated by the main loop in Figure~\ref{fig:reccases_alg}.
+that will later become the body of \var{LoopProc}.
+This function recurses on the structure of \var{LoopGoal},
+as updated by the main loop in Algorithm~\ref{alg:reccases_alg}.
 
 When \putbarriers is called,
-its caller knows that \code{Loop\-Goal} may contain
+its caller knows that \var{LoopGoal} may contain
 the already processed parallel conjunctions (those containing recursive calls),
 it may contain base cases,
 or it may contain both.
 The main if-then-else in \putbarriers
 handles each of these situations in turn.
 
-If \code{LoopGoal} is a parallel conjunction that is in \code{RecParConjs},
+If \var{LoopGoal} is a parallel conjunction that is in \var{RecParConjs},
 then the main loop of \createloopgoal has already processed it,
 and due to condition (7), this function does not need to touch it.
 Our objective in imposing condition (7) was to make this possible.
 
-If, on the other hand, \code{LoopGoal} contains no call to \code{LoopProc},
+If, on the other hand, \var{LoopGoal} contains no call to \var{LoopProc},
 then it did not have any recursive calls in the first place,
 since (due to condition (6))
-they would all have been turned into calls to \code{LoopProc}
+they would all have been turned into calls to \var{LoopProc}
 by the main loop of \createloopgoal.
-Therefore this goal either \emph{is} a base case of \code{LoopProc},
+Therefore this goal either \emph{is} a base case of \var{LoopProc},
 or it is part of a base case.
-In either case, we add a call to \code{lc\_finish(LC)} after it.
+In either case, we add a call to \code{lc\_finish($LC$)} after it.
 In the middle of the correctness argument below,
 we will discuss why this is the right thing to do.
 
 If both those conditions fail,
-then \code{LoopGoal}
+then \var{LoopGoal}
 definitely contains some execution paths that execute a recursive call,
 and may also contain some execution paths that do not.
 What we do in that case (case 3)
-depends on what kind of goal \code{LoopGoal} is.
+depends on what kind of goal \var{LoopGoal} is.
 
-If \code{LoopGoal} is an if-then-else,
+If \var{LoopGoal} is an if-then-else,
 then we know from condition (4)
 that any recursive calls in it
 must be in the then part or the else part,
 and by definition the last part of any base case code
 in the if-then-else must be in one of those two places as well.
 We therefore recursively process both the then part and the else part.
-Likewise, if \code{LoopGoal} is a switch
-(a disjunction in which each disjunct unifies a variable known to be ground
-with a different function symbol,
-so we know that at most one disjunct may succeed),
+Likewise, if \var{LoopGoal} is a switch,
 some arms of the switch may execute a recursive call and some may not,
 and we therefore recursively process all the arms.
 For both if-then-elses and switches,
 if the possible execution paths inside them do not involve conjunctions,
 then the recursive invocations of \putbarriers
-will add a call to \code{lc\_finish} at
+will add a call to \lcfinish at
 the end of each execution path that does not make recursive calls.
 
 What if those execution paths do involve conjunctions?
-If \code{LoopGoal} is a conjunction,
+If \var{LoopGoal} is a conjunction,
 then we recursively transform the first conjunct that makes recursive calls,
 and leave the conjuncts both before and after it (if any) untouched.
 There is guaranteed to be at least one conjunct that makes a recursive call,
@@ -1035,7 +1040,7 @@ We also know at most one conjunct makes a recursive call.
 If more than one did, then
 there would be an execution path through those conjuncts
 that would make more than one recursive call,
-condition (2) would have failed,
+then condition (2) would have failed,
 and the loop control transformation would not be applicable.
 
 \emph{Correctness argument.}
@@ -1046,53 +1051,58 @@ in if-then-elses and switches
 (on entry to the then or else parts and the switch arms respectively)
 and then converge again
 (when execution continues after the if-then-else or switch).
-Our algorithm inserts calls to \code{lc\_finish} into the procedure body
+Our algorithm inserts calls to \lcfinish into the procedure body
 at all the places needed to ensure
-that every nonrecursive execution path executes such a call exactly once,
-and does so after the last goal in the nonrecursive execution path
+that every non-recursive execution path executes such a call exactly once,
+and does so after the last goal in the non-recursive execution path
 that is not shared with a recursive execution path.
 These places are
-the ends of nonrecursive then parts
+the ends of non-recursive then parts
 whose corresponding else parts are recursive,
-the ends of nonrecursive else parts
+the ends of non-recursive else parts
 whose corresponding then parts are recursive,
-and the ends of nonrecursive switch arms
+and the ends of non-recursive switch arms
 where at least one other switch arm is recursive.
 Condition (4) tests for recursive calls in the conditions of if-then-elses
 (which are rare in any case)
 specifically to make this correctness argument possible.
 
-% \zoltan{if we have room, add an example that contains
-% a branched goal with both recursive and nonrecursive branches,
-% followed by a common suffix of code.}
-% \paul{I think this is easy enough to understand without such an example,
-% but perhaps because I have seem similar patterns all through my honours and
-% phd studies.
-% In particular, It did not even occur to me that I might need to
-% provide a correctness argument, it just seemed right from a structural
-% induction point-of-view.}
+\zoltan{if we have room, add an example that contains
+a branched goal with both recursive and non-recursive branches,
+followed by a common suffix of code.}
+\paul{I think this is easy enough to understand without such an example,
+but perhaps because I have seem similar patterns all through my honours and
+phd studies.
+In particular, It did not even occur to me that I might need to
+provide a correctness argument, it just seemed right from a structural
+induction point-of-view.}
+\paul{Addendum: This now means `if I have time'}
 
 Note that for most kinds of goals, execution cannot reach case~3.
 Unifications are not parallel conjunctions and cannot contain calls,
-so if \code{LoopGoal} is a unification, we will execute case~2.
-If \code{LoopGoal} is a first order call, we will also execute case~2,
+so if \var{LoopGoal} is a unification, we will execute case~2.
+If \var{LoopGoal} is a first order call, we will also execute case~2,
 because due to condition (6),
 all recursive calls are inside parallel conjunctions;
 since case 1 does not recurse,
 we never get to those recursive calls.
-\code{LoopGoal} cannot be a higher order call,
-since if the body of \code{OrigGoal} contains a higher order call,
-we cannot rule out the original procedure
-being mutually recursive with another procedure through that call,
-and condition (1) would fail.
-If \code{LoopGoal} is a parallel conjunction,
-then it is either in \code{RecParConj},
+\var{LoopGoal} might be a higher order call.
+Although a higher order call might create mutual recursion;
+any call to \var{OrigProc} will create a new loop control object and execute
+its loop independently.
+This may not be optimal, but it will not cause the transformation to create
+invalid code or perform worse performance than Mercury's normal parallel
+execution mechanics.
+Therefore we treat higher order calls the same way that we treat plain calls
+to procedures other than \var{OrigProc}.
+If \var{LoopGoal} is a parallel conjunction,
+then it is either in \var{RecParConj},
 in which case we execute case~1,
 or (due to condition (5))
 it does not contain any recursive calls,
 in which case we execute case~2.
 Condition (4) also guarantees that we will execute case~2
-if \code{LoopGoal} is a disjunction, negation,
+if \var{LoopGoal} is a disjunction, negation,
 or a quantification that changes the determinism of a goal
 by cutting away (indistinguishable) solutions.
 The only other goal type for which execution may get to case~3
@@ -1115,28 +1125,28 @@ up to the recursive call;
 during the ascent,
 after each return we execute
 the part of the chosen recursive execution path after the recursive call.
-At the bottom, we execute exactly one of the nonrecursive execution paths.
+At the bottom, we execute exactly one of the non-recursive execution paths.
 
 In our case, conditions (5) and (6) guarantee
 that all the goals we spawn off
 will be spawned off during the descent phase.
 When we get to the bottom and
-commit to a nonrecursive execution path through the procedure body,
+commit to a non-recursive execution path through the procedure body,
 we know that we will not spawn off any more goals,
-which is why we can invoke \code{lc\_finish} at that point.
-We can call \code{lc\_finish} at any point in \code{LoopGoal}
+which is why we can invoke \lcfinish at that point.
+We can call \lcfinish at any point in \var{LoopGoal}
 that is after the point
-where we have committed to a nonrecursive execution path,
+where we have committed to a non-recursive execution path,
 and before the point where
-that nonrecursive execution path
+that non-recursive execution path
 joins back up with some recursive execution paths.
 
-The code at case 2 puts the call to \code{lc\_finish}
+The code at case 2 puts the call to \lcfinish
 at the last allowed point, not the first, or a point somewhere in the middle.
-We chose to do this because after the code executing \code{LoopProc}
+We chose to do this because after the code executing \var{LoopProc}
 has spawned off one or more goals one level above the base case,
-we expect that other cores will be busy executing those spawned off goals
-for rather longer than it takes this core to execute the base case.
+we expect that other processors will be busy executing those spawned off goals
+for rather longer than it takes this processor to execute the base case.
 % \paul{The next sentence does not explain to me how we learnt this through
 % automatic parallelism, do you mean that it is the kind of decision that the
 % automatic parallelism system would make?}
@@ -1144,60 +1154,60 @@ for rather longer than it takes this core to execute the base case.
 % tries very hard not to parallelise (and thus to spawn off) cheap goals,
 % while most base cases \emph{are} cheap.
 By making this core do as much useful work as possible
-before must suspend to wait for the spawned-off goals to finish,
+before it must suspend to wait for the spawned-off goals to finish,
 we expect to reduce the amount of work remaining to be done
-after the call to \code{lc\_finish} by a small but possibly useful amount.
-\code{lc\_finish} returns \emph{after} all the spawned-off goals have finished,
+after the call to \lcfinish by a small but possibly useful amount.
+\lcfinish returns \emph{after} all the spawned-off goals have finished,
 so any code placed after it
-(such as if \code{lc\_finish} were placed at the first valid point)
+(such as if \lcfinish were placed at the first valid point)
 would be executed sequentially after the loop;
 where it would definitely add to the overall runtime.
-Therefore, we prefer to place \code{lc\_finish} as late as possible,
-so that this code occurs before \code{lc\_finish}
+Therefore, we prefer to place \lcfinish as late as possible,
+so that this code occurs before \lcfinish
 and is executed in parallel with the rest of the loop,
 where it may have no effect on the overall runtime of the program;
-it will just put to good use what would otherwise be dead time.
+it will just put to good use, what would otherwise be dead time.
 
 We must of course be sure that every loop,
-and therefore every execution of any base case of \code{LoopGoal},
-will call \code{lc\_finish} exactly once: no more, no less.
+and therefore every execution of any base case of \var{LoopGoal},
+will call \lcfinish exactly once: no more, no less.
 (It should be clear that our transformation never puts that call
 on an execution path that includes a recursive call.)
-Now any nonrecursive execution path through \code{LoopGoal}
+Now any non-recursive execution path through \var{LoopGoal}
 will share a (possibly empty) initial part
 and a (possibly empty) final part with some recursive execution paths.
-On any nonrecursive execution path,
-\putbarriers will put the call \code{lc\_finish}
+On any non-recursive execution path,
+\putbarriers will put the call \lcfinish
 just before the first point where that path
 rejoins a recursive execution path.
-Since \code{LoopProc} is det (condition (3)),
+Since \var{LoopProc} is \ddet (condition (3)),
 all recursive execution paths must consist
-entirely of det goals and the conditions of if-then-elses,
+entirely of \ddet goals and the conditions of if-then-elses,
 and (due to condition (4)) cannot go through disjunctions.
-The difference between a nonrecursive execution path
+The difference between a non-recursive execution path
 and the recursive path it rejoins
 must be either that
 one takes the then part of an if-then-else and the other takes the else part,
 or that they take different arms of a switch.
-Such an if-then-else or switch must be det:
-if it were \dsemidet, \code{LoopProc} would be too,
-and if it were nondet or multi,
+Such an if-then-else or switch must be \ddet:
+if it were \dsemidet, \var{LoopProc} would be too,
+and if it were \dnondet or \dmulti,
 then its extra solutions could be thrown away
 only by an existential quantification that quantifies away
 all the output variables of the goal inside it.
-But by condition (4),
+However by condition (4),
 the part of the recursive execution path
-that distinguishes it from a nonrecursive path,
+that distinguishes it from a non-recursive path,
 the recursive call itself,
 cannot appear inside such scopes.
-This guarantees that the middle part of the nonrecursive execution path,
+This guarantees that the middle part of the non-recursive execution path,
 which is not part of either
 a prefix or a suffix shared with some recursive paths,
-must also be det overall,
+must also be \ddet overall,
 though it may have nondeterminism inside it.
 Any code put after the second of these three parts of the execution path
 (shared prefix, middle, shared suffix),
-all three of which are det,
+all three of which are \ddet,
 is guaranteed to be executed exactly once.
 
 % ite with nondet condition,
@@ -1249,11 +1259,12 @@ happens to be a tail call,
 it cannot have the usual tail call optimisation applied to it.
 
 Before this work, this did not matter, because
-the barrier synchronisation needed at the end of the parallel conjunction,
+the barrier synchronisation needed at the end of the parallel conjunction
+(\joinandcontinue),
 which had to be executed at every level of recursion except the base case,
 prevented tail recursion optimisation anyway.
 However, the loop control transformation eliminates that barrier,
-replacing it with the single call to \code{lc\_finish} in the base case.
+replacing it with the single call to \lcfinish in the base case.
 So now this limitation \emph{does} matter in cases
 where all of the recursive calls in the last conjunct of a parallel conjunction
 are tail recursive.
@@ -1299,36 +1310,15 @@ The reason this is true has to do with the way
 the Mercury compiler handles synchronisation between parallel conjuncts.
 Any variable whose value is generated by one parallel conjunct
 and consumed by one or more other conjuncts in that conjunction
-will have a future created for it.
+will have a future created for it (Section~\ref{sec:backgnd_depar}).
 The generating conjunct, once it has computed the value of the variable,
-will execute a \code{signal\_future} on the variable's future
+will execute \signal on the variable's future
 to wake up any consumers that may be waiting for the value of this variable.
 Those consumers will get the value of the original variable from the future,
 and will store that value in a variable that is local to each consumer.
 Since futures are always stored on the heap,
 the communication of bindings from one parallel conjunct to another
 does \emph{not} go through the stack frame.
-
-\begin{table*}[tbh]
-\begin{center}
-\input{mem_table}
-\caption[Peak number of contexts used,
-and peak memory usage for stacks]{Peak number of contexts used,
-and peak memory usage for stacks, measured in megabytes}
-\label{tab:lc_mem}
-\end{center}
-%\vspace{-1\baselineskip}
-\end{table*}
-
-\begin{table*}[tb]
-\begin{center}
-\input{times_table}
-%\vspace{3mm}
-\caption{Execution times measured in seconds, and speedups}
-\label{tab:lc_times}
-\end{center}
-%\vspace{-1\baselineskip}
-\end{table*}
 
 A variable whose value is generated by a parallel conjunct
 and is consumed by code after the parallel conjunction
@@ -1345,7 +1335,7 @@ storing it in the spawned-off goal's child stack frame is good enough.
 
 In our current system,
 the stack frame used by the spawned-off goal
-has exactly the same layout as its parent. % the spawning-off goal.
+has exactly the same layout as its parent, the spawning-off goal.
 This means that in general,
 both the parent and child stack frames will have some unused slots,
 slots used only in the \emph{other} stack frame.
@@ -1354,14 +1344,12 @@ and we have not found the wasted space to be a problem.
 This may be because we have mostly been working with
 automatically parallelised programs,
 and our automatic parallelisation tools
-put much effort into granularity control \citep{bone:2011:overlap}:
+put much effort into granularity control (Chapter~\ref{chap:overlap}):
 the rarer spawning-off a goal is,
 the less the effect of any wasted space.
-\tr{
 However, if we ever find this to be an issue,
 squeezing the unused stack slots out of each stack frame
 would not be difficult.
-}
 
 % \zoltan{This scheme does require us
 % to reserve a context for a spawned-off goal when we create each work package,
@@ -1442,6 +1430,28 @@ while it is in the last parallel conjunct in the dependent versions.
 % used.
 % Only the dependent parallel tests use loop control.
 % \paul{We might want to show independent code using loop control}
+
+\begin{table*}[tbh]
+\begin{center}
+\input{mem_table}
+\caption[Peak number of contexts used,
+and peak memory usage for stacks]{Peak number of contexts used,
+and peak memory usage for stacks, measured in megabytes}
+\label{tab:lc_mem}
+\end{center}
+%\vspace{-1\baselineskip}
+\end{table*}
+
+\begin{table*}[tb]
+\begin{center}
+\input{times_table}
+%\vspace{3mm}
+\caption{Execution times measured in seconds, and speedups}
+\label{tab:lc_times}
+\end{center}
+%\vspace{-1\baselineskip}
+\end{table*}
+
 
 Tables~\ref{tab:lc_mem} and~\ref{tab:lc_times}
 presents our memory consumption and timing results respectively.
