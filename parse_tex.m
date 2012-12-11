@@ -198,33 +198,32 @@ parse_tex(Lines, File, Src, Tokens, !PS) :-
         Tokens = cord.init
     ).
 
-:- pred parse_tex_arg(line_numbers::in, string::in, src::in,
+:- pred parse_tex_arg(line_numbers::in, string::in, char::in, src::in,
     cord(token)::out, ps::in, ps::out) is semidet.
 
-parse_tex_arg(Lines, File, Src, Tokens, !PS) :-
+parse_tex_arg(Lines, File, BracketChar, Src, Tokens, !PS) :-
     whitespace(Src, _, !PS),
     (
-        parse_comment(Src, _, !.PS, PS0)
+        next_char(Src, BracketChar, !.PS, _)
     ->
-        !:PS = PS0,
-        parse_tex_arg(Lines, File, Src, Tokens, !PS)
+        Tokens = cord.empty
     ;
-        ( parse_punct(Lines, File, Src, Token, !.PS, PS0) ->
-            Tokens1 = cord.singleton(Token),
-            PS1 = PS0
-        ; parse_macro(Lines, File, Src, Token, !.PS, PS0) ->
-            Tokens1 = cord.singleton(Token),
-            PS1 = PS0
-        ; parse_word(Lines, File, Src, Token, !.PS, PS0) ->
-            Tokens1 = cord.singleton(Token),
-            PS1 = PS0
+        parse_comment(Src, _, !PS)
+    ->
+        parse_tex_arg(Lines, File, BracketChar, Src, Tokens, !PS)
+    ;
+        ( parse_punct(Lines, File, Src, Token, !PS) ->
+            Tokens1 = cord.singleton(Token)
+        ; parse_macro(Lines, File, Src, Token, !PS) ->
+            Tokens1 = cord.singleton(Token)
+        ; parse_word(Lines, File, Src, Token, !PS) ->
+            Tokens1 = cord.singleton(Token)
         ;
             false
         )
     ->
         TokensA = Tokens1,
-        !:PS = PS1,
-        parse_tex_arg(Lines, File, Src, TokensB, !PS),
+        parse_tex_arg(Lines, File, BracketChar, Src, TokensB, !PS),
         Tokens = TokensA ++ TokensB
     ;
         Tokens = cord.init
@@ -234,40 +233,41 @@ parse_tex_arg(Lines, File, Src, Tokens, !PS) :-
     token::out, ps::in, ps::out) is semidet.
 
 parse_word(Lines, File, Src, Token, !PS) :-
-    offset_to_locn(Lines, File, Src, Locn, !.PS),
-    parse_word2(Src, WordChars, !PS),
+    InitialPS = !.PS,
+    parse_word2([], Src, WordChars, !PS),
     WordChars = [FirstChar | _],
     not not_first_word_char(FirstChar),
     Word = string.from_char_list(WordChars),
+    offset_to_locn(Lines, File, Src, Locn, InitialPS),
     Token = word(Word, Locn).
 
-:- pred parse_word2(src::in, list(char)::out, ps::in, ps::out) is semidet.
+:- pred parse_word2(list(char)::in, src::in, list(char)::out, ps::in, ps::out)
+    is det.
 
-parse_word2(Src, Word, !PS) :-
-    next_char(Src, C, !PS),
-    not not_word_char(C),
+parse_word2(Word0, Src, Word, !PS) :-
     (
-        parse_word2(Src, Word0, !.PS, PS0)
+        next_char(Src, C, !PS),
+        not not_word_char(C)
     ->
-        Word = [C | Word0],
-        !:PS = PS0
+        parse_word2([C | Word0], Src, Word, !PS)
     ;
-        % It's okay if the rest of the word isn't a word.
-        Word = [C]
+        reverse(Word0, Word)
     ).
 
 :- pred parse_macro(line_numbers::in, string::in, src::in,
     token::out, ps::in, ps::out) is semidet.
 
 parse_macro(Lines, File, Src, Token, !PS) :-
-    offset_to_locn(Lines, File, Src, Locn, !.PS),
+    InitialPS = !.PS,
     ( next_char(Src, '$', !PS) ->
+        offset_to_locn(Lines, File, Src, Locn, InitialPS),
         ( next_char(Src, '$', !PS) ->
             Token = macro("$$", cord.empty, Locn)
         ;
             Token = macro("$", cord.empty, Locn)
         )
     ; char(symbol, Src, C, !PS) ->
+        offset_to_locn(Lines, File, Src, Locn, InitialPS),
         Token = macro(char_to_string(C), cord.empty, Locn)
     ;
         next_char(Src, '\\', !PS),
@@ -276,39 +276,51 @@ parse_macro(Lines, File, Src, Token, !PS) :-
             next_char(Src, C, !PS),
             macro_char_short(C)
         ->
+            offset_to_locn(Lines, File, Src, Locn, InitialPS),
             Token = macro(char_to_string(C), cord.empty, Locn)
         ;
             identifier(macro_chars, macro_chars, Src, Ident, !PS)
         ->
             zero_or_more(parse_macro_arg(Lines, File), Src, ArgTokens, !PS),
+            offset_to_locn(Lines, File, Src, Locn, InitialPS),
             (
                 Ident = "begin",
                 ArgTokens = [macro_arg(Tokens, _)],
                 [ArgToken] = list(Tokens),
-                word("verbatim", _) = ArgToken
+                word(EnvName, _) = ArgToken,
+                ( EnvName = "verbatim"
+                ; EnvName = "algorithmic"
+                )
             ->
                 % Skip over stuff inside a verbatim environment.
-                skip_to_end_of_verbatim(Src, !PS),
-                Token = environment("verbatim", empty, empty, Locn)
+                skip_to_end_of_environment(EnvName, Src, !PS),
+                Token = environment(EnvName, empty, empty, Locn)
             ;
                 Token = macro(Ident, cord.from_list(ArgTokens), Locn)
             )
         ;
             whitespace(Src, _, !PS),
+            offset_to_locn(Lines, File, Src, Locn, InitialPS),
             Token = macro(" ", cord.empty, Locn)
         )
     ).
 
-:- pred skip_to_end_of_verbatim(src::in, ps::in, ps::out) is semidet.
+:- pred skip_to_end_of_environment(string::in, src::in, ps::in, ps::out)
+    is semidet.
 
-skip_to_end_of_verbatim(Src, !PS) :-
+skip_to_end_of_environment(EnvName, Src, !PS) :-
+    skip_until(format("\\end{%s}", [s(EnvName)]), Src, !PS).
+
+:- pred skip_until(string::in, src::in, ps::in, ps::out) is semidet.
+
+skip_until(String, Src, !PS) :-
     (
-        keyword("", "\\end{verbatim}", Src, _, !PS)
+        keyword("", String, Src, _, !PS)
     ->
         true
     ;
         next_char(Src, _, !PS),
-        skip_to_end_of_verbatim(Src, !PS)
+        skip_until(String, Src, !PS)
     ).
 
 :- pred parse_group(line_numbers::in, string::in, src::in,
@@ -322,30 +334,33 @@ parse_group(Lines, File, Src, Tokens, !PS) :-
     token::out, ps::in, ps::out) is semidet.
 
 parse_punct(Lines, File, Src, Token, !PS) :-
-    offset_to_locn(Lines, File, Src, Locn, !.PS),
+    InitialPS = !.PS,
     ( one_or_more(char(punctuation), Src, CharsP, !PS) ->
         Chars = CharsP
     ;
         n(3, char(unify('-')), Src, Chars, !PS)
     ),
+    offset_to_locn(Lines, File, Src, Locn, InitialPS),
     Token = punct(string.from_char_list(Chars), Locn).
 
 :- pred parse_macro_arg(line_numbers::in, string::in, src::in,
     macro_arg(token)::out, ps::in, ps::out) is semidet.
 
 parse_macro_arg(Lines, File, Src, Arg, !PS) :-
-    offset_to_locn(Lines, File, Src, Locn, !.PS),
+    InitialPS = !.PS,
     (
-        parse_tex.brackets('{', '}', parse_tex_arg(Lines, File),
+        parse_tex.brackets('{', '}', parse_tex_arg(Lines, File, '}'),
             Src, Tokens, !.PS, PS0)
     ->
         !:PS = PS0,
+        offset_to_locn(Lines, File, Src, Locn, InitialPS),
         Arg = macro_arg(Tokens, Locn)
     ;
-        parse_tex.brackets('[', ']', parse_tex_arg(Lines, File),
+        parse_tex.brackets('[', ']', parse_tex_arg(Lines, File, ']'),
             Src, Tokens, !.PS, PS0)
     ->
         !:PS = PS0,
+        offset_to_locn(Lines, File, Src, Locn, InitialPS),
         Arg = macro_arg(Tokens, Locn)
     ;
         false
