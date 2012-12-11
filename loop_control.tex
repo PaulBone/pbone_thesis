@@ -623,6 +623,10 @@ in comparison, the normal parallel conjunction execution mechanism
 executes one barrier in each iteration of the loop.
 \end{description}
 
+\zoltan{Should we give the pseudo-code of the operations?}
+\paul{XXX: I have given the pseudo-code for one of these, if I have time I'll add
+pseudo-code for the others.}
+
 \noindent
 See Figure~\ref{fig:map_foldl_transformed}
 for an example of how we use these operations.
@@ -634,9 +638,32 @@ This is the first step in preserving tail recursion optimisation.
 % Some of these operations also perform some scheduling;
 % we will discuss that later.
 
-\zoltan{Should we give the pseudo-code of the operations?}
-\paul{XXX: I have given the pseudo-code for one of these, if I have time I'll add
-pseudo-code for the others.}
+\picfigure{lc_context_usage}{Loop control context usage}
+
+Figure~\ref{fig:lc_context_usage} shows a visual representation of context
+usage when using loop control;
+it should be compared with Figure~\ref{fig:linear_context_usage2}.
+As before, this is how contexts are likely to be used on a four processor
+system;
+minor differences in the execution times of each task and similar variables
+will mean that no execution will look as regular as in the figures.
+In the Figure~\ref{fig:lc_context_usage},
+we can see that a total of eight contexts are created and four are in use at
+a time.
+When the loop begins,
+the master thread performs a few iterations, executing \lcwaitfreeslot and
+\lcspawnoff.
+This creates all the contexts and  adds them to the runqueue,
+but only the first for contexts can be executed as there are only for
+processors.
+Once those contexts finish their work,
+they execute \lcjoinandterminate.
+Each call to \lcjoinandterminate marks the relevant slot in the loop control
+structure as free,
+allowing the master context to spawn off more work using the free slot.
+Meanwhile, the other four contexts are now able to execute their work.
+This continues until the loop is finished, at which point \lcfinish releases
+all the contexts.
 
 \subsection{The loop control transformation}
 \label{sec:lc_trans}

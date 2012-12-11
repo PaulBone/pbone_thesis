@@ -22,12 +22,13 @@ for p = 0.5 to 2.0 by 0.5 do {
 }
 
 for p = 2.5 to 4.0 by 0.5 do {
+    #line from Grid.nw + (p -0.125, -0.250) to Grid.nw + (p + 0.125, -0.250)
+    line from Grid.nw + (p, -0.250) to Grid.nw + (p, -0.5)
+
     for h = 2 to 0 by -0.5 do {
         box width 0.25 height 0.25 with .n at Grid.nw + (p, -0.50 - h)
         line from last box.s to last box.s + (0, -0.25)
     }
-
-    line from Grid.nw + (p -0.125, -3.00) to Grid.nw + (p + 0.125, -3.00)
 }
 
 .PE
