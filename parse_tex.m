@@ -386,12 +386,14 @@ offset_to_locn(Lines, File, Src, Locn, PS) :-
 :- mode brackets(in, in, in(parser), in, out, in, out) is semidet.
 
 brackets(L, R, P, Src, Out, !PS) :-
+    InitialPS = !.PS,
     next_char(Src, L, !PS),
     P(Src, Out, !PS),
     ( next_char(Src, R, !.PS, PS0) ->
         !:PS = PS0
     ;
-        fail_with_message("Couldn't match right bracket", Src, unit, !PS)
+        fail_with_message("Couldn't match right bracket", Src, unit,
+            InitialPS, _)
     ).
 
 :- pred char(pred(char), src, char, ps, ps).
