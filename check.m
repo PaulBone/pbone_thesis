@@ -434,7 +434,9 @@ invalid_hypenations = [
     "re-ordered",
     "shut-down",
     "call-graph",
-    "worth-while"
+    "worth-while",
+    "dead-lock",
+    "dead-locks"
     ].
 
 :- func acronyms = list(string).
@@ -478,6 +480,9 @@ bad_ngrams = [
         ["round", "robin"],
         ["worth", "while"],
         ["left", "most"],
+        ["right", "most"],
+        ["dead", "lock"],
+        ["dead", "locks"],
 
         % Hypenate this.
         ["if", "then", "else"]
