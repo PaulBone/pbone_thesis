@@ -13,79 +13,72 @@
 %it is compared with my work.
 %}
 
-\plan{Literature review begins here.}
+\section{Literature review}
+\label{sec:literature_review}
 
-In the rest of this chapter we will explore the literature concerning
-parallel programming.
+In this section we will explore the literature concerning parallel
+programming.
 The languages in which parallelism is used have a strong influence on the
 semantics and safety of the parallelism.
 We group languages into the following two classifications.
 
 \begin{description}
 
-    \item[Imperative] programming languages are those that allow
-    \emph{side-effects}.
+    \item[Pure declarative] programming languages are those that forbid
+    \emph{side effects}.
     A side effect is an action that a computation may perform
     without a declaration of the possibility of the action.
-    This can include input/output (IO) and modification of data structures.
-
-    \item[Pure declarative] programming languages are those that forbid
-    side-effects.
     The effect of executing any computation must be declared in the
     computation's signature.
-    Because all effects are declared, none of them are \emph{side}-effects.
+    Because all effects are declared, none of them are \emph{side} effects.
     This has numerous benefits,
     but we will restrict our attention to the specific benefit
     that this makes it easy for both compilers and programmers to understand
     if it is safe to parallelise any particular computation.
 
-\end{description}
+    \item[Impure] programming languages are those that allow side effects.
+    This includes imperative and impure declarative languages.
+    Determining if parallelisation is safe is usually intractable and often
+    requires whole program analysis.
+    The analysis may also be incomplete.
+    Thus parallelisation of systems in impure languages is notoriously
+    difficult.
 
-\noindent
-Not all researchers agree on the definitions above.
-However these definitions are exactly what is required when discussing
-the safety of parallelism.
-Additionally our definitions allow us to classify all languages without any
-ambiguity.
+\end{description}
 
 There are many ways to introduce parallelism in computer programming.
 We find it useful to create the following classifications for these methods.
+\begin{itemize}
+    \item Parallelism via concurrency
 
-\begin{description}
-    \item[Parallelism via concurrency] describes how
-    concurrency can be used to introduce parallelism.
-    While these concepts are related and often discussed together they are
-    orthogonal.
-    We will explain this and discuss the systems that use concurrency in
-    order to achieve parallelism
-    (Section~\ref{sec:intro_concurrency}).
+    \item Explicit parallelism
+%    is safer and easier to use compared to
+%    \pvc, however it is less expressive.
+%    We will explain how explicit parallelism is distinct from and improves
+%    upon \pvc.
 
-    \item[Explicit parallelism] is safer and easier to use compared to
-    \pvc, however it is less expressive.
-    We will explain how explicit parallelism is distinct from and improves
-    upon \pvc.
+    \item Implicit parallelism
+%    is a classification that includes
+%    systems that attempt to make parallel execution the typical form of
+%    execution.
+%    We describe a number of systems and explain why the general approach is
+%    flawed.
+%    Some systems use do not fit cleanly into either of our explicit
+%    or implicit parallelism definitions.
+%    We will discuss both approaches together in Section~\ref{sec:intro_par}.
 
-    \item[Implicit parallelism] is a category that includes
-    systems that attempt to make parallel execution the typical form of
-    execution.
-    We describe a number of systems and explain why the general approach is
-    flawed.
-    Some systems use do not fit cleanly into either of our explicit
-    or implicit parallelism definitions.
-    We will discuss both approaches together in Section~\ref{sec:intro_par}.
+    \item Automatic parallelism
+%    is our last category.
+%    In these systems sequential execution is the typical form of execution
+%    and parallel execution is used sparingly.
+%    Authors often group these systems with implicit parallelism systems.
+%    We have chosen to separate them because the two systems
+%    approach the same problem from different directions
+%    (parallel as default versus sequential as default).
+%    Prior work in automatic parallelism is discussed in
+%    Section~\ref{sec:intro_auto_par}.
 
-    \item[Automatic parallelism] is our last category.
-    In these systems sequential execution is the typical form of execution
-    and parallel execution is used sparingly.
-    Many authors often group these systems with implicit parallelism systems.
-    We have chosen to separate them because the two systems
-    approach the same problem from different directions
-    (parallel as default versus sequential as default).
-    Prior work in automatic parallelism is discussed in
-    Section~\ref{sec:intro_auto_par}.
-\end{description}
-
-\noindent
+\end{itemize}
 We explore the literature in this order as each successive category builds
 on the work of the previous category.
 Our own system is an automatic parallelism system;
@@ -95,68 +88,70 @@ we cannot discuss it meaningfully until we have explored the literature
 of giants upon whose shoulders we are standing.
 
 
-\section{Parallelism via concurrency}
+\subsection{Parallelism via concurrency}
 \label{sec:intro_concurrency}
 
 % Parallelism and concurrency.
-It is important to distinguish between \emph{parallelism} and
-\emph{concurrency}.
-
+It is important to distinguish between parallelism and concurrency.
 \begin{description}
-    \item[Concurrency] is defined as multiple computations executing simultaneously,
-    which may communicate with one another.
-    As an example consider a single-threaded web server which is required to
-    handle multiple requests concurrently.
+    \item[Concurrency] is parallelism in the problem domain.
 
-    \item[Parallelism] occurs when a program uses multiple cores or other
-    components of a computer to get more work done in the same amount of
-    time.
-    A suitable example may be a program that uses SIMD instructions to
-    multiply matrices, performing several basic operations with a single
-    instruction.
+    As an example consider a web server running on a single core,
+    which is required to handle multiple requests at once.
+    Concurrency is used by the programmer to help him write the webserver in
+    a more natural style.
+
+    \item[Parallelism] is parallelism in the implementation domain.
+   
+    Consider a program that uses SIMD instructions to multiply matrices,
+    performing several basic operations with a single instruction.
+    Parallelism is used to reduce the elapsed execution time of the program. 
+
 \end{description}
 
-\noindent
-Often parallelism is achieved through concurrency
-which leads to many programmers to confuse the two terms.
-For example,
-multiple concurrent processes executing on a multicore processor in parallel
-is both concurrent and parallel.
-
-Concurrency such as \citet*{hoare:1978:csp}'s
-communicating sequential processes (CSP)
-or \citet*{milner:pi}'s $\pi$-calculus
-provide the programmer with a natural way to express many problems,
-such as the web server example above.
-In these cases concurrency is (and should be) used to make the program
-easier to write.
-If concurrency uses parallelism provided by the hardware many programs
-will speed up due to this parallelism,
-but not all.
-
-Often programmers will deliberately use concurrency in order to speed up
-their programs;
-we call this \emph{parallelism via concurrency}.
-This can work well when the program is natural to express using concurrency,
-in which case it should probably be written using concurrency anyway.
-However when the problem cannot be expressed easily using concurrency,
-many programmers will attempt to \emph{force} their program into a concurrent
-model in the name of parallelism.
-Even if a programmer manages to profitably parallelise their program;
-they will usually find that the program is no longer easy to read, understand
-and debug.
-In this section we will discuss systems that encourage parallelism through
+Concurrency may be implemented using parallelism,
+because two independent tasks may be executed at the same time.
+Languages which have been designed for concurrent programming,
+and happen to be implemented using parallelism,
+can be used by programmers to achieve parallelism.
+Because the programmer uses concurrency to achieve parallelism,
+we call this ``\pvc''.
+Unfortunately,
+this means that parallelism is both at the top and bottom levels of the
+software stack, with concurrency in the middle.
+The middle layer is superfluous, and should be avoided if possible.
+In particular,
+programmers should not have to shoe-horn their programs into a concurrent
+model if that model is not a natural fit for the program.
+This is particularly bad because it can make the program difficult to read,
+understand and debug.
+When a program can naturally be expressed using concurrency,
+then it should probably be written to use concurrency anyway,
+regardless of the benefits of parallelism.
+In this section we will discuss systems that allow parallelism through
 concurrency.
 Our critique of these systems should not be misunderstood as a critique of
-concurrency which in general is outside the scope of this dissertation.
+concurrency,
+which is outside the scope of this dissertation.
+
+Concurrency notations such as Hoare's
+communicating sequential processes (CSP) \citep{hoare:1975:csp}
+or Milner's $\pi$-calculus \citep{milner:pi}
+provide the programmer with a natural ways to express many programs,
+such as webservers.
+In these cases concurrency is (and should be) used to make the program
+easier to write.
+If concurrency uses parallelism provided by the hardware,
+many programs will speed up due to this parallelism, but not all.
 
 % Threading.
 The most common method of introducing concurrency is with \emph{threads}.
-Some languages support threads natively such as Java \citep{java-threads}
-and others such as C \citep{c} support it via a library
+Some languages, such as Java \citep{java-threads}, 
+support threads natively; 
+others, such as C \citep{c}, support it via libraries,
 such as
 POSIX Threads \citep{butenhof1997:pthreads} or Windows
-Threads \citep{winthreads}, depending on the operating system.
+Threads \citep{winthreads}.
 These libraries tend to be low level;
 they simply provide an interface to the operating system.
 Different threads of execution run independently,
@@ -164,58 +159,64 @@ sharing a heap and static data.
 Because they share these areas where data may be stored,
 they can and often do,
 use the same data (unlike CSP).
-Threads communicate by writing to and reading from the shard data.
+Threads communicate by writing to and reading from the shared data.
 Regions of code that do this are called \emph{critical sections},
 and they must protect the shared data from concurrent access:
-a thread reading shared data while another writes to it, will read
+a thread reading shared data while another writes to it may read
 inconsistent data;
-and when two threads write to the same data some of the changes to the data
-may be lost.
+and when two threads write to the same data,
+some of the changes may be lost or corrupted.
 Synchronisation such as \emph{mutual exclusion locks} (mutexes)
-\citep{Dijkstra:Mutex} must be used avoid concurrent access.
-Upon entering a critical section a thread must acquire the lock associated with
-the data,
-it must release the lock when it leaves the critical section and the lock
-ensures that only one thread may hold the lock at a time.
+\citep{Dijkstra:Mutex} must be used to manage concurrent access.
+Upon entering a critical section a thread must acquire one or more locks
+associated with the critical section,
+upon leaving it must release the locks.
+The use of locks ensures that only one thread may be in the critical section
+at a time.
+(There are other ways that locks may be used to allow more than one thread
+inside the critical section, such as the readers-writers problem.)
 The programmer is responsible for defining critical sections and using locks
 correctly.
 
 Mutual exclusion locking is problematic,
 it is too easy to make mistakes when using locks.
-Frequent mistakes include: forgetting to synchronise access to a critical
+Frequent mistakes include: forgetting to protect access to a critical
 section,
-making the critical section too small, or too large,
-these can lead to incorrect program behaviour, inconsistent memory states and
+making the critical section too small
+can lead to incorrect program behaviour, inconsistent memory states and
 crashes.
+Making it too large can lead to deadlocks and livelocks.
 When a critical section uses multiple shared resources,
-it is normal to use multiple locks in the single critical section.
-The locks must be acquired in the same order in each such critical section
+it is normal to use multiple locks to protect access to a critical section.
+The locks must be acquired in the same order in each such critical section,
 otherwise deadlocks can occur.
-This also prevents critical sections from being nestable,
-causing significant problems for software composability.
+This requirement in order also prevents critical sections from being
+nestable,
+which causes significant problems for software composability.
+Failing to acquire locks in the correct order or avoid nexting can also cause
+deadlocks.
 All of these problems are difficult to debug because their symptoms are
 intermittent.
 Often so intermittent that introducing tracing code or compiling with debugging
-support, can prevent the problem from occurring;
-this is humorously known as a \emph{heisenbug} ---
-a testament to just how frustrating it can be to find.
+support can prevent the problem from occurring;
+this is known as a \emph{heisenbug} and is very frustrating.
 While it is possible to deal with these problems,
-we believe that it is better to make problems impossible;
+we believe that it is better to design problems out of systems;
 doing so guarantees that the programmer takes on fewer risks.
 
 % Message passing.
-Another popular model is \emph{message passing}.
-Unlike threads, message passing's \emph{processes} do not share static or heap
-data,
+Another popular model of concurrency is message passing.
+Unlike threads, message passing's processes do not share static or heap
+data;
 processes communicate by passing messages to one another.
-The major benefit of message passing is that it does not make assumptions about where processes
-are executing:
+The major benefit of message passing is that it does not make assumptions
+about where processes are executing:
 they can be running all on one machine or spread-out across a network.
 Therefore, message passing is very popular for high performance computing,
 where shared memory systems are not feasible.
 Message passing also avoids the problems with threading and mutexes.
-However other synchronisation techniques can introduce a subset of the
-problems that threading suffers.
+However message passing suffers from some of the same problems that
+threading suffers from.
 For example it is possible to create deadlocks with cyclic dependencies
 between messages:
 a process $a$ will send a message to $b$ but only after it has received a
@@ -227,79 +228,79 @@ Most deadlocks are more subtle and harder to find than this trivial example.
 Notable examples of message passing application programming interfaces (APIs)
 for C and Fortran \citep{backus:1957:fortran} are
 MPI \citep{mpi} and PVM \citep{pvm}.
-Every process can send and receive messages with any other process,
+Every process can send and receive messages to and from any other process.
 We can think of this in terms of \emph{mailboxes}:
 each process owns (and can read from) its own mailbox and can place messages
-in any other mailbox.
+into any mailbox.
 MPI and (to a lesser extent) PVM
 support powerful addressing modes
-such as broadcasting the same message to multiple processes, or
+such as multicasting the same message to multiple processes, or
 distributing the contents of an array evenly between
 multiple processes.
 These features make MPI and PVM very powerful interfaces for high performance
 computing.
-The programmer is responsible for encoding and decoding messages,
-while this adds extra flexibility it can also be very tedious.
-The Erlang language \citep{erlang} supports message passing natively and
-encoding and decoding is done for the programmer.
-Erlang allows processes to be created dynamically,
-making it more flexible than MPI or PVM.
-These two differences make it easier to program in Erlang than C with MPI or
-PVM.
-Erlang is typically used where fault tolerance is important,
-where as MPI and PVM are used for high performance such as in scientific
-computing.
+They make the programmer is responsible for encoding and decoding messages.
+While this adds extra flexibility,
+it can also be very tedious.
+
+Communicating sequential processes \citep{hoare:1978:csp} is a notation for
+concurrency using message passing.
+Although we introduced PVM and MPI first, CSP predates them by 11 years.
+Like MPI and PVM, CSP allows messages to be sent two and from processes
+using mailboxes.
+But unlike MPI and PVM, CSP allows processes to be created dynamically,
+making it more flexible.
+The first language based on CSP was occam \citep{occam1, occam3}.
+The $\pi$-calculus \citep{milner:pi} was developed later.
+It uses \emph{channels} rather than mailboxes for communication,
+although each model is a dual of the other.
+Unlike CSP, the $\pi$=calculus makes channels to be first class;
+they may be sent over a channel to another process.
+This allows programmers to compose a dynamic communication network.
+%Lastly, the Join-calculus \citep{join-calculus}
+%differs from $\pi$-calculus by using asynchronous
+%communication and by adding a number of restrictions;
+%neither of which is important to our discussion.
+
+The Erlang language \citep{erlang} supports native message passing,
+and unlike MPI and PVM, encoding and decoding is implicit.
+%These two differences make it easier to program in Erlang than C with MPI or
+%PVM.
+Erlang is typically used where fault tolerance is important;
+whereas MPI and PVM are used for high performance computing.
 All three systems support distributed computing.
 
-% CSP
-A different interpretation of message passing is
-communicating sequential processes \citep{hoare:1978:csp}.
-Even though we introduced PVM and MPI first, CSP predates them by 11 years.
-In the CSP model communication is performed through \emph{channels},
-channels and processes may be created dynamically.
-Channels are more powerful than mailboxes as multiple processes can read from
-the same channel (but not at the same time).
-A process can also set up multiple channels for different types of message,
-the same benefit can be gained by tagging messages in the mailbox analogy.
-The first language based on CSP is occam \citep{occam1, occam3}.
+%%The Jomel language \citep{jomel} (an ML \citep{ml}) is based on the $\pi$-calculus
+%Jocaml \citep{jocaml} (an Ocaml
+%\citep{ml-types, ocaml-modules, ocaml-bytecode, ocaml-native}
+%derivative) is a language based on join-calculus
+%Jocaml differs from Occam in the same ways that the join-calculus differs
+%from CSP.
+%However Occam, in particular its first version \citep{occam1},
+%was intended as a research tool to experiment with CSP, Jocaml was not.
+%Later versions of occam \citep{occam3} were designed for more practical use.
+%Jocaml is more widely used and appears to be much more practical.
+%Jocaml, like Erlang, is a powerful language with support for distributed
+%computing.
 
-\citet{milner:pi}'s $\pi$-calculus is similar to CSP.
-The difference between the two process algebras is that in the
-$\pi$-calculus,
-channels are first class;
-this mean that a channel can be sent in a channel to another process.
-This allows programmers to compose a dynamic communication network.
-%The Jomel language \citep{jomel} (an ML \citep{ml}) is based on the $\pi$-calculus
+There are many other languages and libraries based on these process algebras
+such as 
 Jocaml \citep{jocaml} (an Ocaml
 \citep{ml-types, ocaml-modules, ocaml-bytecode, ocaml-native}
-derivative) is a language based on the related join-calculus
-\citep{join-calculus}.
-Join-calculus differs from $\pi$-calculus by using asynchronous
-communication and adding a number of restrictions,
-which are not important to our discussion.
-Jocaml differs from Occam in the same ways that the join-calculus differs
-from CSP.
-However Occam, in particular its first version \citep{occam1},
-was intended as a research tool to experiment with CSP, Jocaml was not.
-Later versions of occam \citep{occam3} were designed for more practical use.
-Jocaml is more widely used and appears to be much more practical.
-Jocaml, like Erlang, is a powerful language with support for distributed
-computing.
-
-There are many other languages and libraries based on these process algebra,
-one that is currently enjoying a lot of popularity is Go
-\citep{google:2012:go}.
-Go appears to follow a model similar to the $\pi$-calculus and the
-join-calculus.
-However Go also uses shared memory without providing any synchronisation
+derivative)
+and Go \citep{google:2012:go}.
+Go is similar in style to the $\pi$-calculus.
+%and the join-calculus.
+However it also uses shared memory without providing any synchronisation
 for communicating through shared memory.
-In particular data sent in messages may contain pointers and therefore
-processes may end up referring to the same memory locations.
-If one process modifies such a memory location other processes can see the
-modification.
+In particular data sent in messages may contain pointers,
+and therefore different processes may end up referring to the same memory
+locations.
+If one process modifies such a memory location,
+other processes can see the modification.
 This creates the possibility that modifications to this data can 
-cause a process to read inconsistent data or for updates to the data to get
-lost.
+cause a process to read inconsistent data or 
+cause updates get lost or corrupted.
 This makes several classes of bug possible through accidental use of
 shared memory.
 This is a result of the language specification's inclusion of pointers and
@@ -310,41 +311,42 @@ All the systems we have introduced so far are prone to deadlocks,
 and many are prone to other problems.
 Many problems including deadlocks can be avoided using software
 transactional memory (STM) \citep{stm}.
-STM is similar to the threading model, it includes the concept of critical
-sections.
-Critical sections are not protected by mutexes,
-instead optimistic locking is used.
-Variables that are shared between threads are known as STM variables,
-they may only be modified within a critical section and a good implementation
+STM is similar to the threading model,
+in that it includes the concept of critical sections.
+STM does not protect critical sections using mutexes,
+instead it uses optimistic locking.
+Variables that are shared between threads are known as STM variables.
+They may only be modified within a critical section and a good implementation
 will enforce this.
 STM works by logging all the reads and writes to STM variables within a
-critical section, and not actually performing them until the end of the
-critical section.
+critical section,
+and not actually performing the writes until the end of the critical
+section.
 At that point the STM system acquires a mutex for each STM variable
 (in a pre-defined order to avoid deadlocks)
 and checks for sequential consistency by comparing its log with the current
 values of the variables.
 If no inconsistencies are found
-it may go ahead and modify and unlock the variables.
+it then modifies and unlocks the variables.
 Otherwise it must retry the critical section or fail.
 This is much safer than the threading model because
-the user does not need to use mutexes and critical sections are now
-nestable.
-Two nested sections commit when the outer one commits.
+the user does not need to use mutexes,
+and critical sections are now nestable.
+Code containing nested sections will perform the commit once 
+the outer section is ready to commit.
 However, programmers must still place their critical sections correctly in
 their program.
 A common criticism of STM is that it performs poorly when there is a lot of
-contention as a failed critical section must be re-executed and this often
-adds to the amount of contention.
+contention as a failed critical section must be re-executed,
+and this often adds to the amount of contention.
 Including side-effecting computations inside an STM critical section can also
 be a problem.
 This can be avoided in a pure declarative language such as
-Mercury \citep{mercury_jlp} or Haskell \citep{haskell98} as side effects cannot
-be expressed.
-\citet*{mika:mercury-stm} is an implementation for Mercury
-and \citet*{harris:2005:haskell-stm} is an implementation for Haskell.
+Haskell \citep{haskell98} or Mercury \citep{mercury_jlp}.
+\citet*{harris:2005:haskell-stm} is an implementation for Haskell,
+and \citet*{mika:mercury-stm} is an implementation for Mercury.
 
-\section{Explicit and implicit parallelism}
+\subsection{Explicit and implicit parallelism}
 \label{sec:intro_par}
 
 % Parallelism w/o concurrency in imperative languages.
@@ -426,7 +428,7 @@ languages respectively.
 %the programmer need only annotate their code, indicating that it should be
 %executed in parallel.
 
-\subsection{Parallelism in functional languages}
+\subsubsection{Parallelism in functional languages}
 \label{sec:intro_par_func}
 
 % \paul{Concurrent Lisp}
@@ -578,7 +580,7 @@ it is harder for the programmer to make mistakes.
 Their program will not compile if they forget to provide a typeclass
 instance.
 
-\subsection{Parallelism in logic languages}
+\subsubsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
 Although logic programming has many sub-paradigms we will discuss
@@ -656,7 +658,7 @@ the state of the other variables.
 During sequential execution
 part of the search space may bind variables to values.
 If this branch of the search fails,
-execution must bracktrack and retract any bindings that were made on the
+execution must backtrack and retract any bindings that were made on the
 failed branch.
 This is required so that alternative
 branches of the search tree are free to bind the variables to other values.
@@ -880,7 +882,7 @@ the \code{pseq} function or describe evaluation strategies.
 % \plan{Reform Prolog}
 % Reform Prolog handles loops cleverly, but I need to find a paper for it.
 
-\subsection{Other language paradigms}
+\subsubsection{Other language paradigms}
 \label{sec:intro_par_other}
 
 Some languages allow parallelism in other forms,
@@ -942,7 +944,7 @@ advantage of the program's structure and generate much more efficient
 parallel code.
 
 
-\section{Automatic Parallelisation}
+\subsection{Automatic Parallelisation}
 \label{sec:intro_auto_par}
 
 As we mentioned above,
