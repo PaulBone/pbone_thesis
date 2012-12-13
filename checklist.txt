@@ -5,6 +5,7 @@ Spelling
                      shutdown
                      week
                      course
+                     miss
 
 Revisits
 Cross references

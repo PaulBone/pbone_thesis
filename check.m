@@ -483,6 +483,10 @@ bad_ngrams = [
         ["right", "most"],
         ["dead", "lock"],
         ["dead", "locks"],
+        ["miss", "estimate"],
+        ["miss", "estimated"],
+        ["mis", "estimate"],
+        ["mis", "estimated"],
 
         % Hypenate this.
         ["if", "then", "else"]
