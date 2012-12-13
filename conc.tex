@@ -5,26 +5,87 @@
 % Each research chapter contains a discussion of related work.
 \status{No plan for this chapter yet}
 
-I guess in this chapter I have to unify the contributions of the other
-chapters.
-I think that perhaps this chapter could be used to relate the contribution
-of the thesis to the rest of the world, providing statements about future
-work, and applicability of this work to other languages and systems.
+Summarise contributions
+=======================
 
-\paul{How do you finish a thesis?}
+    Chapter 3 implemented many ideas invented elsewhere in the Mercury
+    runtime system, such as work stealing.
+    It also discusses a number of implementation improvements that make
+    parallel execution more efficient.
+    The Mercury runtime system provides a unique set of challenges, for
+    example dependent AND-parallelism constrains the order that sparks must
+    be evaluated in, making the implementation of work stealing non-trivial.
+    This adds to the support for techniques such as work stealing.
+
+    Chapter 4 describes a unqiue way to use profiling data to find
+    profitable dependent parallelism.
+    Chapter 4 makes two novel contributions:
+        1. Overlap calculation.
+        2. Search for \emph{how} to parallelise a conjunction.
+    Chapter 4 also describes our \emph{practical} implementation
+    of these ideas.
+
+    Chapter 5 both:
+        1. Fixes a long standing problem with parallel execution of most
+        loops in Mercury.
+        2. Provides a special case optimisation for a common programming
+        pattern.
+
+    Chapter 6 shows how we can take advantage of the similarities between
+    Mercury ahd GHC's runtime systems to use the \tscope visual profiler.
+    (Most of the similarity is accidental, eg both systems use strong
+    techniques such as lightweight threads and work stealing.)
+
+Further work
+============
+
+We have already discussed some further work within each of the four
+research chapters.
+Here I will discuss further work combining each of the chapters.
+
+    1. Update the overlap analysis to be aware of loop control and use an
+       appropriate cost model for loop-controlled code.
+       (We already discussed that it should have better handling for loops
+       in general.)
+
+       Do this for more recursion types in the future.  Including
+       loop-control-ish special casing and correct analysis of which special
+       case should be used and its cost model.  Eg: D\&C.
+
+    2. Throttling 
+       \paul{Throttle recursive parallelism based on the cost of each iteration.}
+
+    3. Profile merging, parallelisation as a specialisation and transforming
+       code to make it easier to parallelise (reordering and OISU) ---
+       if I have not discussed these already in Ch4.
+
+    4. The \tscope work has no concept of loop control.  So it cannot
+       properly generate profiles of loop controlled code.
+
+    5. \tscope should be used to feedback more information to the automatic
+       parallelism analysis.
+       This includes information about how many CSCs occur in one second,
+       the real costs of parallel overheads, (How many CSCs does it take to
+       spawn a conjunct etc),
+       and feedback on the actual costs of computations.
+
+    6. We do not handle exceptions.
+
+Related work
+============
+
+I have already discussed each chapter's related work.
+I am not sure there is anything left to discuss here as I am not aware of any
+comparable whole systems (which is what I have created).
+
+I should probably conclude with statements about how my work (the whole
+thesis) fits into the rest of the world.
+Perhaps I should revisit my statement that I hope parallelism is one day
+``just another optimisation''.
+
 
 \section{Further work}
 \label{sec:further_work}
-
-\paul{Exceptions}
-
-\paul{Tie auto parallelism analysis to different recursion types and their
-special case handling such as loop control}
-
-\paul{More special case handling such as D\&C}
-
-\paul{Throttle recursive parallelism based on the cost of each iteration.}
-\paul{Handle other recursion times intelligently.}
 
 \paul{XXX: Future work}
 As we stated above we do not currently handle recursive code specially other
