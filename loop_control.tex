@@ -1396,16 +1396,16 @@ would not be difficult.
 
 \status{This section has not been revised yet.}
 
-We ran all our benchmarks on
+% We ran all our benchmarks on
 % taura
 % a Dell Optiplex 755 desktop PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
 % (four cores, no hyperthreading)
 % running Linux 2.6.31.
 % no hyperthreading
 % apollo, and carlton
-a Dell Optiplex 980 desktop PC with a 2.8~GHz Intel i7 860 CPU
-(four cores, each with two hyperthreads)
-running Linux 2.6.35 in 64-bit mode.
+% a Dell Optiplex 980 desktop PC with a 2.8~GHz Intel i7 860 CPU
+% (four cores, each with two hyperthreads)
+% running Linux 2.6.35 in 64-bit mode.
 % \zoltan{
 % % goliath
 % a SunFire X2250 server with two 3.0~GHz Intel Xeon X5472 CPUs
@@ -1417,9 +1417,8 @@ running Linux 2.6.35 in 64-bit mode.
 % with frequency scaling (Speedstep and TurboBoost) disabled
 % (four cores, each with two hyperthreads)
 % running Linux 2.6.32.
-Each test was run ten times
-with both Speedstep and TurboBoost disabled;
-we discarded the highest and lowest times, and averaged the rest.
+Each test was run twenty times
+with frequency scaling (Speedstep and TurboBoost) disabled.
 
 We have benchmarked our system with four different programs:
 \begin{description}
@@ -1464,7 +1463,7 @@ while it is in the last parallel conjunct in the dependent versions.
 % Only the dependent parallel tests use loop control.
 % \paul{We might want to show independent code using loop control}
 
-\begin{table*}[tbh]
+\begin{sidewaystable}[tbp]
 \begin{center}
 \input{mem_table}
 \caption[Peak number of contexts used,
@@ -1473,9 +1472,9 @@ and peak memory usage for stacks, measured in megabytes}
 \label{tab:lc_mem}
 \end{center}
 %\vspace{-1\baselineskip}
-\end{table*}
+\end{sidewaystable}
 
-\begin{table*}[tb]
+\begin{sidewaystable}[tbp]
 \begin{center}
 \input{times_table}
 %\vspace{3mm}
@@ -1483,7 +1482,7 @@ and peak memory usage for stacks, measured in megabytes}
 \label{tab:lc_times}
 \end{center}
 %\vspace{-1\baselineskip}
-\end{table*}
+\end{sidewaystable}
 
 
 Tables~\ref{tab:lc_mem} and~\ref{tab:lc_times}

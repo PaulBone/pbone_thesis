@@ -697,12 +697,12 @@ def drop_best_and_worst_results(l0):
     else:
         return l0
 
-def mean(l0):
-    l = drop_best_and_worst_results(l0)
+def mean(l):
+    #l = drop_best_and_worst_results(l0)
     return float(sum(l)) / float(len(l))
 
-def stddev(l0):
-    l = drop_best_and_worst_results(l0)
+def stddev(l):
+    #l = drop_best_and_worst_results(l0)
     if len(l) > 1:
         n = float(len(l))
         m = float(sum(l)) / n
