@@ -50,13 +50,13 @@ program where it is worthwhile to execute two or more computations in
 parallel,
 algorithms that pay attention to the second of these issues as well as the
 first.
-Our system uses profiling information to compute
+Our system uses profiling information to estimate the
 times at which a procedure call is expected to consume the values of its
 input arguments
 and the times at which it is expected to produce the values of its output
 arguments.
 Given two calls that may be executed in parallel,
-our system uses the times of production and consumption
+our system uses the estimated times of production and consumption
 of the variables they share
 to determine how much their executions are likely to overlap
 when run in parallel,
@@ -73,7 +73,7 @@ An important benefit of profile-directed parallelisation is that
 since programmers do not annotate the source program,
 it can be re-parallelised easily after a change to the program
 obsoletes some old parallelisation opportunities and creates others.
-To do this the programmer can re-profile the program to generate fresh
+To do this, the programmer can re-profile the program to generate fresh
 recommendations and recompile the program to apply those recommendations.
 Nevertheless, if programmers want to parallelise some conjunctions manually,
 they can do so: our system will not override the programmer.
@@ -92,7 +92,7 @@ Section~\ref{sec:overlap_reccalls}
 describes how we calculate information about recursive calls missing from
 the profiling data.
 Section~\ref{sec:overlap_coverage}
-describes our change to coverage profiling which provides more accurate
+describes our change to coverage profiling, which provides more accurate
 coverage data for the new call graph based search for parallelisation
 opportunities.
 Section~\ref{sec:overlap_overlap_alg} describes our algorithm for
@@ -113,7 +113,8 @@ with comparisons to related work.
 
 When parallelising Mercury programs,
 the best parallelisation opportunities occur
-where two goals take a significant and roughly similar time to execute.
+where two goals take a significant and roughly similar ammount of time to
+execute.
 Their execution time should be as large as possible
 so that the relative costs of parallel execution are small,
 and they should be independent to minimise synchronisation costs.
@@ -121,7 +122,7 @@ Unfortunately, goals expensive enough to be worth executing in parallel
 are rarely independent.
 For example, in the Mercury compiler itself,
 there are 69 conjunctions containing two or more expensive goals,
-goals with a cost above 10,000csc,
+goals with a cost above 10,000csc (call sequence counts),
 but in only three of those conjunctions are the expensive goals independent.
 This is why Mercury supports the parallel execution of dependent conjunctions
 through the use of futures and a compiler transformation
@@ -275,7 +276,7 @@ However, this will not be accurate;
 static analysis cannot take into account sizes of data terms,
 or other values that are only available at runtime.
 Therefore, we use profiler feedback information in our implementation.
-This was introduced in Section~\ref{sec:backgnd_autopar}
+This was introduced in Section~\ref{sec:backgnd_autopar},
 which also includes a description of Mercury's deep profiler.
 To generate the profiler feedback data,
 we require programmers to follow this sequence of actions after they have
@@ -313,16 +314,16 @@ It is up to the programmer using our system
 to select training input for the profiling run in step 2.
 Obviously, programmers should pick input that is as representative as
 possible;
-bet even input data that is quite different from the training input can
+but even input data that is quite different from the training input can
 generate useful parallelisation recommendations.
 Variations in our input data will change the numerical results
 that we use to decide whether something should be parallelised,
 however they rarely change a ``should parallelise'' decision into a
-``should not parallelise'' decision and \emph{vice-versa}.
-The other source of inaccuracy comes from miss estimating the hardware's
+``should not parallelise'' decision or vice-versa.
+The other source of inaccuracy comes from mis-estimating the hardware's
 performance on certain operations such as the cost of spawning off a new
 task.
-Such miss estimations will have the same impact as variations in impact data.
+Such mis-estimations will have the same impact as variations in input data.
 The main focus of this chapter is on step 3;
 we give the main algorithms used by the feedback tool.
 However, we will also touch on steps 1 and 4.
@@ -463,7 +464,7 @@ in Section~\ref{sec:overlap_pragmatic}.
 % for the related work section;
 % mention that this work has not extended to large programs.
 
-The Mercury deep profiler gives us directly
+The Mercury deep profiler gives us
 the costs of all non-recursive call sites in a clique.
 For recursive calls,
 the costs of the callee are mingled together
@@ -497,7 +498,7 @@ base cases, and recursive cases containing a single recursive call site.
 Our example for this category is \code{map\_foldl},
 whose code is shown in Figure~\ref{fig:map_foldl}.
 
-Let us say that of the 100 calls to the procedure,
+Let us say that of 100 calls to the procedure,
 90 were from the recursive call site
 and 10 were from a call site in the parent SCC.
 Then we would calculate
@@ -595,7 +596,7 @@ Then its typical cost is $10 + 3.5(10,000 + 1) = 35,013.5$ call sequence counts.
 
 {\bf Pattern 3: Divide-and-conquer procedures.}
 The third pattern consists of procedures whose bodies
-that also have just two types of execution path through them:
+also have just two types of execution path through them:
 base cases, and recursive cases containing \emph{two} recursive call sites.
 Our example for this category is an accumulator version of \quicksortacc,
 whose code is shown in Figure~\ref{fig:quicksort_acc}.
@@ -607,12 +608,12 @@ optimally,
 dividing the list in half with each recursion.
 Figure~\ref{fig:quicksort_acc_callgraph} shows the call graph for such an
 invocation of \quicksortacc.
-There are 15 nodes in ``qs'''s call tree,
+There are 15 nodes in \code{qs}'s call tree,
 each node has exactly one call leading to it;
 therefore there is one call from outside \quicksortacc's SCC
-(the call from ``main''),
+(the call from \code{main}),
 and 14 calls within the SCC
-(the calls from ``qs'' nodes).
+(the calls from \code{qs} nodes).
 By inspection, there are four complete levels of recursion.
 There are always
 $\ceil{\log_2(N+1)}$
@@ -683,8 +684,7 @@ cost(2)~&= 3{CostRec} + 6 + 4{CostNonRec} \\
 \]
 
 \noindent
-By induction,
-the cost of a recursive call in a perfectly balanced divide and conquer
+The cost of a recursive call in a perfectly balanced divide and conquer
 procedure at depth $D$ is:
 
 \begin{equation*}
@@ -716,7 +716,7 @@ The profiler reports that there are 655,370 calls into this SCC,
 within \quicksortacc's SCC.
 Using the formulas above we find that the AvgMaxDepth is
 $\log_{2}(655,360/10 + 2) \approx 16$.
-The total per-call cost of the call site to partition reported by the profiler
+The total per-call cost of the call site to \partition reported by the profiler
 is an estimated 35.5csc,
 it is the only other goal in either the base case or recursive case with a
 non-zero cost.
@@ -727,8 +727,11 @@ $(2^{14} - 1)(35.5 + 2) + 2^{14}\times0 \approx 614,363$.
 This is the average cost of both of the two recursive calls;
 assuming that the list was partitioned evenly.
 Since the deep profiler reports that the total per-call cost of the
-\quicksortacc SCC is 1,229,106csc, we can see that the above figure makes
-sense.
+\quicksortacc SCC is 1,229,106csc, 
+and the two recursive calls cost 614,363csc each (their sum is 1,228,726csc)
+plus the cost of \partition (35.5csc) is approximatly 1,228,762.
+This is reasonably close to the total cost of \quicksortacc,
+especially given other uncertanties.
 
 There are two ways in which this calculation can be inaccurate.
 First, poorly chosen pivot values create imbalanced call graphs.
@@ -740,10 +743,13 @@ There is one extra concern,
 a pivot that is not perfect will result in two sublists of different sizes
 and therefore the recursive calls will have different costs rather than the
 same cost we computed above.
-\emph{Parallel slackness} can be used as on average the computed costs will
-be close enough,
-and any difference between the predicted cost and the actual cost will not
-affect the system as a whole.
+It is normal to use \emph{parallel slackness} to reduce the impact of
+imbalances.
+This means creating slightly more finely grained parallelism than is
+necessary in order to increase the chance that a processor can find parallel
+work.
+This works because on average the computed costs will be close enough to the
+real costs.
 
 The second cause of inaccurate results comes from our assumption about
 \partition's cost.
@@ -754,11 +760,11 @@ list which is itself directly proportional to the depth in \quicksortacc's call
 graph.
 This would seem to affect our calculations of the cost of recursive calls
 different levels within the call tree.
-However the rate at which \partition's cost increases with hight in the tree
+However the rate at which \partition's cost increases with height in the tree
 is linear, while at the same time the number of calls to \partition grows at
 a power of two with the tree's hight.
 Therefore as the tree becomes larger the \emph{average} cost of calls to
-\partition within it asymptotes towards a constant number.
+\partition within it asymptotically approaches a constant number.
 So in significantly large trees the varying costs of \partition do not
 matter.
 
@@ -825,7 +831,7 @@ matter.
     & \code{~~~~~~~~X = a,} &          60\% &         0 \\
     & \code{~~~~~~~~q(...)} &          60\% &     1,000 \\
  5  & \code{~~~~;}          &               &           \\
-    & \code{~~~~~~~~X = b,} &          20\& &         0 \\
+    & \code{~~~~~~~~X = b,} &          20\% &         0 \\
     & \code{~~~~~~~~r(...)} &          20\% &     2,000 \\
     & \code{~~~~;}          &               &           \\
     & \code{~~~~~~~~X = c,} &          20\% &         0 \\
@@ -954,7 +960,7 @@ calls, averaging the coverage counts, and adding the costs.
 \end{center}
 
 \noindent
-Again, we merge the cases with the sane numbers of recursive calls.
+Again, we merge the cases with the same numbers of recursive calls.
 
 \noindent
 \begin{center}
@@ -989,7 +995,7 @@ It is possible to generalise further, if a procedure has two entries,
 one with zero recursive calls and the other with some $N$ recursive calls.
 Then the recursion pattern is similar to divide and conquer except that the
 base in the formulas shown above is $N$ rather than 2.
-We have not found it necessary to handle these cases.
+It has not been necessary to handle these cases.
 
 \begin{table}
 \begin{center}
@@ -1135,7 +1141,7 @@ to $f$ as a call to $f\prime$.
 This allows us to inline $f\prime$ into $g$ without an issue, and $f$'s call
 to $g$ is no longer recursive.
 
-The graph in Figure~\ref{fig:mutrec3} is more complicated,
+The graph in Figure~\ref{fig:mutrec3} is more complicated;
 it has three loops.
 In this case we cannot inline $g$ into $f$ because of the loop within $g$,
 and we cannot inline $f$ into $g$ because of the loop within $f$.
@@ -1167,7 +1173,7 @@ which can gather the \emph{coverage} of any program point.
 Before we started this project the coverage data gathered was not ancestor
 context specific.
 Coverage data was collected and stored in the profiler's \PS
-structures where it was not be associated with a specific ancestor context of
+structures where it was not associated with a specific ancestor context of
 a procedure.
 Throughout this section we will use the term \emph{deep} to describe data
 that is ancestor context specific,
@@ -1218,11 +1224,10 @@ Our automatic parallelisation tool uses deep profiling data throughout.
 However, using deep profiling data and static coverage data creates
 inconsistencies that can result in erroneous results.
 Figure~\ref{fig:static_and_deep_coverage} shows \listfoldlthree from
-Mercury's standard library;
-it is annotated with data collected from a profiling run of the Mercury
+Mercury's standard library on the right hand side.
+On the immediate left (the fourth column) of each line of code,
+we have shown deep profiling data from a profiling run of the Mercury
 compiler.
-Each line of code is shown with deep profiling data to its immediate left
-(the fourth column).
 The first cell in this column shows the per-call cost of the
 call site in the parent SCC (the total cost of \foldlthree's call graph).
 The other cells in this column show the per-call costs of \foldlthree's call
@@ -1236,7 +1241,13 @@ from its parent call site.
 The second and third columns in this table report static and deep coverage
 data respectively.
 The deep profiling and coverage data was collected from a single SCC of
-\foldlthree whose ancestor context  is part of the compiler's mode checker,
+\foldlthree\footnote{
+    We do not mean that \foldlthree has more than one SCC, and we only
+    picked one;
+    we mean that \foldlthree is called many times during the compiler's
+    execution, each time this creates a new SCC and we have picked one of
+    these.}
+whose ancestor context  is part of the compiler's mode checker;
 the last procedure in the call chain, excluding \foldlthree, is
 \code{modecheck\_to\_fixpoint/8}.
 
@@ -1261,8 +1272,9 @@ This information is correct when generalised across the program,
 but it is incorrect in specific ancestor contexts:
 if we tried to analyse this loop in a specific context it would cause
 problems.
-Additionally, coverage data is necessary to accurately compute the cost of
-the recursive call.
+% \paul{XXX: Why say this?}
+% Additionally, coverage data is necessary to accurately compute the cost of
+% the recursive call.
 % and that the cost of the higher order call is cheap.
 For example,
 if we use this information with the deep profiling information in the fourth
@@ -1311,21 +1323,21 @@ affecting performance.
 It is important to minimise a profiler's impact on performance.
 Poor performance both affects the user's experience and
 increases the risk of distorting the program's profile.
-However, we do not have to worry about distortion as of time measured in
+However, we do not have to worry about distortion of time measured in
 call sequence counts.
-Time measured in seconds may be distorted slightly, this is very minimal.
+Time measured in seconds may be distorted slightly, but this is minimal.
 
 \plan{Optimisations \& profiling}
 Normally during profiling we disable optimisations that can transform a
 program in ways that would make it hard for a programmer to recognise their
 program's profile.
 For example inlining one procedure into another might cause the programmer
-to see one of their procedures making calls to other procedures that they
+to see one of their procedures making calls that they
 did not write.
 However automatic parallelisation, like other optimisations,
 is used to speedup a program;
 a programmer will typically use other optimisations in conjunction with
-automatic parallelism in order to achieve more optimal speedups.
+automatic parallelism in order to achieve more greater speedups.
 The compiler performs parallelisation after most other optimisations,
 and therefore it operates on a version of the program that has already had
 these optimisations applied.
@@ -1409,7 +1421,7 @@ As optimisations make the program simpler, the call graph also becomes
 simpler.
 For example, inlining reduces the number of procedures in the program,
 which means that fewer profiling data structures are needed to represent
-them in both the program's memory and in the data file.
+them both in the program's memory and in the data file.
 This is why the results show that the optimised programs use less memory
 and generate smaller profiling data files.
 Optimisations can also improve performance in another way:
