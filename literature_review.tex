@@ -625,8 +625,8 @@ resources.
 Systems that attempt to exploit OR-parallelism include
 Aurora \citep*{lusk:1990:aurora},
 Muse \citep*{ali:1990:muse}
-and \&ACE \citep*{gupta:1991:ace}.
-(\&ACE also supports AND-parallelism.)
+and ACE \citep*{gupta:1991:ace}.
+(ACE also supports AND-parallelism.)
 
 AND-parallel Prolog implementations introduce parallelism by executing
 conjuncts within clauses in parallel.
@@ -737,7 +737,7 @@ Systems that combine independent AND-parallelism and OR-parallelism,
 such as 
 PEPSys \citep*{baron:1988:pepsys}
 and
-\&ACE \citep*{gupta:1991:ace},
+ACE \citep*{gupta:1991:ace},
 combine the costs of managing variables in either parallelism type.
 
 Unfortunately,
@@ -791,9 +791,6 @@ and Guarded Horn Clauses (GHC) \citep*{ueda:ghc}.
 When these systems encounter multiple clauses during execution they commit
 to only one of the clauses.
 They can only commit if it is clear that only one clause matches.
-%XXX: Currently here.
-%Parlog - Mode annotation
-%GHC - Guard
 Each of these system uses guarded clauses, which have the
 form:
 $H \leftarrow G_1 \wedge \ldots \wedge G_n : B_1 \wedge \ldots \wedge B_m$
@@ -865,8 +862,10 @@ non-deterministic it must handle backtracking over code that produces the
 values of shared variables.
 The backtracking mechanism used is described by \citet{shen:1996:daswam}.
 
-\paul{XXX:
-Implicit: Concurrent Prolog, Parlog, GHC, Andorra, }
+\paul{XXX:}
+Implicit: Aurora, Muse, ACE, Andorra, Concurrent Prolog, Parlog, GHC, DDAS
+Explicit: PEPSys
+Both: Ciao.
 Most of these systems use implicit parallelism, parallelising almost
 everything.
 As we mentioned earlier this can lead to embarrassing parallelism.
