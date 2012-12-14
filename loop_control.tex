@@ -5,7 +5,7 @@
 \label{chap:loop_control}
 
 \status{I have finished the first 3 sections.  They are ready for Peter
-Schacte to check.}
+Schachte to check.}
 
 In the previous chapter we described our
 system that uses profiling data
@@ -485,7 +485,7 @@ but that argument does not belong here,
 since it depends on the behaviour of operations we have not described yet.
 Alternatively, we can completely avoid mentioning the hint field.}
 \paul{I think it is easier to not mention it, it is optimal in some cases and
-neither optimal nor Pessimal in other cases.}
+neither optimal nor pessimal in other cases.}
 
 \end{description}
 
@@ -735,7 +735,7 @@ Algorithms~\ref{alg:transform_alg},~\ref{alg:reccases_alg} and~\ref{alg:basecase
   \State $LoopGoal \gets OrigGoal$
   \For{$RecParConj \in RecParConjs$}
     \State $RecParConj$ has the form $`Conjunct_1~\&~\ldots~\&~Conjunct_n$'
-        for sone $n$
+        for some $n$
     \For{$i \gets 1 to n-1$}
       \Comment This does not visit the last goal in $RecParConj$
       \State $LCSlot_i \gets$ create\_new\_variable()
@@ -1417,31 +1417,34 @@ would not be difficult.
 % with frequency scaling (Speedstep and TurboBoost) disabled
 % (four cores, each with two hyperthreads)
 % running Linux 2.6.32.
-Each test was run twenty times
-with frequency scaling (Speedstep and TurboBoost) disabled.
 
-We have benchmarked our system with four different programs:
+We have benchmarked our system with four different programs,
+many we have used in earlier tests.
+All these programs use explicit parallelism.
 \begin{description}
-\item[mandelbrot]
-generates a mandelbrot image.
-It renders the rows of the image in parallel
-using \mapfoldl{} from Figure~\ref{fig:mapfoldl}.
-\item[raytracer]
-is a raytracer written for
-the ICFP programming competition in 2000.
-Like mandelbrot, it renders the rows of the generated image in parallel,
-but it does not use \mapfoldl{}.
+\item[mandelbrot] uses dependent parallelism using \mapfoldl from
+Figure~\ref{fig:mapfoldl}.
+
 \item[matrixmult]
 multiplies two large matrices.
 It computes the rows of the result in parallel.
+%We have included both dependent and independent versions of matrixmult;
+%neither is tail recursive without
+
+\item[raytracer] uses dependent parallelism and is tail recursive.
+Like mandelbrot, it renders the rows of the generated image in parallel,
+but it does not use \mapfoldl{}.
+
 \item[spectralnorm]
-computes the eigenvalue of a large matrix using the power method.
+was donated by Chris King\footnote{Chris' version was published at
+\url{http://adventuresinmercury.blogspot.com/search/label/parallelization}.}.
+It computes the eigenvalue of a large matrix using the power method.
 It has two parallel loops, both of which are executed multiple times.
-\footnote{
-Spectralnorm was donated by Chris King, see
-\code{http://ad\-ven\-tures\-in\-mer\-cury\-.\-blog\-spot\-.\-com\-/\-search\-/\-label\-/\-pa\-rall\-el\-iza\-tion}.
-We have modified Chris' code slightly.}
+Chris' original version uses dependent parallelism.
+%we have created a new independently parallel version from his original code.
 \end{description}
+
+We ran each test of each program twenty times.
 
 \noindent
 All these benchmarks have dependent AND-parallelism,
@@ -1452,6 +1455,12 @@ is just the location of a unification that constructs a cell
 from the results of two parallel conjuncts:
 the unification is outside the parallel conjunction in the independent versions,
 while it is in the last parallel conjunct in the dependent versions.
+The sequential versions of mandelbrot and raytracer can both use tail call
+optimisation to run in constant stack space.
+This is not possible in the other programs without
+the last call modulo constructor (LCMC)
+optimisation \citep{ross:mercury-lcmc}.
+LCMC is not supported with tail recursion so we have not used it.
 
 % Mandelbrot, raytracer and matrixmult
 % all compute the rows of their result in parallel,
@@ -1484,17 +1493,16 @@ and peak memory usage for stacks, measured in megabytes}
 %\vspace{-1\baselineskip}
 \end{sidewaystable}
 
-
 Tables~\ref{tab:lc_mem} and~\ref{tab:lc_times}
 presents our memory consumption and timing results respectively.
 In both tables,
 the columns list the benchmark programs,
 while the rows show the different ways
 the programs can be compiled and executed.
-Due to space limits,
-each table shows only a subset of the rows,
-those with the most interesting results.
-These subsets are different for the two tables.
+% Due to space limits,
+% each table shows only a subset of the rows,
+% those with the most interesting results.
+% These subsets are different for the two tables.
 
 In Table~\ref{tab:lc_mem}, each box has two numbers.
 The first reports the maximum number of contexts alive at the same time,
@@ -1524,23 +1532,26 @@ in two main ways.
 First, they will incur some overheads
 that the versions in the first row do not,
 overheads that are needed to support the possibility of parallel execution.
-The most important of these overheads is that
-potentially-parallel code needs a way to access thread-specific data,
-and therefore when a program is compiled for parallel execution,
-the Mercury compiler has to reserve one machine register
-to hold a pointer to this data,
-making that machine register unavailable
-to the rest of the Mercury abstract machine.
-Given the dearth of callee-save machine registers on the x86\_64
-(we are not set up to use caller-save registers),
-this can lead to very significant slowdowns:
-for our benchmarks, as much as 30\%.
-The second difference is that,
-the garbage collector and the rest of the runtime system
-must be thread safe,
-and this incurs a runtime cost that leads to slowdowns in most cases,
+The most important of these overheads is that,
+as described in Chapters~\ref{chap:rts} and~\ref{chap:overlap},
+the runtime reserves a hardware register to point to thread specific data and
+% potentially-parallel code needs a way to access thread-specific data,
+% and therefore when a program is compiled for parallel execution,
+% the Mercury compiler has to reserve one machine register
+% to hold a pointer to this data,
+% making that machine register unavailable
+% to the rest of the Mercury abstract machine.
+% Given the dearth of callee-save machine registers on the x86\_64
+% (we are not set up to use caller-save registers),
+% this can lead to very significant slowdowns:
+% for our benchmarks, as much as 30\%.
+% The second difference is that,
+compiling
+the garbage collector and the rest of the runtime system for thread safety.
+% must be thread safe,
+These overheads lead to slowdowns in most cases,
 even when using a single core for user code.
-(The garbage collector uses one core in all of our tests).
+(The garbage collector uses one core in all of our tests.)
 However, the mandelbrot program speeds up when thread safety is enabled;
 it does not do very much memory allocation
 and is therefore affected less by
@@ -1552,17 +1563,15 @@ interacting with the cache system differently.
 All the later rows
 compile the program for parallel execution,
 and leave the parallel conjunctions in the program intact.
-They execute the program on 1 to 4 cores (1c to 4c).
+They execute the program on 1 to 4 cores (`1c' to `4c').
 The versions that execute on the same number of cores
 differ from each other mainly in how they handle loops.
 The rows marked nolc are the controls.
-They do not use the loop control mechanism described in this paper;
-instead, they rely on our system's overall limit
-on the number of contexts that may be created,
-as we described at the end of Section~\ref{sec:context_limit}.
+They do not use the loop control mechanism described in this chapter;
+instead, they rely the context limit.
 The actual limit is the number of engines
 multiplied by a specified parameter,
-which we have set to 128 in c128 rows and to 512 in c512 rows.
+which we have set to 128 in `c128' rows and to 512 in `c512' rows.
 %A minor bug (where \code{<=} was used instead of \code{<}) allows this limit
 %to be exceeded by a single context in some cases.
 Our code checks this limit in a non-thread-safe manner,
@@ -1577,8 +1586,8 @@ so this is an acceptable price to pay for reduced synchronisation overhead.
 %similar problems.
 %So leading the reader to believe that this is the cause is okay by me.}
 
-The rows marked lcN do use our loop control mechanism,
-with the value of N indicating
+The rows marked `lc$N$' do use our loop control mechanism,
+with the value of $N$ indicating
 the value of another parameter we specify when the program is run.
 When the \code{lc\_create\_loop\_control} instruction
 creates a loop control structure,
@@ -1586,21 +1595,20 @@ it computes the number of slots to create in it,
 by multiplying the configured number of Mercury engines
 (each of which can execute on its own core)
 with this parameter.
-We have memory consumption results for N=1, 2 and 4.
-We have timing results for all of these too,
-but show only the results for N=2,
-since the timing results for N=1 and N=4 are almost identical to these.
+We show memory consumption and timing results for $N=1$, 2 and 4.
+The timing results for $N=1$ and $N=4$ are almost identical to those for
+$N=2$.
 It seems that as long as we put a reasonably small limit
-on the number of stacks a loop control structure can use,
+on the number of contexts a loop control structure can use,
 speed is not much affected by the precise value of the limit.
 
-The rows marked lcN,tr are like the corresponding lcN rows,
+The rows marked `lc$N$, tr' are like the corresponding `lc$N$' rows,
 but they also switch on tail recursion preservation
 in the two benchmarks (mandelbrot and raytracer)
 whose parallel loops are naturally tail recursive.
 The implementation of parallelism without loop control
 destroys this tail recursion,
-and so does loop control unless we ask it to preserve it.
+and so does loop control unless we ask it to preserve tail recursion.
 That means that mandelbrot and raytracer use tail recursion
 in all the test setups except for
 the parallel, non-loop control ones,
@@ -1608,8 +1616,8 @@ and loop control ones without tail recursion.
 Since the other benchmarks are not naturally tail recursive,
 they will not be tail recursive however they are compiled.
 There are no such rows in Table~\ref{tab:lc_mem}
-since the results in each lcN,tr row
-would be identical to the corresponding lcN row.
+since the results in each `lc$N$, tr' row
+would be identical to the corresponding `lc$N$' row.
 
 There are several things to note in Table~\ref{tab:lc_mem}.
 The most important is that when the programs are run on more than one core,
@@ -1628,11 +1636,11 @@ for every parallel task that the program can spawn off.
 For example, mandelbrot generates an image with 600 rows,
 so the original context can never spawn off more than 600 other contexts.
 
-On one core, the nolc versions spawn off sparks,
+On one core, the `nolc' versions spawn off sparks,
 but since there is no other engine to pick them up,
 the one engine eventually picks them up itself,
 and executes them in the original context.
-By contrast, the lc versions directly spawn off new contexts, not sparks.
+By contrast, the `lc$N$' versions directly spawn off new contexts, not sparks.
 This avoids the overhead of converting a spark to a context,
 but we can do it only because we know we will not create too many contexts.
 
@@ -1653,9 +1661,9 @@ The first is that in the absence of loop control,
 increasing the per-engine context limit from 128 to 512
 yields significant speedups for three out of four the dependent benchmarks.
 Nevertheless, the versions with loop control
-significantly outperform the versions without, even c512,
+significantly outperform the versions without, even `c512',
 for all these benchmarks except mandelbrot.
-On mandelbrot, c512 already gets a near-perfect speedup,
+On mandelbrot, `c512' already gets a near-perfect speedup,
 yet loop control still gets a small improvement.
 Thus on all our dependent benchmarks,
 switching on loop control yields a speedup
@@ -1663,35 +1671,35 @@ while greatly reducing memory consumption.
 
 Overall, the versions with loop control
 get excellent speedups on three of the benchmarks:
-speedups of 3.94, 3.92 and 3.83 on four CPUs
+speedups of 3.98, 3.93 and 3.89 on four CPUs
 for mandelbrot, matrixmult and spectralnorm respectively.
 The one apparent exception, raytracer,
-is very memory-allocation-intensive,
-because it does lots of floating point arithmetic:
-the Mercury backend we use always boxes floating point numbers,
-so each floating point operation adds a new cell to the heap.
-Because of this, memory bandwidth may also be an issue for it,
-but its bigger problem is garbage collection;
-for another paper,
-we have measured it taking 40\% of the runtime when run on four CPUs.
-% even though we used four marker threads.
-% (For fairness, we used four marker threads
-% regardless of how many CPUs the Mercury code used.)
+is very memory-allocation-intensive.
+In Section~\ref{sec:rts_gc} we showed that this can significantly reduce the
+benefit of parallel execution of Mercury code,
+especially when the collector does not use parallelism itself.
+In we have observed nearly 45\% of a the raytracer's
+runtime being used in garbage collection (Table~\ref{tab:gc_amdahl}):
+This means that parallel execution can only speed up the remaining 55\% of
+the program.
 Therefore the best speedup we can hope for is
-$(4 \times 0.6 + 0.4)/(0.6 + 0.4) = 2.8$,
-and we do come close to that.
+$(4 \times 0.55 + 0.45)/(0.55 + 0.45) = 2.65$,
+which our result of 2.64 is as close as practically possible to this
+theoretical limit.
 
 Second,
 % for two of the four benchmarks,
 loop control is crucial for getting this kind of speedup,
 unless you are willing to waste lots of memory.
 On four cores, loop control raises the speedup compared to c128
-from 2.25 to 3.96 for mandelbrot,
-from 1.45 to 3.92 for matrixmult,
-from 0.87 to 2.52 for raytracer,
-and from 1.01 to 3.83 for spectralnorm.
+from 3.75 to 3.98 for mandelbrot,
+from 3.44 to 3.93 for matrixmult,
+from 1.76 to 2.64 for raytracer,
+and from 1.14 to 3.89 for spectralnorm.
 Those are pretty impressive improvements.
 
+\paul{XXX: Currently here,  there's something wrong with the context limit
+so I need to fix it and re-run the benchmarks.}
 Third, for the benchmarks that have versions using independent parallelism,
 the independent versions are faster than
 the dependent versions without loop control,

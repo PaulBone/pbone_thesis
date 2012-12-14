@@ -493,63 +493,64 @@ class Results(object):
                         f.write(" (%2.2f)" % sd)
                 f.write("\\\\\n")
 
-            lc = default_num_contexts_per_lc
-            c = default_max_contexts_per_thread
-            if self.talk:
-                f.write("\\textbf{%30s} " % ("%s, lc%d" % (nc, lc)));
-            else:
-                f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d" % (nc, lc)));
-            for prog in progs:
-                if prog.endswith("indep"):
-                    # Loop control is not applicable to independant programs
-                    # since their conjuncts are swaped they become
-                    # left-recursive.
-                    f.write(" & n/a ")
+            for lc in num_loop_control_contexts_per_engine: 
+                #lc = default_num_contexts_per_lc
+                c = default_max_contexts_per_thread
+                if self.talk:
+                    f.write("\\textbf{%30s} " % ("%s, lc%d" % (nc, lc)));
                 else:
-                    ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc"]["P%d-lc%d-c%d" % (p, lc, c)])
-                    if not ts:
+                    f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d" % (nc, lc)));
+                for prog in progs:
+                    if prog.endswith("indep"):
+                        # Loop control is not applicable to independant programs
+                        # since their conjuncts are swaped they become
+                        # left-recursive.
                         f.write(" & n/a ")
-                        continue
-                    t = mean(ts)
-                    suseq = baseseq[prog] / t
-                    supar = basepar[prog] / t
-                    f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
-                    if write_stddev:
-                        sd = stddev(ts)
-                        f.write(" (%2.2f)" % sd)
-            f.write("\\\\\n")
+                    else:
+                        ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc"]["P%d-lc%d-c%d" % (p, lc, c)])
+                        if not ts:
+                            f.write(" & n/a ")
+                            continue
+                        t = mean(ts)
+                        suseq = baseseq[prog] / t
+                        supar = basepar[prog] / t
+                        f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+                        if write_stddev:
+                            sd = stddev(ts)
+                            f.write(" (%2.2f)" % sd)
+                f.write("\\\\\n")
 
-            if self.talk:
-                f.write("\\textbf{%30s} " % ("%s, lc%d, tr" % (nc, lc)));
-            else:
-                f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d, tr" % (nc, lc)));
-            for prog in progs:
-                for cur_p in programs:
-                    if cur_p["name"] == prog:
-                        this_prog = cur_p
-                        break
-                is_tr = this_prog["tail_rec"]
-                if prog.endswith("indep"):
-                    # Loop control is not applicable to independant programs
-                    # since their conjuncts are swaped they become
-                    # left-recursive.
-                    f.write(" & n/a ")
-                elif not is_tr:
-                    # Not all programs are tail recursive.
-                    f.write(" & n/a ")
+                if self.talk:
+                    f.write("\\textbf{%30s} " % ("%s, lc%d, tr" % (nc, lc)));
                 else:
-                    ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc-tr"]["P%d-lc%d-c%d" % (p, lc, c)])
-                    if not ts:
+                    f.write("\\textbf{%30s} " % ("par, \&, %s, lc%d, tr" % (nc, lc)));
+                for prog in progs:
+                    for cur_p in programs:
+                        if cur_p["name"] == prog:
+                            this_prog = cur_p
+                            break
+                    is_tr = this_prog["tail_rec"]
+                    if prog.endswith("indep"):
+                        # Loop control is not applicable to independant programs
+                        # since their conjuncts are swaped they become
+                        # left-recursive.
                         f.write(" & n/a ")
-                        continue;
-                    t = mean(ts)
-                    suseq = baseseq[prog] / t
-                    supar = basepar[prog] / t
-                    f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
-                    if write_stddev:
-                        sd = stddev(ts)
-                        f.write(" (%2.2f)" % sd)
-            f.write("\\\\\n")
+                    elif not is_tr:
+                        # Not all programs are tail recursive.
+                        f.write(" & n/a ")
+                    else:
+                        ts = get_times(self.table[prog]["test"]["asmfast.par"]["lc-tr"]["P%d-lc%d-c%d" % (p, lc, c)])
+                        if not ts:
+                            f.write(" & n/a ")
+                            continue;
+                        t = mean(ts)
+                        suseq = baseseq[prog] / t
+                        supar = basepar[prog] / t
+                        f.write(" & %5.2f (%4.2f, %4.2f)" % (t, suseq, supar))
+                        if write_stddev:
+                            sd = stddev(ts)
+                            f.write(" (%2.2f)" % sd)
+                f.write("\\\\\n")
 
         f.write("\\hline\n")
         f.write("\\end{tabular}\n")
