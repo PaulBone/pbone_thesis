@@ -487,9 +487,16 @@ bad_ngrams = [
         ["miss", "estimated"],
         ["mis", "estimate"],
         ["mis", "estimated"],
+        ["miss", "calculate"],
+        ["miss", "calculated"],
+        ["mis", "calculate"],
+        ["mis", "calculated"],
+        ["non", "deterministic"],
 
         % Hypenate this.
-        ["if", "then", "else"]
+        ["if", "then", "else"],
+        ["if", "then", "elses"],
+        ["if", "then", "else's"]
        
         %["collection", "time"],
         %["mutation", "time"]

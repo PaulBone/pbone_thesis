@@ -51,13 +51,12 @@ We find it useful to create the following classifications for these methods.
 \begin{itemize}
     \item Parallelism via concurrency
 
-    \item Explicit parallelism
+    \item Explicit and implicit parallelism
 %    is safer and easier to use compared to
 %    \pvc, however it is less expressive.
 %    We will explain how explicit parallelism is distinct from and improves
 %    upon \pvc.
 
-    \item Implicit parallelism
 %    is a classification that includes
 %    systems that attempt to make parallel execution the typical form of
 %    execution.
@@ -135,7 +134,7 @@ concurrency,
 which is outside the scope of this dissertation.
 
 Concurrency notations such as Hoare's
-communicating sequential processes (CSP) \citep{hoare:1975:csp}
+communicating sequential processes (CSP) \citep{hoare:1978:CSP}
 or Milner's $\pi$-calculus \citep{milner:pi}
 provide the programmer with a natural ways to express many programs,
 such as webservers.
@@ -193,7 +192,7 @@ otherwise deadlocks can occur.
 This requirement in order also prevents critical sections from being
 nestable,
 which causes significant problems for software composability.
-Failing to acquire locks in the correct order or avoid nexting can also cause
+Failing to acquire locks in the correct order or avoid nesting can also cause
 deadlocks.
 All of these problems are difficult to debug because their symptoms are
 intermittent.
@@ -243,7 +242,7 @@ They make the programmer is responsible for encoding and decoding messages.
 While this adds extra flexibility,
 it can also be very tedious.
 
-Communicating sequential processes \citep{hoare:1978:csp} is a notation for
+Communicating sequential processes \citep{hoare:1978:CSP} is a notation for
 concurrency using message passing.
 Although we introduced PVM and MPI first, CSP predates them by 11 years.
 Like MPI and PVM, CSP allows messages to be sent two and from processes
@@ -353,7 +352,7 @@ and \citet*{mika:mercury-stm} is an implementation for Mercury.
 Parallelism can also be achieved without concurrency.
 This can be achieved with language annotations that do not affect the
 (declarative) semantics of the program.
-The annotations describe \emph{what} should be parallelised,
+The annotations usually describe \emph{what} should be parallelised,
 and rarely describe \emph{how} to parallelise each computation.
 We will refer to this as \emph{explicit parallelism}
 since parallelism is expressed directly by the programmer by the explicit
@@ -363,23 +362,22 @@ OpenMP \citep{openmp} is a library for C++ \citep{cplusplus} and Fortran
 that allows programmers to annotate parts of their programs for parallel
 execution.
 In OpenMP most parallelism is achieved by annotating loops.
-C++ is an imperative language and therefore the compiler cannot determine
-which computations are safe to parallelise.
+C++ is an imperative language and therefore the compiler generally cannot
+determine which computations are safe to parallelise.
 The programmer is responsible for guaranteeing that the iterations
-of the loops are independent.
-in other words, that no iteration depends on the results of affects of any of
-the previous iterations.
+of the loops are independent,
+in other words, that no iteration depends on the results of any previous
+iterations.
 If an iteration makes a function call, then this guarantee must also be true for
 the callee and all transitive callees.
-The programmer must also declare which variables are shared, local or used
-for reductions.
+The programmer must also declare the roles of variables,
+such as if they are shared between iterations or local to an iteration.
 This is necessary so that the compiled code is parallelised correctly.
 The programmer may specify how the iterations of the loop may be
 combined into parallel tasks (known as \emph{chunking}).
 This means that to some extent the programmer still describes \emph{how} to
 parallelise the loop,
-although the programmer has much less control than with parallelism through
-concurrency systems.
+although the programmer has much less control than with \pvc systems.
 Provided that the programmer can annotate their loops correctly,
 explicit parallelism with OpenMP avoids the problems
 with threading and message passing.
@@ -388,20 +386,22 @@ with threading and message passing.
 In pure declarative languages
 a function has no side effects,
 all possible effects of calling a function are specified in its 
-declaration, (this can be considered an upper bound).
-This is often done by expressing effects as part of the type system such as
-with:
-Monads \citep{haskell-monads}, which are used by Haskell \citep{haskell98};
-uniqueness-typing, which is used by
+declaration.
+This is often done by expressing effects as part of the type system;
+Haskell \citep{haskell98} uses Monads \citep{haskell-monads},
 Mercury\footnote{
     Mercury's uniqueness typing is part of its mode system.
     Despite this, it is still considered uniqueness typing.}
 \citep{mercury_jlp}
-and Clean \citep{brus:1987:clean};
-or effect-typing, which is used by DDC \citep{ddc}.
+and Clean \citep{brus:1987:clean}
+use
+uniqueness-typing, and 
+Disciple \citep{ddc} which uses effect-typing.
+\paul{Last time Zoltan read this I said "DDC" (the implementation) rather
+than "Disciple" (the language).}
 In any of these systems both the programmer and compiler can trivially
-determine if parallel execution of a particular computation is safe.
-In Haskell, Mercury and Clean
+determine if executing a particular computation in parallel is safe.
+In Haskell, Mercury and Clean (but not Disciple)
 the concept of a variable is different from that in imperative programming,
 it is not a storage location that can be updated,
 but a binding of a name to a value.
@@ -437,9 +437,9 @@ languages respectively.
 Pure functional languages like Haskell and Clean can be evaluated using a
 process known as \emph{graph reduction}.
 Graph reduction works by starting with an expression and a program and
-applying reductions.
-Reductions use an equation in the program to replace part of the expression
-with a new expression.
+applying reductions to the expression using the program.
+Each reduction uses an equation in the program to replace part of the
+expression with a new expression.
 In a lazy language (or lazy implementation of a non-strict language)
 each reduction step performs \emph{outermost reduction}.
 This means that the arguments of a function are not normally evaluated
@@ -448,15 +448,15 @@ function.
 Some reductions require the evaluation of an argument,
 these include primitive operations and pattern matching.
 The system continues applying reductions until the expression is
-a value;
-the value may have parameters which are still expressions (they have not
-been evaluated).
-This is called weak head normal form (WHNF);
-Graph reduction itself can be parallelised:
+a value.
+The resulting value may have parameters which are still expressions;
+they have not been evaluated.
+This is called weak head normal form (WHNF).
+Graph reduction itself can be parallelised.
 If a subgraph (an argument in the expression) is known to be required in the
 future,
 then it can be evaluated in parallel using the same graph reduction process.
-Several projects experimented with this technique
+Several projects have experimented with this technique
 \citep{augustsson:1989:parallel-graph-reduction,burn:1989:parallel-reduction-machine,peyton-jones:1989:parallel-graph-reduction}.
 
 Because the programmer does not need to annotate their program this
@@ -469,9 +469,9 @@ While implicit parallelism is always safe\footnote{
     Nevertheless the \emph{intention} is that implicit parallelism should
     always be safe}
 there is a serious performance issue.
-The cost of creating a parallel evaluation is significant,
-so is any communication between parallel tasks.
-There are also distributed costs throughout the execution of these systems,
+The cost of spawning off a parallel evaluation is significant,
+and so is the cost of communication between parallel tasks.
+There are also distributed costs throughout the execution of these systems:
 for example many parallel graph reduction systems introduce locking on every
 graph node.
 Such locking increases the overheads of evaluation even when no parallel
@@ -481,33 +481,40 @@ of evaluating them in parallel outweighs the costs of doing so.
 Unfortunately most parallelism in an implicit parallel system is very
 fine grained, meaning that it is not large enough to make parallel
 evaluation worthwhile.
-There is also a lot of this parallelism,
-this means that the system spends most of its time managing the parallel
+There is also a lot of this parallelism.
+This means that the system spends most of its time managing the parallel
 tasks rather than evaluating the program.
 This is called embarrassing parallelism as the amount of fine-grained
 parallelism can cause the evaluation to perform \emph{more slowly} than
 sequential evaluation.
-We will discuss other implicitly parallel systems,
-most of them share these problems.
+Most other implicitly parallel systems share these problems.
 Many systems such as \citet*{peyton-jones:1989:parallel-graph-reduction} go
 to lengths to exploit only course grained parallelism.
 In our opinion the problem with implicit parallelism is that it approaches
 the parallel programming challenge from the wrong direction:
 it makes everything execute in parallel \emph{by default} and then attempts
 to introduce sequential execution;
-we believe that one should make sequential execution the default and then
+rather than make sequential execution the default and then
 attempt to introduce parallel execution \emph{only where it is profitable}.
-In contrast explicit parallelism allows the programmer to introduce
+The former creates thousands if not millions of parallel tasks,
+whereas the latter creates far fewer, dozens or hundreds.
+Since most systems have only a handful of processors the latter situation is
+far more manageable having far fewer overheads;
+therefore we believe that it is the correct approach.
+In contrast to implicit parallelism,
+explicit parallelism allows the programmer to introduce
 parallelism only where they believe it would be profitable.
-This means that the default execution strategy is sequential.
+This means that the default execution strategy is sequential,
+and far fewer parallel tasks are created.
 
-Multilisp \citep{halstead:1984:multilisp,halstead:1985:multilisp} is an
+\paul{I checked, Multilisp is capitalised as such.}
+Multilisp \citep*{halstead:1984:multilisp,halstead:1985:multilisp} is an
 explicitly parallel implementation of Scheme.
-Like scheme, Multilisp is not pure, it allows side effects.
+Like Scheme, Multilisp is not pure: it allows side effects.
 This means that as programmers introduce parallelism, they must be sure that
 parallel computations cannot be affected by side effects,
 and do not have side effects themselves.
-Therefore multilisp is not safe as side effects may cause inconsistent
+Therefore Multilisp is not safe as side effects may cause inconsistent
 results or corrupt memory.
 Multilisp programmers create parallelism by creating delayed computations
 called \emph{futures}.
@@ -524,14 +531,14 @@ does.
 The Haskell language standard specifies that it is non-strict\footnote{
     Non-strict evaluation is more broadly defined than lazy evaluation};
 in practice, all implementations use lazy evaluation most of the time.
-A subexpression may be evaluated eagerly if it is always require in a
+A subexpression may be evaluated eagerly if it is always required in a
 particular context.
 Haskell programmers can introduce explicit parallelism into their programs
 with two functions (\code{par} and \code{pseq}).
-\citet*{gph:gum}
+\citet{gph:gum}
 %\citet*{loidi:2008:gph-semiexplicit-parallelism}
 first added these functions to GUM (A parallel Haskell implementation).
-Then \citet*{harris:2005:haskell-smp} added them to the
+Then \citet{harris:2005:haskell-smp} added them to the
 Glasgow Haskell Compiler (GHC).
 %arguably the most popular implementation of Haskell.
 The \code{par} and \code{pseq} functions have the types:
@@ -541,21 +548,21 @@ par :: a -> b -> b
 pseq :: a -> b -> b
 \end{verbatim}
 They both take two arguments and return their first.
-their declarative semantics are identical;
+Their declarative semantics are identical;
 however their \emph{operational} semantics are different.
 The \code{par} function may spawn off a parallel task that evaluates its
 second argument to WHNF,
 and returns its first argument.
 The \code{pseq} function will evaluate its second argument to WHNF
 \emph{and then} return its first argument.
-We can think of these functions as \code{const} with different evaluation
-strategies.
+We can think of these functions as the \code{const} function
+with different evaluation strategies.
 
 Unfortunately lazy evaluation interacts poorly with
 parallel evaluation.
 Because parallel tasks are only evaluated to WHNF,
 most tasks do not create enough work to make parallelisation worthwhile.
-\citet*{trinder:98:strategies}
+\citet{trinder:98:strategies}
 tried to reduce this problem by allowing programmers to
 specify an evaluation strategy,
 which describes how deeply to evaluate expressions.
@@ -563,29 +570,28 @@ This description is written in Haskell itself,
 This support is implemented as a library and it can describe higher order
 evaluation strategies.
 This does not solve the problem,
-it only gives the programmer a way to deal with it when they encounter it;
-it is better to make it impossible for the problem to occur.
+it only gives the programmer a way to deal with it when they encounter it.
+It would be better to make it impossible for the problem to occur.
 Non-strict evaluation can cause other performance problems,
-including problems in sequential programs.
+including in sequential programs.
 Evaluation strategies, in particular eager versus non-eager,
-are a matter of personal preference.
+are often a matter of personal preference.
 
 An alternative Haskell library called Monad.Par \citep{marlow:monadpar}
 requires parallel computations to be evaluated in full.
 However the programmer must provide typeclass instances for each of their
 own types that describe how to completely evaluate that type.
 While this still requires a non-trivial amount of effort from the
-programmer,
-it is harder for the programmer to make mistakes.
-Their program will not compile if they forget to provide a typeclass
+programmer;
+it makes it harder for the programmer to make mistakes,
+since their program will not compile if they forget to provide a typeclass
 instance.
 
 \subsubsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
-Although logic programming has many sub-paradigms we will discuss
-those that use selective linear resolution with definite clauses
-(SLD resolution) \citep{kowalski_sld}.
+Logic programming languages use selective linear resolution with definite
+clauses (SLD resolution) \citep{kowalski_sld}.
 SLD resolution attempts to answer a query by finding a Horn clause whose
 head has the same atom name as the query,
 performing variable substitution and then performing a query on each
@@ -595,59 +601,108 @@ clause may be tried.
 Multiple clauses may succeed meaning that there is more than one solution,
 and as the query may fail there might be zero solutions.
 
-Prolog is the most well known logic programming language based on SLD
+Prolog is the best known logic programming language based on SLD
 resolution.
 OR-parallel Prolog implementations may attempt to resolve a query against
 multiple clauses in parallel.
-Like parallel graph reduction this form of implicit parallelism can create
-embarrassingly parallel workloads.
-OR-parallelism has some additional problems.
-Not all programs will provide enough OR-parallelism as many do not perform
-non-deterministic searches.
-OR-parallelism is speculative:
+In most logic programs there is very little OR-parallelism.
+In cases where there is abundant OR-parallelism,
+it is usually because the program uses a significant amount of
+non-deterministic search.
+Large search problems can be implemented more efficiently in constraint
+programming languages, even sequential ones.
+%Like parallel graph reduction,
+%this form of implicit parallelism can create
+%embarrassingly parallel workloads.
+%OR-parallelism has some additional problems.
+%Not all programs will provide enough OR-parallelism as many do not perform
+%non-deterministic searches.
+Additionally OR-parallelism is speculative:
 the current goal may be executed in a context where only the first result
 will be used,
 therefore searching for more results in parallel may be a waste of
 resources.
-Systems that exploit OR-parallelism include
+Systems that attempt to exploit OR-parallelism include
 Aurora \citep*{lusk:1990:aurora},
 Muse \citep*{ali:1990:muse}
-and \&ACE \citep*{gupta:1991:ace} (which also supports AND-parallelism).
+and \&ACE \citep*{gupta:1991:ace}.
+(\&ACE also supports AND-parallelism.)
 
 AND-parallel Prolog implementations introduce parallelism by executing
 conjuncts within clauses in parallel.
 AND-parallelism comes in two varieties, independent and dependent.
-independent AND-parallelism is much simpler, it only parallelises goals
+Independent AND-parallelism is much simpler, it only parallelises goals
 whose executions are independent.
-Independent AND-parallelism comes in two flavours, strict and non-strict.
-Strict (also called restricted) independent AND-parallelism is where
-conjoined goals that may be evaluated in parallel must have no variables in
-common, including input variables.
-It is trivial for a Prolog system to statically determine that the goals are
-independent.
-Non-strict (unrestricted) independent AND-parallelism is where some variables
-are shared but none of the goals performs any instantiation on these variables
-or anything they reference.
-Examples non-strict independent AND-parallel Prolog systems include \&-Prolog
-\citep*{Hermenegildo:1991:and-parallel,
-DBLP:journals/jlp/MuthukumarBBH99}
-and \&ACE \citep{gupta:1991:ace}.
-As non-strict parallelism is more general it is desirable for a system to
-handle it.
-Determining which goals are independent is much more complicated and
-requires analysis;
-\citet*{DBLP:journals/tcs/GrasH09} and \citet*{Hermenegildo1995} describe
-suitable analyses.
-Some of the analysis can be done at compile time,
-however it is a whole program analysis which means that separate compilation
-cannot be used.
-Furthermore the analysis is often incomplete,
-requiring runtime groundness tests that determine of the conjunctions are
-really independent.
+%Independent AND-parallelism comes in two flavours, strict and non-strict.
+%Strict independent AND-parallelism is where
+%conjoined goals that may be evaluated in parallel must have no free variables in
+%common.
+%This includes free variables made common by aliasing.
+\paul{It seems that everybody defines strict/non-strict differently!
+Now I am confused about the true definitions, if there are any.
+Therefore I have refactored this to just talk about some analyses;
+hopefully it is also more to-the-point.}
+There are various ways to prove the independence of goals with varying
+degrees of completeness.
+If one cannot prove that a group of goals is independent,
+then they must assume the goals are dependent.
+The simplest and weakest way to prove independence is to show that the
+goals have no variables in common,
+including aliased variables (free variables unified with one another).
+This can be done statically.
+However very few groups of goals are trivially independent.
+We can improve this by allowing the sharing of ground variables.
+Systems allowing this initially used runtime tests to check the groundness
+and independence of variables.
 These tests may traverse arbitrarily large data structures.
 The overheads of executing these checks
-(which must be execute regardless of their outcome)
+(which must be executed regardless of their outcome)
 can outweigh the benefit of parallel execution.
+Some systems used compile time analysis to reduce the costs of the runtime
+checks.
+Despite this the runtime tests' costs where still unbounded.
+More advanced systems such as 
+\paul{I checked, all three papers refer to tricky analyses.}
+\citet{hermenegildo:1991:and-parallel},
+\citet{DBLP:journals/tcs/GrasH09} and
+\citet{Hermenegildo1995}
+perform more complicated compile time analyses.
+This often relies on whole program analysis 
+making it impractical for large programs.
+Despite this it is still not complete.
+
+%%Non-strict independent AND-parallelism (also called restricted AND-parallelism)
+%%is where some variables
+%%are shared but either these variables are ground or they will be bound to
+%%the same value in the goals that reference them.
+%\paul{XXX Find out of these papers analyse the conjuncts to find
+%unifications or if they just test groundness}
+%Examples non-strict independent AND-parallel Prolog systems include \&-Prolog
+%%\citep*{Hermenegildo:1991:and-parallel}
+%%DBLP:journals/jlp/MuthukumarBBH99}
+%%and \&ACE \citep{gupta:1991:ace}.
+%First, non-strict independent parallel systems will try to prove that shared
+%variables are ground,
+%if they are then the goals are independent.
+%This test is complete when performed at runtime, however for large terms it
+%can take a sagnificant amount of time.
+%Some systems combine this with compile time analysis,
+%they usually generate somewhat smaller and therefore cheaper runtime tests.
+%however they do not put a fixed limit on the cost of the runtime checks.
+%Some systems such as
+%\citet{Hermenegildo1995} describe more complicated analyses that look at the
+%unifications within parallel conjuncts to determine what types of
+%unifications can occur and if they can cause the same variable to be unified
+%with different function symbols (causing a failure).
+%As non-strict parallelism is more general it is desirable for a system to
+%handle it.
+%Determining which goals are independent is much more complicated and
+%requires analysis;
+%\citet{DBLP:journals/tcs/GrasH09} and
+%suitable analyses.
+%Some of the analysis can be done at compile time,
+%however it is a whole program analysis which means that separate compilation
+%cannot be used.
 
 \plan{Managing logic variables and retracting their values}
 Prolog supports \emph{logic variables},
@@ -666,108 +721,152 @@ With OR-parallelism a variable may be bound to distinct values in different
 parts of the search tree at once.
 There are many different ways to implement this,
 for example Muse stores variables for different parallel parts of the search
-tree in different address spaces \citep{ali:1990:muse}.
-This introduces extra work such as copying the states of computations as new
-work is executed in parallel.
-Often OR-parallelism is used together with independent AND-parallels
-such as in PEPSys \citep*{baron:1988:pepsys},
-such systems can also manage variable bindings in a similar way.
+tree in different address spaces.
+While this is simple to implement it performs poorly:
+extra work is required to copy the states of computations as new
+computations are executed in parallel.
+It is difficult to implement systems that perform well.
 
-While it is straightforward to implement this correctly for OR-parallel
-and independent AND-parallel systems;
-it is much more difficult for dependent AND-parallel systems as
-they must handle communication between parallel conjuncts.
+Variable bindings are also easy to manage in independent AND-parallelism,
+but difficult to manage efficiently.
+%A variable can have at most a single value at a time,
+%and therefore this complication has been removed.
+%Also, due to the independence of the conjunction multiple bindings for the
+%same variable never conflict (as they cannot occur).
+Systems that combine independent AND-parallelism and OR-parallelism,
+such as 
+PEPSys \citep*{baron:1988:pepsys}
+and
+\&ACE \citep*{gupta:1991:ace},
+combine the costs of managing variables in either parallelism type.
+
+Unfortunately,
+just as most programs do not contain much OR-parallelism,
+very few programs contain much independent AND-parallelism.
+Therefore it is important to handle dependent AND-parallelism,
+which is much more difficult \emph{because} of the management of variable
+bindings.
+Any conjunct in a dependent AND-parallel conjunction may produce bindings
+for any given variable.
+If different conjuncts produce different values for the same variable,
+then one of them must fail.
+Handling this correctly and efficiently is extremely difficult.
+In a \emph{moded} system,
+such as Ciao \citep{hermenegildo_ciao},
+the producer of a variable may be known,
+greatly simplifying the management of that variable's bindings.
+The next problem is how variable communication can affect other conjuncts
+running in parallel.
 Most systems allow parallel conjuncts to communicate variable bindings as
 soon as they are produced.
-This allows non-deterministic search computations that consume those bindings to
-detect failure earlier and therefore execute more efficiently.
-However if the producer of a binding calls some non-deterministic code,
+This allows conjoined code running in parallel,
+in particular non-deterministic search computations,
+that consume those bindings to detect failure earlier and therefore execute
+more efficiently.
+However if the producer of a binding is non-deterministic,
+and it produces the binding within the non-deterministic code,
 then a failure may require it to retract variable bindings that are shared
 in the parallel conjunction.
 Implementing this efficiently is difficult.
-Andorra Prolog \citep*{haridi:1990:andorra} models the
-logic program as a Herbrand constraint problem.
-It then solves that problem, introducing parallelism for
-deterministic\footnote{
+Kernel Andorra Prolog \citep*{haridi:1990:andorra}
+solves this problem by performing either AND-parallel execution or
+OR-parallel execution.
+It attempts to execute deterministic\footnote{
     Andorra uses a different definition for determinism than Mercury does.
     Section~\ref{sec:backgnd_mercury} explains Mercury's definition.}
-conjoined goals.
-For Andorra's purposes deterministic means ``succeeds at most once''.
+conjoined goals in parallel.
+For Andorra's purposes, deterministic means ``succeeds at most once''.
+If it cannot,
+because the goals in the resolvent have more than one matching clause,
+then it uses OR-parallelism to execute the matching clauses in parallel.
+This means that non-determinism cannot occur in parallel conjunctions.
 
-Another solutions to this problem involve restricting the Prolog language
+Another solution to this problem involve restricting the Prolog language
 by removing backtracking.
-This creates a committed-choice logic language such as
+This creates committed-choice logic languages such as
 Concurrent Prolog \citep*{saraswat86:concurrent_prolog_definition,
 shapiro:flat_concur_prolog};
 Parlog \citep*{clark:84:parlog_sys_prog,clark:86:parlog}
-or Guarded Horn Clauses (GHC) \citep*{ueda:ghc}.
-When these systems encounter multiple clauses during execution they support
-committing to only one of the clauses.
+and Guarded Horn Clauses (GHC) \citep*{ueda:ghc}.
+When these systems encounter multiple clauses during execution they commit
+to only one of the clauses.
+They can only commit if it is clear that only one clause matches.
+%XXX: Currently here.
+%Parlog - Mode annotation
+%GHC - Guard
 Each of these system uses guarded clauses, which have the
 form:
 $H \leftarrow G_1 \wedge \ldots \wedge G_n : B_1 \wedge \ldots \wedge B_m$
 where $G_i$ and $B_i$ are atoms in the guard and body of the
 clause;
 $H$ is the head of the clause.
-The evaluation of the body is committed to if and only if the guard and any
-unifications in the head are all true.
+The evaluation of the body is committed to if and only if 
+all unifications in the head and the guard are true.
 Declaratively the guard and body are conjoined.
-Each system handles this slightly differently.
-In Concurrent Prolog clauses may execute but only once a clause is committed
-to will any variables it has bound become visible to other parallel
-evaluations.
-This can cause the communication of variable's values to be delayed,
-allowing other parallel evaluations to run ahead and possibly perform
-speculative execution.
-GHC solves this by suspending a computation if a unification in its guard
-would cause a variable visible outside the procedure to become more
-instantiated.
-When another parallel computation updates the variable such that the
-unification can proceed by only performing a simple test,
-then the execution of the clause is resumed.
-However suspending and resuming of tasks can be inefficient,
-especially when any unification with most variables can cause a task to
-suspend or resume.
-(Even unifications in clause bodies can cause a computation to be suspended
-as the predicate to which the clause body belongs may have been called from
-another clause's guard.
-Parlog also suspends computations,
-however it determines when predicates should be suspended based on mode
-information.
-Goals that take a variable in an input are consumers, and may suspend
-until a producer has unified the variable with something representing a
-term.
-In some ways this is analogous to Concurrent Prolog and GHC's usage of
-variables,
-as variables intended for output should be unified in the body of a clause,
-and variables intended for input should be unified in the head or guard:
-so a programmer in any of these three systems has to consider which of the
-variables are input and which are output.
-The programming style in guarded languages is more imperative than
-in traditional Prolog systems as the guard, and which goals are placed in
-the guard, is extra-logical.
+All three systems have two types of unifications:
+\begin{description}
+    \item[\emph{ask} unifications] occur only in one direction:
+    one side of the unification is a term provided by the
+    environment (the resolvent),
+    the other side is a term in the clause head or guard.
+    An ask unification may bind the second term but not the first.
 
-\citet*{pontelli:1996:ddas} describe a system that supports explicit
+    \item[\emph{tell} unifications] allow binding in either direction;
+    they can instantiate the resolvent's term.
+\end{description}
+Each system implements these differently:
+Concurrent Prolog uses a read-only annotation to identify ask unifications,
+and GHC uses scoping rules
+(tell unifications to non-local variables cannot occur in the head or
+guard).
+When an ask unification is used and it would normally bind a variable,
+then the computation is suspended until the variable becomes instantiated.
+This mechanism ensures that enough information is available before the
+program commits to a particular clause.
+When a tell unification is used,
+the binding is made locally and is re-unified as the clause commits.
+This re-unification can add to the costs of execution,
+especially if failure is detected as speculative work may have been
+performed in the meantime.
+Note that in GHC,
+there cannot be any tell unifications in the guard and so re-unification is
+not required.
+However GHC suspends computations more often,
+which also adds to the costs of parallel execution;
+especially when any unification, except those with local variables,
+can cause a task to suspend or resume.
+Originally this included unifications in clause bodies,
+as a the languages allowed predicate calls to be made from guards.
+Newer \emph{flat} versions of these languages forbid this,
+making unifications in clause bodies less complicated
+\citep*{taylor:flat_concur_prolog,foster:1987:flat_parlog,modedghc}.
+Unfortunately this reduces the expressiveness of the languages.
+
+The Data Dependent AND-parallelism system (DDAS)
+\citet{pontelli:1996:ddas} supports explicit
 dependent AND-parallelism in a non-deterministic language;
 it is based on \citet{gupta:1991:ace}.
-Analyses determine the conservative set of shared variables in dependent
+Analyses determine a conservative set of shared variables in dependent
 conjunctions and then \emph{guess} which conjunct produces each variable
-(usually the leftmost one in which the variable appears) and which consume it.
+(usually the leftmost one in which the variable appears)
+and which conjuncts consume it.
 The consumers of a variable are suspended if they attempt to bind it and the
 producer has not yet bound it.
 The compiler names apart all the potentially shared variables so
 that bindings made by the producer can be distinguished
 from bindings made by consumers.
-As these analysis are incomplete (in particular mode analysis),
+As these analyses are incomplete (in particular mode analysis),
 the predicted producer may not be the actual producer as execution may
-follow a different path,
-if this happens then the runtime system will dynamically change the guess
+follow a different path.
+If this happens then the runtime system will dynamically change the guess
 about which conjunct is the producer.
 This system still requires plenty of runtime overhead and since it is
 non-deterministic it must handle backtracking over code that produces the
-values of shared variables,
-this is described by \citet{shen:1996:daswam}.
+values of shared variables.
+The backtracking mechanism used is described by \citet{shen:1996:daswam}.
 
+\paul{XXX:
+Implicit: Concurrent Prolog, Parlog, GHC, Andorra, }
 Most of these systems use implicit parallelism, parallelising almost
 everything.
 As we mentioned earlier this can lead to embarrassing parallelism.
@@ -992,7 +1091,7 @@ available in these programs.
 They have shown that automatic parallelisation is a promising idea for
 improving the performance of software.
 Their system works by measuring the execution time of thunks and using
-thsi information to inform the compiler how to parallelise the program.
+this information to inform the compiler how to parallelise the program.
 Any thunk whose execution time is above a particular threshold is
 spawned off for parallel evaluation.
 This has two problems, both are due to Haskell's lazy evaluation.
