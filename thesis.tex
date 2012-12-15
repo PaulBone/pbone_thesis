@@ -1,4 +1,4 @@
-\documentclass[a4paper,twoside]{report}
+\documentclass[a4paper,twoside,openright]{report}
 
 \title{Automatic Parallelisation for Mercury}
 \author{Paul Bone}
@@ -128,44 +128,54 @@ This is to certify that:
 
 \chapter*{Preface}
 
-I begun working on automatic parallelism in Mercury as part of my Honours project
+The dissertation begins with an introduction chapter
+(Chapter~\ref{chap:intro}) that
+motivates the need for automatic parallelism systems.
+It provides an analysis of the related literature;
+using this to provide the details of why automatic parallelism is important
+and why the problem is still unsolved.
+
+Chapter~\ref{chap:backgnd} provides background material used throughout the
+rest of the dissertation.
+In particular it describes prior work 
+that I did as part of my Honours project
 for the degree of Bachelor of Computer Science at the University of Melbourne.
 This work occurred before my PhD candidature commenced.
-It included the profiler feedback framework that is discussed in
-Section~\ref{sec:background}.
-It also includes an initial, rudimentary, version of the automatic
-parallelisation tool
-(Section~\ref{sec:backgnd_priorautopar}
-including an algorithm for determining when a sub-computation produces or
-consumes a variable (Section~\ref{sec:backgnd_var_use_analysis})
-and an extension to the deep profiler that enables coverage profiling
+This work included:
+the profiler feedback framework (Section~\ref{sec:backgnd_autopar}),
+an initial rudimentary version of the automatic
+parallelisation tool (also Section~\ref{sec:backgnd_autopar}),
+an algorithm for determining when a sub-computation first uses
+a variable (Section~\ref{sec:backgnd_var_use_analysis}),
+and the coverage profiling support in Mercury's deep profiler
 (Section~\ref{sec:backgnd_coverage}).
 
-Peter Wang and I worked together to implement work stealing for the Mercury
-runtime system.
-We estimate that Peter contributed 80\% of the work stealing implementation
-and that I contributed 20\%.
-\paul{I haven't written up this work, I must decide which chapter it belongs
-in, maybe it should be part of the background}.
+Chapter~\ref{chap:rts} discusses a number of improvements that we made to
+the runtime system.
+These improvements are designed to make parallel Mercury programs perform
+better.
+Chapter~\ref{chap:rts} describes some joint work with Peter Wang.
+Wang contributed about 80\% of the initial work stealing implementation 
+described in Section~\ref{sec:rts_work_stealing};
+I contributed the other 20\%.
+Work stealing is also described in Section~\ref{sec:rts_work_stealing2},
+but the work in that section is solely my own.
 
-Chapter~\ref{chap:overlap} is derived from a journal paper:
-
-% XXX: not really a quote, I want this text to be typeset as a paragraph whose
-% indent (not just first line) is larger than normal.
+Chapter~\ref{chap:overlap} describes our new automatic parallelism
+analysis tool and its novel algorithms.
+It is based on the following journal article.
 
 \begin{quote}
 \pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
 \pubtitle{Estimating the overlap between dependent computations for automatic
-zparallelization.}
+parallelization.}
 \pubhow{Theory and Practice of Logic Programming,}{11(4--5):575--591, 2011.}
 \end{quote}
 
-% Zoltan, Peter and I worked together to develop the overlap algorithm.
-% \paul{The basis for this algorithm first appears in Zoltan's Leuven slides}
-% The implementation and testing is all my own work.
-% Zoltan and Peter assisted me in writing and editing the paper.
-
-Chapter~\ref{chap:loop_control} is derived from a conference paper:
+Chapter~\ref{chap:loop_control} describes a code transformation that fixes 
+a long standing performance problem in the parallel execution of most
+recursive code.
+It is based on the following conference paper.
 
 \begin{quote}
 \pubauthor{Paul Bone, Zoltan Somogyi and Peter Schachte.}
@@ -174,13 +184,10 @@ Chapter~\ref{chap:loop_control} is derived from a conference paper:
 Applications of Multicore Programming,}{Philadelphia PA USA, January 2012.}
 \end{quote}
 
-% Zoltan and I developed the data structures and algorithm.
-% 80\% of the implementation is my own work.
-% \paul{Zoltan worked on the code generator changes, but are they actually part
-% of the research?}
-% Zoltan and Peter assisted me in writing and editing the paper.
-
-Chapter~\ref{chap:tscope} is derived from a workshop paper:
+Chapter~\ref{chap:tscope} describes our use of the \tscope visual
+profiler that was developed for use with Haskell and how we use it with
+Mercury.
+It is based on the following workshop paper.
 
 \begin{quote}
 \pubauthor{Paul Bone and Zoltan Somogyi.}
@@ -189,10 +196,10 @@ Chapter~\ref{chap:tscope} is derived from a workshop paper:
 {Lexington KY USA, July 2011.}
 \end{quote}
 
-% Zoltan provided feedback about my ideas and contributed a number of ideas of
-% his own.
-% I am the sole author of the implementation.
-% Zoltan assisted me in writing and editing the paper.
+Finally Chapter~\ref{chap:conc} concludes the dissertation, providing a
+discussion that unifies the work presented in the four main chapters and
+describes potential further work.
+
 
 \chapter*{Contribution to published work form}
 
@@ -204,69 +211,89 @@ I think it is one form per chapter based on published work}
 \status{Outline only}
 
 First I will thank my supervisors,
-Zoltan,
-Peter,
-Aaron.
-Then close colleagues
-Julien, 
-Mark, 
-Ralph, 
-Tibaut,
+Zoltan Somogyi,
+Peter Scachte and
+Aaron Harwood
+for all their support, hard work, and on occasion weekends.
+I have learnt a lot from you and enjoyed your company and our interesting
+off-topic conversations.
+I also want to thank my Mercury, G12 and programming languages colleagues:
+Julien Fischer,
+Mark Brown,
+Ralph Becket, 
+Thibaut Feydy,
 Matt Guica,
 Matt Davis,
 Andreas Schutt,
-Leslie,
-Sebastian.
-Other helpful and supportive academics:
+Leslie DeKoninck,
+Sebastian Brand,
+Leon Mika,
+and
+Ondrej Bojar;
+and Mercury developers outside of the University:
+Peter Wang,
+Ian Maclarty,
+and
+Peter Ross.
+I also want to thank the helpful and supportive stuff in the Computing and
+Information Systems department at the University of Melbourne,
+especially
 Linda Stern,
 Bernie Pope,
-Harald S{\o}ndergaard,
+Harald S{\o}ndergaard, and
 Lee Naish.
-And in general the community in the CIS department for making me feel
-welcome and supported with respect to my vision impairment.
 
-Financial contributors.
-Australian Postgraduate Award,
-NICTA Top-up Scholarship,
-Melbourne Abroad Travelling Scholarship (ICLP \& Cambridge),
-Google Travel Prize (ICLP \& Cambridge),
-Association for Logic Programming (ICLP),
-Mercury Project (ICLP) \paul{Zoltan, you gave me some money for ICLP, where did it
-come from?},
-NICTA (DAMP),
-Open Parallel (MW'12).
-
-Simon Marlow (Maybe Simon's family),
+I would also like to acknowledge the support of the functional and logic
+programming research community.
+Firstly, those who answered my \tscope related questions and helped me
+organise my attendance at the \tscope summit:
 Simon Peyton-Jones,
 Duncan Coutts,
-Eric Kow (although he was absent),
-Simon Peyton-Jones,
-and others who attended the \tscope summit in Cambridge.
-
-The functional programming community in Sydney,
+Eric Kow,
+and in particular Simon Marlow and his incredibly hospitable family.
+I also want to thank those at the University of New South Wales who invited
+me to present a seminar to their research group:
 Ben Lippmeier,
 Gabi Keller,
-Manuel Chakravarty,
-Erik de Castro.
+and Manuel Chakravarty.
 
-Others contributed with proof reading, shell accounts and benchmark
-programs:
-Ben Stewart for shell access on his multicore system early in my work,
-Chris King,
-Michael Richter,
-Gert Meulyzer,
-Stefan Ljungstrand.
+I received financial support from the following scholarships, prizes and
+organisations:
+Australian Postgraduate Award,
+NICTA Top-up Scholarship,
+NICTA travel support,
+Melbourne Abroad Travelling Scholarship,
+%(ICLP \& Cambridge),
+Google Travel Prize,
+%(ICLP \& Cambridge),
+Association for Logic Programming (ICLP),
+%Mercury Project (ICLP) \paul{Zoltan, you gave me some money for ICLP, where did it
+%come from?},
+%NICTA (DAMP),
+and
+Open Parallel.
+%(MW'12).
 
-My friends,
+I would like to offer special thanks to those who contributed time and
+effort in other ways.
+%Others contributed with proof reading, shell accounts and benchmark
+%programs:
+Ben Stewart for shell access to his multicore system early in my candidature,
+Chris King for his spectralnorm benchmark program,
+Michael Richter for assistance with proof reading.
+%Gert Meulyzer,
+%Stefan Ljungstrand.
+
+I would like to offer a whole lot of thanks to my friends:
 Amanda \& Chas Dean,
 Lucas \& Jen Wilson-Richter,
 Sarah Simmonds, John Spencer,
 Jeff Beinvenu, Mangai Murugappan,
 Terry Williamson, Heidi Williams,
-Trent Buck for explaining the lambda calculas \emph{at} me,
+%Trent Buck for explaining the lambda calculus \emph{at} me,
 Tom Wijgers,
 Ha Le,
-Chris Menz,
+%Chris Menz,
 Emil Mikulic,
 Dave Grinton,
 Marco Maimone,
@@ -274,17 +301,18 @@ Michael Slater,
 Geoff Giesemann,
 Enzo Reyes,
 Dylan Leigh,
-Marco Mattiuzzo.
+and Marco Mattiuzzo.
 
-My parents, Keith and Faye Bone,
-for teaching me that my vision might be an impairment but should never
+I want to thank my parents, Keith and Faye Bone, for their support and
+encouragement,
+but most of all,
+for teaching me that my poor vision might be an impairment, but should never
 be a limitation.
-My brother, James Bone, for always having time to listen.
-Especially when I use incomprehensible jargon,
-also known as \emph{nerd words} while we where growing up.
+Thanks to my brother, James Bone, for always having time to listen,
+even when I use incomprehensible jargon (``nerd-words'').
 
-Finally, Liz Bone my wife,
-for her love, patience, understanding and caring
+Finally, Liz Bone, my wife,
+for her love patience understanding and caring
 and being generally awesome.
 
 

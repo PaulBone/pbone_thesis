@@ -4,7 +4,7 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-\status{This chapter is ready for review by Zoltan.}
+\status{This chapter is ready for its \textbf{second} review by Zoltan.}
 
 \plan{Why multicore}
 In 1965 Moore \citep{moore} predicted that the transistor 
@@ -188,36 +188,35 @@ saving programmers a lot of time.
 \section{General approach}
 \label{sec:intro_general_approach}
 
-\paul{XXX: Zoltan suggests moving this paragraph after the literature review}
 Unfortunately automatic parallelisation technology is yet to be developed to the
 point where it is generally useable.
+Our aim is that automatic parallelisation will be easy to use and
+will parallelise programs more effectively that most programmers can by
+hand.
+Most significantly,
+automatic parallelism will be very simple to use compared with the
+difficulty of manual parallelisation.
+Furthermore as programs change,
+costs of computations within them will change,
+and this may make manual parallelisations (using explicit parallelism) less
+effective.
+An automatic parallelisation system will therefore make it easier to
+maintain programs as the automatic parallelisation analysis can simply be
+re-executed to re-parallelise the programs.
 We are looking forward to a future where programmers think about
 parallelism no more than they currently think about traditional compiler
 optimisations.
+
 In this dissertation we have solved several critical issues with automatic
 parallelism.
-Our work is targeted towards Mercury \citep*{mercury_jlp},
-a purely declarative logic programming language.
-We choose to use Mercury because:
+Our work is targeted towards Mercury
+We choose to use Mercury because
 it already supports explicit parallelism of dependent conjunctions,
-it provides powerful profiling tools which generate data for our profile
+and it provides powerful profiling tools which generate data for our profile
 feedback analyses.
-We believe that our work could be adapted for other systems.
-
-% As processors have changed over the years,
-% high level languages have remained the same;
-% the same programming paradigms have been applicable to all processors.
-% This is no longer true for multicore processors,~%
-% \footnote{We show in this thesis that multicore processors do not need to be
-% programmed any differently than single-core processors.}
-% programmers are expected to supply each processor with its own instruction
-% stream.
-% This is usually done by programming with \emph{threads}.
-% The programmer creates multiple threads of exececution and the operating system
-% multiplexes these threads onto processors.
-% Threads communicate through shared memory and must synchronise to ensure that
-% memory is kept in a consistent state.
-% The most common synchronisation method is the use of mutual exclusion locks.
-% Locks prevent concurrent access to the same resource by different threads,
-% however they pose particular problems: XXX
+The parallelisation system described in this dissertation is detailed,
+we have paid attention to issues in Mercury's explicit parallelism as well
+as automatic parallelism and visualisation of parallel programs' execution
+profiles.
+We believe that our work could also be adapted for other systems.
 

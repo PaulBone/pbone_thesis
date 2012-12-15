@@ -83,10 +83,10 @@ thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) \
 %.eps: %.dot
 	dot -Teps < $< > $@
 
-times_table.tex: $(TIMING_RESULTS) $(BENCH_ALL)
+times_table.tex: $(TIMING_RESULTS) $(BENCH_ALL) Makefile
 	./$(BENCH_ALL) -n0 -w -f times_table.tex -p $(TIMING_RESULTS)
 
-mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL)
+mem_table.tex:  $(MEM_RESULTS) $(BENCH_ALL) Makefile
 	./$(BENCH_ALL) -n0 -m -f mem_table.tex -p $(MEM_RESULTS)
 
 undefined.txt: thesis.log

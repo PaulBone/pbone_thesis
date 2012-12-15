@@ -413,8 +413,12 @@ contractions = [
     "they'd",
     "let's",
     %"lets",
+    
     "heapsize",
-    "callgraph"
+    "callgraph",
+    
+    % ITYM principle
+    "principal"
     ].
 
 :- func invalid_hypenations = list(string).
@@ -436,7 +440,9 @@ invalid_hypenations = [
     "call-graph",
     "worth-while",
     "dead-lock",
-    "dead-locks"
+    "dead-locks",
+    "hot-spot",
+    "hot-spots"
     ].
 
 :- func acronyms = list(string).
@@ -496,8 +502,10 @@ bad_ngrams = [
         % Hypenate this.
         ["if", "then", "else"],
         ["if", "then", "elses"],
-        ["if", "then", "else's"]
-       
+        ["if", "then", "else's"],
+        ["hot", "spot"],
+        ["hot", "spots"]
+
         %["collection", "time"],
         %["mutation", "time"]
     ].

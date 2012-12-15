@@ -66,7 +66,7 @@ We find it useful to create the following classifications for these methods.
 %    or implicit parallelism definitions.
 %    We will discuss both approaches together in Section~\ref{sec:intro_par}.
 
-    \item Automatic parallelism
+    \item Feedback directed Automatic parallelism
 %    is our last category.
 %    In these systems sequential execution is the typical form of execution
 %    and parallel execution is used sparingly.
@@ -80,7 +80,7 @@ We find it useful to create the following classifications for these methods.
 \end{itemize}
 We explore the literature in this order as each successive category builds
 on the work of the previous category.
-Our own system is an automatic parallelism system;
+Our own system is a feedback directed automatic parallelism system;
 it makes use of concepts described in all four categories.
 Therefore
 we cannot discuss it meaningfully until we have explored the literature
@@ -587,6 +587,15 @@ it makes it harder for the programmer to make mistakes,
 since their program will not compile if they forget to provide a typeclass
 instance.
 
+Regardless of how we manage lazyness in parallelism we expose,
+it still introduces a runtime cost.
+Every variable must be tested to determine if it is a thunk or a value,
+and while this cost occurs in sequential programs, it can be higher in
+parallel programs.
+Furthermore, this means that it is not always clear
+(even when one does use \code{pseq}, strategies or Monad.Par)
+which threads will perform which computations.
+
 \subsubsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
@@ -785,7 +794,7 @@ Another solution to this problem involve restricting the Prolog language
 by removing backtracking.
 This creates committed-choice logic languages such as
 Concurrent Prolog \citep*{saraswat86:concurrent_prolog_definition,
-shapiro:flat_concur_prolog};
+taylor:flat_concur_prolog};
 Parlog \citep*{clark:84:parlog_sys_prog,clark:86:parlog}
 and Guarded Horn Clauses (GHC) \citep*{ueda:ghc}.
 When these systems encounter multiple clauses during execution they commit
@@ -862,93 +871,106 @@ non-deterministic it must handle backtracking over code that produces the
 values of shared variables.
 The backtracking mechanism used is described by \citet{shen:1996:daswam}.
 
-\paul{XXX:}
-Implicit: Aurora, Muse, ACE, Andorra, Concurrent Prolog, Parlog, GHC, DDAS
-Explicit: PEPSys
-Both: Ciao.
-Most of these systems use implicit parallelism, parallelising almost
-everything.
+Most of the systems we have discussed use implicit parallelism.
+These are: Aurora, Muse, ACE, Andorra, Concurrent Prolog, Parlog, GHC and
+DDAS;
+while PEPSys uses explicit parallelism and Ciao can use either.
+The implicitly parallel systems parallelise almost everything.
 As we mentioned earlier this can lead to embarrassing parallelism.
-To avoid this many of the above systems use some type of schedule analysis
-to decide what is worth executing in parallel.
-This can vary from using OR-parallelism near the top of a nondeterministic
-search space \citep{hausman:1987:or},
-to the compile time analyses performed by Ciao Prolog
-\citep{hermenegildo_ciao} including \emph{granularity control}
-\citep{lopez96:distance_granularity}.
-
-The concept of granularity control
-\citep{debray:1990:granularity} is that only tasks
-large enough such that their computational cost makes up for the cost of
-parallel execution should be parallelised.
-There are numerous different ways to estimate the runtime of a task.
+Therefore, it si better to create fewer coarse-grained parallel tasks rather
+than many fine-grained tasks.
+%To avoid this many of the above systems use some type of schedule analysis
+%to decide what is worth executing in parallel,
+%and then attempt to only parallelise those things.
+To achieve this, some systems use \emph{granularity control}
+\citep{debray:1990:granularity}
+to parallelise only tasks large enough such that their computational cost
+makes up for the cost of spawning off the task.
+While it is easy to either spawn off or not spawn off a task,
+it is much more difficult to determine a task's cost.
+There are multiple different ways to estimate the cost of a task.
+For example \citet{king:lower_bound_time_complexity} and
+\citet{lopez96:granularity} construct cost functions
+at compile time which can be evaluated at runtime to estimate if the cost
+of a goal is above a threshold for parallel execution given
+the sizes of certain terms.
+During compile time the \citeauthor{lopez96:granularity} paper 
+uses the type, mode and determinism information that
+the Ciao \citep{hermenegildo_ciao} compiler makes available.
+Whilst the \citeauthor{king:lower_bound_time_complexity} paper
+creates its cost functions from a convex hull approximation of the
+program's costs. 
 %The runtime may also be measured in a previous execution of the program and
 %this may provide an estimate for the runtime in the future
 %\citep{sarkar:1989:feedback,harris,tannier};
 %our own system, including the system we implemented before commencing the
 %Ph.D.\ programme, \citet*{bone:2001:honours}
-For example \citet*{lopez96:distance_granularity} construct cost functions
-at compile time which can be evaluated at runtime to give the cost of a
-goal given the values of certain terms.
-During compile time it uses the type, mode and determinism information that
-the Ciao compiler makes available.
-\citet*{shen_98_granularity-control} created a different method for
+\citet{shen_98_granularity-control} created a different method for
 granularity control.
-They propose two methods for increasing the ``distance''
-(and therefore runtime)
-between two parallel job creation events.
-The first method works at compile time and the second method works at
-runtime.
-
-Granularity control and Ciao's conditional parallelism both help to
-reduce the amount of embarrassing parallelism.
-However parallel execution is still the \emph{default}
-form of execution.
-Granularity control only transforms some of the parallel execution into
-sequential execution.
-This means that embarrassing parallelism is still a problem.
+They measure the ``distance'' between the creation of successive parallel
+tasks.
+They propose two methods for increasing this distance which can create more
+coarse grained parallelism and usually spawns off less parallel work
+(reducing the cost of parallel execution in the program).
+Their first method works at compile time by transforming a recursive
+predicate so that it spawns parallel tasks less frequently.
+Their second method works at runtime to achieve the same means,
+it uses a counter and will not spawn off parallel work until the counter
+reaches a predetermined value.
+Once it reaches such a value, then the program will spawn off some parallel
+work and reset the counter.
+The counter can be incremented based on some indication of how much work is
+being done between tasks, such as abstract machine instructions executed.
+These methods can help to reduce the amount of embarrassing parallelism,
+but the compiler-based method can be difficult to implement correctly for
+all programs,
+and the runtime-based method introduces extra runtime costs.
+Finding profitable parallelism is still a difficult problem.
 % This approaches the problem from the wrong direction.
 % We believe that it is best to use sequential execution by default and
 % introduce parallelism only where it is likely to be beneficial.
 
 Mercury,
-a pure logic/functional language,
-follows the principal of introducing parallelism only where it is
-estimated to be beneficial.
-We will discuss parallelism in Mercury in
-Sections~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar}.
-For now we will concentrate on the differences between Mercury
-and the Prolog and committed choice languages.
-\citet*{conway:2002:par} introduced independent AND-parallelism
-to Mercury.
-Mercury's strong and static mode system allows us to test independence at
-compile time.
-Modes may be declared or inferred.
-Later \citet*{wang:2006:hons} relaxed the requirement of independent
-parallelism allowing Mercury to handle dependent AND-parallelism;
-this was later published as \citet*{wang:2011:dep-par}.
-Mercury allows parallelism only in deterministic code,
-code with exactly one solution.
-The strong determinism system provides this information.
-This means that variable bindings made by dependent conjuncts can never be
-retracted,
-allowing us to use a much simpler and more efficient implementation.
+a pure logic/functional language, with strong and static type, mode and
+determinism systems.
+We will discuss Mercury in more detail throughout
+Chapter~\ref{chap:backgnd}.
+\citet{conway:2002:par} introduced explicit independent AND-parallelism
+to Mercury in deterministic code,
+code with exactly one solution
+(see also Section~\ref{sec:backgnd_merpar}). 
+Later \citet{wang:2006:hons}; \citet{wang:2011:dep-par} 
+implemented support for dependent AND-parallelism.
+Mercury's mode system allows the compiler to determine the exact locations
+of variable bindings.
+This allows \citeauthor{wang:2006:hons} to implement a transformation that efficiently
+handles dependent AND-parallelism
+(see also Section~\ref{sec:backgnd_deppar}). 
+Because Mercury only supports parallelism in deterministic code,
+variable bindings made by dependent conjuncts can never be retracted.
 Some of our critics (reviews of the paper \citet{bone:2011:overlap}
 on which Chapter~\ref{chap:overlap} is based)
 are concerned that this reduces the amount of parallelism that Mercury is
 able to exploit \emph{too much}.
-We disagree,
+However,
 roughly 75\% of Mercury code is deterministic\footnote{
     We gathered determinism information for the
     largest open source Mercury program, the Mercury compiler.
 }, and most of the rest is semi-deterministic
 (it produces either zero or one solutions).
-While we are missing out on parallelising 25\% of the
+It may appear that we are missing out on parallelising 25\% of the
 program,
-the 75\% that we can parallelise accounts for 97\% of the cost of the
-program (Table~\ref{tab:recursion_types}).
-Supporting parallelism in non-deterministic code to parallelise the
-remaining 3\% of the program's cost is also prohibitively expensive.
+but most of the parallelism in this code is speculative and therefore
+more difficult to parallelise effectively.
+Furthermore,
+the 75\% that we can parallelise accounts for 97\% of the runtime
+(Table~\ref{tab:recursion_types})
+when tested on a single program (the compiler).
+Parallelising the remaining 3\% would require
+supporting parallelism in at least semi-deterministic code which has higher
+runtime costs.
+It is also unlikely that this part of the program contains much profitable
+parallelism as most semi-deterministic code has shorter runtimes.
 The Prolog systems that support parallelism in goals that can fail and
 goals with more than one solution must manage variable bindings
 in very complicated ways;
@@ -962,23 +984,12 @@ as most Prologs cannot determine which variables are shared in parallel
 conjunctions,
 and none can determine this accurately.
 Mercury's implementation,
-which uses futures (Section~\ref{sec:backgnd_deppar},
-increases the costs of unification for the shared variables only.
+which uses futures (Section~\ref{sec:backgnd_deppar}),
+increases the costs of unification only for shared variables.
 A related comparison, although it is not specific to parallelism,
-is that unification is orders of magnitude simpler in Mercury than in
+is that unification an order of magnitude simpler in Mercury than in
 Prolog as Mercury does not support logic variables.
-This is also a deliberate design decision.
-
-In contrast to Haskell,
-Mercury's evaluation is eager SLD resolution.
-Therefore Mercury's support for explicit parallelism is easier to use
-than Haskell's;
-it does not require programmers to use an equivalent of
-the \code{pseq} function or describe evaluation strategies.
-
-
-% \plan{Reform Prolog}
-% Reform Prolog handles loops cleverly, but I need to find a paper for it.
+This was also a deliberate design decision.
 
 \subsubsection{Other language paradigms}
 \label{sec:intro_par_other}
@@ -988,12 +999,12 @@ or are created specifically to make parallelism easy to expose.
 Parallel languages that do not fall into one of the above paradigms are
 assessed here.
 
-Sisal \citep{feo:1990:sisal-report} is a data-flow language.
-In some respects its syntax looks like that of a imperative language
-since has constructs for loops.
-However functions are referentially transparent.
-so it is a pure functional language (according to our definition above).
-Sisal supports implicit data-flow parallelism.
+Sisal \citep{feo:1990:sisal-report} was a data-flow language.
+Its syntax looked like that of a imperative language,
+this was only a syntactic sugar for a pure functional language.
+It was also one of the first single assignment languages;
+using single assignment to implement its pure functional semantics.
+Sisal supported implicit data-flow parallelism.
 Sisal's builtin types include arrays and streams.
 Streams have the same form as cons-lists (Lisp style) except that as one
 computation produces results on the stream, another computation may be
@@ -1004,45 +1015,78 @@ languages.
 A stream may have only one producer,
 which makes them different from channels.
 The other source of parallelism is the parallel execution of independent
-loop iterations.
-Sisal's for loops include a reduction clause;
-this clause states how the loop is transformed into a result which may be a
-scalar result, an array or stream.
-The loop's body may not have any effects or make any variable bindings;
-so the loop's only result is the one described by the result clause.
-The Sisal project is unfortunately dead,
-and information about the system is hard to find and access.
-The Sisal language appears to be good for expressing data-flow
+parts of loop iterations;
+as one iteration is being completed another iteration can be started.
+It could also handle completely independent parallel loops.
+Sisal's for loops included a reduction clause,
+which states how the iterations' results are summarised into an overall
+result,
+which may be a scalar result, an array or stream.
+A loop's body must not have any effects or make any variable bindings;
+so a loop's only result is the one described by the result clause.
+The Sisal project is long dead,
+which is unfortunate as it appeared to be good for expressing data-flow
 parallel programs.
-It is more difficult to say anything about how well the system
-transformed programs into executable code and how well it performed.
+Information about Sisal is hard to find and access,
+and so it is difficult to say anything about how well the system transformed
+programs into executable code and how well it performed.
 
+\paul{UPC is not data-parallel, so I did not include it.}
 Data-parallel languages such as
-NESL \citep{blelloch:95:nesl} and
 Data Parallel Haskell (DpH)
-\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores}
-parallelise operations on members of a data structure.
-For example,
-DpH parallelises operations on its parallel array type.
-Any operations (including nested operations) on these arrays are
-executed in parallel.
-Data-parallel languages are especially good at targeting SIMD hardware
-including general purpose graphics processor units.
-They also work well on SMP hardware.
-While these systems are good at what they do,
-they do not handle non data parallel problems well,
-and data parallel programs are a very small subset of computer programs.
+\citep{dph:2007:status_report,dph:2008:harnessing_the_multicores},
+NESL\footnote{
+    \citet{blelloch:95:nesl} does not explain what the name ``NESL'' may
+    stand for.
+    Since the language supports nested parallelism based on sequences we
+    guess the name might be the acronym of ``NEsted Sequence Language''.}
+\citep{blelloch:95:nesl} and
+C* \citep{rose:cstar}
+parallelise operations on members of a sequence-style data structure.
+DpH calls them parallel arrays,
+NESL calls these structures sequences, and
+C* calls them domains.
+DpH and NESL can handle some forms of nested parallelism.
+Any operations on these structures are executed in parallel.
+NESL and C* have been targeted towards SIMD hardware
+and DpH has been targeted towards multicore hardware.
+Data-parallelism's strength is that its computations are \emph{regular},
+having a similar, if not identical, shape and operations.
+This makes targeting SIMD hardware,
+and controlling granularity on SMP hardware easier in these systems than
+most others.
 
-Data parallel and data-flow parallelism do not have the same
-problems as implicit parallelism.
-This is because data parallel and data-flow parallel programs have a
-more regular structure than logic and functional programs.
-Data parallel and data-flow parallel languages are able to take
-advantage of the program's structure and generate much more efficient
-parallel code.
+Data parallel and data-flow parallel languages do not have the same
+problems (such as embarrassing parallelism)
+as implicit parallel languages.
+This is because programs with data-parallelism
+(and to a lesser extent data-flow parallelism)
+have a more regular structure,
+which allows these systems to generate much more efficient parallel code.
+However, very few programs have either data-parallelism or data-flow
+parallelism and cannot be parallelised.
+Therefore, these techniques cannot be used to parallelise most programs.
 
+Reform Prolog \citep{bevemyr:reform} 
+handles data-parallelism in a logic language.
+It finds singly recursive Prolog predicates,
+separating their recursive code into the code before the recursive call and
+the code after.
+It compiles them so that they execute in parallel the code before the
+recursive call on all levels of the recursion,
+then they execute the base case,
+followed by parallel execution of the code after the recursive call on all
+levels of the recursion.
+Reform Prolog only does this for deterministic code
+(which we do not think is a problem, as we do the same in Mercury).
+However Reform Prolog has other limitations:
+the depth of the recursion must be known before the loop is executed,
+parallel execution cannot be nested,
+and no other forms of parallelism are exploited.
+This means that. like the languages above,
+Reform Prolog cannot effectively parallelise most programs.
 
-\subsection{Automatic Parallelisation}
+\subsection{Feedback directed Automatic Parallelisation}
 \label{sec:intro_auto_par}
 
 As we mentioned above,
@@ -1050,19 +1094,21 @@ it is better to start with a sequential program and introduce parallelism
 only where it is beneficial,
 rather than parallelising almost all computations.
 Programmers using an explicit parallelism system could follow this
-principal.
+principle.
 However 
 for each computation the programmer considers parallelising,
 they must know and keep track of a lot of
 information in order to determine if parallel execution is worthwhile.
 In the context of profiling and optimisation,
 it is widely reported that programmers are poor at identifying the
-hot-spots in their programs or estimating the costs of their program's
-computations.
+hotspots in their programs or
+estimating the costs of their program's computations in general.
 Programmers who are parallelising programs must also understand the
-overheads of parallelism such as:
-spawning parallel tasks,
-cleaning up completed parallel tasks,
+overheads of parallelism such as
+spawning parallel tasks and
+cleaning up completed parallel tasks.
+As well as other things that can affect parallel execution performance
+including
 operating system scheduling and
 hardware behaviour such as cache effects.
 Even if a programmer determines that parallel execution is worthwhile in
@@ -1077,26 +1123,38 @@ dependent parallelism is used in Mercury,
 programmers must also estimate how the dependencies effect parallelism.
 In practice programmers will attempt to use trial and error to find the
 best places to introduce parallelism,
-but an incorrect assumption of any of the above variables can prevent them
-from parallelising the program effectively.
+but an incorrect estimation of the magnitude of any of the above effects can
+prevent them from parallelising the program effectively.
+
+Therefore we advocate the use of feedback directed parallelism;
+this technique gathers cost information from a previous execution of the
+program,
+and uses that information to estimate the costs of the program's
+computations in the future, parallelising it accordingly.
+This is important because the cost of a computation often depends on the
+size of its input data.
+Feedback directed parallelism avoids the runtime cost of such a calculation
+(as the size of the input data is not available except at runtime or through
+profiling).
+It also avoids the human-centric issues with explicit parallelism.
 
 \citet*{harris_07_feedback_imp_par} developed a profiler
 feedback directed automatic parallelisation approach for Haskell programs.
-They reported speed ups of up to 80\% compared to the sequential
+They reported speed ups of up to a factor of 1.8 compared to the sequential
 execution of their test programs on a four core machine.
 However they were not able to improve the performance of some
-programs, they attributed this to a lack of parallelism
-available in these programs.
-They have shown that automatic parallelisation is a promising idea for
-improving the performance of software.
+programs,
+which they attributed to a lack of parallelism available in these programs.
+Their partial success shows that automatic parallelisation is a promising
+idea and requires further research.
 Their system works by measuring the execution time of thunks and using
 this information to inform the compiler how to parallelise the program.
 Any thunk whose execution time is above a particular threshold is
 spawned off for parallel evaluation.
 This has two problems, both are due to Haskell's lazy evaluation.
-The first was mentioned above, all thunks are evaluated to WHNF,
-which means that most thunks represent very little parallel work
-(they will often create a structure which itself contains new thunks).
+The first is that their system does not also introduce calls to \code{pseq}
+then it has the same problems with lazyness that the introduction of
+\code{pseq} attempts to overcome (see Section~\ref{sec:intro_par_func}).
 The second problem is that thunk execution is speculative:
 when a thunk is created it is usually unknown whether the thunk's value
 will actually be used;
@@ -1107,30 +1165,30 @@ is not represented by a thunk at all and is evaluated eagerly.
 % Jerome's work.
 \citet*{tannier:2007:parallel_mercury} previously attempted to automatically
 parallelise Mercury programs using profiler feedback.
-His approach selects the most expensive predicates
-of a program and attempts to parallelise conjunctions within them.
-This is one of the few pieces of work that attempts to measure how
+His approach selected the most expensive predicates
+of a program and attempted to parallelise conjunctions within them.
+This is one of the few pieces of work that attempts to estimate how
 dependencies affect the amount of parallelism available.
-Tannier's approach counts the number of shared variables in a parallel
-conjunction and uses this as an analogue for how restricted the
+Tannier's approach counted the number of shared variables in a parallel
+conjunction and used this as an analogue for how restricted the
 parallelism may be.
 However in practice most producers produce dependant variables late in
 their execution and most consumers consume them early.
-Therefore Tannier's calculation is naive:
+Therefore Tannier's calculation was naive:
 the time that these variables are produced by one conjunct and consumed
-by the other may not correlate with the number of dependant variables.
-Tannier's algorithm is, in general, too optimistic
+by the other usually do not correlate with the number of dependant variables.
+Tannier's algorithm was, in general, too optimistic
 about the parallelism available in dependant conjunctions.
-Tannier also makes use of compile-time granularity control to reduce the
+Tannier also made use of compile-time granularity control to reduce the
 over-parallelisation that can occur in recursive code.
 
-To improve on Tannier's methods we aimed to calculate when the
+To improve on Tannier's methods my honours project
+\citep*{bone:2008:hons}
+aimed to calculate when the
 producing conjunct is most likely to produce the dependant values and
-when the consuming conjunct is likely to need them\footnote{
-    This work was part of my honours project}
-\citep*{bone:2008:hons}.
-To do this we modified Mercury's profiler so that it could provide enough
-information so that we could calculate the likely production and
+when the consuming conjunct is likely to need them.
+To do this I modified Mercury's profiler so that it could provide enough
+information so that I could calculate the likely production and
 consumption times.
 This early work was restricted to situations with a
 single dependent variable shared between two conjuncts.
@@ -1146,34 +1204,4 @@ It is described in more detail in Section~\ref{sec:backgnd_autopar}.
 % \ref{sec:backgnd_deep}.
 % No equivalent profiler exists for Haskell or Clean.
 % This and Mercury's purity make it the best environment for our research.
-
-We anticipate that automatic parallelisation will be easy to use and
-will parallelise programs more effectively that most programmers can by
-hand.
-Most significantly,
-automatic parallelism will be much faster to use than parallelising a
-program manually.
-Furthermore as programs change costs of computations within them will 
-change,
-this may make manual parallelisations (using explicit parallelism) less
-effective.
-An automatic parallelisation system will make it easier to maintain
-program as the automatic parallelisation analysis can simply be
-re-executed to re-parallelise the program.
-
-The remainder of the dissertation is organised as follows.
-Chapter~\ref{chap:backgnd} provides background information about
-Mercury and explicit and automatic parallelism in Mercury.
-Chapter~\ref{chap:rts} discusses a number of improvements that we made to
-the runtime system.
-Chapter~\ref{chap:overlap} describes our new automatic parallelism
-analysis.
-Chapter~\ref{chap:loop_control} addresses a long standing problem in the
-parallel execution of most recursive code.
-Chapter~\ref{chap:tscope} describes our use of the \tscope visual
-profiler that was developed for use with Haskell and how we use it with
-Mercury.
-Finally Chapter~\ref{chap:conc} concludes the dissertation, providing a
-discussion that unifies the work presented in the four main chapters and
-describes potential further work.
 
