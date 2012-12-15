@@ -2,25 +2,22 @@
 \chapter{Visualisation}
 \label{chap:tscope}
 
-\status{This section needs a lot more work.  But it depends on unfinished
-implementation}
+\status{Not written yet}
 
-%\begin{abstract}
-%The behavior of parallel programs is even harder to understand
-%than the behavior of sequential programs.
-%Parallel programs may suffer from
-%any of the performance problems afflicting sequential programs,
-%as well as from several problems unique to parallel systems.
-%Many of these problems are quite hard
-%(or even practically impossible)
-%to diagnose without help from specialized tools.
-%We present a proposal for a tool
-%for profiling the parallel execution of Mercury programs,
-%a proposal whose implementation we have already started.
-%This tool is an adaptation and extension of the \tscope profiler
-%that was first built to help programmers visualize
-%the execution of parallel Haskell programs.
-%\end{abstract}
+The behaviour of parallel programs is even harder to understand
+than the behaviour of sequential programs.
+Parallel programs may suffer from
+any of the performance problems afflicting sequential programs,
+as well as from several problems unique to parallel systems.
+Many of these problems are quite hard
+(or even practically impossible)
+to diagnose without help from specialized tools.
+In this chapter we describe a proposal for a tool
+for profiling the parallel execution of Mercury programs,
+a proposal whose implementation we have already started.
+This tool is an adaptation and extension of the \tscope profiler
+that was first built to help programmers visualise
+the execution of parallel Haskell programs.
 
 \section{Introduction}
 
@@ -33,8 +30,8 @@ to help them understand how their program behaves.
 This enhanced understanding then makes it easier
 for programmers to speed up the program.
 
-Profilers are needed because the actual behavior of a program
-often differs from the behavior imagined by the programmer.
+Profilers are needed because the actual behaviour of a program
+often differs from the behaviour imagined by the programmer.
 This is true even for sequential programs.
 For parallel programs,
 the gulf between human estimates and machine realities
@@ -87,9 +84,9 @@ whether they result from such dependencies or other causes.
 
 Profiling tools that can help application programmers
 can also be very useful for the implementors of runtime systems.
-While optimizing Mercury's parallel runtime system,
+While optimising Mercury's parallel runtime system,
 we have needed to measure the costs of certain operations
-and the frequency of certain behaviors.
+and the frequency of certain behaviours.
 Some examples are:
 when a piece of work is made available,
 how quickly can a sleeping worker-thread respond to this request?
@@ -101,8 +98,8 @@ can be used to improve the runtime system,
 which can help improve the performance of \emph{all} parallel programs.
 
 A third category of people who can use profiling tools for parallel programs
-is researchers working on automatic parallelization tools.
-Doing a good job of automatically parallelizing a program
+is researchers working on automatic parallelisation tools.
+Doing a good job of automatically parallelising a program
 requires a cost-benefit analysis for each parallelism opportunity,
 which requires estimates of both the cost and the benefit of each opportunity.
 Profiling tools can help researchers calibrate
@@ -118,9 +115,9 @@ a pure logic programming language designed for
 the creation of large, reliable and efficient application programs,
 we fall into all three of the above categories.
 We have long needed a tool
-to help us understand the behavior of parallel Mercury programs,
+to help us understand the behaviour of parallel Mercury programs,
 of the parallel Mercury runtime system
-and of our autoparallelization tool \citep{bone:2011:overlap},
+and of our autoparallelisation tool \citep{bone:2011:overlap},
 but the cost of building such a tool seemed daunting.
 We therefore looked around for alternative approaches.
 The one we selected was to adapt to Mercury
@@ -133,7 +130,7 @@ We chose \tscope because
 the runtime system it was designed to record information from
 has substantial similarities to the Mercury runtime system,
 because it was \emph{designed} to be extensible,
-and, like many visualization tools, it is extremely useful
+and, like many visualisation tools, it is extremely useful
 for finding subtle issues that cause significant problems.
 
 % This paper presents the adaption of \tscope \citep{threadscope}
@@ -153,11 +150,11 @@ describes how we extended the \tscope system
 to collect the kinds of data needed to describe
 the parallel execution of Mercury programs,
 while Section~\ref{sec:analysis} describes how
-one can analyze that data to yield insights
+one can analyse that data to yield insights
 that can be useful to our three audiences:
 application programmers,
 runtime system implementors,
-and the implementors of autoparallelization tools.
+and the implementors of autoparallelisation tools.
 Section~\ref{sec:conc}
 concludes with a discussion of related work.
 
@@ -167,7 +164,7 @@ concludes with a discussion of related work.
 \subsection{\tscope}
 
 \tscope was originally built
-to help programmers visualize the parallel execution of Haskell programs
+to help programmers visualise the parallel execution of Haskell programs
 compiled with the dominant implementation of Haskell,
 the Glasgow Haskell Compiler or GHC.
 The idea is that during the execution of a parallel Haskell program,
@@ -359,8 +356,8 @@ This is not a problem for the Haskell version of \tscope,
 since it does not care about sparks' identities.
 However, we do, since sparks correspond to conjuncts in parallel conjunctions,
 and we want to give to the user not just general information
-about the behavior of the program as a whole,
-but also about the behavior of individual parallel conjunctions,
+about the behaviour of the program as a whole,
+but also about the behaviour of individual parallel conjunctions,
 and of the conjuncts in them.
 We have therefore added an id that uniquely identifies each spark
 as an additional argument of the RUN\_SPARK and STEAL\_SPARK events.
@@ -379,7 +376,7 @@ We have extended the set of \tscope event types
 to include several new types of events.
 Most of these record information about constructs that do not exist in Haskell:
 parallel conjunctions, conjuncts in those conjunctions, and futures.
-Some provide information about the behavior of Mercury engines
+Some provide information about the behaviour of Mercury engines
 that \tscope for Haskell does not need,
 either because that information is of no interest,
 or because the information is of interest
@@ -398,7 +395,7 @@ we report the event types we have added to \tscope.
 In the next section, Section~\ref{sec:analysis},
 we will show how the old and new events can be used together
 to infer interesting and useful information
-about the behavior of parallel Mercury programs.
+about the behaviour of parallel Mercury programs.
 
 % \item[STRING] Record an association between a String and an integer so
 % that a static string occurring many times within a log file can be
@@ -450,7 +447,7 @@ and the second is an engine-specific sequence number,
 so that in successive sparks created by the same engine,
 the second part will be 1, 2, 3 etc.
 This design allows the runtime system
-to allocate globally unique spark ids without synchronization.
+to allocate globally unique spark ids without synchronisation.
 
 \emph{END\_PAR\_CONJUNCT:
 records that the current engine
@@ -610,7 +607,7 @@ whose performance we are trying to measure,
 interfering with the measurement itself.
 While such interference cannot be avoided
 (writing events out to the log file also takes time),
-we nevertheless want to minimize it if at all possible.
+we nevertheless want to minimise it if at all possible.
 In this case, it is possible:
 the addresses of the structures are trivially available,
 and require no extra time or space during the profiled run.
@@ -662,7 +659,7 @@ The extra cost is therefore quite small.
 \section{Deriving metrics from events}
 \label{sec:analysis}
 
-\tscope is primarily used to visualize the execution of parallel programs.
+\tscope is primarily used to visualise the execution of parallel programs.
 However, we can also use it, along with our new events,
 to calculate and to present to the user
 a number of different metrics about the execution of parallel Mercury programs.
@@ -671,7 +668,7 @@ a number of different metrics about the execution of parallel Mercury programs.
 Some of the metrics are of interest
 only to application programmers,
 or only to runtime system implementors,
-or only to autoparallelization tool implementors,
+or only to autoparallelisation tool implementors,
 but several are useful to two or even all three of those audiences.
 Also, some of these metrics say something about the whole program;
 some say something about individual parallel conjunctions,
@@ -681,7 +678,7 @@ we then discuss how we intend to present them to users.
 
 % Such as how much overlap we are \emph{really} getting,
 % and how efficient the RTS is and how this can drive settings in our
-% automatic parallelization analysis.
+% automatic parallelisation analysis.
 % 
 % Discuss granularity and parallel slackness, show how we can measure these.
 
@@ -709,11 +706,11 @@ It is trivial to scan all the events in the trace,
 keeping track of the number of engines currently being used,
 each of which corresponds to a CPU.
 The resulting curve tells programmers
-which parts of their program's execution is already sufficiently parallelized,
-which parts are parallelized but not yet enough to use all available CPUs,
+which parts of their program's execution is already sufficiently parallelised,
+which parts are parallelised but not yet enough to use all available CPUs,
 and which parts still have no parallelism at all.
 They can then focus their efforts on the latter.
-The visualization of this curve has been implemented,
+The visualisation of this curve has been implemented,
 and is described by \citet{threadscope}.
 
 % number of sparks available for execution at any given time
@@ -743,10 +740,10 @@ Due to Amdahl's law \citep{amdahl:1967:law},
 % XXX Explain amdahl's law since the paper dosn't describe the usual
 % interpretation.
 this fraction limits the best possible speedup we can get
-for the program as a whole by parallelizing the mutator.
+for the program as a whole by parallelising the mutator.
 For example, if the program spends one third of its time doing GC
 (which unfortunately actually happens for some parallel programs),
-then no parallelization of the program can yield a speedup of more than three,
+then no parallelisation of the program can yield a speedup of more than three,
 \emph{regardless} of the number of CPUs available.
 
 \emph{NANOSECS\_PER\_CALL:
@@ -756,7 +753,7 @@ The Mercury profiler for sequential programs \citep{conway:2001:mercury-deep}
 measures time in call sequence counts (CSCs);
 the call sequence counter is incremented at every procedure call.
 It does this because there is no portable, or even semi-portable way
-to access any realtime clocks that may exist on the machine,
+to access any real-time clocks that may exist on the machine,
 and even the non-portable method on x86 machines (the RDTSC instruction)
 is too expensive for it.
 (The Mercury sequential profiler needs to look up the time at every call,
@@ -771,7 +768,7 @@ which occur \emph{much} more rarely.)
 The final value of the call sequence counter
 at the end of a sequential execution of a program 
 gives its length in CSCs; say $n$ CSCs.
-When a parallelized version of the same program is executed on the same data
+When a parallelised version of the same program is executed on the same data
 under \tscope,
 we can compute the total amount of \emph{user time}
 taken by the program on all CPUs; say $m$ nanoseconds.
@@ -784,7 +781,7 @@ per CSC in its sequential execution.
 % Clearer, but not great, I get stuck at ``in its sequential execution''
 % but now I know what you mean and this phrase is somewhat implicit.
 This is useful information,
-because our automatic parallelization system
+because our automatic parallelisation system
 uses CSCs, as measured by the Mercury sequential profiler,
 as its unit of measurement of the execution time 
 of both program components and system overheads.
@@ -826,7 +823,7 @@ the number of runnable tasks that these conjuncts represent.
 From this we can compute the history of the number
 of runnable tasks made available by this dynamic conjunction.
 We can derive the maximum and the time-weighted average of this number,
-and we can summarize those
+and we can summarise those
 across all dynamic instances of a given static conjunction.
 
 Consider a conjunction with $n$ conjuncts.
@@ -1086,7 +1083,7 @@ If all the sparks consume at least one variable
 that is not currently available,
 the scheduler should prefer to execute the one
 whose consumed variables are the \emph{closest} to being available.
-This requires knowledge of the expected behavior of the program,
+This requires knowledge of the expected behaviour of the program,
 to wit, the expected running times of the conjuncts generating those variables.
 In some cases, that information may nevertheless be available,
 derived from measured previous runs of the program,
@@ -1137,7 +1134,7 @@ based on balancing their relevance in the current situation.
 the time, for each parallel conjunct,
 between the end of its execution and the end of the conjunction as a whole.}
 It is easy to compute this for every dynamic conjunct,
-and to summarize it as a minimum, maximum, average and variance
+and to summarise it as a minimum, maximum, average and variance
 for any given static conjunct.
 If the average times after
 for different conjuncts in a given parallel conjunction
@@ -1196,7 +1193,7 @@ and try to eliminate the dependencies they represent.
 If that is not possible, they may nevertheless try to reduce them
 by computing the variable earlier
 or pushing the point of first consumption later.
-% After optimizing these cases,
+% After optimising these cases,
 % programmer may wish to look at shared variables
 % that fit into neither category.
 
@@ -1234,7 +1231,7 @@ of those many pieces of code.
 % Programmers should look at futures that fit into the second category
 % and try to remove or reduce
 % the dependencies they represent between parallel conjuncts;
-% after optimizing these cases,
+% after optimising these cases,
 % they should look futures that fit into the third category.
 
 % \emph{FUTURE_SUSPEND_TIME_FIRST_WAIT:
@@ -1264,7 +1261,7 @@ how often contexts are suspended waiting for futures.
 
 \emph{WAITED\_FUTURE\_SIGNAL\_TO\_CONJUNCT\_END\_TIME:
 the average, maximum and variance of the time
-between the signaling of a future on which another context is blocked
+between the signalling of a future on which another context is blocked
 and the end of the parallel conjunct that signalled the future.}
 This should be computed for every parallel conjunct
 that signals at least one future.
@@ -1276,12 +1273,12 @@ on the same engine immediately after the current conjunct finishes.
 
 \emph{FUTURE\_SIGNAL\_TO\_CONJUNCT\_END\_TIME:
 the average, maximum and variance of the time
-between the signaling of a future
-and the end of the parallel conjunct that signaled that future.}
+between the signalling of a future
+and the end of the parallel conjunct that signalled that future.}
 As above, this should be computed for
 every parallel conjunct that signals at least one future.
 This value can be used to determine
-how often the optimization described above will not be useful.
+how often the optimisation described above will not be useful.
 
 \emph{OUT\_OF\_ORDER\_PROBABILITY:
 given two parallel conjuncts $A$ and $B$,
@@ -1313,7 +1310,7 @@ out of order execution has a direct impact on another task.
 \emph{OUT\_OF\_ORDER\_SCHEDULING\_BLOCKS\_ANOTHER\_CONTEXT\_TC:
 When tasks are executed out of order, as described above,
 how much of the time do other contexts $D, E, F\ldots$ block
-waiting on a future signaled by $C, D, E, \ldots$
+waiting on a future signalled by $C, D, E, \ldots$
 which, eventually, depend on $A$?}
 This metric considers the transitive closure of the dependency chain
 measured by the previous metric.
@@ -1326,7 +1323,7 @@ a continuous timeline of the program's execution on the horizontal axis,
 while along the vertical axis,
 the display is divided into a discrete number of rows,
 with one row per CPU (per engine in Mercury, per capability in Haskell).
-The color of a display point for CPU $n$ at time $t$
+The colour of a display point for CPU $n$ at time $t$
 shows what CPU $n$ was doing at time $t$:
 whether it was idle, doing GC, or executing the program.
 The time axis can be scaled to see an overview of the execution as a whole
@@ -1376,13 +1373,13 @@ We also plan to add to \tscope
 a mechanism that allows the user to request
 the generation of a plain text file in a machine-readable format
 containing all the metrics that may be of interest
-to our automatic parallelization tool.
+to our automatic parallelisation tool.
 We want our tool to be able to compare
-its predictions of autoparallelized programs
+its predictions of auto-parallelised programs
 with metrics derived from actual measurements of such programs,
 so that we can help tune its performance to reduce the resulting discrepancies.
 
-% \section{Time recording and synchronization}
+% \section{Time recording and synchronisation}
 %
 % A critical part of profiling knowing how long certain things take,
 % and at what time certain events occur.
@@ -1426,7 +1423,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 \section{Related work and conclusion}
 \label{sec:conc}
 
-% It is well established that a visualization tool is extremely useful
+% It is well established that a visualisation tool is extremely useful
 % for programmers debugging and tuning complex systems.
 % \tscope definitely supports this when used either with
 % Haskell \citep{threadscope},
@@ -1445,7 +1442,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % parallelism is in a Haskell program.
 % Ben Lippmeier wrote a similar tool/paper, its on his website.
 % 
-% \citet{runciman93:profilingparfp} introduces another visualization tool.
+% \citet{runciman93:profilingparfp} introduces another visualisation tool.
 % This also shows the amount of parallelism in a Haskell program, but it does it
 % over time and also shows the number of blocked tasks.
 % 
@@ -1457,10 +1454,10 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % Discuss how this can possibly be tied to perf(1).
 
 Many parallel implementations of programming languages
-come with visualization tools
+come with visualisation tools
 since (as we argued in the introduction)
 the people writing parallel programs
-need such tools to understand the actual behavior of their programs,
+need such tools to understand the actual behaviour of their programs,
 and the people implementing those languages find them useful too.
 Such tools have been created for all kinds of programming languages:
 imperative (even Visual Studio has one),
@@ -1469,15 +1466,15 @@ functional
 and logic (\citet{Foster96,vace}
 and the systems cited by \citet{Gupta95parallelexecution}).
 
-Many of these visualizers share common ideas and features.
+Many of these visualisers share common ideas and features.
 For example, many systems (including \tscope)
-use a horizontal bar with different parts colored differently
-to display the behavior of one CPU,
+use a horizontal bar with different parts coloured differently
+to display the behaviour of one CPU,
 while many other systems use trees
 that display the structure of the computation.
 (The latter approach is more common
-among visualizers for sequential languages.)
-Nevertheless, each visualizer is necessarily oriented
+among visualisers for sequential languages.)
+Nevertheless, each visualiser is necessarily oriented
 towards giving its users what they want,
 and the users of different systems want different information,
 since they are using different languages based on different concepts.
@@ -1489,7 +1486,7 @@ such as Concurrent Prolog, Parlog and Guarded Horn Clauses
 have quite different concerns from users of Mercury
 (where to disable parallelism, not where to enable it).
 
-We know of only one visualizer
+We know of only one visualiser
 for a not-inherently-concurrent logic programming language
 that does nevertheless support dependent AND-parallelism: VACE \citep{vace}.
 However, the ACE system supports
@@ -1497,7 +1494,7 @@ OR-parallelism and independent AND-parallelism
 as well as dependent AND-parallelism,
 and its features do not seem designed
 to help programmers exploit dependent AND-parallelism better.
-As far as we know, noone has built a profiler
+As far as we know, no-one has built a profiler
 for a dependent AND-parallel logic programming language
 with the capabilities that we propose.
 We haven't yet built one either :-),
@@ -1507,15 +1504,15 @@ by the time of the workshop,
 and many more by the end of the year.
 
 % I think our basic argument should be:
-% - visualization tools have long proven to be useful
+% - visualisation tools have long proven to be useful
 %   in improving the performance of parallel programs
 %   and in helping the developers of parallel systems
 % - such tools have been built for many different systems:
 %   logic, functional, and imperative,
 % - some features are common to many of these systems:
 %   many show trees, while many others show CPU utilization
-% - yet each visualizer is nevertheless specific to its own language
-% - the only visualizer (VACE) we know of for a language
+% - yet each visualiser is nevertheless specific to its own language
+% - the only visualiser (VACE) we know of for a language
 %   that supports dependent AND parallelism
 %   does not focus on dependent AND parallelism,
 %   and it does not gather the metrics we think we need
