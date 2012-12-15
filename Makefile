@@ -50,8 +50,8 @@ CHECK_FILES = $(TEX_PROSE:%.tex=%.check)
 # Results from Loop control.
 #TIMING_RESULTS =    results_carlton_n10_2011-11-26_01.pickle
 #MEM_RESULTS =       results_carlton_n10_2011-11-26_01.pickle
-TIMING_RESULTS =    results_cabsav_n20_2012-12-14_00.pickle
-MEM_RESULTS =       results_cabsav_n20_2012-12-14_00.pickle
+TIMING_RESULTS =    results_cabsav_n20_2012-12-15_00.pickle
+MEM_RESULTS =       results_cabsav_n20_2012-12-15_00.pickle
 BENCH_ALL=          lc_bench_all
 
 #DETEX=untex -m -uascii -e
