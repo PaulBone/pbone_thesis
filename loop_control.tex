@@ -1394,7 +1394,7 @@ would not be difficult.
 \section{Performance evaluation}
 \label{sec:lc_perf}
 
-\status{This section has not been revised yet.}
+\status{This section is ready for review by Peter Schachte.}
 
 % We ran all our benchmarks on
 % taura
@@ -1419,7 +1419,7 @@ would not be difficult.
 % running Linux 2.6.32.
 
 We have benchmarked our system with four different programs,
-many we have used in earlier tests.
+three of which were used in earlier chapters.
 All these programs use explicit parallelism.
 \begin{description}
 \item[mandelbrot] uses dependent parallelism using \mapfoldl from
@@ -1440,11 +1440,10 @@ was donated by Chris King\footnote{Chris' version was published at
 \url{http://adventuresinmercury.blogspot.com/search/label/parallelization}.}.
 It computes the eigenvalue of a large matrix using the power method.
 It has two parallel loops, both of which are executed multiple times.
+Therefore, the parallelism available in spectralnorm is very fine-grained.
 Chris' original version uses dependent parallelism.
 %we have created a new independently parallel version from his original code.
 \end{description}
-
-We ran each test of each program twenty times.
 
 \noindent
 All these benchmarks have dependent AND-parallelism,
@@ -1461,6 +1460,7 @@ This is not possible in the other programs without
 the last call modulo constructor (LCMC)
 optimisation \citep{ross:mercury-lcmc}.
 LCMC is not supported with tail recursion so we have not used it.
+We ran each test of each program twenty times.
 
 % Mandelbrot, raytracer and matrixmult
 % all compute the rows of their result in parallel,
@@ -1566,7 +1566,7 @@ and leave the parallel conjunctions in the program intact.
 They execute the program on 1 to 4 cores (`1c' to `4c').
 The versions that execute on the same number of cores
 differ from each other mainly in how they handle loops.
-The rows marked nolc are the controls.
+The rows marked `nolc' are the controls.
 They do not use the loop control mechanism described in this chapter;
 instead, they rely the context limit.
 The actual limit is the number of engines
@@ -1574,9 +1574,12 @@ multiplied by a specified parameter,
 which we have set to 128 in `c128' rows and to 512 in `c512' rows.
 %A minor bug (where \code{<=} was used instead of \code{<}) allows this limit
 %to be exceeded by a single context in some cases.
-Our code checks this limit in a non-thread-safe manner,
-which means that in the presence of races,
-the limit can be exceeded by one or two contexts.
+Although our code uses thread-safe mechanisms for counting the number of
+contexts in use;
+when it checks this value against the limit it does not use a thread-safe
+machanism.
+Therefore, whilst the number of contexts in use can never be corrupted,
+it can be exceed the limit by about one or two contexts.
 Since different contexts can have different sized stacks,
 the limit is only an approximate control over memory consumption anyway,
 so this is an acceptable price to pay for reduced synchronisation overhead.
@@ -1642,7 +1645,7 @@ the one engine eventually picks them up itself,
 and executes them in the original context.
 By contrast, the `lc$N$' versions directly spawn off new contexts, not sparks.
 This avoids the overhead of converting a spark to a context,
-but we can do it only because we know we will not create too many contexts.
+but we can do this only because we know we will not create too many contexts.
 
 When executing on two or more cores,
 mandelbrot and raytracer use one more context that one would expect.
@@ -1662,7 +1665,7 @@ increasing the per-engine context limit from 128 to 512
 yields significant speedups for three out of four the dependent benchmarks.
 Nevertheless, the versions with loop control
 significantly outperform the versions without, even `c512',
-for all these benchmarks except mandelbrot.
+for all these benchmarks except for mandelbrot.
 On mandelbrot, `c512' already gets a near-perfect speedup,
 yet loop control still gets a small improvement.
 Thus on all our dependent benchmarks,
@@ -1671,7 +1674,7 @@ while greatly reducing memory consumption.
 
 Overall, the versions with loop control
 get excellent speedups on three of the benchmarks:
-speedups of 3.98, 3.93 and 3.89 on four CPUs
+speedups of 3.95, 3.92 and 3.90 on four CPUs
 for mandelbrot, matrixmult and spectralnorm respectively.
 The one apparent exception, raytracer,
 is very memory-allocation-intensive.
@@ -1683,19 +1686,22 @@ runtime being used in garbage collection (Table~\ref{tab:gc_amdahl}):
 This means that parallel execution can only speed up the remaining 55\% of
 the program.
 Therefore the best speedup we can hope for is
-$(4 \times 0.55 + 0.45)/(0.55 + 0.45) = 2.65$,
-which our result of 2.64 is as close as practically possible to this
-theoretical limit.
+$(4 \times 0.55 + 0.45)/(0.55 + 0.45) \approx 2.65$,
+which our result of 2.65 reaches.
+It is unusual to see results this close to their theoretical maximums;
+in this case the parallelisation of the runtime may affect the garbage
+collector's performance,
+which can affect the figures that we have used with Amdahl's law.
 
 Second,
 % for two of the four benchmarks,
 loop control is crucial for getting this kind of speedup,
 unless you are willing to waste lots of memory.
 On four cores, loop control raises the speedup compared to c128
-from 3.75 to 3.98 for mandelbrot,
-from 3.44 to 3.93 for matrixmult,
-from 1.76 to 2.64 for raytracer,
-and from 1.14 to 3.89 for spectralnorm.
+from 3.36 to 3.95 for mandelbrot,
+from 1.44 to 3.92 for matrixmult,
+from 0.87 to 2.65 for raytracer,
+and from 1.01 to 3.90 for spectralnorm.
 Those are pretty impressive improvements.
 
 \paul{XXX: Currently here,  there's something wrong with the context limit
@@ -1706,8 +1712,9 @@ the dependent versions without loop control,
 while there is no significant difference between
 the speeds of the independent versions and the dependent loop control versions.
 For matrix multiplication, the loop control dependent version is faster,
-while for spectral-norm, the independent version is faster,
-but in both cases the difference is small.
+but the difference is small.
+While for spectral-norm, the independent version result falls within the
+    range of loop control results.
 This shows that on these benchmarks, loop control completely avoids
 the problems described at the beginning of this chapter.
 
@@ -1717,10 +1724,11 @@ one case gets a slight speedup, while the others get slight slowdowns.
 Due to the extra copying required,
 this tilt towards slowdowns is to be expected.
 However, the effect is very small:
-always within 1\%, and usually in the noise.
-(For example, spectral-indep on three cores
-does everything exactly the same with c512 as with c128,
-so the difference between 6.44s and 6.41s is just noise.)
+usually within 2\%.
+%and usually in the noise.
+%(For example, spectral-indep on three cores
+%does everything exactly the same with c512 as with c128,
+%so the difference between 6.44s and 6.41s is just noise.)
 The possibility of such slight slowdowns is an acceptable price to pay
 for allowing parallel code to recurse arbitrarily deeply
 while using constant stack space.
