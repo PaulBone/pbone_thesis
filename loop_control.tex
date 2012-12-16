@@ -4,8 +4,9 @@
 \label{chap:lc}
 \label{chap:loop_control}
 
-\status{I have finished the first 3 sections.  They are ready for Peter
-Schachte to check.}
+\status{Peter has checked the first 3 sections and I will retrieve them from
+him later.
+The next three sections are now ready for someone to check.}
 
 In the previous chapter we described our
 system that uses profiling data
@@ -58,9 +59,11 @@ Section~\ref{sec:lc_transformation} describes
 the program transformation we have developed
 to control memory consumption by loops.
 Section~\ref{sec:lc_perf} evaluates
-how our system works in practice on some benchmarks,
+how our system works in practice on some benchmarks.
+Section~\ref{sec:lc_further_work}
+describes potential further work,
 and
-Section~\ref{sec:lc_conc} concludes with some related work.
+Section~\ref{sec:lc_conc} concludes with discussion of related work.
 
 \section{Introduction}
 \label{sec:lc_intro}
@@ -78,7 +81,7 @@ which happens often,
 since in logic programming languages,
 tail recursive code has long been the preferred way to write a loop.
 In independent code,
-we can workarround the issue by reordering the conjuncts
+we can workaround the issue by reordering the conjuncts
 in a conjunction (see Section~\ref{sec:rts_reorder}),
 but in dependent code this is not possible.
 The problem is that
@@ -306,7 +309,7 @@ so it benefits both manually and automatically parallelised Mercury code.
 \section{The loop control transformation}
 \label{sec:lc_transformation}
 
-\status{This section is ready for Peter Schachte to check.}
+\status{This section is ready for someone to check.}
 
 \begin{figure}[tb]
 \begin{verbatim}
@@ -1394,7 +1397,7 @@ would not be difficult.
 \section{Performance evaluation}
 \label{sec:lc_perf}
 
-\status{This section is ready for review by Peter Schachte.}
+\status{This section is ready for review by someone.}
 
 % We ran all our benchmarks on
 % taura
@@ -1460,6 +1463,15 @@ This is not possible in the other programs without
 the last call modulo constructor (LCMC)
 optimisation \citep{ross:mercury-lcmc}.
 LCMC is not supported with tail recursion so we have not used it.
+
+We found that the independent spectralnorm benchmark performed poorly due
+to its fine granularity and the overhead of notification.
+Therefore, we compiled the runtime system in such a way so that
+notifications were not used to communicate the availability of sparks
+(Section~\ref{sec:rts_work_stealing2}).
+Instead Mercury engines were configured to poll each other to find sparks
+to execute.
+This change only affects the non-loop control tests.
 We ran each test of each program twenty times.
 
 % Mandelbrot, raytracer and matrixmult
@@ -1577,7 +1589,7 @@ which we have set to 128 in `c128' rows and to 512 in `c512' rows.
 Although our code uses thread-safe mechanisms for counting the number of
 contexts in use;
 when it checks this value against the limit it does not use a thread-safe
-machanism.
+mechanism.
 Therefore, whilst the number of contexts in use can never be corrupted,
 it can be exceed the limit by about one or two contexts.
 Since different contexts can have different sized stacks,
@@ -1704,8 +1716,6 @@ from 0.87 to 2.65 for raytracer,
 and from 1.01 to 3.90 for spectralnorm.
 Those are pretty impressive improvements.
 
-\paul{XXX: Currently here,  there's something wrong with the context limit
-so I need to fix it and re-run the benchmarks.}
 Third, for the benchmarks that have versions using independent parallelism,
 the independent versions are faster than
 the dependent versions without loop control,
@@ -1733,10 +1743,54 @@ The possibility of such slight slowdowns is an acceptable price to pay
 for allowing parallel code to recurse arbitrarily deeply
 while using constant stack space.
 
+\section{Further work}
+\label{sec:lc_further_work}
+
+\status{This section is ready for someone to check.}
+
+There are a number of small improvements that could be made to improve loop
+control.
+As we mentioned in Section~\ref{sec:lc_tailrec} the allocation of stack
+slots in tail recursive code is rather naive.
+We could perform better stack slot allocation for both the parent stack
+frame and the first stack frame on the stack slot's context.
+We could also change how stack slots are allocated in non-recursive code.
+By allocating the slots that are shared between the parent and child
+computations into separate parts of the same stack frame,
+we may be able to reduce \emph{false sharing}.
+False sharing normally occurs when two parallel tasks contend for access to
+a single cache-line sized area of memory \emph{without} actually using the
+data in that memory to communicate;
+this creates extra cache misses that can be avoided by allocating memory
+differently.
+
+Loop control allows the same small number of contexts to be used to execute
+a parallel loop.
+However, Futures are still allocated dynamically and are not re-used.
+We could achieve further performance improvements by controlling the
+allocation and use of futures.
+This could reduce the number of allocations of futures from
+$num\_futures\_per\_level \times num\_red\_levels$ to just a single
+allocation,
+depending on how futures where used in the loop.
+
+These changes are minor optimisations, and might only increase
+performance by a small fraction;
+there are other areas of further work that could provide more benefit.
+For example,
+applying a similar transformation to other parallel code patterns,
+such as right recursion or divide and conquer,
+could improve performance of code using those patterns.
+In some patterns this may require novel transformations such as we have
+shown here,
+in others it may simply be the application of loop control transformations
+such as \citet{shen_98_granularity-control}
+
+
 \section{Conclusion}
 \label{sec:lc_conc}
 
-\status{This section has not been revised yet.}
+\status{This section is ready for review by someone.}
 
 Ever since the first parallel implementations
 of declarative languages in the 1980s,
@@ -1750,7 +1804,10 @@ keeping it at a reasonable level.
 
 However, most throttling mechanisms we know of
 have been general in nature,
-such as granularity control systems \citep{lopez96:granularity}.
+such as granularity control systems
+\citep{lopez96:granularity,
+king:lower_bound_time_complexity,
+shen_98_granularity-control}.
 These have similar objectives,
 but use totally different methods:
 restricting the set of places in a program
@@ -1793,6 +1850,10 @@ To avoid even higher overheads,
 it imposes the same restriction we do:
 it parallelises only deterministic code
 (though the definition of ``deterministic'' it uses is a bit different).
+Reform Prolog does not handle any other forms of parallelism,
+whereas Mercury handles parallelism in various situations,
+and the loop control transformation simply optimises one form of
+parallelism.
 % not throttled,
 % no granularity control,
 
@@ -1820,13 +1881,14 @@ and since it does so without adding significant overhead,
 permits them to live up to their full potential.
 For one of our benchmarks,
 loop control makes a huge difference:
-on four cores, it turns a speedup of 1.13 into a speedup of 3.83.
+on four cores, it turns a speedup of 1.01 into a speedup of 3.90.
 It significantly improves speedups on two other benchmarks,
 and it even helps the fourth and last benchmark,
 even though that was already close to the maximum possible speedup.
 
 The other main advantage of our system
-is that it allows procedures to keep exploiting tail recursion optimisation.
+is that it allows procedures to keep exploiting tail recursion optimisation
+(TRO).
 If TRO is applicable to the sequential version of a procedure,
 then it will stay applicable to its parallel version.
 Many programs cannot handle large inputs without TRO,
@@ -1836,31 +1898,29 @@ to systems that resemble the Mercury implementation,
 but this should apply to the implementation
 of every eager declarative language.
 
-\section{Notes/To use}
 
-\status{This section will te removed.}
+%\section{Notes/To use}
+%
+%\status{This section will te removed.}
+%
+%Currently, the Mercury runtime system
+%often continues execution, on completion of a parallel conjunction,
+%on a CPU different from the one being used before that parallel conjunction.
+%When our system finds a smattering of parallel conjunctions
+%through a mostly sequential program,
+%these switches from a CPU with a warm cache to a CPU with a cold cache
+%severely degrade the program's performance.
+%Right now, for most programs,
+%this effect yields a slowdown significantly bigger
+%than the speedups yielded by automatic parallelisation.
+%Once this defect is fixed, we hope to report significantly better results
+%for more and bigger programs.
+%
+%
 
-Currently, the Mercury runtime system
-often continues execution, on completion of a parallel conjunction,
-on a CPU different from the one being used before that parallel conjunction.
-When our system finds a smattering of parallel conjunctions
-through a mostly sequential program,
-these switches from a CPU with a warm cache to a CPU with a cold cache
-severely degrade the program's performance.
-Right now, for most programs,
-this effect yields a slowdown significantly bigger
-than the speedups yielded by automatic parallelisation.
-Once this defect is fixed, we hope to report significantly better results
-for more and bigger programs.
-
-
-% possible future work: store futures in loop control slots,
-% if their lifetime allows,
-% to replace numfuturesperlevel*numlevels allocations with just one
-
-We would like to thank
-% for their support,
-Chris King for allowing us to use his spectralnorm benchmark.
+%We would like to thank
+%% for their support,
+%Chris King for allowing us to use his spectralnorm benchmark.
 
 
 % LocalWords:  parallelise parallelisation parallelised quantifications nondet
