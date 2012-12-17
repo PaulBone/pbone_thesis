@@ -15,7 +15,7 @@ any of the performance problems afflicting sequential programs,
 as well as from several problems unique to parallel systems.
 Many of these problems are quite hard
 (or even practically impossible)
-to diagnose without help from specialized tools.
+to diagnose without help from specialised tools.
 In this chapter we describe a proposal for a tool
 for profiling the parallel execution of Mercury programs,
 a proposal whose implementation we have already started.
@@ -25,22 +25,23 @@ the execution of parallel Haskell programs.
 
 The structure of this chapter is as follows.
 Section~\ref{sec:tscope_intro} describes three different groups of people,
-and for each describes why a visual profiler based on \tscope would benifit
+and for each describes why a visual profiler based on \tscope would benefit
 them.
 Section~\ref{sec:tscope_background} gives a description of the \tscope tool,
 how it is used in Haskell,
 and how we can use it for Mercury without any modifications.
 Section~\ref{sec:tscope_newevents}
 describes how we modify and extended the \tscope system
-to collect the kinds of data needed to more comletely describe
+to collect the kinds of data needed to more completely describe
 the parallel execution of Mercury programs,
 while Section~\ref{sec:tscope_analysis} describes how
 one can analyse that data to yield insights
 that can be useful to our three audiences:
 application programmers,
 runtime system implementors,
-and the implementors of autoparallelisation tools.
-Section~\ref{sec:tscope_conc}
+and the implementors of auto-parallelisation tools.
+Section~\ref{sec:tscope_example} shows some examples of our work so far.
+Finally, Section~\ref{sec:tscope_conc}
 concludes with a discussion of related work.
 
 \section{Introduction}
@@ -145,7 +146,7 @@ we fall into all three of the above categories.
 We have long needed a tool
 to help us understand the behaviour of parallel Mercury programs,
 of the parallel Mercury runtime system
-and of our autoparallelisation tool (Chapter~\ref{chap:overlap}),
+and of our auto-parallelisation tool (Chapter~\ref{chap:overlap}),
 but the cost of building such a tool seemed daunting.
 We therefore looked around for alternative approaches.
 The one we selected was to adapt to Mercury
@@ -195,7 +196,7 @@ and what Mercury calls a context GHC calls a \emph{thread}.
 we will continue to use Mercury terminology as we have done so far in the
 dissertation.)
 Mercury and GHC both use sparks,
-although GHC's sparks do not need to be evalulated,
+although GHC's sparks do not need to be evaluated,
 and may be garbage collected.
 The second reason is that
 the \tscope log file format was designed to be extensible.
@@ -283,7 +284,7 @@ The possible reasons include:
 (c) the context has finished.
 GHC uses many more reason values, but these are the only reasons that
 are applicable to our work.
-The context id could be derrived implicitly,
+The context id could be derived implicitly,
 but the convention that was established by the GHC developers requires us to
 provide it.
 
@@ -336,8 +337,8 @@ The garbage collection events in GHC are much more complex.
 However, since Mercury uses the
 Boehm-Demers-Weiser conservative garbage collector (Boehm GC)
 \citep{boehm:1988:gc},
-we have much less insight into the garbage collector's (GC) behavour,
-and thus fewer GC related events and simplier semantics.
+we have much less insight into the garbage collector's (GC) behaviour,
+and thus fewer GC related events and simpler semantics.
 
 \item[GC\_END]:
 Garbage collection has finished on the current engine;
@@ -429,11 +430,11 @@ about the behaviour of parallel Mercury programs.
 
 \begin{description}
 
-% \item[STRING] Record an association between a String and an integer so
-% that a static string occurring many times within a log file can be
-% replaced with an integer.
-% Making the log files shorter and therefore not flushing them to disk
-% as often.
+\item[STRING] records an association between a text string and an integer so
+that a string occurring many times within a log file can be
+replaced with an integer.
+Making the log files shorter and therefore not flushing them to disk
+as often.
 
 \item[START\_PAR\_CONJUNCTION] records the fact that
 the current engine is about to start executing a parallel conjunction.
@@ -441,7 +442,7 @@ It identifies the parallel conjunction in two different ways.
 The static id identifies
 the location of the conjunction in the source code of the program.
 The dynamic id is the address of the barrier structure
-that all the conjuncts in the conjunction will synchronize on when they finish.
+that all the conjuncts in the conjunction will synchronise on when they finish.
 Note that barrier structures' storage may be reused for other objects,
 including other barriers, by later code,
 so these dynamic ids are not unique across time,
@@ -519,7 +520,7 @@ engine.
 It gives the name of the variable the future is for,
 as well as the dynamic id of the future.
 It does not give the dynamic id of the parallel conjunction
-whose conjuncts the future is intended to synchronize,
+whose conjuncts the future is intended to synchronise,
 but that can be found out quite easily:
 just scan forward for the next \event{START\_PAR\_CONJUNCTION}
 event.
@@ -711,7 +712,7 @@ The GHC developers have independently\footnote{
 recognised this need,
 and have created alternative views within the \tscope GUI to present textual
 information such as reports of these metrics.
-In our rudimentory prototype of how these metrics could be calculated we
+In our rudimentary prototype of how these metrics could be calculated we
 used a command line driven console interface.
 (Some parts of \tscope are implemented as a library,
 allowing the development of different independent tools.)
@@ -722,7 +723,7 @@ only to application programmers,
 or only to runtime system implementors,
 or only to auto-parallelisation tool implementors,
 but several are useful to two or even all three of those groups.
-Also, metics can be organised by their \emph{subject},
+Also, metrics can be organised by their \emph{subject},
 whether that is:
 \begin{itemize}
     \item the whole program,
@@ -869,9 +870,9 @@ Their metrics are more complicated as their spark implementation is more
 complicated.
 Their implementation introduces a new event that provides summary data just
 for this purpose;
-by comparison our spark events provide more detail as we know more accuratly
-when each spark event occured.
-We wish to measure the number of sparks avaiable on each Mercury engine's
+by comparison our spark events provide more detail as we know more accurately
+when each spark event occurred.
+We wish to measure the number of sparks available on each Mercury engine's
 deque at any given time.
 This can be done by maintaining a counter for each engine,
 incrementing it each time that engine uses the \event{CREATE\_SPARK} event,
@@ -936,7 +937,7 @@ limit the amount of parallelism available in the conjunction.
 The impact of the individual drops on the time-weighted average
 shows which effects do the most limiting in any given parallel conjunction.
 
-\metrictopic{Parconj runnable self and desc}
+\metrictopic{Parconj runnable self and descendants}
 is the number of CPUs that can be used by a given parallel conjunction
 and its descendants.
 This metric is almost the same as \metric{Parconj runnable self},
@@ -949,7 +950,7 @@ and it counts the number of runnable tasks they represent.
 
 The two metrics,
 \metric{Parconj runnable self} and
-\metric{Parconj runnable self and desc},
+\metric{Parconj runnable self and descendants},
 can be used together to see whether
 the amount of parallelism that can be exploited
 by the two parallel conjunctions together is substantially greater than
@@ -983,7 +984,7 @@ and stops counting a conjunct when it stops using the CPU
 % \paul{Only when it blocks on a future, finishes a conjunct or calls
 % \code{sched.yield}}
 
-Obviously, \metric{Parconj running self} can never exceed 
+Obviously, \metric{Parconj running self} can never exceed
 \metric{Parconj runnable self}
 for any parallel conjunction at any given point of time.
 However, one important difference between the two metrics
@@ -1030,12 +1031,12 @@ The most obvious use of the \metric{Parconj running self} curve of a
 conjunction is to tell programmers whether and to what extent
 that parallel conjunction can exploit the available CPUs.
 
-\metrictopic{Parconj running self and desc}
+\metrictopic{Parconj running self and descendants}
 is the number of CPUs that are actually used by a given parallel conjunction
 and its descendants.
 This metric has the same relationship to
 \metric{Parconj running self}
-as \metric{Parconj runnable self and desc} has to
+as \metric{Parconj runnable self and descendants} has to
 \metric{Parconj runnable self}.
 Its main use is similar to the main use of \metric{Parconj running self}:
 to tell programmers whether and to what extent
@@ -1046,13 +1047,13 @@ even if the top-level conjunction by itself does not,
 and in such cases the programmer can stop looking for more parallelism,
 at least in that part of the program's execution timeline.
 
-\metrictopic{Parconj avail CPUs}
+\metrictopic{Parconj available CPUs}
 is the number of CPUs available to a given parallel conjunction.
 Scanning through the entire trace,
 we can compute and record the number of CPUs being used
 at any given time during the execution of the program.
 For any given parallel conjunction,
-we can also compute \metric{Parconj running self and desc},
+we can also compute \metric{Parconj running self and descendants},
 the number of CPUs used by that conjunction and its descendants.
 By taking the difference between the curves of those two numbers,
 we can compute the curve of the number of CPUs
@@ -1430,22 +1431,23 @@ Above the per-CPU rows \tscope shows a plot that is virtually identical
 to the curve of the \metric{CPUs over time} metric we defined above,
 and now it can do so for Mercury programs as well as for Haskell programs.
 
-\paul{XXX: Currently here}
-The main \tscope GUI also has a mechanism that allows the user
-to ask for simple scalar data about the profiled program run.
-Originally, it was used only to display the overall time taken by the run.
-It is trivial to modify this to let the user input
+The \tscope GUI includes different views, including a view that can provide
+reports to the user,
+including simple scalar data about the profiled program run.
+This data already includes GHC's equivalent of the \metric{GC stats}
+and \metric{Mutator vs GC time} metrics;
+we could easily use this to report our metrics.
+It is also trivial to add a new view that allows the user to input
 the number of call sequence counts (CSCs)
 executed by a sequence version of the same program on the same data,
 which would allow the tool to compute and display
-the value of the NANOSECS\_PER\_CALL metric.
-It is not much harder to modify it to compute and then output
-the values of the GC\_STATS and MUTATOR\_VS\_GC\_TIME metrics.
+the value of the \metric{Nanosecs per call} metric.
 
 We plan to modify the \tscope GUI so that
 if the user hovers the pointer over the representation
 of an event connected with a parallel conjunction as a whole
-(such as a START\_PAR\_CONJUNCTION or END\_PAR\_CONJUNCTION event),
+(such as a \event{START\_PAR\_CONJUNCTION} or
+\event{END\_PAR\_CONJUNCTION} event),
 they get a menu allowing them to select
 one of the conjunction-specific metrics listed above.
 The system should then compute and print the selected metric.
@@ -1454,10 +1456,11 @@ of an event connected with a specific parallel conjunct,
 they should be able to ask for and get
 the value of one of the conjunct-specific metrics.
 
-We plan to add to \tscope a screen
+We plan to add to \tscope a view
 that lists all the parallel conjunctions executed by the program.
-(The information needed for that list is available in the strings
-representing the static ids of the executed parallel conjunctions.)
+(The information needed for that list is available in the \event{STRING}
+events that record strings representing the static ids of the executed
+parallel conjunctions.)
 By selecting items from this list,
 the tool should be able to print summaries
 from all the dynamic occurrences of the conjunction
@@ -1514,7 +1517,117 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 % This offset is subtracted from the times recorded by each of these cores.
 % In practice we have not needed this algorithm,
 % Whenever it was enabled it simply conformed that the TSCs in the different
-% cores where already synchronized.
+% cores where already synchronised.
+
+\section{Preliminary examples}
+\label{sec:tscope_example}
+
+\begin{figure}
+\includegraphics[width=0.98\textwidth]{pics/icfp2000_eventlog}
+\caption{A profile of the raytracer}
+\label{fig:ts_icfp2000}
+\end{figure}
+
+Some of our early examples use only the \tscope features introduced by the
+GHC developers.
+We modified Mercury's runtime system to write out compatible log files using
+only the events in Section~\ref{sec:background}.
+Using some of the example programs from previous chapters we were able to
+see the \tscope profiles of the raytracer
+(Figure~\ref{fig:ts_icfp2000})
+and the mandelbrot image generator (Figure~\ref{fig:ts_mandelbrot}).
+These profiles were generated on an eight processor machine, using eight
+Mercury engines.
+In both figures, green areas in the eight lower rows indicate when each of
+the eight Mercury engines was executing a context.
+Orange areas indicate when that engine initiated garbage collection.
+The top-most row shows, at each point in time, how many engines are
+executing contexts.
+
+In Figure~\ref{fig:ts_icfp2000} we can see the effect on runtime of the
+garbage collector (GC).
+The mutator is interrupted many times for short periods of time while the
+GC runs.
+This profile was generated with the default initial heap size,
+therefore GC events occur quite frequently.
+
+\begin{figure}
+\includegraphics[width=0.98\textwidth]{pics/mandelbrot_eventlog}
+\caption{A profile of the mandelbrot program}
+\label{fig:ts_mandelbrot}
+\end{figure}
+
+The profile in Figure~\ref{fig:ts_mandelbrot} has a much lower memory
+allocation rate.
+One collection event can be seen roughly in the middle of execution,
+and there is another one that cannot be seen at the beginning of the
+execution\footnote{
+    The \tscope tool allows us to zoom into executions,
+    and small events such as very short garbage collections can be seen with
+    higher magnification.}.
+After the visible GC event,
+we can see that the third and fifth engines do not resume their work
+immediately;
+this is a potential area of optimisation that runtime system programmers
+could improve.
+
+In Section~\ref{sec:rts_gc} we spoke about the impact of garbage collection
+in detail.
+The data for Table~\ref{tab:gc_amdahl} in that section was collected using
+\tscope.
+In particular we used the \metric{GC stats} and \metric{Mutator vs GC time}
+metrics.
+Figure~\ref{fig:ts_dat} shows this data for the
+raytracer using initial heap sizes of 16MB and 512MB.
+They report data averaged over eight executions,
+as our command line tool supports merging \tscope reports.
+We can see that the number of collections, 
+the average time of a collection,
+and the total time spent performing collection vary dramatically.
+Which we explored in detail in Section~\ref{sec:rts_gc}.
+
+\begin{figure}
+\begin{center}
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[16MB initial heap size]{%
+{\small
+\begin{tabular}{l}
+\code{Basic Statistics} \\
+\code{~~~~Number of engines:~~4} \\
+\code{~~~~Total elapsed time:~13.46s } \\
+\code{~~~~Startup time:~~~~~~~~1.89ms~~0.0\%} \\
+\code{~~~~Running time:~~~~~~~13.45s~~~100.0\%} \\
+\code{~~~~Number of collections:~288} \\
+\code{~~~~Total GC time:~~~~~~~~~7.05s~~~52.4\%} \\
+\code{~~~~Total Mut time:~~~~~~~~6.40s~~~47.6\%} \\
+\code{~~~~Average GC time:~~~~~~~24.48ms} \\
+\end{tabular}
+}}
+\end{minipage}
+%
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[512MB initial heap size]{%
+{\small
+\begin{tabular}{l}
+\code{Basic~Statistics} \\
+\code{~~~~Number~of~engines:~~4} \\
+\code{~~~~Total~elapsed~time:~6.96s~} \\
+\code{~~~~Startup~time:~~~~~~~1.89ms~~0.0\%} \\
+\code{~~~~Running~time:~~~~~~~6.95s~~~100.0\%} \\
+\code{~~~~Number~of~collections:~26} \\
+\code{~~~~Total~GC~time:~~~~~~~~~1.25s~~~17.9\%} \\
+\code{~~~~Total~Mut~time:~~~~~~~~5.71s~~~82.1\%} \\
+\code{~~~~Average~GC~time:~~~~~~~47.96ms} \\
+\end{tabular}
+}}
+\end{minipage}
+\end{center}
+\caption{Basic metrics for the raytracer}
+\label{fig:ts_dat}
+\end{figure}
+
+We have not yet implemented any more advanced metrics.
+However, even our simplest metrics have already been useful.
 
 \section{Related work and conclusion}
 \label{sec:tscope_conc}
@@ -1593,11 +1706,11 @@ to help programmers exploit dependent AND-parallelism better.
 As far as we know, no-one has built a profiler
 for a dependent AND-parallel logic programming language
 with the capabilities that we propose.
-We haven't yet built one either :-),
+We haven't yet built one either,
 but we are working on it.
-We expect to have at least a third of our proposed metrics implemented
-by the time of the workshop,
-and many more by the end of the year.
+% We expect to have at least a third of our proposed metrics implemented
+% by the time of the workshop,
+% and many more by the end of the year.
 
 % I think our basic argument should be:
 % - visualisation tools have long proven to be useful
@@ -1612,13 +1725,6 @@ and many more by the end of the year.
 %   that supports dependent AND parallelism
 %   does not focus on dependent AND parallelism,
 %   and it does not gather the metrics we think we need
-
-% XXX Acknowledgements.
-We would like to thank everyone
-who has contributed to the development of \tscope,
-in particular Simon Marlow and Duncan Coutts,
-who have answered many of our questions,
-and helped us add Mercury specific features to \tscope.
 
 % You can find these papers in ~pbone/papers/
 % berthold_eden.pdf

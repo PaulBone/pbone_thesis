@@ -6,6 +6,9 @@ PIC =		$(wildcard pics/*.pic)
 PIC_TEX =	$(PIC:%.pic=%.tex)
 DOT =       $(wildcard pics/*.dot)
 DOT_EPS =   $(DOT:%.dot=%.eps)
+PDF =       $(wildcard pics/*.pdf)
+PDF_UCEPS =   $(PDF:%.pdf=%.uceps)
+PDF_EPS =   $(PDF:%.pdf=%.eps)
 LS =		lecture_support/Makefile.lectures
 TALK_PICS =	$(wildcard pics/*.pic)
 TALK_PSS =	$(wildcard raw_ps/*.ps)
@@ -64,7 +67,9 @@ all : thesis.pdf thesis.ps undefined.txt talk.pdf
 wc :
 	wc -w $(TEX_PROSE)
 
-thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) \
+thesis.dvi thesis.log : $(TEXFILES) \
+		$(PIC_TEX) $(DOT_EPS) $(PDF_EPS) \
+		$(TABLES_TEX) \
         bib.bib checking spelling
 	latex thesis
 	bibtex thesis
@@ -82,6 +87,24 @@ thesis.dvi thesis.log : $(TEXFILES) $(PIC_TEX) $(DOT_EPS) $(TABLES_TEX) \
 
 %.eps: %.dot
 	dot -Teps < $< > $@
+
+#%.pdf : %.eps
+#	ps2pdf $< $@
+
+%.uceps: %.pdf
+	pdftops -eps $< $@
+
+%.eps : %.ps
+	ps2eps $<
+
+pics/icfp2000_eventlog.ps : pics/icfp2000_eventlog.uceps cropps.pl
+	./cropps.pl 0 160 978 806 $< > $@
+
+pics/par_fib_eventlog.ps : pics/par_fib_eventlog.uceps cropps.pl
+	./cropps.pl 0 160 978 806 $< > $@
+
+pics/mandelbrot_eventlog.ps : pics/mandelbrot_eventlog.uceps cropps.pl
+	./cropps.pl 0 160 978 806 $< > $@
 
 times_table.tex: $(TIMING_RESULTS) $(BENCH_ALL) Makefile
 	./$(BENCH_ALL) -n0 -w -f times_table.tex -p $(TIMING_RESULTS)
