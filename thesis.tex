@@ -129,39 +129,41 @@ This is to certify that:
 
 \chapter*{Preface}
 
-The dissertation begins with an introduction chapter
+The dissertation begins with an introduction
 (Chapter~\ref{chap:intro}) that
 motivates the need for automatic parallelism systems.
 It provides an analysis of the related literature;
-using this to provide the details of why automatic parallelism is important
+using this to show why automatic parallelism is important
 and why the problem is still unsolved.
 
 Chapter~\ref{chap:backgnd} provides background material used throughout the
 rest of the dissertation.
 In particular it describes prior work 
 that I did as part of my Honours project
-for the degree of Bachelor of Computer Science at the University of Melbourne.
-This work occurred before my PhD candidature commenced.
+for the degree of Bachelor of Computer Science Honours at the University of Melbourne.
+This work occurred before my Ph.D.\ candidature commenced.
 This work included:
 the profiler feedback framework (Section~\ref{sec:backgnd_autopar}),
 an initial rudimentary version of the automatic
 parallelisation tool (also Section~\ref{sec:backgnd_autopar}),
 an algorithm for determining when a sub-computation first uses
 a variable (Section~\ref{sec:backgnd_var_use_analysis}),
-and the coverage profiling support in Mercury's deep profiler
-(Section~\ref{sec:backgnd_coverage}).
+and the initial version of the coverage profiling support in Mercury's deep
+profiler (Section~\ref{sec:backgnd_coverage}).
 
-Chapter~\ref{chap:rts} discusses a number of improvements that we made to
-the runtime system.
-These improvements are designed to make parallel Mercury programs perform
+Chapter~\ref{chap:rts} discusses a number of improvements that were made to
+the runtime system, in order to make parallel Mercury programs perform
 better.
 Chapter~\ref{chap:rts} describes some joint work with Peter Wang.
 Wang contributed about 80\% of the initial work stealing implementation 
 described in Section~\ref{sec:rts_work_stealing};
 I contributed the other 20\%.
-Work stealing is also described in Section~\ref{sec:rts_work_stealing2},
+An improved version of work stealing is described in
+Section~\ref{sec:rts_work_stealing2},
 but the work in that section is solely my own.
 
+The next three chapters are based on published papers,
+of which I am the first author and contributed the vast majority of the work.
 Chapter~\ref{chap:overlap} describes our new automatic parallelism
 analysis tool and its novel algorithms.
 It is based on the following journal article.
@@ -193,7 +195,8 @@ It is based on the following workshop paper.
 \begin{quote}
 \pubauthor{Paul Bone and Zoltan Somogyi.}
 \pubtitle{Profiling parallel Mercury programs with \tscope.}
-\pubhow{21st Workshop on Logic-based methods in Programming Environments,}
+\pubhow{Proceedings of the 21st Workshop on Logic-based methods in
+Programming Environments,}
 {Lexington KY USA, July 2011.}
 \end{quote}
 
@@ -210,7 +213,7 @@ I think it is one form per chapter based on published work}
 
 First I will thank my supervisors,
 Zoltan Somogyi,
-Peter Scachte and
+Peter Schachte and
 Aaron Harwood
 for all their support, hard work, and on occasion weekends.
 I have learnt a lot from you and enjoyed your company and our interesting
@@ -233,7 +236,7 @@ Peter Wang,
 Ian MacLarty,
 and
 Peter Ross.
-I also want to thank the helpful and supportive stuff in the Computing and
+I also want to thank the helpful and supportive staff in the Computing and
 Information Systems department at the University of Melbourne,
 especially
 Linda Stern,
