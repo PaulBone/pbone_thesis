@@ -442,7 +442,8 @@ invalid_hypenations = [
     "dead-lock",
     "dead-locks",
     "hot-spot",
-    "hot-spots"
+    "hot-spots",
+    "data-structure"
     ].
 
 :- func acronyms = list(string).

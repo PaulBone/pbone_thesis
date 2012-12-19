@@ -1,5 +1,5 @@
 
-\section{Improved Work Stealing Implementation}
+\section{Improved work stealing implementation}
 \label{sec:rts_work_stealing2}
 
 In this section we attempt to improve on our work stealing
@@ -620,7 +620,7 @@ another engine.
     Informing the thief which spark deque it should check is an
     optimisation.
     Before this message is sent, the sender will check that the recipient
-    would not exceed the contest limit by stealing and executing the spark.
+    would not exceed the context limit by stealing and executing the spark.
 
     \item[\code{MR\_ACTION\_SHUTDOWN}:]
     The runtime system is shutting down, this engine should exit.

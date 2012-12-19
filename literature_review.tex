@@ -498,8 +498,8 @@ This is called embarrassing parallelism as the amount of fine-grained
 parallelism can cause the evaluation to perform \emph{more slowly} than
 sequential evaluation.
 Most other implicitly parallel systems share these problems.
-Many systems such as \citet*{peyton-jones:1989:parallel-graph-reduction} go
-to lengths to exploit only course grained parallelism.
+Many systems such as \citet{peyton-jones:1989:parallel-graph-reduction} go
+to lengths to exploit only coarse grained parallelism.
 In our opinion the problem with implicit parallelism is that it approaches
 the parallel programming challenge from the wrong direction:
 it makes everything execute in parallel \emph{by default} and then attempts
@@ -1121,7 +1121,7 @@ and no other forms of parallelism are exploited.
 This means that like the languages above,
 Reform Prolog cannot effectively parallelise most programs.
 
-\subsection{Feedback directed Automatic Parallelisation}
+\subsection{Feedback directed automatic parallelisation}
 \label{sec:intro_auto_par}
 
 As we mentioned above,
