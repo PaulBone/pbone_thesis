@@ -509,62 +509,61 @@ will be a small multiple of the number of cores in the system.
 The multiplier is configurable
 by setting an environment variable when the program is run.
 
-\paul{XXX: Fix aritys, maybe describe algorithm, it is not self-explanitory}
-\begin{algorithm}[tbp]
-\begin{algorithmic}
-\Procedure{MR\_lc\_wait\_free\_slot}{$lc$, $retry\_label$}
-    %unsigned    hint, offset, i;
-
-    \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
-        \State MR\_aquire\_lock($lc.MR\_lc\_master\_context\_lock$)
-        \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
-            %MR\_Context *ctxt;
-            \State /* Only commit to sleeping while holding the lock. */
-            %so retest the outstanding worker count.
-            \State $ctxt \gets$ MR\_ENGINE($MR\_eng\_this\_context$)
-            \State MR\_save\_context($ctxt$)
-            \State $ctxt.MR\_ctxt\_resume \gets retry\_label$
-            %\State $ctxt.MR\_ctxt\_resume\_owner\_engine \gets$ MR\_ENGINE($MR_eng_id$)
-            \State $lc.MR\_lc\_master\_context \gets ctxt$
-            %MR_CPU_SFENCE;
-            \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
-            \State MR\_ENGINE($MR\_eng\_this\_context$) $\gets$ \NULL
-            \State MR\_idle()
-        \EndIf 
-        \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
-    \EndIf
-
-    \State $hint \gets lc.MR\_lc\_free\_slot\_hint$
-
-    \For{$offset \gets 0$ to $lc.MR\_lc\_num\_slots$}
-        \State $i \gets (hint + offset) \bmod lc.MR\_lc\_num\_slots$
-        \If{$lc.MR\_lc\_slots[i].MR\_lcs\_is\_free$}
-            \State $lc.MR\_lc\_slots[i].MR\_lcs\_is\_free \gets false$
-            \State $lc.MR\_lc\_free\_slot\_hint \gets
-                (i + 1) \bmod lc.MR\_lc\_num\_slots$
-            \State MR\_atomic\_inc\_int($lc.MR\_lc\_outstanding\_workers$)
-            \State $lcs\_idx \gets i$
-            \State \Break
-        \EndIf 
-    \EndFor 
-
-    \If{$lc.MR\_lc\_slots[i].MR\_lcs\_context = $\NULL}
-        %\Comment Allocate a new context.
-        \State $lc.MR\_lc\_slots[i].MR\_lcs\_context \gets$
-            MR\_create\_context()
-        %\State
-        %    $lc.MR\_lc\_slots[i].MR\_lcs\_context.MR\_ctxt\_thread\_local\_mutables
-        %    \gets MR\_THREAD\_LOCAL\_MUTABLES$
-    \EndIf
-
-    \State reset\_context\_stack\_ptr($lc.MR\_lc\_slots[i].MR\_lcs\_context$)
-
-    \State \Return $lcs\_idx$
-\EndProcedure
-\end{algorithmic}
-\caption{\lcwaitfreeslot}
-\label{alg:lc_free_slot}
-\end{algorithm}
+%\begin{algorithm}[tbp]
+%\begin{algorithmic}
+%\Procedure{MR\_lc\_wait\_free\_slot}{$lc$, $retry\_label$}
+%    %unsigned    hint, offset, i;
+%
+%    \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
+%        \State MR\_aquire\_lock($lc.MR\_lc\_master\_context\_lock$)
+%        \If{$lc.MR\_lc\_outstanding\_workers = lc.MR\_lc\_num\_slots$}
+%            %MR\_Context *ctxt;
+%            \State /* Only commit to sleeping while holding the lock. */
+%            %so retest the outstanding worker count.
+%            \State $ctxt \gets$ MR\_ENGINE($MR\_eng\_this\_context$)
+%            \State MR\_save\_context($ctxt$)
+%            \State $ctxt.MR\_ctxt\_resume \gets retry\_label$
+%            %\State $ctxt.MR\_ctxt\_resume\_owner\_engine \gets$ MR\_ENGINE($MR_eng_id$)
+%            \State $lc.MR\_lc\_master\_context \gets ctxt$
+%            %MR_CPU_SFENCE;
+%            \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
+%            \State MR\_ENGINE($MR\_eng\_this\_context$) $\gets$ \NULL
+%            \State MR\_idle()
+%        \EndIf 
+%        \State MR\_release\_lock($lc.MR\_lc\_master\_context\_lock$)
+%    \EndIf
+%
+%    \State $hint \gets lc.MR\_lc\_free\_slot\_hint$
+%
+%    \For{$offset \gets 0$ to $lc.MR\_lc\_num\_slots$}
+%        \State $i \gets (hint + offset) \bmod lc.MR\_lc\_num\_slots$
+%        \If{$lc.MR\_lc\_slots[i].MR\_lcs\_is\_free$}
+%            \State $lc.MR\_lc\_slots[i].MR\_lcs\_is\_free \gets false$
+%            \State $lc.MR\_lc\_free\_slot\_hint \gets
+%                (i + 1) \bmod lc.MR\_lc\_num\_slots$
+%            \State MR\_atomic\_inc\_int($lc.MR\_lc\_outstanding\_workers$)
+%            \State $lcs\_idx \gets i$
+%            \State \Break
+%        \EndIf 
+%    \EndFor 
+%
+%    \If{$lc.MR\_lc\_slots[i].MR\_lcs\_context = $\NULL}
+%        %\Comment Allocate a new context.
+%        \State $lc.MR\_lc\_slots[i].MR\_lcs\_context \gets$
+%            MR\_create\_context()
+%        %\State
+%        %    $lc.MR\_lc\_slots[i].MR\_lcs\_context.MR\_ctxt\_thread\_local\_mutables
+%        %    \gets MR\_THREAD\_LOCAL\_MUTABLES$
+%    \EndIf
+%
+%    \State reset\_context\_stack\_ptr($lc.MR\_lc\_slots[i].MR\_lcs\_context$)
+%
+%    \State \Return $lcs\_idx$
+%\EndProcedure
+%\end{algorithmic}
+%\caption{\lcwaitfreeslot}
+%\label{alg:lc_free_slot}
+%\end{algorithm}
 
 \item[\code{LCslot = lc\_wait\_free\_slot(LC)}]
 % This operation tests \linebreak[3] whether \LC{} has any free slots.
@@ -583,7 +582,6 @@ from a global list of free contexts,
 by computations that have terminated earlier),
 or by allocating a new context
 (which typically happens only soon after startup).
-\paul{Keep the algorithm? Add algorithms for other operations?}
 
 % I have edited this so that it does not refer to sparks, since they are not used
 % with loop control.
