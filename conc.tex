@@ -3,19 +3,35 @@
 \label{chap:conc}
 
 % Each research chapter contains a discussion of related work.
-\status{No plan for this chapter yet}
+\status{Work in progress.}
 
-Summarise contributions
-=======================
+Chapter~\ref{chap:rts}
+investigated a number of problems that affected the performance of parallel
+Mercury programs.
+Before we could work on automatic parallelism,
+it was necessary to fix these problems that effected explicitly parallel
+Mercury programs.
+These problems included the effects of garbage collection (GC),
+the execution of sparks,
+and the behaviour of contexts in right-recursive code.
+While in Chapter~\ref{chap:rts} we did not fix any issues with garbage
+collection or
+the behavior of contexts in right-recursive code,
+we did find work-arrounds that reduced the effects of both these problems.
+We also made general improvments, such as the efficient implementation of
+work stealing,
+which fixed some problems with the scheduling of sparks.
+Others (for example \citet{halstead}) have shown that work stealing has been effective in many environments.
+Our results in Chapter~\ref{chap:rts} and support to the 
 
-    Chapter 3 implemented many ideas invented elsewhere in the Mercury
-    runtime system, such as work stealing.
-    It also discusses a number of implementation improvements that make
-    parallel execution more efficient.
-    The Mercury runtime system provides a unique set of challenges, for
-    example dependent AND-parallelism constrains the order that sparks must
-    be evaluated in, making the implementation of work stealing non-trivial.
-    This adds to the support for techniques such as work stealing.
+implemented many ideas invented elsewhere in the Mercury
+runtime system, such as work stealing.
+It also discusses a number of implementation improvements that make
+parallel execution more efficient.
+The Mercury runtime system provides a unique set of challenges, for
+example dependent AND-parallelism constrains the order that sparks must
+be evaluated in, making the implementation of work stealing non-trivial.
+This adds to the support for techniques such as work stealing.
 
     Chapter 4 describes a unqiue way to use profiling data to find
     profitable dependent parallelism.
