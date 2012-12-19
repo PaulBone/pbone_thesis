@@ -25,14 +25,14 @@ Without novel power saving techniques
 this limits increases of processors' clock speeds.
 
 Around 2005 it became clear that significant improvements in performance
-would not come from increased clock speeds but from parallel processing
+would not come from increased clock speeds but from multicore parallelism
 \citep{free_lunch}.
-Manufacturers now build processors that can do more work in parallel.
-Multiple processing cores can be placed in the same package,
+Manufacturers now build processors with multiple processing cores,
+which can be placed in the same package,
 and usually on the same die.
 Individual cores work separately, communicating through the memory
 hierarchy.
-Multicore computing is only the latest form of multiprocessor computing.
+% Multicore computing is only the latest form of multiprocessor computing.
 
 Other methods of improving performance without increasing clock speed have
 also been tried.
@@ -45,8 +45,8 @@ processor instructions form a pipeline,
 with several instructions at different stages of execution at once,
 and by adding extra circuitry, several instructions may be at the same stage
 of execution.
-However, we have reached the limits of what super-scalar execution can
-offer.
+However, we have just about reached the limits of what super-scalar
+execution can offer.
 
 \item
 Manufacturers have also added Single Instruction Multiple Data (SIMD)
@@ -72,14 +72,14 @@ for cache management.
 %One of the most notable improvements is multicore execution.
 
 \plan{SMP \& programming}
-Multicore computing is a special case of multi-processing.
-Most multiprocessing systems are symmetric multi-processing (SMP) systems.
+Multicore computing is a special case of multiprocessing.
+Most multiprocessing systems are symmetric multiprocessing (SMP) systems.
 An SMP system consists of several homogeneous processors and some memory
 connected together.
-Usually all processors are equally-distant from any memory location.
+Usually all processors are equally-distant from all memory location.
 Most multicore systems are SMP systems;
 they may have more than one CPU each with any number of cores.
-Some multi-processing systems use a non-uniform memory architecture (NUMA).
+Some multiprocessing systems use a non-uniform memory architecture (NUMA).
 Usually this means that each processor has fast access to some local memory
 and slower access to the other processors' memories.
 %there may be multiple memory areas, some of which a processor cannot access
@@ -88,9 +88,9 @@ and slower access to the other processors' memories.
 %The benefit of NUMA is that it is easier to build large NUMA systems than
 %large SMP systems.
 %The drawback is that it is harder to program.
-SMP systems are vastly more common, so programmers are usually more
-interested in programming for them.
-Therefore, In this dissertation we are only concerned with SMP systems.
+SMP systems are currently vastly more common, so programmers are usually
+more interested in programming for them.
+Therefore, in this dissertation we are only concerned with SMP systems.
 Our approach will work with NUMA systems, but not optimally.
 
 %\plan{We need parallelism}
@@ -105,13 +105,13 @@ Our approach will work with NUMA systems, but not optimally.
 %however it is arguably the most difficult to use feature;
 %which is why we choose to concentrate our effort on making it easier to use.
 
-To use a multicore system, or multi-processing in general,
+To use a multicore system, or multiprocessing in general,
 programmers must parallelise their software.
 This is normally done by dividing the software into multiple threads of
 execution
 which execute in parallel with one another.
 This is very difficult in imperative languages as the programmer is
-responsible for coordinating the threads.
+responsible for coordinating the threads \citep{sutter:2005:concurrency}.
 Few programmers have the skills necessary to accomplish this,
 and those that do, still make expensive mistakes as
 threaded programming is inherently error prone. 
@@ -125,23 +125,24 @@ Section~\ref{sec:intro_concurrency}.
 
 In contrast to imperative languages,
 it is trivial to express parallelism in pure declarative languages.
-expressing this parallelism creates two strongly-related problems.
+Expressing this parallelism creates two strongly-related problems.
 First,
 one must overcome the costs of parallel execution.
 For example,
-it may take thousands of instructions to make task available for execution on
+it may take hundreds of instructions to make a task available for execution on
 another processor.
-However, if that task only takes hundreds of instructions to execute,
+However, if that task only takes a few instructions to execute,
 then there is no benefit to executing it in parallel.
-Even if the task creates thousands of instructions to execute,
+Even if the task creates hundreds of instructions to execute,
 parallel execution is probably not worthwhile.
 Most easy-to-exploit parallelism is \emph{fine grained} such as this.
 Second,
-An abundance of coarse grained parallelism can also be a problem.
+an abundance of coarse grained parallelism can also be a problem.
 Whilst the amount of parallelism the machine can exploit
-cannot increase beyond the number of processors;
+cannot increase beyond the number of processors,
 the more parallel tasks a program creates,
-the more parallel execution overheads will have an effect on performance.
+the more the overheads of parallel execution will have an effect on
+performance.
 In these situations,
 there is no benefit in parallelising many of the tasks,
 and yet the overheads of their parallel executions will still have an
@@ -154,19 +155,22 @@ This often cripples the performance of such programs.
 %many overheads, more than would be necessary to parallelise this program
 %optimally.
 This is known as an \emph{embarrassingly parallel} workload.
-Programs with either of these problems perform more \emph{slowly} than their
-sequential equivalents.
+Programs with either of these problems almost always perform more
+\emph{slowly} than their sequential equivalents.
 Programmers must therefore find the parts of their program where parallel execution
-is profitable and annotate those parts of their program \emph{only},
+is profitable and parallelise those parts of their program \emph{only},
 whilst being careful to avoid embarrassing parallelism.
 This means that a programmer must have a strong understanding of their
 program's  computations' costs,
-how much parallelism is exposed,
-and how many processors may be available and any point in the program's
+how much parallelism they are making available,
+and how many processors may be available at any point in the program's
 execution.
 Programmers are not good at identifying the hotspots in their programs
-or understanding the costs of computations,
+or in many cases understanding the costs of computations,
 consequently programmers are not good at manually parallelising programs.
+Programmers are encouraged to use profilers to help them identify the
+hotspots in their programs and speed them up;
+this also applies to parallelisation.
 
 Automatic parallelism aims to make it easy to introduce parallelism.
 Software companies will not need to spend as much effort on parallelising
@@ -180,8 +184,8 @@ newer processors.
 Furthermore, 
 as a parallel program is modified its performance characteristics will
 change,
-some changes may affect the benefit of the parallelism that has already been
-exploited.
+and some changes may affect the benefit of the parallelism that has already
+been exploited.
 In these cases automatic parallelism will make it easy to
 \emph{re-parallelise} the program,
 saving programmers a lot of time.
@@ -205,21 +209,40 @@ and this may make manual parallelisations (using explicit parallelism) less
 effective.
 An automatic parallelisation system will therefore make it easier to
 maintain programs as the automatic parallelisation analysis can simply be
-re-executed to re-parallelise the programs.
+redone to re-parallelise the programs.
 We are looking forward to a future where programmers think about
 parallelism no more than they currently think about traditional compiler
 optimisations.
 
-In this dissertation we have solved several critical issues with automatic
-parallelism.
-Our work is targeted towards Mercury
+In this dissertation we have solved several of the critical issues with
+automatic parallelism.
+Our work is targeted towards Mercury.
 We choose to use Mercury because
 it already supports explicit parallelism of dependent conjunctions,
 and it provides powerful profiling tools which generate data for our profile
 feedback analyses.
-The parallelisation system described in this dissertation is detailed,
-we have paid attention to issues in Mercury's explicit parallelism as well
-as automatic parallelism and visualisation of parallel programs' execution
-profiles.
-We believe that our work could also be adapted for other systems.
+Mercury's support for parallel execution and the previous
+auto-parallelisation system \citep{bone:2008:hons} is described in
+Chapter~\ref{chap:backgnd}.
+In this dissertation we make a number of improvements to Mercury's runtime
+system that improve the performance of parallel Mercury programs
+(Chapter~\ref{chap:rts}).
+In Chapter~\ref{chap:overlap} we describe our
+automatic parallelism analysis tool and its algorithms,
+and show how it can speedup several programs.
+In Chapter~\ref{chap:loop_control} we introduce a new transformation that
+improves the performance of 
+some types of recursive code and achieve almost perfect linear speedups on
+several benchmarks.
+The transformation also allows recursive code within parallel conjunctions
+to take advantage of tail recursion optimisation.
+Chapter~\ref{chap:tscope} describes a proposal to add support for Mercury to
+the \tscope parallel profile visualisation tool.
+We expect that the proposed features will very useful for programmers and
+researchers alike.
+Finally in Chapter~\ref{chap:conc} we conclude the dissertation,
+tieing together the various contributions.
+We believe that our work could also be adapted for other systems;
+this will be easier in similar languages and more difficult in less similar
+languages.
 
