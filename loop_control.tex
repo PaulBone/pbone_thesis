@@ -412,8 +412,6 @@ struct MR_LoopControl_Struct
 
     volatile MR_bool          MR_lc_finished;
 
-    unsigned                  MR_lc_free_slot_hint;
-
     /*
     ** MR_lc_slots MUST be the last field, since in practice, we treat
     ** the array as having as many slots as we need, adding the size of
@@ -478,16 +476,16 @@ A boolean flag that says whether the loop has finished or not.
 It is initialised to false, and is set to true
 as the first step of the \lcfinish operation.
 
-\item[\code{MR\_lc\_free\_slot\_hint}]
-contains an index into the array of free slots.
-It indicates which slot may be free;
-we use it to speed up the search for a free slot in the average case.
-\zoltan{we need an argument for WHY this is a speedup,
-but that argument does not belong here,
-since it depends on the behaviour of operations we have not described yet.
-Alternatively, we can completely avoid mentioning the hint field.}
-\paul{I think it is easier to not mention it, it is optimal in some cases and
-neither optimal nor pessimal in other cases.}
+%\item[\code{MR\_lc\_free\_slot\_hint}]
+%contains an index into the array of free slots.
+%It indicates which slot may be free;
+%we use it to speed up the search for a free slot in the average case.
+%\zoltan{we need an argument for WHY this is a speedup,
+%but that argument does not belong here,
+%since it depends on the behaviour of operations we have not described yet.
+%Alternatively, we can completely avoid mentioning the hint field.}
+%\paul{I think it is easier to not mention it, it is optimal in some cases and
+%neither optimal nor pessimal in other cases.}
 
 \end{description}
 
