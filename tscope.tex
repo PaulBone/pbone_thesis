@@ -25,9 +25,10 @@ the execution of parallel Haskell programs.
 
 The structure of this chapter is as follows.
 Section~\ref{sec:tscope_intro} describes three different groups of people,
-and for each describes how a visual profiler based on \tscope would benefit
-them.
-\paul{XXX: List the people here, say a little about them}
+Mercury programmers, runtime system implementors and automatic parallelism
+researchers.
+For each group we describe how a visual profiler based on \tscope would
+benefit them.
 Section~\ref{sec:tscope_background} gives a description of the \tscope tool,
 how it is used in Haskell,
 and how we can use it for Mercury without any modifications.
@@ -132,10 +133,10 @@ requires a cost-benefit analysis for each parallelism opportunity,
 which requires estimates of both the cost and the benefit of each opportunity.
 Profiling tools can help researchers calibrate
 the algorithms they use to generate estimates of both costs and benefits.
-(We did not use the work in this chapter to help us with these problems in
+We did not use the work in this chapter to help us with these problems in
 Chapter~\ref{chap:overlap},
-\paul{XXX: Qualify 'this'.}
-so this is some potential further work.)
+so using \tscope to tune the work of Chapter~\ref{chap:overlap} represents
+some potential further work.
 % For example, if it is more expensive to spawn off a computation
 % than it is to execute it locally, we prefer to execute it locally.
 % To answer this we need to know how expensive
@@ -491,7 +492,7 @@ to allocate globally unique spark ids without synchronisation.
 \item[END\_PAR\_CONJUNCT]
 records that the current engine
 has finished the execution of a conjunct in a parallel conjunction.
-Gives the dynamic id of the parallel conjunction.
+It also gives the dynamic id of the parallel conjunction.
 Note that there is no \event{START\_PAR\_CONJUNCT} event
 to mark the start of execution of any conjunct.
 For the first conjunct, its execution will start
@@ -500,10 +501,9 @@ as soon as the engine has finished recording the
 The first thing the conjunct will do is create a spark
 representing the second and later conjuncts
 (which above we informally referred to as the spark for the second conjunct).
-\paul{XXX: Peter says this is a run-on sentance.}
 The \event{CREATE\_SPARK} event records the id of the spark,
 then, either the \event{RUN\_SPARK} event or \event{STEAL\_SPARK} event records
-which engine and context executes the spark,
+which engine and context executes the spark.
 If the engine does not yet have a context a \event{CREATE\_SPARK\_THREAD}
 event is posted that identifies the newly created context.
 \event{RUN\_THREAD} and \event{STOP\_THREAD} events
@@ -802,10 +802,10 @@ between pairs of \event{GC\_START} and \event{GC\_END} events,
 and dividing the result by the program's total runtime.
 (Both sides of the division refer to elapsed time, not CPU time.)
 Due to Amdahl's law \citep{amdahl:1967:law},
-% XXX Explain amdahl's law since the paper dosn't describe the usual
+% Explain amdahl's law since the paper dosn't describe the usual
 % interpretation.
-this fraction limits the best possible speedup we can get
-for the program as a whole by parallelising the mutator.
+the fraction of time spent in garbage collection limits the best possible
+speedup we can get for the program as a whole by parallelising the mutator.
 For example, if the program spends one third of its time doing GC
 (which unfortunately actually happens for some parallel programs),
 then no parallelisation of the program can yield a speedup of more than three,
@@ -813,7 +813,7 @@ then no parallelisation of the program can yield a speedup of more than three,
 
 \metrictopic{Nanosecs per call}
 is the average number of nanoseconds between successive procedure calls.
-The Mercury profiler for sequential programs \citep{conway:2001:mercury-deep}
+The Mercury deep profiler (for sequential programs) \citep{conway:2001:mercury-deep}
 (Section~\ref{sec:backgnd_deep}),
 which has nothing to do with \tscope,
 measures time in call sequence counts (CSCs);
@@ -824,8 +824,8 @@ and even the non-portable method on x86 machines (the RDTSC instruction)
 is too expensive for it.
 (The Mercury sequential profiler needs to look up the time at every call,
 which in typical programs will happen every couple of dozen instructions or so.
-\paul{XXX: What profiler?!}
-The Mercury parallel profiler needs to look up the time only at each event,
+The Mercury runtime support for \tscope needs to look up the time only at
+each event,
 which occur \emph{much} less frequently.)
 % RDTSC still has some overhead:
 % a) It is a sequencing operation for the CPU.
@@ -1233,14 +1233,13 @@ between the end of its execution and the end of the conjunction as a whole.
 It is easy to compute this for every dynamic conjunct,
 and to summarise it as a minimum, maximum, average and variance
 for any given static conjunct.
-\paul{XXX: Remove after?}
-If the average times after
+If the average \metric{Conjunct time after} metrics
 for different conjuncts in a given parallel conjunction
 are relatively stable (have low variance)
 but differ substantially compared to the runtime of the conjunction as a whole,
 then the speedup from the parallel execution of the conjunction
-will be significantly limited by Amdahl's law.
-\paul{XXX: Amdahl or overhead?}
+will be significantly limited by overheads.
+% \paul{XXX: Amdahl or overhead?}
 In such cases, the programmer may wish to take
 two conjuncts that are now executed in parallel
 and execute them in sequence.
