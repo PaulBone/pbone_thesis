@@ -1539,10 +1539,10 @@ Some of our early examples use only the \tscope features introduced by the
 GHC developers.
 We modified Mercury's runtime system to write out compatible log files using
 only the events in Section~\ref{sec:tscope_background}.
-Using some of the example programs from previous chapters we were able to
-see the \tscope profiles of the raytracer
+Using this system we were able to see the \tscope profiles of the raytracer
 (Figure~\ref{fig:ts_icfp2000})
-and the mandelbrot image generator (Figure~\ref{fig:ts_mandelbrot}).
+and the mandelbrot image generator (Figure~\ref{fig:ts_mandelbrot}),
+two of the example programs from previous chapters.
 These profiles were generated on an eight processor machine, using eight
 Mercury engines.
 In both figures, green areas in the eight lower rows indicate when each of
@@ -1564,9 +1564,9 @@ therefore GC events occur quite frequently.
 \label{fig:ts_mandelbrot}
 \end{figure}
 
-The profile in Figure~\ref{fig:ts_mandelbrot} has a much lower memory
-allocation rate.
-One collection event can be seen roughly in the middle of execution,
+The mandelbrot program has a much lower memory allocation rate.
+One collection event can be seen roughly in the middle of the execution
+profile (Figure~\ref{fig:ts_mandelbrot}),
 and there is another one that cannot be seen at the beginning of the
 execution\footnote{
     The \tscope tool allows us to zoom into executions,
@@ -1590,8 +1590,8 @@ They report data averaged over eight executions,
 as our command line tool supports merging \tscope reports.
 We can see that the number of collections, 
 the average time of a collection,
-and the total time spent performing collection vary dramatically.
-Which we explored in detail in Section~\ref{sec:rts_gc}.
+and the total time spent performing collection vary dramatically,
+which we explored in detail in Section~\ref{sec:rts_gc}.
 
 \begin{figure}
 \begin{center}
@@ -1600,14 +1600,14 @@ Which we explored in detail in Section~\ref{sec:rts_gc}.
 {\small
 \begin{tabular}{l}
 \code{Basic Statistics} \\
-\code{~~~~Number of engines:~~4} \\
-\code{~~~~Total elapsed time:~13.46s } \\
-\code{~~~~Startup time:~~~~~~~~1.89ms~~0.0\%} \\
-\code{~~~~Running time:~~~~~~~13.45s~~~100.0\%} \\
+\code{~~~~Number of engines:~~~~~~~4} \\
+\code{~~~~Total elapsed time:~~~~~13.46s } \\
+\code{~~~~Startup time:~~~~~~~~~~~~1.89ms~~~~0.0\%} \\
+\code{~~~~Running time:~~~~~~~~~~~13.45s~~~100.0\%} \\
 \code{~~~~Number of collections:~288} \\
-\code{~~~~Total GC time:~~~~~~~~~7.05s~~~52.4\%} \\
-\code{~~~~Total Mut time:~~~~~~~~6.40s~~~47.6\%} \\
-\code{~~~~Average GC time:~~~~~~~24.48ms} \\
+\code{~~~~Total GC time:~~~~~~~~~~~7.05s~~~~52.4\%} \\
+\code{~~~~Total Mut time:~~~~~~~~~~6.40s~~~~47.6\%} \\
+\code{~~~~Average GC time:~~~~~~~~24.48ms} \\
 \end{tabular}
 }}
 \end{minipage}
@@ -1617,14 +1617,14 @@ Which we explored in detail in Section~\ref{sec:rts_gc}.
 {\small
 \begin{tabular}{l}
 \code{Basic~Statistics} \\
-\code{~~~~Number~of~engines:~~4} \\
-\code{~~~~Total~elapsed~time:~6.96s~} \\
-\code{~~~~Startup~time:~~~~~~~1.89ms~~0.0\%} \\
-\code{~~~~Running~time:~~~~~~~6.95s~~~100.0\%} \\
-\code{~~~~Number~of~collections:~26} \\
-\code{~~~~Total~GC~time:~~~~~~~~~1.25s~~~17.9\%} \\
-\code{~~~~Total~Mut~time:~~~~~~~~5.71s~~~82.1\%} \\
-\code{~~~~Average~GC~time:~~~~~~~47.96ms} \\
+\code{~~~~Number~of~engines:~~~~~~~4} \\
+\code{~~~~Total~elapsed~time:~~~~~~6.96s~} \\
+\code{~~~~Startup~time:~~~~~~~~~~~~1.89ms~~~~0.0\%} \\
+\code{~~~~Running~time:~~~~~~~~~~~~6.95s~~~100.0\%} \\
+\code{~~~~Number~of~collections:~~26} \\
+\code{~~~~Total~GC~time:~~~~~~~~~~~1.25s~~~~17.9\%} \\
+\code{~~~~Total~Mut~time:~~~~~~~~~~5.71s~~~~82.1\%} \\
+\code{~~~~Average~GC~time:~~~~~~~~47.96ms} \\
 \end{tabular}
 }}
 \end{minipage}
@@ -1676,7 +1676,7 @@ the people writing parallel programs
 need such tools to understand the actual behaviour of their programs,
 and the people implementing those languages find them useful too.
 Such tools have been created for all kinds of programming languages:
-imperative (even Visual Studio has one),
+imperative (such as in Visual Studio),
 functional
 (\citet{edentraceviewer,loidl98:gransim,runciman93:profilingparfp} among others)
 and logic (\citet{Foster96,vace}
@@ -1699,8 +1699,11 @@ and their concept of data flow between computations
 is quite different from Mercury's,
 and users of concurrent logic programming languages
 such as Concurrent Prolog, Parlog and Guarded Horn Clauses
-have quite different concerns from users of Mercury
-(where to disable parallelism, not where to enable it).
+have quite different concerns from users of Mercury.
+A concurrent logic programmer's concerns might include
+where to disable parallelism;
+a Mercury programmer might instead be concerned with
+where to introduce parallelism.
 
 We know of only one visualiser
 for a not-inherently-concurrent logic programming language
