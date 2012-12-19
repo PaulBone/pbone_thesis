@@ -7,14 +7,13 @@
 
 In this chapter we summarise the contributions of the previous four
 chapters,
-with emphasis on how all the chapters fit together.
+emphasising on how all the chapters fit together.
 
 Chapter~\ref{chap:rts}
 investigated a number of problems that affected the performance of parallel
-Mercury programs.
-Before we could work on automatic parallelism,
-it was necessary to fix these problems that effected explicitly parallel
-Mercury programs.
+Mercury programs,
+because before we could work on automatic parallelism,
+we had to fix them.
 These problems included the negative performance effects of garbage collection (GC),
 the issues with the execution of sparks,
 and the behaviour of contexts in right-recursive code.
@@ -22,53 +21,48 @@ While in Chapter~\ref{chap:rts} we did not fix the negative performance
 effects of garbage collection or
 the behaviour of contexts in right-recursive code,
 we did find workarounds that reduced the impact of both these problems.
-We also made general improvements, such as the efficient implementation of
+We also made general improvements, such as an efficient implementation of
 work stealing,
-which fixed some problems with the scheduling of sparks.
-Others (for example \citet{halstead:1985:multilisp}) have shown that work
-stealing has been effective in other environments.
-Our results in Chapter~\ref{chap:rts} add more support for work stealing by
-showing that it is also effective in our environment.
-This may seem minor,
-but the Mercury 
-runtime system provides a unique set of challenges.
-For example, 
-when no free processor is stealing work,
-conjuncts of the same conjunction,
-and therefore their sparks,
-must be executed in their left-to-right order to avoid blocking and poor
-performance.
-Therefore while work stealing itself is not novel,
-our implementations (Section~\ref{sec:rts_work_stealing}
-and~\ref{sec:rts_work_stealing2}) are.
+which fixed a spark scheduling problem.
+Without work stealing the runtime system would commit to either the parallel
+or sequential execution of a spark too early,
+which made a frequently incorrect assumption about whether an idle engine
+would be available to execute the spark.
+By using work stealing,
+the scheduling decision is made when the spark is either executed by its
+owner, or stolen by a thief,
+which is the first point in time that it is known if there is an idle
+engine (the thief).
 
 Chapter~\ref{chap:overlap} describes a unique way to use profiling data to
 find profitable dependent parallelism.
 We made several novel contributions.
-Most significantly,
-our analysis is the first to our knowledge that estimates how dependencies affect
+Most significantly, to the best of our knowledge,
+our analysis is the first that estimates how dependencies affect
 the parallelism in parallel conjunctions of any size
 and with any number of dependencies.
 As the analysis algorithm executes,
-it follows the execution of a parallel conjunction according to the runtime
-system, as described in Chapter~\ref{chap:backgnd}, the background, and
+it mimics the same execution steps that our runtime system would do,
+as described in Chapter~\ref{chap:backgnd}, the background, and
 Chapter~\ref{chap:rts}, our modifications to the runtime system.
 Chapter~\ref{chap:overlap}'s other contributions include
 an algorithm that selects the best parallelisation of any conjunction from
 the $2^{N-1}$ possibilities.
-We also use a number of other analyses,
-for instance we use ancestor context specific cost information and are able
-to calculate the missing costs of some recursive calls.
+This algorithm will not explore some parts of the search space that will not
+provide a solution better than the best solution so far (branch and bound).
+It will also switch to a greedy algorithm that runs in $O(N)$ time if the
+search is taking too long.
+For small values of $N$ a complete search is used and for larger values of
+$N$ a greedy (linear) search is sued.
 
 In Chapter~\ref{chap:loop_control}
-We describe and fix a pathological performance problem that occurs in most
+we describe and fix a pathological performance problem that occurs in most
 singly recursive code.
-We found and implemented workarounds for this problem earlier in
-Chapter~\ref{chap:rts};
-Our novel program transformation that fixes this problem also allows us to
-take advantage of tail recursion inside parallel conjunctions,
-provided that the equivalent sequential program normally supports tail
-recursion.
+Our solution is a novel program transformation that fixes this problem by
+restricting the number of contexts that such code can use.
+Our transformation also
+allows us to take advantage of tail recursion inside parallel conjunctions,
+if the original sequential code supports tail recursion.
 This is important as it allows parallel Mercury programs to operate on data
 with unbounded size.
 Programs that work on large data structures are usually also those that
@@ -77,10 +71,11 @@ therefore this transformation is critical for practical parallel programming
 in Mercury.
 While the transformation in this chapter supersedes the workarounds in
 Chapter~\ref{chap:rts},
-the context limit work around is still useful when the transformation cannot
+the context limit work around is still useful when the transformation
+presented in this chapter cannot
 be applied, such as in divide and conquer code.
 
-In Chapter~\ref{chap:tscope} proposed modifications for both Mercury and
+In Chapter~\ref{chap:tscope} we proposed modifications to both Mercury and
 \tscope that allow programmers to visualise the parallel profile of their
 Mercury program.
 We have enough of this system implemented to know that it is feasible and
@@ -89,16 +84,17 @@ analyses and visualisations of Mercury programs.
 We described many different analyses and how each could be implemented.
 We believe that these will be useful for programmers trying to parallelise
 their Mercury programs, as well as implementors working on the runtime
-system or automatic parallelisation tools.
+system and/or automatic parallelisation tools.
 Someone working on the runtime system can use Mercury's support for \tscope
-to profile the parallel runtime system and tune it for better performance.
-While someone working on automatic parallelism can use data gained through
-\tscope to adjust the values that represent the costs of parallel execution
+to profile the parallel runtime system and tune it for better performance,
+while someone working on automatic parallelism can use data gained through
+\tscope to spot performance problems that need attention,
+and to adjust the values that represent the costs of parallel execution
 overheads in the cost model.
 
 \section{Further work}
 
-Throughout the dissertation we have discussed further work that may apply to
+Throughout this dissertation we have discussed further work that may apply to
 each contribution.
 In this section we wish to describe further work that may apply to the whole
 system.
@@ -107,21 +103,21 @@ In Chapter~\ref{chap:overlap},
 we said that the estimation of parallelism in dependent conjunctions
 (overlap analysis) should be more aware of recursive code, such as loops.
 This should include an understanding of how the loop control transformation
-effects the execution of loops,
+affects the execution of loops,
 including the different runtime costs that apply to loop controlled code.
-This analysis could also be improved by taking account of how many
+The overlap analysis could also be improved by taking account of how many
 processors are available to execute the iterations of the loop.
 This information,
 the number of available processors and the cost of each iteration,
-can be used to apply other loop throttling methods such as
-chunking.
+can be used to apply other loop throttling methods,
+such as chunking.
 
 Both loop control, and analysis of how recursion affects parallelism,
 should be applied to code of other recursion types such as divide and
 conquer code. 
 Provided that the two recursive calls have parallel overlap,
-one can easily introduce granularity control near the top of the divide and
-conquer code's call graph.
+one can easily introduce granularity control near the top of the call graph
+of a divide and conquer predicate.
 
 %    3. Profile merging, parallelisation as a specialisation and transforming
 %       code to make it easier to parallelise (reordering and OISU) ---
@@ -129,7 +125,7 @@ conquer code's call graph.
 
 In Chapter~\ref{chap:tscope} we did not introduce any events for the loop
 control work, or discuss loop control at all.
-This is also an area for further work,
+This is also an area for further work:
 we must design events and metrics that can measure loop controlled code.
 It would also be interesting to compare the profiles of loop controlled code
 with the profiles of the same code without loop control.
@@ -138,7 +134,7 @@ We briefly discussed (above and in Chapter~\ref{chap:tscope}) that
 \tscope can be used to gather data that could be used as input for the
 auto-parallelism analysis.
 This can inform the auto-parallelism analysis in several ways.
-First, it will be able to convert between real time (in nonoseconds) and call
+First, it will be able to convert between real time (in nanoseconds) and call
 sequence counts.
 Second, it can analyse the profile to determine the actual costs (in either
 unit) of the parallelisation overheads,
@@ -151,25 +147,29 @@ different costs for many overheads.
 Making it easy to determine the costs of overheads will make the auto
 parallelisation tool easier to use.
 Finally, the auto parallelism analysis will be able to determine if
-parallelising a particular computation was actually a good idea,
-it could then provide a report about each parallel conjunction,
-and how much that conjunction \emph{actually} benefited from parallelism
+parallelising a particular computation was actually a good idea.
+It could then provide a report about each parallel conjunction,
+saying how much that conjunction \emph{actually} benefited from parallelism
 compared to the analysis tool's estimate.
+Such reports would be extremely valuable when extending the overlap analysis
+to account for more of the many factors affecting performance.
 
-\plan{Final words.}
+\section{Final words}
+
 We have created a very powerful parallel programming environment,
 with good runtime behaviours (Chapters~\ref{chap:rts}
 and~\ref{chap:loop_control}),
 a very good automatic parallelisation system (Chapter~\ref{chap:overlap})
 and the basis of a useful visual profiler (Chapter~\ref{chap:tscope}).
 We have shown that this system is useful for parallelising some small and
-medium sized programs, including almost perfectly linear speedups.
+medium sized programs, getting almost perfect linear speedups
+on several benchmarks.
 Our system provides a solid basis for further research into automatic
 parallelism.
 We believe that further development along these lines will produce a system
 that is capable of automatically parallelising large and complex programs.
-We are looking forward to a future where parallelisation is just another
-optimisation, and programmers think of it no more than they currently
+We look forward to a future where parallelisation is just another
+optimisation, and programmers think no more of it than they currently
 think of inlining.
 
 
