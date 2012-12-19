@@ -1,62 +1,63 @@
 
 Multicore computing is ubiquitous,
-so naturally programmers need to write
-parallel programs to take advantage of the extra cores on modern computer
+so programmers need to write
+parallel programs to take advantage of the full power of modern computer
 systems.
 However the most popular parallel programming methods are difficult and
 extremely error-prone.
 Most such errors are intermittent,
 which means they may be unnoticed until after a product has been shipped;
-they are also very difficult to fix.
+they are also often very difficult to fix.
 This problem has been addressed by pure declarative languages that support
 explicit parallelism.
-%\paul{I like what this sentence means but I am not keen on the ``peter piper
-%picked a pack...''.}
-However a new class of performance bugs may still plague parallel
-programs.
-It can be difficult for developers to find tasks that are worth
+However, this does nothing about another problem:
+it is often difficult for developers to find tasks that are worth
 parallelising.
 When they can be found,
 it is often too easy to create too much parallelism,
 such that the overheads of parallel execution overwhelm the benefits gained
 from the parallelism.
-Also, when parallel tasks may depend on other parallel tasks,
+Also, when parallel tasks depend on other parallel tasks,
 the dependencies may restrict the amount of parallelism available.
 This makes it even harder for programmers to estimate the benefit of
 parallel execution.
 
 In this dissertation we describe our 
-profile feedback directed automatic parallelisation system.
+profile feedback directed automatic parallelisation system,
+which aims at solving this problem.
 We implemented this system for Mercury, a pure declarative logic programming
 language.
 We use information gathered from a profile collected from a sequential
-execution of a program to inform the compiler about how it can be
+execution of a program to inform the compiler about how that program can be
 parallelised.
 Ours is, as far as we know, the first automatic parallelisation system that
 can estimate the parallelism available among any number of parallel tasks
 with any number of (non-cyclic) dependencies.
 This novel estimation algorithm is supplemented by
 an efficient exploration of the program's call graph,
-an analyses that calculates the cost of recursive calls (as this is not provided
+an analysis that calculates the cost of recursive calls (as this is not provided
 by the profiler),
 and an efficient search for the best parallelisation of $N$ computations 
 from among the $2^{N-1}$ candidates.
 
-We found that when our system parallelised most loops,
-the resulting programs caused excessive memory usage and poor performance.
-Therefore,
-we describe a novel program transformation that fixes this problem.
+We found that in some cases where our system parallelised a loop,
+spawning off virtually all of its iterations,
+the resulting programs exhibited excessive memory usage and poor
+performance.
+We therefore designed and implemented
+a novel program transformation that fixes this problem.
 This transformation also allows recursive calls within the parallelised code
 to take advantage of tail recursion.
 
 Also presented in this dissertation are many changes that improve the
-performance of Mercury's parallel runtime system.
-As well as a proposal and partial implementation of a visualisation tool to
-assist developers with parallelising their programs
-and researchers with developing automatic parallelisation tools and
-improving performance of the runtime system.
+performance of Mercury's parallel runtime system,
+as well as a proposal and partial implementation of a visualisation tool
+that assists developers with parallelising their programs,
+and helps researchers develop automatic parallelisation tools and
+improve the performance of the runtime system.
 
-We have attacked and solved a number of issues that are critical to
+Overall,
+we have attacked and solved a number of issues that are critical to
 making automatic parallelism a realistic option for developers.
 
 
