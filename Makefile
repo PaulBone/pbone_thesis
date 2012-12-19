@@ -15,6 +15,7 @@ TALK_PSS =	$(wildcard raw_ps/*.ps)
 
 TEX_PROSE = \
 		thesis.tex \
+        abstract.tex \
 		intro.tex \
 		literature_review.tex \
 		backgnd.tex \
