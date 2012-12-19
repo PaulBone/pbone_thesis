@@ -619,6 +619,8 @@ another engine.
     able to steal and execute.
     Informing the thief which spark deque it should check is an
     optimisation.
+    Before this message is sent, the sender will check that the recipient
+    would not exceed the contest limit by stealing and executing the spark.
 
     \item[\code{MR\_ACTION\_SHUTDOWN}:]
     The runtime system is shutting down, this engine should exit.
@@ -835,7 +837,7 @@ so if the run queue is non-empty we put the spark back on the deque and jump
 to \idle (lines 24--27);
 otherwise we execute the spark.
 
-\input{tab_work_stealing_revised2pt1}
+\input{tab_work_stealing_revised3pt1}
 
 \plan{Benchmark}
 Table~\ref{tab:work_stealing_revised_mandelbrot} shows a comparison of the previous
@@ -843,10 +845,10 @@ work stealing implementation with this one using mandelbrot.
 There are two row groups with three rows each.
 The first group shows the results for right recursive mandelbrot while the
 second shows the results for left recursive mandelbrot.
-The first row in each group give the results for the previous work stealing
+The first row in each group gives the results for the previous work stealing
 system and
 the second and third rows in each group show the results for the current
-system using notifications (second row) and polling (third row).
+system using either notifications (second row) and polling (third row).
 Each result is presented with its standard deviation in parentheses.
 We compiled the right recursive mandelbrot program with the conjunct
 reordering transformation from Section~\ref{sec:rts_reorder} disabled,
@@ -861,13 +863,23 @@ we have shown the standard deviation for each result to make it easier to
 see where comparisons are valid.
 In both left and right recursive mandelbrot programs using one Mercury
 engine,
-the new work stealing code with notifications appears to perform worse than
-the original work stealing code.
-The new implementation with polling improved on the speed of notifications,
-but not on the original implementation.
-The results with multiple engines are harder to draw any conclusions from,
-there are no strong trends and some results have high standard deviations.
-We are hesitant to draw any conclusions from these results.
+the new work stealing code with notifications appears to perform slightly worse than
+the original work stealing code;
+however the figures are so close that such a comparison may not be
+valid.
+Neither of the two configurations of the new implementation is faster than
+the original implementation.
+For right recursive mandelbrot both configurations of the new
+implementation improved on
+the old implementation.
+In left recursive mandelbrot all there versions are comparable.
+The old implementation used one spark deque per context, of which there are
+many in right-recursive code;
+where as the new implementation uses one spark deque per engine, of which
+there are a constant number.
+Therefore,
+we believe that this supports our decision to associate deque with engines
+rather than contexts, in order to make work stealing simpler.
 
 %Using only one engine means that work stealing will not occur but spark
 %creation does, the engine will also execute \joinandcontinue often.
@@ -970,7 +982,7 @@ We are hesitant to draw any conclusions from these results.
 \end{center}
 \end{figure}
 
-Because the mandelbrot results are inconclusive,
+To make it easier to see the effects of the new work stealing code,
 we created a new benchmark named fibs.
 Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 using the naive algorithm:
@@ -980,10 +992,16 @@ This calculation is shown as the function \fibs in Figure~\ref{fig:fibs}.
     (The arity of a Mercury function is written as \code{N+1}.
     The \code{+1} refers to the return value,
     while \code{N} refers to the function's input arguments.)
-The naive fibs program is an excellent micro-benchmark for work stealing.
+The naive fibs program is a useful micro-benchmark for work stealing.
 It creates many small tasks whose overheads dominate the program's execution
 time,
-allowing us easily measure the overheads of work stealing.
+allowing us easily measure the overheads of parallel execution.
+However as most engines will be creating sparks,
+engines are more likely to find sparks on their own deques and therefore will
+attempt to steal work less frequently.
+By comparison in the mandelbrot program, only one engine at a time creates
+sparks,
+and therefore all the other engines will steal work from it whenever they can.
 Results for this version of \fibs
 are shown in the ``without GC'' (fifth) row group of 
 Table~\ref{tab:work_stealing_revised_fibs}.
@@ -1009,7 +1027,7 @@ with varying initial values for \Depth.
 %embarrassing parallelism by turning a computation with
 %many small parallel tasks into one with fewer larger parallel tasks.
 
-\input{tab_work_stealing_revised2pt2}
+\input{tab_work_stealing_revised3pt2}
 
 Fibs has better parallel performance when \Depth's initial value is
 smaller,
@@ -1039,14 +1057,22 @@ Even when no notification is made,
 the test to determine if a notification is needed adds overhead.
 But the new results with polling are also slower than the old runtime
 system.
-In fact,
-it is difficult to see a distinction between
-the new results with notifications, and the new results with polling.
-So the overhead of making a notification does not appear to make a strong
-difference.
-However when we consider the single engine cases,
-there is a clear difference between the old and new implementations.
-Therefore the difference in performance comes from some code that is
+In the cases with a \var{Depth} of 30 or 40,
+the new implementation with notifications performs more slowly than the new
+implementation with polling.
+This is not a big surprise as the cost of notification can be occurred any
+time a spark is created,
+the cost can vary depending if a notification needs to be made or not.
+Whereas the cost of polling only affects idle engines.
+We cannot see this in the results as engines spend very little time idle
+while running fibs,
+and the impact on idle engines seldom has an effect on the elapsed execution
+time of a program (it may affect CPU utilisation slightly).
+
+When we consider the single engine cases,
+there is also a clear difference between the old and new implementations,
+even though no work stealing or notification occurs with a single engine.
+Therefore this difference in performance comes from some code that is
 executed when only one engine is used.
 Work stealing itself, or the code in \idle is probably not the cause of the
 slow down.
@@ -1054,6 +1080,18 @@ This leaves only \joinandcontinue,
 whose new version contains an extra test to ensure that the engine's current
 context is compatible with the spark that it found on its local deque.
 Further tests could be performed to confirm this hypothesis.
+
+The benefits of the new implementation appear to be mixed.
+Notifications make the new system slower,
+as does the new implementation of \joinandcontinue.
+However,
+the smaller number of spark deques make work stealing faster.
+Overall,
+the benefit of the new implementation depends on the program being executed.
+However it is important to remember that fibs is a microbenchmark and does
+not represent typical programs,
+especially granularity control as these versions create embarrassing
+parallelism.
 
 There are some other interesting trends in the results.
 Most obviously,
