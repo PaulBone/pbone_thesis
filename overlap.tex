@@ -113,7 +113,7 @@ with comparisons to related work.
 
 When parallelising Mercury programs,
 the best parallelisation opportunities occur
-where two goals take a significant and roughly similar ammount of time to
+where two goals take a significant and roughly similar amount of time to
 execute.
 Their execution time should be as large as possible
 so that the relative costs of parallel execution are small,
@@ -729,9 +729,9 @@ assuming that the list was partitioned evenly.
 Since the deep profiler reports that the total per-call cost of the
 \quicksortacc SCC is 1,229,106csc, 
 and the two recursive calls cost 614,363csc each (their sum is 1,228,726csc)
-plus the cost of \partition (35.5csc) is approximatly 1,228,762.
+plus the cost of \partition (35.5csc) is approximately 1,228,762.
 This is reasonably close to the total cost of \quicksortacc,
-especially given other uncertanties.
+especially given other uncertainties.
 
 There are two ways in which this calculation can be inaccurate.
 First, poorly chosen pivot values create imbalanced call graphs.
@@ -1503,7 +1503,7 @@ Then we use $ParTime_p$ and $ParTime_q$ to calculate the speedup due to
 parallelism.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}[5]
+\begin{algorithmic}[1]
 \Procedure{overlap\_simple}{$SeqTime_q$, $VarUsesList_q$, $ProdTimeMap_p$}
 \State $CurSeqTime \gets 0$
 \State $CurParTime \gets 0$
@@ -1607,7 +1607,7 @@ processing each conjunct with a loop similar to the one in
 Algorithm~\ref{alg:dep_par_conj_overlap_simple}.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}[5]
+\begin{algorithmic}[1]
 \Procedure{find\_par\_time}{$Conjs$}
     \State $ProdTimeMap \gets empty$
     \State $TotalParTime \gets 0$
@@ -1850,7 +1850,7 @@ when used in a Mandelbrot image generator
 Each call to \code{M} draws a row,
 while \code{F} appends the new row
 onto the cord of the rows already drawn.
-The cord is an instance of a datastructure that perscribes a sequence
+The cord is an instance of a datastructure that prescribes a sequence
 (like a list) but whose append operation runs in constant time.
 The table also shows when \code{F} produces \var{Acc1}
 and when the recursive call consumes \var{Acc1}.
@@ -1975,7 +1975,7 @@ a version of Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 that accounts for overheads.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}[5]
+\begin{algorithmic}[1]
 \Procedure{find\_par\_time}{$Conjs$, $SeqTimes$}
     \State $N \gets$ length($Conjs$)
     \State $ProdTimeMap \gets$ empty
@@ -2105,7 +2105,7 @@ Unfortunately, this will often be \emph{too} much parallelism,
 because in practice many conjuncts are unifications
 and arithmetic operations whose execution takes very few instructions.
 Executing such conjuncts in their own threads
-costs far more in overheads than can be gained by running in parallel.
+costs far more in overheads than can be gained from their parallel execution.
 To see just how big conjunctions can be,
 let us consider the quadratic equation example
 from Section~\ref{sec:backgnd_mercury},
@@ -2113,14 +2113,14 @@ which we have repeated here.
 The quadratic equation is often written as a single conjunct:
 
 \begin{verbatim}
-X = (-B + sqrt(B^2 - 4*A*C)) / (2*A)
+X = (-B + sqrt(pow(B, 2) - 4*A*C)) / (2*A)
 \end{verbatim}
 
 \noindent
-Which is decomposed by the complier into 12 conjuncts:
+Which is decomposed by the compiler into 12 conjuncts:
 
 \begin{verbatim}
-V_1  = 2,               V_2  = B ^ V_1,         V_3 = 4,
+V_1  = 2,               V_2  = pow(B, V_1),     V_3 = 4,
 V_4  = V_3 * A,         V_5  = V_4 * C,         V_6 = V_2 - V_5,
 V_7  = sqrt(V_6),       V_8  = -1,              V_9 = V_8 * B,
 V_10 = V_9 + V_7,       V_11 = V_1 * A,         X   = V_10 / V_11
@@ -2159,15 +2159,15 @@ $G_1~\&~G_2~\&~G_3$.
 \noindent
 Our goal is to find the best parallelisation of a conjunction from among
 the various possible parallel conjunctions.
-The solution space is $2^{n-1}$,
-and as the quadratic equation example demonstrates $n$ can be quite large
-even for simple expressions.
-The largest conjunction we have seen and tried to parallelise is about 150
-conjuncts long,
-this is in the Mercury compiler itself.
+The solution space is as large as $2^{n-1}$,
+and as the quadratic equation example demonstrates that $n$ can be quite
+large even for simple expressions.
+The largest conjunction we have seen and tried to parallelise contains about 150
+conjuncts.
+This is in the Mercury compiler itself.
 
 \begin{algorithm}[tbp]
-\begin{algorithmic}[5]
+\begin{algorithmic}[1]
 \Procedure{find\_best\_partition}{$InitPartition$, $InitTime$, $LaterConjs$}
   \If{empty($LaterConjs$)}
     \State \Return $(InitTime, InitPartition)$
@@ -2190,7 +2190,8 @@ this is in the Mercury compiler itself.
         \If{$BestExTime < BestANTime$}
           \State \Return $BestExtendSoln$
         \ElsIf{$BestExTime = BestANTime$}
-          \State \Return $(BextExTime, BestExPartSet \cup BestANPartSet)$
+          \State \Return $(BextExTime,$ choose($BestExPartSet$,
+            $BestANPartSet$)
         \Else
           \State \Return $BestAddNewSoln$
         \EndIf
@@ -2233,13 +2234,13 @@ Algorithm~\ref{alg:best_par_search}, which processes the middle goals.
 % a \emph{non}contiguous sequence of the original conjuncts.
 The algorithm starts with an empty list as  $InitPartition$,
 zero as $InitTime$, and the list of middle conjuncts as $LaterConjs$.
-$InitPartition$ expresses a partition of an initial sequence
+$InitPartition$ expresses a partition of an initial sub-sequence
 of the middle goals into parallel conjuncts
 whose estimated execution time is $InitTime$,
 and considers whether it is better to add the next middle goal
 to the last existing parallel conjunct ($Extend$) (line 6),
 or to put it into a new parallel conjunct ($AddNew$) (line 7).
-the calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
+The calls to \findpartime (lines 8 and 9) evaluate these two alternatives by
 estimating their parallel overlap using
 Algorithm~\ref{alg:dep_par_conj_overlap_complete}.
 %from section \ref{sec:overlap_overlap_alg}.
@@ -2259,19 +2260,23 @@ It counts how many overlap calculations have been performed
 and if this reaches the threshold ($PreferLinearEvals$) then our algorithm
 explores only the most profitable of the two alternatives at every choice
 point.
-If the threshold has not been reached the code on lines 15--22 is executed
-which explores the least profitable alternative ($AddNew$).
+If the threshold has not been reached then the code on lines 15--22 
+is executed
+which explores the extensions of the less profitable alternative ($AddNew$)
+as well.
 Symmetric code which explores $Extend$ when it is the least profitable
-belongs on line 26.
-The algorithm returns the best of the two solutions
-(or merges the solutions when they are of equal value on line 20).
+belongs on line 26 and the lines omitted after it.
+The algorithm returns the best of the two solutions,
+or chooses one of the solutions when they are of equal value on line 20.
+Currently this choice is arbitrary,
+but it could be based on other metrics such as CPU utilisation.
 If the threshold has been reached the least profitable alternative is not
 explored (line 24).
 
-The actual algorithm is more complex than
+The actual algorithm in the Mercury system is more complex than
 Algorithm~\ref{alg:best_par_search}:
 our algorithm will also test each partial parallelisation against the best
-solution found so far,
+solution found so far.
 If the expected execution time for the candidate currently being considered
 is already greater than the fastest existing complete parallelisation,
 we can stop exploring that branch;
@@ -2410,7 +2415,7 @@ This means that we may visit the same procedure multiple times from
 different ancestor contexts.
 In a different context a procedure may have a different optimal
 parallelisation,
-or no optimal parallelisation.
+or no profitable parallelisation.
 % In addition to this,
 % multiple conjunctions in the procedure may be parallelised.
 Me must somehow resolve cases where there are multiple candidate
@@ -2438,13 +2443,14 @@ specialising $i$]{
 \end{figure}
 
 In the future, we plan to use multi-version specialisation.
-For every procedure with different parallelisation recommendations,
+For every procedure with different parallelisation recommendations
+in different ancestor contexts,
 we intend to create a specialised version for each recommendation,
 leaving the original sequential version.
 This will of course require the creation of specialised versions
 of its parent, grandparent etc procedures,
-until we get to an ancestor procedure
-which does not occur in the common prefix of all the conflicting ancestor contexts.
+until we get to an ancestor procedure that can be used to separate the
+specialised version, or versions, from the original versions.
 This is shown in Figure~\ref{fig:par_specialisation}, in the figure $j$ is
 being parallelised when it is called from the
 $main \calls f \calls h \calls i \calls j$ ancestor context,
@@ -2467,12 +2473,22 @@ This ensures that as we apply advice,
 the goal path leading to each
 successive conjunction that we parallelise, still points to the correct
 conjunction.
-The compiler attempts to match calls within the procedure's body with calls
-in the candidate conjunction to ensure that it is applying advice correctly.
-It will attempt to match both the callee's name and the variables that are
-being passed.
-If any conjunction cannot be found or the advice cannot be applied,
-then the compiler skips that piece of advice and issues a warning.
+To ensure that the compiler applies advice correctly,
+it attempts to identify the parallel conjunction in the procedure's body
+that the parallelisation advice refers to.
+It does this by comparing the goal structure, and the calls within the
+procedure body to
+the goal structure and calls in the candidate conjunction in the feedback
+data.
+It compares calls using the callee's name and the names of some of the
+variables in the argument list.
+Not all variables are used as many are named automatically by other compiler
+transformations,
+the compiler knows which ones are automatically introduced by other
+transformations.
+If any conjunction cannot be found,
+then the match fails and the compiler skips that piece of advice and issues
+a warning.
 
 % \subsection{Searching for parallelism opportunities}
 % \label{sec:pragmabestfirst}
@@ -2524,13 +2540,14 @@ when we decided to parallelise this conjunction.
 
 Currently our system will parallelise both the ancestor and the current
 conjunction.
-Although the system will not explore parts of the call graph
+Our system will not explore parts of the call graph
 (and therefore conjunctions)
-when it thinks there is ample parallelism in the procedure's ancestors.
+when it thinks there is enough parallelism in the procedure's ancestors
+to occupy all the CPUs.
 In the future we could choose among the three reasonable alternatives:
 we could evaluate the speedup from each of them, and just pick the best.
 This is simple to do when both candidates are in the same procedure.
-When on of the candidates is in an ancestor call we must also 
+When one of the candidates is in an ancestor call we must also 
 take into account
 the fact that for each invocation of the ancestor conjunction,
 we will invoke the current conjunction many times.
@@ -2583,14 +2600,14 @@ if-then-else is executed.
 \begin{verbatim}
 ( if ... then
     ...,
-    expensive\_call\_1(...),
+    expensive_call_1(...),
     ...,
-    expensive\_call\_2(...)
+    expensive_call_2(...)
 else
     ...,
-    cheap\_call(...),
+    cheap_call(...),
     ...,
-    expensive\_call\_2(...)
+    expensive_call_2(...)
 )
 \end{verbatim}
 
@@ -2602,17 +2619,17 @@ For example, we do not push \code{expensive\_call\_2} past
 ( if ... then
     ...,
     ( if ... then
-        expensive\_call\_1(...),
+        expensive_call_1(...),
     else
         ...
     ),
-    other\_call(...),
+    other_call(...),
 else
     ...,
-    cheap\_call(...),
+    cheap_call(...),
     ...
 ),
-expensive\_call\_2(...)
+expensive_call_2(...)
 \end{verbatim}
 
 \subsection{Garbage collection and estimated parallelism}
@@ -2758,12 +2775,13 @@ We ran all four programs
 with one set of input parameters to collect profiling data,
 and with a \emph{different} set of input parameters to produce
 the timing results in the following table.
-All tests were run on the same system as throughout Chapter~\ref{chap:rts},
-the system is described on page~\pageref{cabsav}.
+All tests were run on the same system as the benchmarks on Chapter~\ref{chap:rts},
+(the system is described on page~\pageref{cabsav}).
 % taura
 % a Dell Optiplex 755 PC with a 2.4~GHz Intel Core 2 Quad Q6600 CPU
 % running Linux 2.6.31.
-Each test was executed 40 times.
+Each test was executed 40 times,
+we give the reason for the high number of samples below.
 
 % \begin{table*}[h]
 % \begin{center}
@@ -2878,7 +2896,7 @@ only when they are independent (``indep'');
 even if they are dependent, regardless of how dependencies affect the
 estimated available parallelism (``naive'');  and
 even if they are dependent, but only if they have good overlap (``overlap'').
-The next two columns give the sequential execution time of each program,
+The next two columns give sequential execution times of each program,
 the first of these is the
 runtime of the program when compiled for sequential execution,
 the second is
@@ -2903,13 +2921,13 @@ The results shown in Table~\ref{tab:autopar} were collected using one marker
 thread in the garbage collector.
 The second reason for a slowdown in thread safe grades comes from how we
 compile Mercury code.
-Mercury uses four\footnote{
+Mercury uses four
+of the x86\_64's six callee-save registers~\citep{sysv-abi} to implement
+four of the Mercury abstract machine registers\footnote{
     We only use four real registers because we may use only 
     callee-save registers,
     and we do not want to over-constrain the C compiler's register
     allocator.}
-of the x86\_64's six callee-save registers~\citep{sysv-abi} to implement
-four of the Mercury abstract machine registers
 (Section~\ref{sec:backgnd_merpar}).
 The four abstract machine registers that use real registers are:
 the stack pointer,
@@ -2934,13 +2952,17 @@ In mandelbrot and both raytracers,
 all the parallelism is dependent,
 which is why indep gets no speedup for them as it refuses to create
 dependent parallel conjunctions.
-The non-chunking raytracer achieves a speedups of 1.90 and 1.89 with four Mercury engines.
-We might expect better results with four engines, but as we discussed in
-Section~\ref{sec:rts_gc} the raytracer's performance is limited due to how
-much time it spends in the garbage collector.
+The non-chunking raytracer achieves speedups of 1.90 and 1.88 with four Mercury engines.
+We have found two reasons for these poor results.
+The first reason is that, as we discussed in
+Section~\ref{sec:rts_gc},
+the raytracer's performance is limited by how much time it spends in the
+garbage collector.
+The second reason is the ``right recursion problem'' (see below).
 For mandelbrot, overlap gets a speedup
 that is as good as one can reasonably expect: 3.85 on four engines.
-At first glance there appears to be a difference between naive and overlap.
+At first glance there appears to be a difference in the performance of the
+naive and overlap versions of the mandelbrot program.
 However the feedback data given to the compiler is the same in both cases,
 so the generated code will be the same.
 Any apparent difference is due to the high degree of variability in the
@@ -2949,16 +2971,17 @@ which is why we executed each benchmark 40 times.
 This variability does not exist in the indep case,
 so we believe it comes from how dependencies in parallel conjunctions are
 handled.
+The performance is probably affected by
 Both the implementation of futures,
-and the right recursive problem is probably affecting the performance.
-
-In Section~\ref{sec:rts_reorder} we introduced a work around for the
-right recursive problem.
+and the ``right recursion problem''
+(Section~\ref{sec:rts_original_scheduling_performance}),
+for which we introduce a work around 
+in Section~\ref{sec:rts_reorder}.
 The work around reorders the conjuncts of a parallel conjunction to
 transform right recursion into left recursion.
 However this cannot be done to dependent conjunctions as it would create
 mode incorrect code.
-Even if non-chunking raytracer and mandelbrot do not reach the context limit,
+If non-chunking raytracer and mandelbrot do not reach the context limit,
 the garbage collector needs to scan the large number of stacks created by
 right recursion.
 This means that parallel versions of these programs put more demands on the
@@ -2968,8 +2991,26 @@ the more Mercury engines that are used, the more sparks are stolen and
 therefore more contexts are created.
 Dependent parallel right recursive code will not scale to large numbers of
 processors well.
+We fix the right recursion problem
+in Chapter~\ref{chap:loop_control},
+and provide better benchmark results for explicitly-parallel versions of the
+non-chunking raytracer, mandelbrot and a dependent version of matrixmult.
 
-We verified this idea by testing the chunking version of raytracer.
+The version of the Mercury runtime system that we used in these tests
+does not behave exactly as described in
+Section~\ref{sec:rts_work_stealing2}.
+In some cases the context limit is not used to reduce the amount of memory
+consumed by contexts' stacks.
+This means that right recursive dependent parallel conjunctions can consume
+more memory (reducing performance),
+but they can also create more parallel tasks (usually improving
+performance).
+This does not affect the analysis of how well automatic parallelism works,
+it merely makes it difficult to compare these results with results in the
+other chapters of the dissertation.
+
+We verified the right recursion problem's impact in garbage collection by
+testing the chunking version of raytracer.
 This version renders 16 rows of the image on each iteration and therefore
 creates fewer larger contexts.
 We can see that chunking raytracer performs much better than the
@@ -2987,13 +3028,13 @@ which creates just as many contexts but has a much lower allocation rate,
 already runs very optimally.
 This shows that
 program transformations that cause more work to be done in each context
-are likely to be an optimisation,
+are likely to be optimisations,
 this includes the work in Chapter~\ref{chap:loop_control}.
 % We thus expect that applying throttling
 % (as described in section~\ref{sec:overlap})
 % should significantly improve these results.
 
-The parallelism in the main predicate of matrixmult is independent,
+The parallelism in the main predicate of matrixmult is independent.
 Regardless of which parallel cost calculation we used (naive, indep or
 overlap),
 the same feedback was sent to the compiler.
@@ -3105,7 +3146,7 @@ Mercury's strong mode and determinism systems
 greatly simplify the parallel execution of logic programs.
 As we discussed in
 Sections~\ref{sec:intro_par_logic},~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar},
-They make it easy to implement efficient explicit dependent AND-parallelism.
+they make it easy to implement dependent AND-parallelism efficiently.
 The mode system provides complete information allowing us to identify
 shared variables at compile time.
 %\citet*{DBLP:journals/tcs/GrasH09} and \citet{Hermenegildo1995} describe
@@ -3162,12 +3203,33 @@ We know of only four attempts to estimate the overlap
 between parallel computations,
 and two of these are in Mercury.
 
-The first is our earlier work in \citet*{bone:2008:hons}\footnote{
+\citet*{tannier:2007:parallel_mercury} attempted to automatically parallelise
+Mercury programs.
+\citeauthor{tannier:2007:parallel_mercury}'s
+approach was to use the number of shared variables in a parallel
+conjunction as an analogue for how dependent the conjunction was.
+While two conjuncts are indeed less likely
+to have useful parallel overlap if they have more shared variables,
+we have found this heuristic too inaccurate to be useful.
+Conjunctions with only a single variable can significantly vary in
+their amount of overlap,which we have shown with the examples in this
+chapter.
+Analysing overlap properly is important as most parallel conjunctions have
+very little overlap,
+making their parallelisation wasteful.
+
+After
+\citeauthor{tannier:2007:parallel_mercury}'s
+work,
+we attempted to estimate overlap more accurately in
+our prior work (\citet{bone:2008:hons}
+\footnote{
     This earlier work was done as part of my honours project and contributed
     to the degree of Bachelor of Computer Science Honours at The University of
-    Melbourne}
-which used mode and profiler feedback information to perform a much simpler
-analysis of the parallelism available in dependent parallel conjunctions.
+    Melbourne.}).
+Compared with the work in this chapter,
+our earlier work performed perform a much simpler analysis of the
+parallelism available in dependent parallel conjunctions.
 It could handle only conjunctions with two conjuncts and a single shared
 variable.
 It also did not use the ancestor context specific information provided by the
@@ -3178,21 +3240,7 @@ Most critically our earlier work did not attempt to calculate the costs of
 recursive calls,
 and therefore failed to find any parallelism in any of the test programs we
 used,
-including the raytracer that we used in this chapter.
-
-Prior to this,
-\citet*{tannier:2007:parallel_mercury} attempted to automatically parallelise
-Mercury programs.
-Tannier's approach was to use the number of shared variables in a parallel
-conjunction as an analogue for how dependent the conjunction was.
-While two conjuncts are indeed less likely
-to have useful parallel overlap if they have more shared variables,
-we have found this heuristic too inaccurate to be useful.
-Conjunctions with only a single variable can significantly vary in
-their amount of overlap,which we have shown with the examples in this
-chapter.
-Analysing overlap properly is important as most parallel conjunctions have
-very little overlap making their parallelisation wasteful.
+including the raytracer that we use in this chapter.
 
 Another dependency aware auto-parallelisation effort
 was in the context of speculative execution in imperative programs.
@@ -3211,7 +3259,7 @@ this heuristic will be inaccurate.
 
 The most closely related work to ours is that of
 \citet*{Pontelli97automaticcompile-time}.
-They generated parallelism annotations for the ACE and/or-parallel system
+They generated parallelism annotations for the ACE AND/OR-parallel system.
 They recognised the varying amounts of parallelism that may be available in
 dependent AND-parallel code.
 This system used, much as we do,
@@ -3230,7 +3278,7 @@ Our whole-program analysis covers only the parts of the call graph that are
 deemed costly enough to be worth exploring,
 which is another benefit of profiler feedback analysis.
 \citeauthor{Pontelli97automaticcompile-time}'s analysis of the variable use
-times is incomplete when analysing diverging code.
+times is incomplete when analysing branching code.
 We recognised the impact that diverging code may have and created coverage
 profiling so that we could gather information and analyse diverging code
 accurately \citep{bone:2008:hons}.
@@ -3238,7 +3286,8 @@ Using profiling data is the only way
 for an automatic parallelisation system to find out
 what the \emph{typical} cost and variable use times are.
 Finally, \citeauthor{Pontelli97automaticcompile-time}'s overlap calculation is
-pairwise, it considers the overlap of only two conjuncts at a time.
+pairwise:
+it considers the overlap of only two conjuncts at a time.
 We have found that one must consider the overlap of the whole parallel
 conjunction, as a delay in the production of a variable in one conjunct can
 affect the variable production times of other conjuncts.
@@ -3294,7 +3343,7 @@ from a specific parent, grandparent or other ancestor.
 % due to the different behaviour of that conjunction in different contexts.
 We also plan to modify our feedback tool
 to accept several profiling data files,
-with a priority scheme to resolve any conflicts.
+with a priority or (weighted) voting scheme to resolve any conflicts.
 % between their advice.
 There is also potential further work in the handling of loops and recursion.
 We will talk about this in Chapter~\ref{chap:conc}

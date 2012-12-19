@@ -25,8 +25,9 @@ the execution of parallel Haskell programs.
 
 The structure of this chapter is as follows.
 Section~\ref{sec:tscope_intro} describes three different groups of people,
-and for each describes why a visual profiler based on \tscope would benefit
+and for each describes how a visual profiler based on \tscope would benefit
 them.
+\paul{XXX: List the people here, say a little about them}
 Section~\ref{sec:tscope_background} gives a description of the \tscope tool,
 how it is used in Haskell,
 and how we can use it for Mercury without any modifications.
@@ -57,15 +58,15 @@ This enhanced understanding then makes it easier
 for programmers to speed up the program.
 
 Profilers are needed because the actual behaviour of a program
-often differs from the behaviour imagined by the programmer.
+often differs from the behaviour assumed by the programmer.
 This is true even for sequential programs.
 For parallel programs,
-the gulf between human estimates and machine realities
+the gulf between human expectations and machine realities
 is usually even wider.
-This is because every cause
-that can cause such differences for sequential programs
+This is because every cause of unexpected behaviour
+for sequential programs
 is present in parallel programs as well,
-while parallel programs also have several causes unique to them.
+while parallel programs also have several causes of their own.
 % When writing software that uses parallelism,
 % understanding how the program runs is more difficult.
 % Parallelism may be used in different parts of the program,
@@ -133,6 +134,7 @@ Profiling tools can help researchers calibrate
 the algorithms they use to generate estimates of both costs and benefits.
 (We did not use the work in this chapter to help us with these problems in
 Chapter~\ref{chap:overlap},
+\paul{XXX: Qualify 'this'.}
 so this is some potential further work.)
 % For example, if it is more expensive to spawn off a computation
 % than it is to execute it locally, we prefer to execute it locally.
@@ -184,7 +186,7 @@ The diagrams it displays reveal to the programmer
 the places where the program is getting the expected amount of parallelism,
 as well as the places where it is not.
 
-We could adapt the \tscope system to Mercury for two main reasons.
+We were able to adapt the \tscope system to Mercury for two main reasons.
 The first is that the parallel implementations of Haskell and Mercury
 in GHC and mmc (the Melbourne Mercury Compiler)
 are quite similar in several important respects,
@@ -198,7 +200,8 @@ dissertation.)
 Mercury and GHC both use sparks,
 although GHC's sparks do not need to be evaluated,
 and may be garbage collected.
-The second reason is that
+The second reason
+that we were able to adapt \tscope to Mercury is that
 the \tscope log file format was designed to be extensible.
 Each log file starts with a description
 of each kind of event that may occur in it.
@@ -221,10 +224,10 @@ and process the rest.
 
 Mercury is able to make use of a number of event types already supported by
 \tscope and GHC,
-in other cases we are able to add support for Mercury-specific event types to
-\tscope.
-Here we introduce the events in the first category,
-The next section describes those in the second category.
+and in other cases we are able to add support for Mercury-specific event
+types to \tscope.
+Here we introduce the events in the first category;
+the next section describes those in the second category.
 Events of all types have a 64bit timestamp
 that records the time of their occurrence, measured in nanoseconds.
 This unit illustrates the level of precision \tscope aims for,
@@ -247,7 +250,7 @@ this makes the current engine id
 an implicit parameter of most event types.
 
 The event types supported by the original version of \tscope
-that are relevant to our work are the following.
+that are relevant to our work are listed here.
 
 \begin{description}
 
@@ -264,9 +267,10 @@ and gives the id of the context being created.
 (What Mercury calls a context Haskell calls a thread;
 the name of the event uses Haskell terminology.)
 Context ids are allocated sequentially,
-but the parameter cannot be omitted,
+but the id cannot be omitted,
 since the runtime system may reuse the storage of a context
-after the termination of the computation that has previously used it.
+after the termination of the computation that has previously used it,
+and therefore by specifying the id we can determine when a thread is reused.
 
 \item[RUN\_THREAD]
 records the scheduling event
@@ -313,7 +317,7 @@ although again, this can be inferred by context.
 Also gives the id of the engine that the spark was stolen from.
 % This should really be called STOLE_SPARK.
 
-\item[CREATE\_SPARK\_THREAD]:
+\item[CREATE\_SPARK\_THREAD]
 is slightly different in GHC and Mercury.
 In GHC this records the creation of a worker context that runs a special
 routine that processes sparks in a loop;
@@ -330,8 +334,8 @@ but if it is, it can be inferred from context.
 % the context will probably be used to execute other sparks
 % once it finishes the current one.
 
-\item[GC\_START]:
-The current engine has initiated garbage collection;
+\item[GC\_START]
+is used when the current engine has initiated garbage collection;
 control of the engine has been taken away from the mutator.
 The garbage collection events in GHC are much more complex.
 However, since Mercury uses the
@@ -340,8 +344,8 @@ Boehm-Demers-Weiser conservative garbage collector (Boehm GC)
 we have much less insight into the garbage collector's (GC) behaviour,
 and thus fewer GC related events and simpler semantics.
 
-\item[GC\_END]:
-Garbage collection has finished on the current engine;
+\item[GC\_END]
+indicates when garbage collection has finished on the current engine;
 control of the engine has been returned to the mutator.
 % \paul{I do not know the intended semantics of the GC events that Haskell uses}
 % More information about how Mercury uses these events is in Section
@@ -363,14 +367,14 @@ rather than recorded at profiling runtime.
 events is considered a mistake \citep{threadscope-summit},
 since they are guaranteed to be the same as the id of the context already
 running on that engine or
-the context id in the following \event{CREATE\_SPARK\_THREAD} event.
+the context id in the following \event{CREATE\_SPARK\_THREAD} event,
 but their removal is prevented by backwards compatibility concerns.)
 In most cases, the required inference algorithm is quite simple.
 For example, answering the question of whether the context
 mentioned by a \event{CREATE\_SPARK\_THREAD} event is new or reused
 merely requires searching the part of the log up to that event
 looking for mentions of the same context id.
-And we have already seen how the engine id parameter
+We have already seen how the engine id parameter
 missing from most of the above events
 can be deduced from block headers.
 
@@ -422,7 +426,7 @@ has been in the modification of the parallel Mercury runtime system
 to generate all of the existing, modified and new events when called for.
 
 In the rest of this section,
-we report the event types we have added to \tscope.
+we report on the event types we have added to \tscope.
 In the next section, Section~\ref{sec:tscope_analysis},
 we will show how the old and new events can be used together
 to infer interesting and useful information
@@ -461,7 +465,7 @@ event.
 for a parallel conjunct by the current engine.
 % \paul{XXX We call this SPARKING in the source code but should not}
 It gives the id of the spark itself,
-and the dynamic id of the parallel conjunction the conjunct is from.
+and the dynamic id of the parallel conjunction containing the conjunct.
 To keep the log file small,
 it does \emph{not} give the position of the conjunct in the conjunction.
 However, since in every parallel conjunction
@@ -475,9 +479,9 @@ This means that the sparks for the non-first conjuncts
 will always be created in order,
 which makes it quite easy to determine which spark represents which conjunct.
 
-The id of a spark is an integer consisting of two parts.
+The id of a spark is an integer consisting of two parts:
 % spark IDs are 32 bits wide, the 8 most significant bits are the engine ID,
-The first part is the id of the engine that created the spark,
+the first part is the id of the engine that created the spark,
 and the second is an engine-specific sequence number,
 so that in successive sparks created by the same engine,
 the second part will be 1, 2, 3 etc.
@@ -496,6 +500,7 @@ as soon as the engine has finished recording the
 The first thing the conjunct will do is create a spark
 representing the second and later conjuncts
 (which above we informally referred to as the spark for the second conjunct).
+\paul{XXX: Peter says this is a run-on sentance.}
 The \event{CREATE\_SPARK} event records the id of the spark,
 then, either the \event{RUN\_SPARK} event or \event{STEAL\_SPARK} event records
 which engine and context executes the spark,
@@ -509,7 +514,7 @@ By following these links,
 a single forward traversal of the log file can find out,
 for each engine, which conjunct of which dynamic parallel conjunction
 it is running at any given time
-(if in fact it is running any;
+(if in fact it is running any:
 an engine can be idle,
 or it may be running code that is outside of any parallel conjunction).
 When an engine records an \event{END\_PAR\_CONJUNCT} event,
@@ -521,13 +526,13 @@ It gives the name of the variable the future is for,
 as well as the dynamic id of the future.
 It does not give the dynamic id of the parallel conjunction
 whose conjuncts the future is intended to synchronise,
-but that can be found out quite easily:
+but that can be determined quite easily:
 just scan forward for the next \event{START\_PAR\_CONJUNCTION}
 event.
 The reason why this inference works is that
 the code that creates futures
 is only ever put into programs by the Mercury compiler,
-and mmc never puts that code anywhere
+which never puts that code anywhere
 except just before the start of a parallel conjunction.
 If a parallel conjunction uses $n$ futures,
 then every one of its \event{START\_PAR\_CONJUNCTION} events
@@ -708,7 +713,7 @@ a number of different metrics about the execution of parallel Mercury programs.
 The GHC developers have independently\footnote{
     The GHC developers added the alternative views to \tscope after we
     published the paper on which this chapter is based
-    \citep{pbone:2011:tscope}.}
+    \citep{bone:2011:tscope}.}
 recognised this need,
 and have created alternative views within the \tscope GUI to present textual
 information such as reports of these metrics.
@@ -774,7 +779,7 @@ which parts are parallelised but not yet enough to use all available CPUs,
 and which parts still have no parallelism at all.
 They can then focus their efforts on the latter.
 The visualisation of this curve is already implemented in \tscope
-\citet{threadscope}.
+\citep{threadscope}.
 
 % \label{sec:gc_stats}
 \metrictopic{GC stats} is the number of garbage collections,
@@ -809,7 +814,7 @@ then no parallelisation of the program can yield a speedup of more than three,
 \metrictopic{Nanosecs per call}
 is the average number of nanoseconds between successive procedure calls.
 The Mercury profiler for sequential programs \citep{conway:2001:mercury-deep}
-(Section~\ref{sec:backgnd_deep},
+(Section~\ref{sec:backgnd_deep}),
 which has nothing to do with \tscope,
 measures time in call sequence counts (CSCs);
 the call sequence counter is incremented at every procedure call.
@@ -819,8 +824,9 @@ and even the non-portable method on x86 machines (the RDTSC instruction)
 is too expensive for it.
 (The Mercury sequential profiler needs to look up the time at every call,
 which in typical programs will happen every couple of dozen instructions or so.
+\paul{XXX: What profiler?!}
 The Mercury parallel profiler needs to look up the time only at each event,
-which occur \emph{much} more rarely.)
+which occur \emph{much} less frequently.)
 % RDTSC still has some overhead:
 % a) It is a sequencing operation for the CPU.
 % b) It requires some arithmetic and maybe a function call, I do not
@@ -851,7 +857,7 @@ from being expressed in CSCs to being expressed in nanoseconds,
 which is an essential first step in comparing them to reality.
 
 \metrictopic{Contexts allocated} is the number of contexts allocated at any given
-time,
+time;
 it includes contexts that are running, runnable and blocked.
 
 \metrictopic{Contexts runnable} is the number of contexts that are on the global
@@ -897,7 +903,7 @@ This information can then be compared,
 either by programmers or by automatic tools,
 with the sequential execution time of that conjunction recorded by
 Mercury's deep profiler,
-to see whether executing the conjunction was a good idea or not.
+to see whether executing the conjunction in parallel was a good idea or not,
 \emph{provided} that the two measurements are done in the same units.
 At the moment, they are not, but as we discussed above,
 CSCs can be converted to nanoseconds using the \metric{Nanosecs per call}
@@ -922,7 +928,7 @@ across all dynamic instances of a given static conjunction.
 
 Consider a conjunction with $n$ conjuncts.
 If it has a maximum number of runnable tasks
-that is significantly less than $n$,
+significantly less than $n$,
 this is a sign that the parallelism the programmer aimed for
 could not be achieved.
 If instead the average but not the maximum number of runnable tasks
@@ -935,7 +941,7 @@ Both dependencies among conjuncts
 and differences in the execution times of the conjuncts
 limit the amount of parallelism available in the conjunction.
 The impact of the individual drops on the time-weighted average
-shows which effects do the most limiting in any given parallel conjunction.
+shows which effects are the most limiting in any given parallel conjunction.
 
 \metrictopic{Parconj runnable self and descendants}
 is the number of CPUs that can be used by a given parallel conjunction
@@ -1182,7 +1188,7 @@ This requires knowledge of the expected behaviour of the program,
 to wit, the expected running times of the conjuncts generating those variables.
 In some cases, that information may nevertheless be available,
 derived from measured previous runs of the program,
-although of course it can only ever be a guess.
+although of course it can only ever be an approximation.
 
 Note also this is only one of several considerations
 that an ideal scheduler should take into account.
@@ -1190,7 +1196,7 @@ For example, schedulers should also prefer to execute the conjunct
 (whether it is a context or a spark)
 that is currently next on the critical path to the end of the conjunction.
 Knowledge of the critical path is also knowledge about the future,
-and similarly must also be a guess.
+and similarly must also be an approximation.
 Ideally, the scheduler should take into account
 all these different considerations before coming to a decision
 based on balancing their relevance in the current situation.
@@ -1227,12 +1233,14 @@ between the end of its execution and the end of the conjunction as a whole.
 It is easy to compute this for every dynamic conjunct,
 and to summarise it as a minimum, maximum, average and variance
 for any given static conjunct.
+\paul{XXX: Remove after?}
 If the average times after
 for different conjuncts in a given parallel conjunction
 are relatively stable (have low variance)
 but differ substantially compared to the runtime of the conjunction as a whole,
 then the speedup from the parallel execution of the conjunction
 will be significantly limited by Amdahl's law.
+\paul{XXX: Amdahl or overhead?}
 In such cases, the programmer may wish to take
 two conjuncts that are now executed in parallel
 and execute them in sequence.
@@ -1242,7 +1250,7 @@ does not unduly delay any other conjuncts that consume the data it generates,
 the resulting small loss of parallelism
 may be more than compensated for
 by the reduction in parallelism overhead.
-It is of course much harder and maybe impossible
+It is of course much harder
 to select the two conjuncts to execute in sequence
 if the times after for at least some of the conjuncts
 are \emph{not} stable (i.e. they have high variance).
@@ -1261,7 +1269,7 @@ but the system has only one available CPU,
 it should choose to run $A$.
 Since it comes logically earlier,
 the consumers that depend on its outputs
-will also tend to come logically earlier.
+are also likely to come logically earlier.
 Delaying the running of $A$ has a substantial risk of delaying them,
 thus delaying the tasks depending on \emph{their} outputs, and so on.
 Any efficient scheduling algorithm
@@ -1531,7 +1539,7 @@ so that we can help tune its performance to reduce the resulting discrepancies.
 Some of our early examples use only the \tscope features introduced by the
 GHC developers.
 We modified Mercury's runtime system to write out compatible log files using
-only the events in Section~\ref{sec:background}.
+only the events in Section~\ref{sec:tscope_background}.
 Using some of the example programs from previous chapters we were able to
 see the \tscope profiles of the raytracer
 (Figure~\ref{fig:ts_icfp2000})

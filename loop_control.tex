@@ -1136,11 +1136,11 @@ induction point-of-view.}
 \paul{Addendum: This now means `if I have time'}
 
 Note that for most kinds of goals, execution cannot reach case~3
-in Algorithm~\ref{alg:whatever}.
+in Algorithm~\ref{alg:basecases_alg}.
 Unifications are not parallel conjunctions and cannot contain calls,
 so if \var{LoopGoal} is a unification, we will execute case~2.
 If \var{LoopGoal} is a first order call, we will also execute case~2,
-due to condition (6) in Algorithm~\ref{alg:xxx},
+due to condition (6) in Algorithm~\ref{alg:transform_alg},
 all recursive calls are inside parallel conjunctions;
 since case 1 does not recurse,
 we never get to those recursive calls.
@@ -1641,7 +1641,7 @@ It seems that as long as we put a reasonably small limit
 on the number of contexts a loop control structure can use,
 speed is not much affected by the precise value of the limit.
 
-The rows in Table~\ref{tab:xxx}
+The rows in Table~\ref{tab:lc_times}
 marked `lc$N$, tr' are like the corresponding `lc$N$' rows,
 but they also switch on tail recursion preservation
 in the two benchmarks (mandelbrot and raytracer)
