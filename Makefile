@@ -96,6 +96,7 @@ thesis.dvi thesis.log : $(TEXFILES) \
 	pdftops -eps $< $@
 
 %.eps : %.ps
+	-rm $@
 	ps2eps $<
 
 pics/icfp2000_eventlog.ps : pics/icfp2000_eventlog.uceps cropps.pl
