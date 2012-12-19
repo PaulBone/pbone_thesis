@@ -872,10 +872,10 @@ the original implementation.
 For right recursive mandelbrot both configurations of the new
 implementation improved on
 the old implementation.
-In left recursive mandelbrot all there versions are comparable.
+In left recursive mandelbrot all three versions are comparable.
 The old implementation used one spark deque per context, of which there are
 many in right-recursive code;
-where as the new implementation uses one spark deque per engine, of which
+whereas the new implementation uses one spark deque per engine, of which
 there are a constant number.
 Therefore,
 we believe that this supports our decision to associate deque with engines
@@ -1017,8 +1017,8 @@ We can achieve this by introducing a new function \fibsgc,
 which is shown in Figure~\ref{fig:fibsgc}.
 \fibsgc takes an additional argument named \Depth which is
 the number of recursion levels near the top of the call graph in
-which parallel execution should be used,
-below this depth sequential execution is used.
+which parallel execution should be used.
+Below this depth sequential execution is used.
 The first four rows of
 Table~\ref{tab:work_stealing_revised_fibs} show results using \fibsgc,
 with varying initial values for \Depth.
@@ -1032,8 +1032,9 @@ with varying initial values for \Depth.
 Fibs has better parallel performance when \Depth's initial value is
 smaller,
 demonstrating how granularity control improves performance.
-In parallelised divide and conquer code such as this the context limit does
-not affect performance as badly as it does with right single recursive code.
+In parallelised divide and conquer code such as this,
+the context limit does not affect performance as much as it does with right
+single recursive code.
 This is because both conjuncts have similar costs compared to the different
 costs in singly recursive code.
 The original context is less likely to block on the completion of the second
@@ -1060,10 +1061,10 @@ system.
 In the cases with a \var{Depth} of 30 or 40,
 the new implementation with notifications performs more slowly than the new
 implementation with polling.
-This is not a big surprise as the cost of notification can be occurred any
+This is not a big surprise as the cost of notification might be occurred any
 time a spark is created,
-the cost can vary depending if a notification needs to be made or not.
-Whereas the cost of polling only affects idle engines.
+and the cost can vary depending on whether a notification needs to be made,
+whereas the cost of polling only affects idle engines.
 We cannot see this in the results as engines spend very little time idle
 while running fibs,
 and the impact on idle engines seldom has an effect on the elapsed execution
@@ -1099,7 +1100,7 @@ as expected and explained above,
 parallel fibs program with fine granularity
 (high values for \Depth or disabled granularity control),
 run more slowly than those with coarse granularity.
-This is easy to understand so we will not discuss it further.
+% This is easy to understand so we will not discuss it further.
 However
 when we consider the sequential results for varying amounts of granularity,
 we see some strange results.
@@ -1108,8 +1109,8 @@ results;
 the results with large values for \Depth should be slower than the ones with
 smaller values.
 We would also expect the results without granularity control to be fastest,
-but not significantly,
-as in practice \fibsgc contributes to a tiny part of the call graphs of tests
+but not significantly:
+in practice \fibsgc contributes to a tiny part of the call graphs of tests
 with a low \Depth value.
 However the results are very different:
 the sequential execution times for fibs with a \Depth of 40

@@ -498,6 +498,7 @@ bad_ngrams = [
         ["mis", "calculate"],
         ["mis", "calculated"],
         ["non", "deterministic"],
+        ["where", "as"],
 
         % Hypenate this.
         ["if", "then", "else"],
