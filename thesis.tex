@@ -58,11 +58,15 @@
 \usepackage{stmaryrd}
 
 \usepackage{fancyhdr}
-\setlength{\headheight}{15.2pt}
+%\setlength{\headheight}{15.2pt}
 \pagestyle{fancy}
-\lhead{}
-\rhead{}
-\chead{}
+\fancyhead{}
+\fancyhead[CE]{\slshape \leftmark}
+\fancyhead[CO]{\slshape \rightmark}
+\fancyhead[LE,RO]{\thepage}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.0pt}
 
 \onehalfspacing
 
