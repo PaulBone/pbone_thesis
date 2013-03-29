@@ -167,9 +167,34 @@ some citations [especially in the first few pages). Additionally
     How does the discussion in page 26 relate to some of the tail recursion
     optimizations developed for and=parallelism?
 
-*** TODO Futures                                   :clarification:discussion:
+*** DONE Futures                                   :clarification:discussion:
+    CLOSED: [2013-05-15 Wed 23:42]
     I might have missed it, but lots of what I see in page 28 resembles the
     behavior of conditional variables in POSIX threads.
+
+diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
+index a5c14f2..a15a8bc 100644
+--- a/backgnd_deppar.tex
++++ b/backgnd_deppar.tex
+@@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
+ it must be declared as impure so that the compiler will not optimise away calls
+ to it.
+ 
++Some readers have asked if futures are similar to POSIX condition
++variables \citep{butenhof1997:pthreads}.
++While both name their operations \emph{wait} and \emph{signal} they are
++different in two significant ways.
++First,
++futures store a value as well as state,
++POSIX condition variables store only their state.
++Second,
++when a future is signalled, all its consumers are woken,
++whereas only one of a POSIX condition variable's waiters is woken.
++A POSIX condition variable is more similar to a semaphore.
++
+ To minimise waiting,
+ the compiler pushes \signal operations on each future
+ as far to the left into the producer conjunct as possible,
 
 *** TODO Evidence                                                :discussion:
     I found some considerations in page 30/31 a bit speculative (especially
