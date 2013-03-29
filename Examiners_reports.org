@@ -2,121 +2,111 @@
 Note that there may be OCR errors in this file, but I wanted it in text so I
 could annotate it.
 
-Examiner 1
-==========
+* Examiner 1
 
-General
--------
+** General
 
-    I would have liked to see some discussion about how all the techniques
+*** I would have liked to see some discussion about how all the techniques
     proposed in this dissertation could be applied outside of Mercury
     [e.g., to Prolog? To functional languages?)
 
-    Many of your considerations on two benchmarks, representing relysome
+*** Many of your considerations on two benchmarks, representing relysome
     fairly regular computations.  How would you consider these
     representatives?  Or, more in general, I would have liked to see a much
     broader pool of diverse benchmarks being used throughout the
     dissertation.
 
-    There are no formal considerations about the fact that the parallel
+*** There are no formal considerations about the fact that the parallel
     implementations respect the "theoretical" operational semantics of the
     language [e.g., same observable behavior).  Even though it is true, it
     would be a good idea to spell it out.
 
-Chapter 1
----------
+** Chapter 1
 
 Chapter 1 is supposed to set the contest for the whole dissertation, and it
 does so in a good way. The chapter could be strengthened a bit by adding
 some citations [especially in the first few pages). Additionally
 
-    Considerations in this chapter ignore the new generations of
+*** Considerations in this chapter ignore the new generations of
     architecturesbased on CUDA SMP, etc.)
 
-    I would suggest to add examples of Pure and impure languages
+*** I would suggest to add examples of Pure and impure languages
 
-    Is the example in page 8 correct?
+*** Is the example in page 8 correct?
 
-    Considerations in page 9 talk about “logic programming”. but they are
+*** Considerations in page 9 talk about “logic programming”. but they are
     really focused on languages derived from Prolog (SLD-based, etc.).
     Logic programming is a much broader term, and the considerations in this
     page do not reach other LP languages [e.g._,ASP-based).
 
-    Hermenegildo used to stress that there is really no such thing as
+*** Hermenegildo used to stress that there is really no such thing as
     independent and dependent and-p, they are the same thing just seen at
     different levels of granularity [and I tend to agree with this).
 
-    My memory might be wrong.  but the dependent and——p model of Pontelli
+*** My memory might be wrong.  but the dependent and——p model of Pontelli
     and Gupta does not really build on [45] [they are completely
     independent).  Furthermore, DDAS was the name of the system developed by
     Kish Shen, not by Pontelli Gupta.
 
-Chapter 2
----------
+** Chapter 2
 
-    Can you provide a source for the various statistics mentioned in page
+*** Can you provide a source for the various statistics mentioned in page
     25?
 
-    How does the discussion in page 26 relate to some of the tail recursion
+*** How does the discussion in page 26 relate to some of the tail recursion
     optimizations developed for and=parallelism?
 
-    I might have missed it, but lots of what I see in page 28 resembles the
+*** I might have missed it, but lots of what I see in page 28 resembles the
     behavior of conditional variables in POSIX threads.
 
-    I found some considerations in page 30/31 a bit speculative (especially
+*** I found some considerations in page 30/31 a bit speculative (especially
     the last two paragraphs before 2.4.1); any evidence supporting these
     clairns?  @ particular, evidence related to how unbalanced Computations
     can become due to different inputs.
 
-    The discussion?  in this Chapter could benefit from raphical
+*** The discussion?  in this Chapter could benefit from raphical
     representations of the data structures.
 
-Chapter 3
----------
+** Chapter 3
 
-    I found several English errors and typos, please proofread
+*** I found several English errors and typos, please proofread
 
-    An1dahl's law tend to be rather conservative \ have you considered using
+*** Amdahl's law tend to be rather conservative \ have you considered using
     something like Gustafson-Barsis instead?
 
         [It's pesimistic for a reason - it works]
 
-    Reason 2 page 50: would it be possible to tst this hypothesis?  p)
+*** Reason 2 page 50: would it be possible to tst this hypothesis?  p)
     bounding/unbounding threads?
 
     I found page 56 rather poorly written and hard to follow.
 
-Chapter 6
----------
+** Chapter 6
 
-[Yes, he doesn't have any comments for 4 or 5.]
+*** Please include more figures.
 
-    Please include more figures.
+** Bibliography
 
-Bibliography
-------------
+*** Several errors, please review your entries?
 
-    Several errors, please review your entries?
-    
-    [46] has a spurious ‘p’
+*** [46] has a spurious ‘p’
 
-    [45] appeared in a more complete forrn in some ICLP [perhaps 1994)
+*** [45] appeared in a more complete forrn in some ICLP [perhaps 1994)
 
-    I believe Pontelli was an author in [47] -
+*** I believe Pontelli was an author in [47] -
  
-    also it was published in 2001, not in 1995; on the other hand 1995 saw
+*** also it was published in 2001, not in 1995; on the other hand 1995 saw
     the publication of Hernienegildo’s et al. paper on 8a:ACE (which
     introduces many of the independent and—pstructures and optimizations)
 
-    [90] was published in ICl_.P’97
+*** [90] was published in ICl_.P’97
 
-Second esaminer
-===============
+* Examiner 2
 
-    p.28 Top. When explaining the working of futuregwait/2, it would be nice
-    T to add a line explaining why there is no for deadlock.  dangerp.30-31,
+** p.28 Top. When explaining the working of futuregwait/2, it would be nice
+   T to add a line explaining why there is no for deadlock.  dangerp.30-31,
 
-    In your argumentation for the feedback-directed approach, you state
+** In your argumentation for the feedback-directed approach, you state
     yourself that a program is typically executed multiple times with
     respect to different inputs (p.31). While you use this argument in
     favour of the feedback-approach (which is imo totally justified), it
@@ -130,33 +120,33 @@ Second esaminer
     appropriate level of objectiveness. See also my remark on the discussion
     w.r.t.  Static analysis (p 92).
 
-    p 34 imprecise vocabulary.  On the one hand you talk about “computations
+** p 34 imprecise vocabulary.  On the one hand you talk about “computations
     p and C1” but further down the test they have become ‘“conjuncts p and
     q”.
 
-    .41 line G_{kl},\ldots,G_{a}.  This must be G_{k+l}.
- 
-    p.50. What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
+** .41 line G_{kl},\ldots,G_{a}.  This must be G_{k+l}.
+
+** p.50. What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
     runtime?  it, it should also be explained.  if care to mention you
 
-    p.60. While l was wondering for several pages Why this structure had to
+** p.60. While l was wondering for several pages Why this structure had to
     be a stack, the second half of the page provides the explanation (to
     deal with nested conjunctions).  It would help the reader if this
     justification was moved to the spot. where the stacks are introduced.
 
-    p.71.  Just a remark, but algorithm 3.8 is basic and the idea of
+** p.71.  Just a remark, but algorithm 3.8 is basic and the idea of
     reordering independent conjunctions quite seems not far.  being pushed
     very
 
-    p. 78. In Figure 3.6, there is an “XXX” remaining.
+** p. 78. In Figure 3.6, there is an “XXX” remaining.
 
-    p.79. Figure 0 = Seems strange to characterize some transitions as
+** p.79. Figure 0 = Seems strange to characterize some transitions as
     “busier” because “you think” (p.78) they occur most often.  Is this
     relevant and, if it is, could it be better (experimentally)
     validated/justified? if it isn't, don‘t talk about it as it makes one
     wonder Whether some of the made are based on intuitionchoicesyou only.
 
-    p.92. When (re)introducing the general approach and justifying the
+** p.92. When (re)introducing the general approach and justifying the
     feedback-approach, the discussion on profiler-feedback versus static
     analysis could be more detailed and more objective.  You put a lot of
     emphasis on “representative input” (see also my remark concerning
@@ -169,18 +159,18 @@ Second esaminer
     stating I feel it could be somewhat more objectively (with its strong
     and weak points) introduced and discussed.
 
-    p.93 (end of section 4.2). Terminology: one often uses
+** p.93 (end of section 4.2). Terminology: one often uses
     “monovariant/polyvariant” to refer to the fact that a
     predicate/procedure is analysed/transformed/compiled one versus multiple
     times with respect to a somewhat different content.
 
-    p.106 (bottom of the page): “the recursivecalls cost at its average
+** p.106 (bottom of the page): “the recursivecalls cost at its average
     recursion depth is used by the algorithm”.  is this speaking) the best
     one can get or would it be to obtain more precise results (eg.
     (theoretically possible by performing some finpoint computation on the
     predicate)?
 
-    p.120 (bottom of the page). Typo: “perforrned perform”.
+** p.120 (bottom of the page). Typo: “perforrned perform”.
 
-    p. 12.4.  Typo: “that the each iteration”
+** p. 12.4.  Typo: “that the each iteration”
 
