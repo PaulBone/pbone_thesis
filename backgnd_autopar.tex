@@ -340,7 +340,7 @@ and consumed within parallel conjuncts.
 The analysis uses this to calculate how much parallelism is available,
 for conjunctions with a single shared variable.
 Consider the timeline shown in Figure~\ref{fig:overlap4},
-In the sequential case the computations \code{p} and \code{q} are shown
+In the sequential case the conjuncts \code{p} and \code{q} are shown
 side-by-side.
 Below this, \code{q} is parallelised against \code{p}.
 The future \code{A} is communicated from \code{p} to \code{q},

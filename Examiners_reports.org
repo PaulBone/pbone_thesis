@@ -26,10 +26,13 @@ could annotate it.
     appropriate level of objectiveness. See also my remark on the discussion
     w.r.t.  Static analysis (p 92).
 
-** TODO p 34,                                                       :trivial:
+** DONE p 34,                                                       :trivial:
+   CLOSED: [2013-03-31 Sun 18:21]
     imprecise vocabulary.  On the one hand you talk about
     “computations p and C1” but further down the test they have become
     ‘“conjuncts p and q”.
+
+   Fixed by replacing the initial 'computations' with 'conjuncts'
 
 ** TODO p.41 Notation                                               :trivial:
    line G_{kl},\ldots,G_{a}.  This must be G_{k+l}.
