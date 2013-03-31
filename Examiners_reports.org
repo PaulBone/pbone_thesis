@@ -34,8 +34,11 @@ could annotate it.
 
    Fixed by replacing the initial 'computations' with 'conjuncts'
 
-** TODO p.41 Notation                                               :trivial:
-   line G_{kl},\ldots,G_{a}.  This must be G_{k+l}.
+** DONE p.41 Notation                                               :trivial:
+   CLOSED: [2013-03-31 Sun 18:49]
+   line G_{k_l},\ldots,G_{a}.  This must be G_{k+l}.
+
+   The examiner is correct. I've fixed this.
 
 ** CHCK p.50. BLKSIZE                                         :clarification:
    What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
