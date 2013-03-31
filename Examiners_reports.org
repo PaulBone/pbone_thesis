@@ -220,5 +220,8 @@ Zoltan said he'd check these.
     introduces many of the independent and—pstructures and optimizations)
 
 *** [90] was published in ICl_.P’97
-
-
+* Other changes
+** Refactoring
+   No content changes.
+*** DONE Moved headings for background sections into individual .tex files
+    CLOSED: [2013-03-31 Sun 17:55]
