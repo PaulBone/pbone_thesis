@@ -225,3 +225,6 @@ Zoltan said he'd check these.
    No content changes.
 *** DONE Moved headings for background sections into individual .tex files
     CLOSED: [2013-03-31 Sun 17:55]
+
+** Presentation
+*** TODO Check hyphenation and overlong lines.
