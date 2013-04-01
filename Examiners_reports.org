@@ -56,9 +56,11 @@ could annotate it.
     very
 
 
-** TODO p. 78. XXX                                                  :trivial:
+** DONE p. 78. XXX                                                  :trivial:
+   CLOSED: [2013-04-01 Mon 14:12]
    In Figure 3.6, there is an “XXX” remaining.
 
+   Deleted, (the revisit had already been acted upon).
 
 ** TODO p.79. Busy transitions                                :clarification:
     Figure 0 = Seems strange to characterize some transitions as
