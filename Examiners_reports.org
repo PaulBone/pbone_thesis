@@ -131,7 +131,10 @@ index 97d03d0..4157fd0 100644
    could change the profiler but we're not convinced that doing so is
    necessary.
 
-** TODO p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
+** DONE p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
+   CLOSED: [2013-04-01 Mon 14:55]
+
+   Fixed (almost) double word.
 
 ** TODO p. 12.4.  Typo: “that the each iteration”                   :trivial:
 
