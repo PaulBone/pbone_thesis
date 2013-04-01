@@ -121,15 +121,80 @@ index 97d03d0..4157fd0 100644
  % \section{Traversing the call graph}
  % \label{sec:overlap_dfs}
 
-** TODO p.106 (bottom of the page):                           :clarification:
+** DONE p.106 (bottom of the page):                           :clarification:
+   CLOSED: [2013-04-01 Mon 17:59]
    “the recursivecalls cost at its average recursion depth is used by
    the algorithm”.  is this speaking) the best one can get or would it
    be to obtain more precise results (eg.  (theoretically possible by
    performing some finpoint computation on the predicate)?
 
-   This is what we can do without changing the profiler further.  We
-   could change the profiler but we're not convinced that doing so is
-   necessary.
+   The examiner has understood the issue to some degree.  I've
+   emphasised the issue and added discussion about getting more
+   precise results through analysis of recurrence relations.
+
+:diff --git a/conc.tex b/conc.tex
+index b9e2ddc..0b49b5b 100644
+--- a/conc.tex
++++ b/conc.tex
+@@ -93,6 +93,7 @@ and to adjust the values that represent the costs of parallel execution
+ overheads in the cost model.
+ 
+ \section{Further work}
++\label{sec:conc_further_work}
+ 
+ Throughout this dissertation we have discussed further work that may apply to
+ each contribution.
+diff --git a/overlap.tex b/overlap.tex
+index a0accd5..756d879 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -1715,22 +1715,39 @@ times.
+ In many cases,
+ the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
+ will contain a recursive call.
+-In these cases the recursive call's cost at its average recursion depth is
+-used by the algorithm.
+-This assumes that the recursive call
+-calls the \emph{original, sequential} version of the procedure.
++In these cases the recursive call's cost at its average recursion depth in the
++sequential execution data gathered by the profiler is used by the
++algorithm.
++This is naive because it assumes that the recursive call
++calls the \emph{original, sequential} version of the procedure,
++however the call is recursive and so the parallelised procedure calls itself,
++the \emph{transformed parallel} procedure whose cost at its average recursion
++depth is going to be different from the sequential version's.
+ When the recursive call calls the parallelised version,
+-we can expect a similar saving (absolute time, not ratio)
++%we can expect a similar saving
++there may be a similar saving 
++(absolute time, not ratio)
+ on \emph{every} recursive invocation,
+ provided that there are enough free CPUs.
+ How this affects the expected speedup of the top level call
+ depends on the structure of the recursion.
+-Our current approach handles non-recursive cases correctly,
++
++It should be possible to estimate the parallel execution time of the top level
++call into the recursive procedure,
++including the parallelism created at each level of the recursion,
++provided that
++the recursion pattern is one that is understood by the algorithms in
++Section \ref{sec:overlap_reccalls}.
++Before we implemented this it was more practical to improve the efficiency of
++recursive code
++(Chapter \ref{chap:loop_control}).
++We have not yet returned to this problem,
++see Section \ref{sec:conc_further_work}.
++Nevertheless,
++our current approach handles non-recursive cases correctly,
+ which are the majority (78\%) of all cases;
+ it handles a further 13\% of cases (single recursion) reasonably well
+ (Section~\ref{sec:overlap_reccalls}).
+-We do not currently do any further analysis when parallelising recursive
+-code.
+ Note that even better results for singly recursive procedures can be
+ achieved because of the work in Chapter~\ref{chap:loop_control}.
 
 ** DONE p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
    CLOSED: [2013-04-01 Mon 14:55]

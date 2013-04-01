@@ -1715,22 +1715,39 @@ times.
 In many cases,
 the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 will contain a recursive call.
-In these cases the recursive call's cost at its average recursion depth is
-used by the algorithm.
-This assumes that the recursive call
-calls the \emph{original, sequential} version of the procedure.
+In these cases the recursive call's cost at its average recursion depth in the
+sequential execution data gathered by the profiler is used by the
+algorithm.
+This is naive because it assumes that the recursive call
+calls the \emph{original, sequential} version of the procedure,
+however the call is recursive and so the parallelised procedure calls itself,
+the \emph{transformed parallel} procedure whose cost at its average recursion
+depth is going to be different from the sequential version's.
 When the recursive call calls the parallelised version,
-we can expect a similar saving (absolute time, not ratio)
+%we can expect a similar saving
+there may be a similar saving 
+(absolute time, not ratio)
 on \emph{every} recursive invocation,
 provided that there are enough free CPUs.
 How this affects the expected speedup of the top level call
 depends on the structure of the recursion.
-Our current approach handles non-recursive cases correctly,
+
+It should be possible to estimate the parallel execution time of the top level
+call into the recursive procedure,
+including the parallelism created at each level of the recursion,
+provided that
+the recursion pattern is one that is understood by the algorithms in
+Section \ref{sec:overlap_reccalls}.
+Before we implemented this it was more practical to improve the efficiency of
+recursive code
+(Chapter \ref{chap:loop_control}).
+We have not yet returned to this problem,
+see Section \ref{sec:conc_further_work}.
+Nevertheless,
+our current approach handles non-recursive cases correctly,
 which are the majority (78\%) of all cases;
 it handles a further 13\% of cases (single recursion) reasonably well
 (Section~\ref{sec:overlap_reccalls}).
-We do not currently do any further analysis when parallelising recursive
-code.
 Note that even better results for singly recursive procedures can be
 achieved because of the work in Chapter~\ref{chap:loop_control}.
 
