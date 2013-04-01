@@ -55,7 +55,6 @@ could annotate it.
     reordering independent conjunctions quite seems not far.  being pushed
     very
 
-
 ** DONE p. 78. XXX                                                  :trivial:
    CLOSED: [2013-04-01 Mon 14:12]
    In Figure 3.6, there is an “XXX” remaining.
@@ -88,11 +87,39 @@ could annotate it.
     input, so both methods have the same requirements.  Each method
     has its own strengths and may complement the other.
 
-** TODO p.93 (end of section 4.2). Terminology                      :trivial:
+** DONE p.93 (end of section 4.2). Terminology                      :trivial:
+   CLOSED: [2013-04-01 Mon 14:52]
    Terminology: one often uses “monovariant/polyvariant” to refer to
    the fact that a predicate/procedure is
    analysed/transformed/compiled one versus multiple times with
    respect to a somewhat different content.
+
+   I've rephrased this paragraph to use these terms (and explain
+   them).
+
+diff --git a/overlap.tex b/overlap.tex
+index 97d03d0..4157fd0 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -383,11 +383,13 @@ A procedure can contain several conjunctions with two or more goals that we
+ consider parallelising,
+ therefore multiple candidate parallelisations may be generated for different
+ conjunctions in a procedure.
+-The same procedure may also appear more than once in the call graph,
+-and therefore multiple parallelisations may be generated for the same
+-conjunctions within the procedure.
+-We discuss how we resolve conflicting recommendations for the same procedure
+-in Section~\ref{sec:overlap_pragmatic}.
++The same procedure may also appear more than once in the call graph.
++Each time it occurs in the call graph its conjunctions may be parallelised
++differently, or not at all,
++therefore it is said to be \emph{polyvariant} (having multiple forms).
++Currently our implementation compiles a single \emph{monovariant} procedure,
++we discuss how the implementation chooses which candidate parallelisations to
++include in Section~\ref{sec:overlap_pragmatic}.
+ 
+ % \section{Traversing the call graph}
+ % \label{sec:overlap_dfs}
 
 ** TODO p.106 (bottom of the page):                           :clarification:
    “the recursivecalls cost at its average recursion depth is used by

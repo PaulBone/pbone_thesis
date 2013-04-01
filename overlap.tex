@@ -383,11 +383,13 @@ A procedure can contain several conjunctions with two or more goals that we
 consider parallelising,
 therefore multiple candidate parallelisations may be generated for different
 conjunctions in a procedure.
-The same procedure may also appear more than once in the call graph,
-and therefore multiple parallelisations may be generated for the same
-conjunctions within the procedure.
-We discuss how we resolve conflicting recommendations for the same procedure
-in Section~\ref{sec:overlap_pragmatic}.
+The same procedure may also appear more than once in the call graph.
+Each time it occurs in the call graph its conjunctions may be parallelised
+differently, or not at all,
+therefore it is said to be \emph{polyvariant} (having multiple forms).
+Currently our implementation compiles a single \emph{monovariant} procedure,
+we discuss how the implementation chooses which candidate parallelisations to
+include in Section~\ref{sec:overlap_pragmatic}.
 
 % \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
