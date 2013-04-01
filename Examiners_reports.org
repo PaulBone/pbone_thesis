@@ -136,7 +136,10 @@ index 97d03d0..4157fd0 100644
 
    Fixed (almost) double word.
 
-** TODO p. 12.4.  Typo: “that the each iteration”                   :trivial:
+** DONE p. 12.4.  Typo: “that the each iteration”                   :trivial:
+   CLOSED: [2013-04-01 Mon 14:57]
+
+Removed 'the' from the phrase.
 
 * TODO Examiner 2
 
