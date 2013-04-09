@@ -275,7 +275,17 @@ analysis.
 However, this will not be accurate;
 static analysis cannot take into account sizes of data terms,
 or other values that are only available at runtime.
-Therefore, we use profiler feedback information in our implementation.
+It may be possible to provide this data by some other means,
+such as by requiring the programmer to provide a specification of their
+program's likely input data.
+It has been shown that programmers are not good at estimating where their
+programs' hotspots are,
+likewise we think that a programmer's estimate of their program's likely
+input data will also be inaccurate.
+This conclusion is supported by the obvious reasoning that it is always best
+to experimentally measure something rather than estimate it is value.
+Therefore,
+our automatic parallelisation system uses profiler feedback information.
 This was introduced in Section~\ref{sec:backgnd_autopar},
 which also includes a description of Mercury's deep profiler.
 To generate the profiler feedback data,
