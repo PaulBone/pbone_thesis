@@ -61,13 +61,37 @@ could annotate it.
 
    Deleted, (the revisit had already been acted upon).
 
-** TODO p.79. Busy transitions                                :clarification:
+** DONE p.79. Busy transitions                                :clarification:
+   CLOSED: [2013-04-10 Wed 21:43]
     Figure 0 = Seems strange to characterize some transitions as
     “busier” because “you think” (p.78) they occur most often.  Is
     this relevant and, if it is, could it be better (experimentally)
     validated/justified? if it isn't, don‘t talk about it as it makes
     one wonder Whether some of the made are based on
     intuitionchoicesyou only.
+
+Described our reasoning why these edges are busier:
+
+diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
+index bc4178e..def8dbe 100644
+--- a/rts_work_stealing2.tex
++++ b/rts_work_stealing2.tex
+@@ -530,8 +530,13 @@ blue edge:
+ blue denotes a transition that is done with a compare and swap on the
+ \code{MR\_es\_state} field of the \enginesleepsync structure,
+ whilst other transitions are made with an assignment.
+-The edges drawn with thicker lines are \emph{busier}:
+-these are the transitions that we think occur most often.
++The parallel runtime system is under the most load when there are a large
++number of sparks that represent small computations.
++When this occurs engines spend most of their execution time in the
++\code{MR\_WORKING}, \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
++states, or transitioning between them.
++Therefore these transitions are \emph{busier}
++and their edges in the graph are drawn with thicker lines.
+ 
+ \plan{Notification transitions}
+ When an engine creates a spark or makes a context runnable
 
 ** DONE p.92. Static analysis                                 :clarification:
    CLOSED: [2013-04-09 Tue 10:51]
