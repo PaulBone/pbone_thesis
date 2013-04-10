@@ -44,11 +44,45 @@ could annotate it.
    What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
    runtime?  it, it should also be explained.  if care to mention you
 
-** CHCK p.60. Choice of stack                                       :reorder:
+** DONE p.60. Choice of stack                                       :reorder:
+   CLOSED: [2013-04-10 Wed 22:45]
    While l was wondering for several pages Why this structure had to
    be a stack, the second half of the page provides the explanation (to
    deal with nested conjunctions).  It would help the reader if this
    justification was moved to the spot. where the stacks are introduced.
+
+I cannot move this as there is a circular dependency in the
+explanation.  I've provided a forward reference instead.  I've also
+added a forward reference that was missing from an earlier chapter to
+the same explanation.
+
+diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
+index da8adda..443d8d7 100644
+--- a/rts_original_scheduling.tex
++++ b/rts_original_scheduling.tex
+@@ -161,6 +161,10 @@ there are three important scenarios:
+     any sparks left on the stack by $G_1$ would have been popped off by
+     the \joinandcontinue barriers of the conjunctions that spawned off the
+     sparks.
++    This invariant requires a \emph{last-in-first-out} storage of sparks,
++    which is why each context uses a stack rather than a queue.
++    In Section~\ref{sec:rts_work_stealing} we explain in more detail why
++    a \emph{last-in-first-out} order is important.
+ 
+     The check that the spark's stack pointer is equal to the current
+     parent stack pointer\footnote{
+diff --git a/rts_work_stealing.tex b/rts_work_stealing.tex
+index 2c6b9f1..3a16381 100644
+--- a/rts_work_stealing.tex
++++ b/rts_work_stealing.tex
+@@ -9,6 +9,7 @@ described in the previous section.
+ its solution.
+ In a work stealing system,
+ sparks placed on a context's local spark stack
++(we describe below why we use a stack)
+ are not committed to running in that context;
+ they may be executed in a different context if they are stolen.
+ This delays the decision of where to execute a spark until the moment
 
 ** NOOP p.71. remark
    Just a remark, but algorithm 3.8 is basic and the idea of
