@@ -40,9 +40,35 @@ could annotate it.
 
    The examiner is correct. I've fixed this.
 
-** CHCK p.50. BLKSIZE                                         :clarification:
+** DONE p.50. BLKSIZE                                         :clarification:
+   CLOSED: [2013-04-10 Wed 22:44]
    What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
    runtime?  it, it should also be explained.  if care to mention you
+
+   Maybe the examiner says that if we cannot explain it then we should
+   not mention it.  I've explained that it is inscrutable.
+
+diff --git a/rts_gc.tex b/rts_gc.tex
+index a01cdf5..ba35dee 100644
+--- a/rts_gc.tex
++++ b/rts_gc.tex
+@@ -510,8 +510,14 @@ We anticipate that increasing the size of the local free lists will cause even
+ less contention for global locks,
+ allowing allocation intensive programs to have better parallel
+ performance.
+-The size of the local free list can be adjusted by increasing the
+-\texttt{HBLKSIZE} tunable.
++We wanted to investigate if increasing the size of the local free lists could
++improve performance.
++We contacted the Boehm GC team about this and they advised us to experiment
++with the \texttt{HBLKSIZE} tunable.
++They did not say what this tunable controls.
++and it is undocumented and the source code is inscrutable.
++Our impression is that it only indirectly tunes the sizes of the local free
++lists.
+ Unfortunately this feature is experimental,
+ and adjusting \texttt{HBLKSIZE} caused our programs to crash.
+ Therefore we cannot evaluate how \texttt{HBLKSIZE} affects our
 
 ** DONE p.60. Choice of stack                                       :reorder:
    CLOSED: [2013-04-10 Wed 22:45]
