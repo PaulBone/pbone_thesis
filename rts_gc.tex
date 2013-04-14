@@ -65,6 +65,13 @@ As the number of processors increases,
 the mutator threads spend a larger proportion of their time waiting for
 collection to complete.
 
+A reviewer suggested the use of Gustafson-Barsis' law
+\citep{gustafson:88:reevaluating-amdahl}
+as Amdahl's law is pessimistic.
+However Gustafson-Basis' law assumes that the amount of available data that
+one might want to process is unbounded.
+This rarely true for most applications and so Amdahl's law is more applicable.
+
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
 To reduce this problem,
