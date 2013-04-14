@@ -5,11 +5,28 @@ could annotate it.
 #+TAGS: clarification(c) trivial(t) bibliographic(b) diagram(p) reorder(r)
 #+TAGS: discussion(d)
 
-* TODO Examiner 1
+* DONE Examiner 1
+  CLOSED: [2013-04-14 Sun 14:19]
 
-** TODO p.28 Top.  future.wait/2                              :clarification:
+** DONE p.28 Top.  future.wait/2                              :clarification:
+   CLOSED: [2013-04-14 Sun 14:19]
    When explaining the working of future.wait/2, it would be nice to
    add a line explaining why there is no danger for deadlock.
+
+diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
+index a5c14f2..81eb62c 100644
+--- a/backgnd_deppar.tex
++++ b/backgnd_deppar.tex
+@@ -95,6 +95,9 @@ acquiring the lock as well as after.
+ If it is \code{MR\_PRODUCED} before the lock is acquired,
+ then \wait can safely retrieve the
+ future's value without using the lock.
++Note also that because Mercury's mode system ensures that variable
++dependencies can never form cycles,
++then the compiler's use of futures cannot create a deadlock.
+ 
+ A producer will call \signal to place a value into a future and wake up any
+ suspended contexts.
 
 ** DONE p.30-31,  Feedback                                    :clarification:
    CLOSED: [2013-04-14 Sun 12:40]
