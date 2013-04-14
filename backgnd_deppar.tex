@@ -115,7 +115,7 @@ as far to the left into the producer conjunct as possible,
 and it pushes \wait operations
 as far to the right into each of the consumer conjuncts as possible.
 This means not only pushing them
-into the bodys of predicates called by the conjunct,
+into the bodies of predicates called by the conjunct,
 but also into the bodies of the predicates they call,
 with the intention that on each execution path
 each \signal is put immediately after
@@ -131,7 +131,7 @@ the compiler cannot push a \wait or \signal operation
 into the body of a predicate that it does not have access to
 or into a predicate that it cannot identify.
 
-Any variable is produced exactly once along any execution parth,
+Any variable is produced exactly once along any execution path,
 and therefore there is exactly one \signal operation along any path.
 However, a variable may be used any number of times along an execution path,
 therefore there can be any number of \wait operations along a path.
