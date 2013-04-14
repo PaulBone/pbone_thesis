@@ -40,11 +40,16 @@ against another computation.
 It is important not to create too much parallelism:
 The hardware is limited in how many parallel tasks it can execute,
 any more and the overheads of parallel execution will slow the program down.
-Therefore, it is not just sub-optimal to parallelise the search of the small list,
+Therefore, it is not just sub-optimal to parallelise the search of the small
+list,
 but detrimental.
-The only way we can know the actual cost of most pieces of code
-is by understanding their typical inputs,
-or measuring their runtime cost while operating on typical inputs.
+Using a specification of a program's typical inputs one could
+calculate the execution times of the program's procedures.
+However it is more direct and much easier to simply use a profiler to
+measure the typical execution times of procedures in the program
+while the program is executing with typical inputs,
+especially when we have such a powerful profiler already available
+(Section~\ref{sec:backgnd_deep}).
 Therefore,
 profiling data should be used in auto-parallelisation;
 it allows us to predict runtime costs for computations whose
