@@ -96,21 +96,30 @@ used with another,
 then the profile will not necessarily represent the actual use
 of the program,
 and that the optimisation may not be as good as it should be.
-Parallelisation decisions are binary,
+In practice parallelism is used in very few places within a program:
+in the Mercury Compiler itself there are only 34
+(Page~\pageref{page:conjs_in_mcc}) conjuncts in 28,448\footnote{
+    The number of \PS structures in the same profiling data that was used to
+    provide the figures on Page~\pageref{page:conjs_in_mcc}.}
+procedures that may be worth parallelising.
+This means that most differences in performance are not likely to affect the
+very small part of the program where parallelism may be applicable.
+Furthermore,
+as parallelisation decisions are binary,
 either `do not parallelise' to `parallelise'.
-Therefore,
-they will only change as the costs of computations cross some threshold.
-Unless alternative input data causes a computation's runtime to cross such a
-threshold,
-then the parallelisation based on the original input data is 
-as equally valid as the parallelisation based on the alternative input data.
-Most variations in input data will not  
-effect parallelisation enough to cause a significant difference in performance.
+a numerical difference in performance will not usually alter the binary
+parallelisation decision.
+So in most cases,
+auto-parallelisation based on the original input data is equivalent to
+auto-parallelisation based on slightly different input data.
 
-Even in a case where automatic parallelisation does not produce optimal
-results,
-near optimal results are good enough.
-Automatic parallelisation will always be cheaper than manual
+In cases where different input data causes the program to be parallelised
+differently,
+the result is often going to be near-optimal.
+In these cases the main benefits of automatic parallelisation are
+unaffected,
+which are:
+automatic parallelisation will always be cheaper than manual
 parallelisation,
 it requires much less time and does not require a company hire a
 parallelisation expert.

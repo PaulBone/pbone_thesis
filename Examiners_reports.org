@@ -11,7 +11,8 @@ could annotate it.
    When explaining the working of future.wait/2, it would be nice to
    add a line explaining why there is no danger for deadlock.
 
-** TODO p.30-31,  Feedback                                    :clarification:
+** DONE p.30-31,  Feedback                                    :clarification:
+   CLOSED: [2013-04-14 Sun 12:40]
     In your argumentation for the feedback-directed approach, you state
     yourself that a program is typically executed multiple times with
     respect to different inputs (p.31). While you use this argument in
@@ -25,6 +26,73 @@ could annotate it.
     a good one.  but it should be introduced/discussed within more
     appropriate level of objectiveness. See also my remark on the discussion
     w.r.t.  Static analysis (p 92).
+
+    This issue was discussed but the discussion could have been
+    better.  The change below improves the discussion making our
+    reasoning clearer.
+
+diff --git a/backgnd_autopar.tex b/backgnd_autopar.tex
+index e5e0cb5..be01eae 100644
+--- a/backgnd_autopar.tex
++++ b/backgnd_autopar.tex
+@@ -96,21 +96,30 @@ used with another,
+ then the profile will not necessarily represent the actual use
+ of the program,
+ and that the optimisation may not be as good as it should be.
+-Parallelisation decisions are binary,
++In practice parallelism is used in very few places within a program:
++in the Mercury Compiler itself there are only 34
++(Page~\pageref{page:conjs_in_mcc}) conjuncts in 28,448\footnote{
++    The number of \PS structures in the same profiling data that was used to
++    provide the figures on Page~\pageref{page:conjs_in_mcc}.}
++procedures that may be worth parallelising.
++This means that most differences in performance are not likely to affect the
++very small part of the program where parallelism may be applicable.
++Furthermore,
++as parallelisation decisions are binary,
+ either `do not parallelise' to `parallelise'.
+-Therefore,
+-they will only change as the costs of computations cross some threshold.
+-Unless alternative input data causes a computation's runtime to cross such a
+-threshold,
+-then the parallelisation based on the original input data is 
+-as equally valid as the parallelisation based on the alternative input data.
+-Most variations in input data will not  
+-effect parallelisation enough to cause a significant difference in performance.
+-
+-Even in a case where automatic parallelisation does not produce optimal
+-results,
+-near optimal results are good enough.
+-Automatic parallelisation will always be cheaper than manual
++a numerical difference in performance will not usually alter the binary
++parallelisation decision.
++So in most cases,
++auto-parallelisation based on the original input data is equivalent to
++auto-parallelisation based on slightly different input data.
++
++In cases where different input data causes the program to be parallelised
++differently,
++the result is often going to be near-optimal.
++In these cases the main benefits of automatic parallelisation are
++unaffected,
++which are:
++automatic parallelisation will always be cheaper than manual
+ parallelisation,
+ it requires much less time and does not require a company hire a
+ parallelisation expert.
+diff --git a/overlap.tex b/overlap.tex
+index 3b853ed..a66eb8a 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -3121,6 +3121,7 @@ whose effect is lost in the noise.
+ % However, the raw times showed significant variability,
+ % and this process does not entirely eliminate that variability.
+ 
++\label{page:conjs_in_mcc}
+ To see the difference between naive and overlap,
+ we need to look at larger programs.
+ Our standard large test program is the Mercury compiler, which contains
+
 
 ** DONE p 34,                                                       :trivial:
    CLOSED: [2013-03-31 Sun 18:21]
