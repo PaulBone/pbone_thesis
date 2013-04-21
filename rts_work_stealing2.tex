@@ -532,7 +532,7 @@ blue denotes a transition that is done with a compare and swap on the
 whilst other transitions are made with an assignment.
 The parallel runtime system is under the most load when there are a large
 number of sparks that represent small computations.
-When this occurs engines spend most of their execution time in the
+When this occurs, engines spend most of their execution time in the
 \code{MR\_WORKING}, \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
 states, or transitioning between them.
 Therefore these transitions are \emph{busier}

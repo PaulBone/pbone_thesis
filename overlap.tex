@@ -276,14 +276,19 @@ However, this will not be accurate;
 static analysis cannot take into account sizes of data terms,
 or other values that are only available at runtime.
 It may be possible to provide this data by some other means,
-such as by requiring the programmer to provide a specification of their
-program's likely input data.
-It has been shown that programmers are not good at estimating where their
-programs' hotspots are,
-likewise we think that a programmer's estimate of their program's likely
-input data will also be inaccurate.
-This conclusion is supported by the obvious reasoning that it is always best
-to experimentally measure something rather than estimate it is value.
+such as by requiring the programmer to provide a 
+descriptions of the typical shapes and sizes of 
+their program's likely input data.
+Programming folklore says that programmers are not good at estimating where
+their programs' hotspots are.
+Some of the reasons for this will affect a programmer's estimate of their
+program's likely input data, making it inaccurate.
+In fact, misunderstanding a program's typical input is one of the reasons
+why a programmer is likely to mis-estimate the location of the
+program's hotspots.
+Our argument is supported by the reasoning that an estimate,
+even a confident one, can only be verified by measurement;
+but a measurement never needs estimation to back it up.
 Therefore,
 our automatic parallelisation system uses profiler feedback information.
 This was introduced in Section~\ref{sec:backgnd_autopar},
@@ -397,8 +402,8 @@ The same procedure may also appear more than once in the call graph.
 Each time it occurs in the call graph its conjunctions may be parallelised
 differently, or not at all,
 therefore it is said to be \emph{polyvariant} (having multiple forms).
-Currently our implementation compiles a single \emph{monovariant} procedure,
-we discuss how the implementation chooses which candidate parallelisations to
+Currently our implementation compiles a single \emph{monovariant} procedure.
+We discuss how the implementation chooses which candidate parallelisations to
 include in Section~\ref{sec:overlap_pragmatic}.
 
 % \section{Traversing the call graph}
@@ -1725,9 +1730,9 @@ times.
 In many cases,
 the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 will contain a recursive call.
-In these cases the recursive call's cost at its average recursion depth in the
-sequential execution data gathered by the profiler is used by the
-algorithm.
+In these cases,
+the algorithm uses the recursive call's cost at its average recursion depth
+in the sequential execution data gathered by the profiler.
 This is naive because it assumes that the recursive call
 calls the \emph{original, sequential} version of the procedure,
 however the call is recursive and so the parallelised procedure calls itself,

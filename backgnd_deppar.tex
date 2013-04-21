@@ -97,7 +97,7 @@ then \wait can safely retrieve the
 future's value without using the lock.
 Note also that because Mercury's mode system ensures that variable
 dependencies can never form cycles,
-then the compiler's use of futures cannot create a deadlock.
+the compiler's use of futures cannot create a deadlock.
 
 A producer will call \signal to place a value into a future and wake up any
 suspended contexts.

@@ -23,7 +23,7 @@ index a5c14f2..81eb62c 100644
  future's value without using the lock.
 +Note also that because Mercury's mode system ensures that variable
 +dependencies can never form cycles,
-+then the compiler's use of futures cannot create a deadlock.
++the compiler's use of futures cannot create a deadlock.
  
  A producer will call \signal to place a value into a future and wake up any
  suspended contexts.
@@ -134,26 +134,32 @@ index 3b853ed..a66eb8a 100644
    not mention it.  I've explained that it is inscrutable.
 
 diff --git a/rts_gc.tex b/rts_gc.tex
-index a01cdf5..ba35dee 100644
+index a01cdf5..7306619 100644
 --- a/rts_gc.tex
 +++ b/rts_gc.tex
-@@ -510,8 +510,14 @@ We anticipate that increasing the size of the local free lists will cause even
+@@ -510,10 +510,18 @@ We anticipate that increasing the size of the local free lists will cause even
  less contention for global locks,
  allowing allocation intensive programs to have better parallel
  performance.
 -The size of the local free list can be adjusted by increasing the
 -\texttt{HBLKSIZE} tunable.
+-Unfortunately this feature is experimental,
+-and adjusting \texttt{HBLKSIZE} caused our programs to crash.
 +We wanted to investigate if increasing the size of the local free lists could
 +improve performance.
 +We contacted the Boehm GC team about this and they advised us to experiment
 +with the \texttt{HBLKSIZE} tunable.
 +They did not say what this tunable controls.
-+and it is undocumented and the source code is inscrutable.
++it is undocumented and the source code is very hard to understand.
 +Our impression is that it only indirectly tunes the sizes of the local free
 +lists.
- Unfortunately this feature is experimental,
- and adjusting \texttt{HBLKSIZE} caused our programs to crash.
++Unfortunately this feature is experimental:
++adjusting \texttt{HBLKSIZE} caused our programs to crash intermittently,
++such that we could not determine for which values (other than the default) 
++the programs would run reliably.
  Therefore we cannot evaluate how \texttt{HBLKSIZE} affects our
+ programs.
+ Once this feature is no longer experimental,
 
 ** DONE p.60. Choice of stack                                       :reorder:
    CLOSED: [2013-04-10 Wed 22:45]
@@ -168,7 +174,7 @@ added a forward reference that was missing from an earlier chapter to
 the same explanation.
 
 diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
-index da8adda..443d8d7 100644
+index da8adda..30dcc74 100644
 --- a/rts_original_scheduling.tex
 +++ b/rts_original_scheduling.tex
 @@ -161,6 +161,10 @@ there are three important scenarios:
@@ -176,24 +182,26 @@ index da8adda..443d8d7 100644
      the \joinandcontinue barriers of the conjunctions that spawned off the
      sparks.
 +    This invariant requires a \emph{last-in-first-out} storage of sparks,
-+    which is why each context uses a stack rather than a queue.
++    which is \emph{why} each context uses a stack rather than a queue.
 +    In Section~\ref{sec:rts_work_stealing} we explain in more detail why
 +    a \emph{last-in-first-out} order is important.
  
      The check that the spark's stack pointer is equal to the current
      parent stack pointer\footnote{
 diff --git a/rts_work_stealing.tex b/rts_work_stealing.tex
-index 2c6b9f1..3a16381 100644
+index 2c6b9f1..ec273c5 100644
 --- a/rts_work_stealing.tex
 +++ b/rts_work_stealing.tex
-@@ -9,6 +9,7 @@ described in the previous section.
- its solution.
+@@ -10,7 +10,8 @@ its solution.
  In a work stealing system,
  sparks placed on a context's local spark stack
-+(we describe below why we use a stack)
  are not committed to running in that context;
- they may be executed in a different context if they are stolen.
+-they may be executed in a different context if they are stolen.
++they may be executed in a different context if they are stolen
++(we describe below why we use a stack to store sparks).
  This delays the decision of where to execute a spark until the moment
+ before it is executed.
+ 
 
 ** NOOP p.71. remark
    Just a remark, but algorithm 3.8 is basic and the idea of
@@ -229,7 +237,7 @@ index bc4178e..def8dbe 100644
 -these are the transitions that we think occur most often.
 +The parallel runtime system is under the most load when there are a large
 +number of sparks that represent small computations.
-+When this occurs engines spend most of their execution time in the
++When this occurs, engines spend most of their execution time in the
 +\code{MR\_WORKING}, \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
 +states, or transitioning between them.
 +Therefore these transitions are \emph{busier}
@@ -258,50 +266,59 @@ index bc4178e..def8dbe 100644
     has its own strengths and may complement the other.
 
 diff --git a/overlap.tex b/overlap.tex
-index 756d879..bde01cb 100644
+index a66eb8a..50fbd11 100644
 --- a/overlap.tex
 +++ b/overlap.tex
-@@ -275,7 +275,17 @@ analysis.
- However, this will not be accurate;
+@@ -276,14 +276,19 @@ However, this will not be accurate;
  static analysis cannot take into account sizes of data terms,
  or other values that are only available at runtime.
--Therefore, we use profiler feedback information in our implementation.
-+It may be possible to provide this data by some other means,
-+such as by requiring the programmer to provide a specification of their
-+program's likely input data.
-+It has been shown that programmers are not good at estimating where their
-+programs' hotspots are,
-+likewise we think that a programmer's estimate of their program's likely
-+input data will also be inaccurate.
-+This conclusion is supported by the obvious reasoning that it is always best
-+to experimentally measure something rather than estimate it is value.
-+Therefore,
-+our automatic parallelisation system uses profiler feedback information.
+ It may be possible to provide this data by some other means,
+-such as by requiring the programmer to provide a specification of their
+-program's likely input data.
+-It has been shown that programmers are not good at estimating where their
+-programs' hotspots are,
+-likewise we think that a programmer's estimate of their program's likely
+-input data will also be inaccurate.
+-This conclusion is supported by the obvious reasoning that it is always best
+-to experimentally measure something rather than estimate it is value.
++such as by requiring the programmer to provide a 
++descriptions of the typical shapes and sizes of 
++their program's likely input data.
++Programming folklore says that programmers are not good at estimating where
++their programs' hotspots are.
++Some of the reasons for this will affect a programmer's estimate of their
++program's likely input data, making it inaccurate.
++In fact, misunderstanding a program's typical input is one of the reasons
++why a programmer is likely to mis-estimate the location of the
++program's hotspots.
++Our argument is supported by the reasoning that an estimate,
++even a confident one, can only be verified by measurement;
++but a measurement never needs estimation to back it up.
+ Therefore,
+ our automatic parallelisation system uses profiler feedback information.
  This was introduced in Section~\ref{sec:backgnd_autopar},
- which also includes a description of Mercury's deep profiler.
- To generate the profiler feedback data,
 
 I've also described this earlier in Chapter 2.
 
 diff --git a/backgnd_autopar.tex b/backgnd_autopar.tex
-index 8db3c47..8f8c220 100644
+index 6cfa3fb..2a3b85f 100644
 --- a/backgnd_autopar.tex
 +++ b/backgnd_autopar.tex
 @@ -40,11 +40,16 @@ against another computation.
  It is important not to create too much parallelism:
  The hardware is limited in how many parallel tasks it can execute,
  any more and the overheads of parallel execution will slow the program down.
--Therefore, it is not just sub-optimal to parallelise the search of the small list,
+-Therefore, it is not just sub-optimal to parallelise the search of the small li
 +Therefore, it is not just sub-optimal to parallelise the search of the small
 +list,
  but detrimental.
 -The only way we can know the actual cost of most pieces of code
 -is by understanding their typical inputs,
 -or measuring their runtime cost while operating on typical inputs.
-+Using a specification of a program's typical inputs one could
++Using a description of a program's typical inputs one could
 +calculate the execution times of the program's procedures.
-+However it is more direct and much easier to simply use a profiler to
-+measure the typical execution times of procedures in the program
++However it is more direct, more robust and much easier to simply use a
++profiler to measure the typical execution times of procedures in the program
 +while the program is executing with typical inputs,
 +especially when we have such a powerful profiler already available
 +(Section~\ref{sec:backgnd_deep}).
@@ -323,7 +340,7 @@ diff --git a/overlap.tex b/overlap.tex
 index 97d03d0..4157fd0 100644
 --- a/overlap.tex
 +++ b/overlap.tex
-@@ -383,11 +383,13 @@ A procedure can contain several conjunctions with two or more goals that we
+@@ -383,11 +398,13 @@ A procedure can contain several conjunctions with two or more goals that we
  consider parallelising,
  therefore multiple candidate parallelisations may be generated for different
  conjunctions in a procedure.
@@ -336,12 +353,13 @@ index 97d03d0..4157fd0 100644
 +Each time it occurs in the call graph its conjunctions may be parallelised
 +differently, or not at all,
 +therefore it is said to be \emph{polyvariant} (having multiple forms).
-+Currently our implementation compiles a single \emph{monovariant} procedure,
-+we discuss how the implementation chooses which candidate parallelisations to
++Currently our implementation compiles a single \emph{monovariant} procedure.
++We discuss how the implementation chooses which candidate parallelisations to
 +include in Section~\ref{sec:overlap_pragmatic}.
  
  % \section{Traversing the call graph}
  % \label{sec:overlap_dfs}
+
 
 ** DONE p.106 (bottom of the page):                           :clarification:
    CLOSED: [2013-04-01 Mon 17:59]
@@ -370,7 +388,8 @@ diff --git a/overlap.tex b/overlap.tex
 index a0accd5..756d879 100644
 --- a/overlap.tex
 +++ b/overlap.tex
-@@ -1715,22 +1715,39 @@ times.
+
+@@ -1713,22 +1730,39 @@ times.
  In many cases,
  the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
  will contain a recursive call.
@@ -378,9 +397,9 @@ index a0accd5..756d879 100644
 -used by the algorithm.
 -This assumes that the recursive call
 -calls the \emph{original, sequential} version of the procedure.
-+In these cases the recursive call's cost at its average recursion depth in the
-+sequential execution data gathered by the profiler is used by the
-+algorithm.
++In these cases,
++the algorithm uses the recursive call's cost at its average recursion depth
++in the sequential execution data gathered by the profiler.
 +This is naive because it assumes that the recursive call
 +calls the \emph{original, sequential} version of the procedure,
 +however the call is recursive and so the parallelised procedure calls itself,
@@ -402,12 +421,12 @@ index a0accd5..756d879 100644
 +including the parallelism created at each level of the recursion,
 +provided that
 +the recursion pattern is one that is understood by the algorithms in
-+Section \ref{sec:overlap_reccalls}.
++Section~\ref{sec:overlap_reccalls}.
 +Before we implemented this it was more practical to improve the efficiency of
 +recursive code
-+(Chapter \ref{chap:loop_control}).
++(Chapter~\ref{chap:loop_control}).
 +We have not yet returned to this problem,
-+see Section \ref{sec:conc_further_work}.
++see Section~\ref{sec:conc_further_work}.
 +Nevertheless,
 +our current approach handles non-recursive cases correctly,
  which are the majority (78\%) of all cases;
@@ -417,6 +436,7 @@ index a0accd5..756d879 100644
 -code.
  Note that even better results for singly recursive procedures can be
  achieved because of the work in Chapter~\ref{chap:loop_control}.
+ 
 
 ** DONE p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
    CLOSED: [2013-04-01 Mon 14:55]
