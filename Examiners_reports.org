@@ -192,9 +192,13 @@ some citations [especially in the first few pages). Additionally
 
         [It's pesimistic for a reason - it works]
 
-*** CHCK Clarification/Discussion (Page 50)        :clarification:discussion:
+*** WONT Clarification/Discussion (Page 50)        :clarification:discussion:
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
     bounding/unbounding threads?
+
+    No such reference exists.  There are no "reasons" on this page
+    and "aim 2" is both obvious given the reasoning on p50 and is
+    explained and measured throughout the dissertation.
 
 *** CHCK Prose on page 56
     I found page 56 rather poorly written and hard to follow.
