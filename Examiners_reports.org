@@ -182,9 +182,9 @@ index da8adda..30dcc74 100644
      the \joinandcontinue barriers of the conjunctions that spawned off the
      sparks.
 +    This invariant requires a \emph{last-in-first-out} storage of sparks,
-+    which is \emph{why} each context uses a stack rather than a queue.
-+    In Section~\ref{sec:rts_work_stealing} we explain in more detail why
-+    a \emph{last-in-first-out} order is important.
++    which is why each context uses a stack rather than a queue.
++    In Section~\ref{sec:rts_work_stealing} we explain in more detail
++    \emph{why} a \emph{last-in-first-out} order is important.
  
      The check that the spark's stack pointer is equal to the current
      parent stack pointer\footnote{
@@ -291,8 +291,8 @@ index a66eb8a..50fbd11 100644
 +In fact, misunderstanding a program's typical input is one of the reasons
 +why a programmer is likely to mis-estimate the location of the
 +program's hotspots.
-+Our argument is supported by the reasoning that an estimate,
-+even a confident one, can only be verified by measurement;
++Our argument is that an estimate,
++even a confident one, can only be verified by measurement,
 +but a measurement never needs estimation to back it up.
  Therefore,
  our automatic parallelisation system uses profiler feedback information.
