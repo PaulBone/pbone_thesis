@@ -18,7 +18,7 @@ before it is executed.
 Work stealing is a popular method for managing parallel work in a shared
 memory multiprocessor system.
 % XXX: There may be earlier papers by keller 1984 as cited by halstead.
-Multilisp \citep{halstead:1985:multilisp} was one of the first systems to
+Multilisp (\citet{halstead:1985:multilisp}) was one of the first systems to
 use work stealing,
 which Halstead calls ``an unfair scheduling policy''.
 The term ``unfair'' is not an expression of the morals of stealing (work),
@@ -70,7 +70,7 @@ Work stealing's other benefits can be summarised as follows.
 
 \end{itemize}
 
-The initial work stealing implementation was built jointly by
+Mercury's initial work stealing implementation was built jointly by
 Peter Wang and myself,
 Wang contributed about 80\% of the work
 and I contributed the remaining 20\%.
@@ -349,7 +349,7 @@ The deque provides the following operations.
     is not a double pointer as one might expect.
     This implementation detail avoids memory allocation for sparks inside
     the deque implementation.
-    A callers of any of these functions temporarily stores the spark on
+    Callers of any of these functions temporarily stores the spark on
     its program stack.
 
     \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]
@@ -486,7 +486,7 @@ processors in the order that they appear in the program.
 % processors in the order that they appear in the program.
 % This is much stronger than C's \code{volatile} keyword which only controls
 % how the compiler may order instructions and cache values.
-\citet{Chase_2005_wsdeque} uses Java's \code{volatile} qualifier in the
+\citet{Chase_2005_wsdeque} use Java's \code{volatile} qualifier in the
 declaration for the \var{top} and \var{bottom} fields of the deque
 structure.
 When adding the deque algorithms to Mercury's runtime system,
