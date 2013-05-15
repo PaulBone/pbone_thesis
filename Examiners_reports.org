@@ -163,9 +163,28 @@ some citations [especially in the first few pages). Additionally
     Can you provide a source for the various statistics mentioned in page
     25?
 
-*** CHCK TRO and and-parallelism                :clarification:bibliographic:
+*** DONE TRO and and-parallelism                :clarification:bibliographic:
+    CLOSED: [2013-05-16 Thu 00:00]
     How does the discussion in page 26 relate to some of the tail recursion
     optimizations developed for and=parallelism?
+
+diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
+index 21d12ec..05a3b03 100644
+--- a/backgnd_merpar.tex
++++ b/backgnd_merpar.tex
+@@ -250,6 +250,12 @@ consists only of the final conjunct, $G_n$,
+ and the context just executes it.
+ Once each conjunct synchronises using {\joinandcontinue},
+ the original context will continue execution after the parallel conjunction.
++The introduction of the barrier at the end of the conjunction can prevent
++the compiler from using tail recursion optimistion.
++This occurs when $G_n$ ended in a recursive call, and the whole conjunction
++was the last conjunction in a procedure's body.
++We discuss this problem in more detail and provide our solution in
++Chapter~\ref{chap:loop_control}.
+ Figure~\ref{fig:par_conj} shows an example of the code generated to execute
+ a parallel conjunction.
+ In this example the first conjunct creates a spark that represents the
 
 *** TODO Futures                                   :clarification:discussion:
     I might have missed it, but lots of what I see in page 28 resembles the
