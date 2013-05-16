@@ -1146,9 +1146,8 @@ index 450bf3d..3b87ebd 100644
 No,  Due to bitrot in the upstream ThreadScope project generating
 additional pictures requires extra work.
 
-** TODO Bibliography
-
-Zoltan said he'd check these.
+** DONE Bibliography
+   CLOSED: [2013-05-16 Thu 21:58]
 
 *** Several errors, please review your entries?
 
