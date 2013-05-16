@@ -11,7 +11,7 @@ Mercury does not allow destructive update.
 %    Their use does not interfere with parallelism as they are used in
 %    conjunction with impurity.
 %    The compiler will not parallelise impure goals.}
-Therefore a call usually returns its value in newly allocated memory
+Therefore a call usually returns its results in newly allocated memory
 rather than modifying the memory of its parameters.
 Likewise, a call cannot modify data that may be aliased.
 This means that Mercury programs often have a high rate of allocation,
@@ -57,8 +57,9 @@ for $P$ processors.
 Using four processors the theoretical best speedup is:
 %\paul{I prefer how \\frac displays maths but in text the fonts become tiny.}
 $(1 + 19) / (1 + 19/4) = 3.48$.
-17\% of the parallel runtime ($1 + 19/4$) is collector time.
-If we use a machine with 100 processors then this becomes:
+The fraction of this new execution time ($1 + 19/4$) spent in the collector
+($1$) is 17\% (it was 0.5\% without parallelisation).
+If we use a machine with 100 processors then the speedup becomes:
 $(1 + 19) / (1 + 19/100) = 16.8$;
 with 84\% of the runtime spent in the collector.
 As the number of processors increases,
@@ -74,7 +75,7 @@ This rarely true for most applications and so Amdahl's law is more applicable.
 
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
-To reduce this problem,
+To reduce this effect,
 \citet{boehm:1988:gc} included parallel marking support in their collector.
 Ideally this would remove the bottleneck described above.
 However,
@@ -93,7 +94,7 @@ parallel Mercury programs (Section~\ref{sec:backgnd_merpar}).
 The second is that
 memory allocation routines must use locking to protect shared data
 structures,
-which will slow down allocation.
+which slows down allocation.
 Boehm GC's authors recognised this problem and
 added support for thread-local resources such as free lists.
 Therefore,
@@ -110,7 +111,7 @@ benchmark programs with different memory allocation requirements.
 We wanted to determine how memory allocation rates affect
 performance of parallel programs.
 Our first benchmark is a raytracer developed for the
-ICFP programming contest in 2000.
+ICFP programming contest in the year 2000.
 For each pixel in the image,
 the raytracer casts a ray into the scene to determine what colour to paint that pixel.
 Two nested loops build the pixels for the image:
@@ -191,15 +192,17 @@ interference from any other performance problems.
 \plan{Describe performance in practice.}
 The raytracer program benefits from parallelism in both Mercury and the
 garbage collector.
-Using Mercury's parallelism only (four Mercury engines, and one GC thread) 
-speeds the program up by a factor of 1.58,
+Using Mercury's parallelism only
+(four Mercury engines, and one GC thread)
+the program achieves a speedup of 1.58,
 compared to 1.29 when using the GC's parallelism only (one Mercury engine,
 and four GC threads).
 When using both Mercury and the GC's parallelism (four engines and four
 marker threads)
-the raytracer achieves a speedup of 2.73.
+it achieves a speedup of 2.73.
 These speedups are much lower than we might expect from such a program:
 either the mutator, the collector or both are not being parallelised well.
+
 mandelbrot\_lowalloc does not see any benefit from parallel marking.
 It achieves very good speedups from multiple Mercury engines.
 We know that this program has a low allocation rate
@@ -209,6 +212,7 @@ these results support the hypothesis that heavy use of garbage collection
 makes it difficult to achieve good speedups when parallelising programs.
 The more time spend in garbage collection,
 the worse the speedup due to parallelism.
+
 mandelbrot\_highalloc, which stores its data on the heap,
 sees similar trends in performance as raytracer.
 It is also universally slower than mandelbrot\_lowalloc.
@@ -245,7 +249,7 @@ respectively.
 
 \plan{Describe trends in either the mutator or GC time.}
 As we expected, mandelbrot\_lowalloc spends very little time running the collector.
-Typically, it ran the collector only twice during its execution.
+Typically, it runs the collector only twice during its execution.
 Also, total collector time was usually between 5 and 30 milliseconds.
 The other two programs ran the collector hundreds of times.
 As we increased the number of Mercury engines
@@ -298,7 +302,7 @@ number of Mercury engines
 both the collector and mutator time decrease.
 This shows that parallelism in Mercury and in Boehm GC both contribute to
 the elapsed time speedup we saw in the diagonal path in Table~\ref{tab:gc}.
-As Table~\ref{tab:gc_amdahl} give us more detail,
+As Table~\ref{tab:gc_amdahl} gives us more detail,
 we can also see that collector time as a percentage of elapsed time
 increases as we add threads and engines to the collector and Mercury.
 This occurs for both the raytracer and mandelbrot\_highalloc.
@@ -357,8 +361,8 @@ by definition,
 allocation cannot occur during collector time.
 mandelbrot\_highalloc has a higher allocation rate than raytracer.
 However,
-it spends less time doing collection, when measured either absolutely
-or by percentage of elapsed time.
+measuring either absolutely or as a percentage of elapsed time,
+mandelbrot\_highalloc spends less time doing collection than the raytracer.
 Garbage collectors are tuned for particular workloads.
 It is likely that Boehm GC handles mandelbrot\_highalloc's workload more
 easily than raytracer's workload.
@@ -394,7 +398,7 @@ we have shown that speedups due to Mercury's parallel conjunction
 are limited by the garbage collector.
 Better speedups can be achieved by using the parallel marking feature in the
 garbage collector.
-We also attempted to improve performance further by modifying the initial
+Now we will show how performance can be improved by modifying the initial
 heap size of the program.
 Table~\ref{tab:gc_heapsize} shows the performance of the raytracer and
 mandelbrot\_highalloc programs with various initial heap sizes.
@@ -425,7 +429,7 @@ If, after a collection, it still cannot satisfy the memory request then it
 will increase the size of the heap.
 In each collection,
 the collector must read all the stacks, global data, thread local data and
-all the in-use memory in the heap 
+all the in-use memory in the heap
 (memory that is reachable from the stacks, global data and thread local
 data).
 This causes a lot of cache misses, especially when the heap is large.
@@ -445,8 +449,8 @@ than with a heap size of 32MB.
 %remembering to care about normal caches much less TLBs.}
 64MB is much larger than the processor's cache size
 (this processor's L3 cache is 8MB) and
-covers more page mappings than its TLBs can hold (L2 TLB covers 2MB when
-using 4KB pages).
+covers more page mappings than its TLBs can hold
+(the L2 TLB covers 2MB when using 4KB pages).
 The collector's structures and access patterns may be slower at this size
 because of these hardware limitations,
 and the benefits of a 64MB heap are not enough to overcome the effects of
@@ -477,12 +481,12 @@ There are two reasons for this
     \item[Reason 1]
     In a parallel program with more than one Mercury engine,
     each collection must \emph{stop-the-world}:
-    All Mercury engines are stopped so that they do not modify the heap during
+    all Mercury engines are stopped so that they do not modify the heap during
     the marking phase.
     This requires synchronisation which reduces the performance of parallel
     programs.
-    Therefore, the less often collection occurs, the rarer stop-the-world
-    events are, and the less their synchronisation affects performance.
+    The less frequently collection occurs, the less performance is affected
+    by the synchronisation of stop-the-world events.
 
     \item[Reason 2]
     Another reason was suggested by Simon Marlow:
@@ -497,7 +501,7 @@ There are two reasons for this
     (P2) objects,
     causing a cache miss in P1's cache and invalidating the corresponding cache
     line in P2's cache.
-    Later, when collection is finished,
+    Later, when collection is finishes,
     P2's process resumes execution and incurs a cache miss for the object that
     it had been using.
     % He never states this in either of his parallel GC papers.
@@ -510,7 +514,7 @@ There are two reasons for this
 We also investigated another area for increased parallel performance.
 Boehm GC maintains thread local free lists that allow memory to be allocated
 without contending for locks on global free lists.
-When a local free list cannot satisfy a memory request, the global free
+When local free lists cannot satisfy a memory request, the global free
 lists must be used.
 The local free lists amortise the costs of locking the global free lists.
 We anticipate that increasing the size of the local free lists will cause even

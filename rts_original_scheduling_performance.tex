@@ -30,7 +30,8 @@
 In Section~\ref{sec:rts_gc} we ran our benchmarks with a recent version of the
 runtime system.
 In the rest of this chapter we describe many of the improvements to the
-runtime system that improved parallel performance.
+runtime system that led to the improved parallel performance reported in
+that section.
 
 \plan{Introduce right recursion.}
 Figure~\ref{fig:map_right_and_left_recursive} shows two alternative, parallel
@@ -72,11 +73,15 @@ and therefore tend to write right recursive code.
 
 \plan{Show performance figures.}
 Table~\ref{tab:right} shows average elapsed time in seconds for the
-mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
-We this program because it is easy to observe the speedup due to parallelism
-in Mercury as garbage collection does not affect its performance very much.
-The loop that iterates over the rows in the image uses right recursion;
-it is similar to the loop in Figure~\ref{fig:map_right_recursive}.
+mandelbrot\_lowalloc program from 20 test runs.
+We described this program above in Section~\ref{sec:rts_gc}.
+Using this program we can easily observe the
+speedup due to parallelism in Mercury without the effects of the garbage
+collector.
+The main loop of the renderer uses right recursion,
+and is similar to \code{map/3}
+(Figure~\ref{fig:map_right_recursive}),
+this is the loop that iterates over the image's rows.
 The leftmost column of the table shows the maximum number of contexts
 that may exist at any time.
 This is the limit that was introduced in the previous section.
@@ -133,10 +138,9 @@ After executing \code{P/2} the original context will call the
 \joinandcontinue barrier.
 It then attempts to execute a spark from its local spark stack,
 which will fail because the only spark was placed on the global spark queue.
-The original context will be needed after the other conjunct finishes, 
-to execute the code after the parallel conjunction.
-The original context cannot proceed but will be needed later,
-therefore it is suspended until all the other 599 iterations of the loop
+The original context cannot proceed until after the other context finishes,
+but it will be needed then and must then be kept in memory.
+Therefore It is suspended until all the other 599 iterations of the loop
 have finished.
 Meanwhile the spark that was placed on the global run queue is converted
 into a new context.
@@ -145,7 +149,7 @@ becomes blocked within the recursive instance of the same parallel
 conjunction;
 it must wait for the remaining 598 iterations of the loop.
 This process continues to repeat itself,
-allocating more contexts which can consume large amounts of memory.
+allocating more contexts.
 Each context consumes a significant amount of memory,
 much more than one stack frame.
 Therefore
@@ -267,12 +271,24 @@ Right and Left recursion shown with standard deviation}
 Table~\ref{tab:2009_left_nolimit} shows benchmark results using left
 recursion.
 The table is broken into three sections:
+
+\begin{enumerate}
+
+\item
 a copy of the right recursion data from Table~\ref{tab:right},
 which is presented again for comparison;
+
+\item
 the left recursion data,
 which we will discuss now;
+
+\item
 and left recursion data with a modified context limit,
 which we will discuss in a moment.
+
+\end{enumerate}
+
+\noindent
 The figures in parenthesis are the standard deviation of the samples.
 
 The left recursive figures are underwhelming;
@@ -374,7 +390,7 @@ this way.
 
 \plan{Reinforce that these results support the idea that scheduling
 decisions are made prematurely}
-Both of the left recursion problems have the same cause:
+Both of the left recursive programs have the same cause:
 the decision to execute a spark sequentially or in parallel is
 made too early.
 This decision is made when the spark is scheduled,
