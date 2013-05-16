@@ -181,7 +181,8 @@ some citations [especially in the first few pages). Additionally
     The discussion in this Chapter could benefit from graphical
     representations of the data structures.
 
-** TODO Chapter 3
+** DONE Chapter 3
+   CLOSED: [2013-05-16 Thu 16:28]
 
 *** DONE Proofread                                                  :trivial:
     CLOSED: [2013-05-12 Sun 18:13]
