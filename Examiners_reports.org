@@ -199,9 +199,15 @@ some citations [especially in the first few pages). Additionally
 *** CHCK Prose on page 56
     I found page 56 rather poorly written and hard to follow.
 
-** TODO Chapter 6
+** DONE Chapter 6
+   CLOSED: [2013-04-14 Sun 14:42]
 
-*** CHCK Please include more figures.                               :diagram:
+*** WONT Please include more figures.                               :diagram:
+    CLOSED: [2013-04-14 Sun 14:42]
+
+No,  Due to bitrot in the upstream ThreadScope project generating
+additional pictures requires extra work.
+
 
 ** TODO Bibliography
 
