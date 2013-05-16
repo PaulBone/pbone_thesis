@@ -5,7 +5,7 @@
 \plan{Introduction}
 In Sections~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar},
 we introduced parallelism in Mercury and described the runtime system in
-generic terms.
+general terms.
 In this section we will explain how sparks were originally managed
 prior to 2009,
 when I began my Ph.D.\ candidature.
@@ -46,7 +46,7 @@ The second aim is to reduce the amount of memory allocated
 as contexts' stacks by reducing the number of contexts allocated.
 Globally scheduled sparks may be converted into contexts,
 so they are also included in this limit.
-We explain this limit on the number of context in more detail
+We explain this limit on the number of contexts in more detail
 in Section~\ref{sec:rts_original_scheduling_performance},
 after covering the background information in the current section.
 Note that sparks placed on the global queue are executed in a
@@ -137,7 +137,7 @@ Then it executes the barrier \joinandcontinue,
 shown in
 Algorithm~\ref{alg:join_and_continue_peterw}.
 The algorithms throughout this chapter use a macro named \code{MR\_ENGINE}
-to access the fields of the current engine structure.
+to access the fields of the structure representing the current engine.
 Depending on how full the global run queue is,
 and how parallel tasks are interleaved,
 there are three important scenarios:
@@ -219,7 +219,7 @@ there are three important scenarios:
 
     Eventually $C_{Orig}$ will execute its call to \joinandcontinue
     (line 5 of the example),
-    or be executed after waiting on the barrier's lock (line 4 of
+    or resume execution after waiting on the barrier's lock (line 4 of
     \joinandcontinue),.
     When this happens it will find that \var{st->MR\_st\_num\_outstanding}
     is zero,
@@ -343,7 +343,7 @@ They do this by calling \idle,
 whose code is shown in Algorithm~\ref{alg:MR_idle_initial}.
 Only one of the idle engines can execute \idle at a time.
 \var{MR\_runqueue\_lock} protects the context run queue and the
-global context queue from concurrent access.
+global spark queue from concurrent access.
 After acquiring the lock,
 engines execute a loop.
 An engine exits the loop only when it finds some work to do or the
@@ -373,8 +373,8 @@ register and the spark's thread local mutables
 into the context.
 If the engine does not find any work,
 it will wait using a condition variable and the run queue lock.
-The pthreads wait function is able to unlock the lock and wait on the
-condition atomically, preventing race conditions.
+The pthread wait function is able to unlock the lock and wait on the
+condition variable atomically, preventing race conditions.
 The condition variable is used to wake up the engine if either a spark is
 placed on the global spark queue or a context is placed on the context run
 queue.

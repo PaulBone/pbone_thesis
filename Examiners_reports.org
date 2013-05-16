@@ -448,26 +448,696 @@ Which discussion? there are several, many of them already include C
 style structure definitions (Sparks, SyncTerms and Futures).  I don't
 think anything more graphical is required.
 
-** TODO Chapter 3
+** DONE Chapter 3
+   CLOSED: [2013-05-16 Thu 16:28]
 
-*** TODO Proofread                                                  :trivial:
+*** DONE Proofread                                                  :trivial:
+    CLOSED: [2013-05-12 Sun 18:13]
     I found several English errors and typos, please proofread
 
-*** TODO Amdahl's law vs Gustafson-Barsis law      :bibliographic:discussion:
+diff --git a/macros.tex b/macros.tex
+index db513dd..500081b 100644
+--- a/macros.tex
++++ b/macros.tex
+@@ -46,6 +46,7 @@
+ \newcommand{\push}[0]{\code{MR\_push\_spark()}\xspace}
+ \newcommand{\pop}[0]{\code{MR\_pop\_spark()}\xspace}
+ \newcommand{\steal}[0]{\code{MR\_steal\_spark()}\xspace}
++\newcommand{\esactiondata}{\code{MR\_\-es\_\-action\_\-data}\xspace}
+ \newcommand{\findpartime}[0]{\code{find\_par\_time}\xspace}
+ \newcommand{\findbestpartition}[0]{\code{find\_best\_partition}\xspace}
+ 
+diff --git a/rts.tex b/rts.tex
+index b7f5096..e30d014 100644
+--- a/rts.tex
++++ b/rts.tex
+@@ -7,11 +7,11 @@
+ Early in the project
+ we tested two manually parallelised programs:
+ a raytracer and a mandelbrot image generator.
+-Both of them have a single significant loop
++Both programs have a single significant loop
+ whose iterations are independent of one another.
+-We expect that automatic parallelisation would parallelise this loop
+-as it is the best place to introduce parallelism.
+-When we parallelised this loop manually we did
++We expect that a good automatic parallelisation system will parallelise this
++loop as it is the best place to introduce parallelism.
++When we parallelised this loop manually,
+ we did not get the speedups that we expected.
+ Therefore,
+ we chose to address the performance problems
+@@ -30,10 +30,12 @@ spark scheduling.
+ We address one of these problems by introducing work stealing in
+ Section~\ref{sec:rts_work_stealing}.
+ Then in Section~\ref{sec:rts_reorder} we reorder conjuncts in independent
+-parallel conjunctions to work around the other spark scheduling problem.
+-Finally, in Section~\ref{sec:rts_work_stealing2} we make further improvements to
+-work stealing and change how idle engines look for work, sleep and are
+-woken up.
++parallel conjunctions to work around the second spark scheduling problem.
++Finally, in Section~\ref{sec:rts_work_stealing2} we make further
++improvements to
++work stealing and change the data structures and algorithms used to manage
++idle engines,
++including how idle engines look for work, sleep and are woken up.
+ 
+ \input{rts_gc}
+ \input{rts_original_scheduling}
+diff --git a/rts_gc.tex b/rts_gc.tex
+index a01cdf5..2ffb2da 100644
+--- a/rts_gc.tex
++++ b/rts_gc.tex
+@@ -11,7 +11,7 @@ Mercury does not allow destructive update.
+ %    Their use does not interfere with parallelism as they are used in
+ %    conjunction with impurity.
+ %    The compiler will not parallelise impure goals.}
+-Therefore a call usually returns its value in newly allocated memory
++Therefore a call usually returns its results in newly allocated memory
+ rather than modifying the memory of its parameters.
+ Likewise, a call cannot modify data that may be aliased.
+ This means that Mercury programs often have a high rate of allocation,
+@@ -57,8 +57,9 @@ for $P$ processors.
+ Using four processors the theoretical best speedup is:
+ %\paul{I prefer how \\frac displays maths but in text the fonts become tiny.}
+ $(1 + 19) / (1 + 19/4) = 3.48$.
+-17\% of the parallel runtime ($1 + 19/4$) is collector time.
+-If we use a machine with 100 processors then this becomes:
++The fraction of this new execution time ($1 + 19/4$) spent in the collector
++($1$) is 17\% (it was 0.5\% without parallelisation).
++If we use a machine with 100 processors then the speedup becomes:
+ $(1 + 19) / (1 + 19/100) = 16.8$;
+ with 84\% of the runtime spent in the collector.
+ As the number of processors increases,
+@@ -67,7 +68,7 @@ collection to complete.
+ 
+ \plan{Discuss predictions regarding parallel marking, locking and thread
+ local heaps.}
+-To reduce this problem,
++To reduce this effect,
+ \citet{boehm:1988:gc} included parallel marking support in their collector.
+ Ideally this would remove the bottleneck described above.
+ However,
+@@ -86,7 +87,7 @@ parallel Mercury programs (Section~\ref{sec:backgnd_merpar}).
+ The second is that
+ memory allocation routines must use locking to protect shared data
+ structures,
+-which will slow down allocation.
++which slows down allocation.
+ Boehm GC's authors recognised this problem and
+ added support for thread-local resources such as free lists.
+ Therefore,
+@@ -103,7 +104,7 @@ benchmark programs with different memory allocation requirements.
+ We wanted to determine how memory allocation rates affect
+ performance of parallel programs.
+ Our first benchmark is a raytracer developed for the
+-ICFP programming contest in 2000.
++ICFP programming contest in the year 2000.
+ For each pixel in the image,
+ the raytracer casts a ray into the scene to determine what colour to paint that pixel.
+ Two nested loops build the pixels for the image:
+@@ -184,15 +185,17 @@ interference from any other performance problems.
+ \plan{Describe performance in practice.}
+ The raytracer program benefits from parallelism in both Mercury and the
+ garbage collector.
+-Using Mercury's parallelism only (four Mercury engines, and one GC thread) 
+-speeds the program up by a factor of 1.58,
++Using Mercury's parallelism only
++(four Mercury engines, and one GC thread)
++the program achieves a speedup of 1.58,
+ compared to 1.29 when using the GC's parallelism only (one Mercury engine,
+ and four GC threads).
+ When using both Mercury and the GC's parallelism (four engines and four
+ marker threads)
+-the raytracer achieves a speedup of 2.73.
++it achieves a speedup of 2.73.
+ These speedups are much lower than we might expect from such a program:
+ either the mutator, the collector or both are not being parallelised well.
++
+ mandelbrot\_lowalloc does not see any benefit from parallel marking.
+ It achieves very good speedups from multiple Mercury engines.
+ We know that this program has a low allocation rate
+@@ -202,6 +205,7 @@ these results support the hypothesis that heavy use of garbage collection
+ makes it difficult to achieve good speedups when parallelising programs.
+ The more time spend in garbage collection,
+ the worse the speedup due to parallelism.
++
+ mandelbrot\_highalloc, which stores its data on the heap,
+ sees similar trends in performance as raytracer.
+ It is also universally slower than mandelbrot\_lowalloc.
+@@ -238,7 +242,7 @@ respectively.
+ 
+ \plan{Describe trends in either the mutator or GC time.}
+ As we expected, mandelbrot\_lowalloc spends very little time running the collector.
+-Typically, it ran the collector only twice during its execution.
++Typically, it runs the collector only twice during its execution.
+ Also, total collector time was usually between 5 and 30 milliseconds.
+ The other two programs ran the collector hundreds of times.
+ As we increased the number of Mercury engines
+@@ -291,7 +295,7 @@ number of Mercury engines
+ both the collector and mutator time decrease.
+ This shows that parallelism in Mercury and in Boehm GC both contribute to
+ the elapsed time speedup we saw in the diagonal path in Table~\ref{tab:gc}.
+-As Table~\ref{tab:gc_amdahl} give us more detail,
++As Table~\ref{tab:gc_amdahl} gives us more detail,
+ we can also see that collector time as a percentage of elapsed time
+ increases as we add threads and engines to the collector and Mercury.
+ This occurs for both the raytracer and mandelbrot\_highalloc.
+@@ -350,8 +354,8 @@ by definition,
+ allocation cannot occur during collector time.
+ mandelbrot\_highalloc has a higher allocation rate than raytracer.
+ However,
+-it spends less time doing collection, when measured either absolutely
+-or by percentage of elapsed time.
++measuring either absolutely or as a percentage of elapsed time,
++mandelbrot\_highalloc spends less time doing collection than the raytracer.
+ Garbage collectors are tuned for particular workloads.
+ It is likely that Boehm GC handles mandelbrot\_highalloc's workload more
+ easily than raytracer's workload.
+@@ -387,7 +391,7 @@ we have shown that speedups due to Mercury's parallel conjunction
+ are limited by the garbage collector.
+ Better speedups can be achieved by using the parallel marking feature in the
+ garbage collector.
+-We also attempted to improve performance further by modifying the initial
++Now we will show how performance can be improved by modifying the initial
+ heap size of the program.
+ Table~\ref{tab:gc_heapsize} shows the performance of the raytracer and
+ mandelbrot\_highalloc programs with various initial heap sizes.
+@@ -418,7 +422,7 @@ If, after a collection, it still cannot satisfy the memory request then it
+ will increase the size of the heap.
+ In each collection,
+ the collector must read all the stacks, global data, thread local data and
+-all the in-use memory in the heap 
++all the in-use memory in the heap
+ (memory that is reachable from the stacks, global data and thread local
+ data).
+ This causes a lot of cache misses, especially when the heap is large.
+@@ -438,8 +442,8 @@ than with a heap size of 32MB.
+ %remembering to care about normal caches much less TLBs.}
+ 64MB is much larger than the processor's cache size
+ (this processor's L3 cache is 8MB) and
+-covers more page mappings than its TLBs can hold (L2 TLB covers 2MB when
+-using 4KB pages).
++covers more page mappings than its TLBs can hold
++(the L2 TLB covers 2MB when using 4KB pages).
+ The collector's structures and access patterns may be slower at this size
+ because of these hardware limitations,
+ and the benefits of a 64MB heap are not enough to overcome the effects of
+@@ -470,12 +474,12 @@ There are two reasons for this
+     \item[Reason 1]
+     In a parallel program with more than one Mercury engine,
+     each collection must \emph{stop-the-world}:
+-    All Mercury engines are stopped so that they do not modify the heap during
++    all Mercury engines are stopped so that they do not modify the heap during
+     the marking phase.
+     This requires synchronisation which reduces the performance of parallel
+     programs.
+-    Therefore, the less often collection occurs, the rarer stop-the-world
+-    events are, and the less their synchronisation affects performance.
++    The less frequently collection occurs, the less performance is affected
++    by the synchronisation of stop-the-world events.
+ 
+     \item[Reason 2]
+     Another reason was suggested by Simon Marlow:
+@@ -490,7 +494,7 @@ There are two reasons for this
+     (P2) objects,
+     causing a cache miss in P1's cache and invalidating the corresponding cache
+     line in P2's cache.
+-    Later, when collection is finished,
++    Later, when collection is finishes,
+     P2's process resumes execution and incurs a cache miss for the object that
+     it had been using.
+     % He never states this in either of his parallel GC papers.
+@@ -503,7 +507,7 @@ There are two reasons for this
+ We also investigated another area for increased parallel performance.
+ Boehm GC maintains thread local free lists that allow memory to be allocated
+ without contending for locks on global free lists.
+-When a local free list cannot satisfy a memory request, the global free
++When local free lists cannot satisfy a memory request, the global free
+ lists must be used.
+ The local free lists amortise the costs of locking the global free lists.
+ We anticipate that increasing the size of the local free lists will cause even
+diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
+index da8adda..1a8e80d 100644
+--- a/rts_original_scheduling.tex
++++ b/rts_original_scheduling.tex
+@@ -5,7 +5,7 @@
+ \plan{Introduction}
+ In Sections~\ref{sec:backgnd_merpar} and~\ref{sec:backgnd_deppar},
+ we introduced parallelism in Mercury and described the runtime system in
+-generic terms.
++general terms.
+ In this section we will explain how sparks were originally managed
+ prior to 2009,
+ when I began my Ph.D.\ candidature.
+@@ -46,7 +46,7 @@ The second aim is to reduce the amount of memory allocated
+ as contexts' stacks by reducing the number of contexts allocated.
+ Globally scheduled sparks may be converted into contexts,
+ so they are also included in this limit.
+-We explain this limit on the number of context in more detail
++We explain this limit on the number of contexts in more detail
+ in Section~\ref{sec:rts_original_scheduling_performance},
+ after covering the background information in the current section.
+ Note that sparks placed on the global queue are executed in a
+@@ -137,7 +137,7 @@ Then it executes the barrier \joinandcontinue,
+ shown in
+ Algorithm~\ref{alg:join_and_continue_peterw}.
+ The algorithms throughout this chapter use a macro named \code{MR\_ENGINE}
+-to access the fields of the current engine structure.
++to access the fields of the structure representing the current engine.
+ Depending on how full the global run queue is,
+ and how parallel tasks are interleaved,
+ there are three important scenarios:
+@@ -219,7 +219,7 @@ there are three important scenarios:
+ 
+     Eventually $C_{Orig}$ will execute its call to \joinandcontinue
+     (line 5 of the example),
+-    or be executed after waiting on the barrier's lock (line 4 of
++    or resume execution after waiting on the barrier's lock (line 4 of
+     \joinandcontinue),.
+     When this happens it will find that \var{st->MR\_st\_num\_outstanding}
+     is zero,
+@@ -343,7 +343,7 @@ They do this by calling \idle,
+ whose code is shown in Algorithm~\ref{alg:MR_idle_initial}.
+ Only one of the idle engines can execute \idle at a time.
+ \var{MR\_runqueue\_lock} protects the context run queue and the
+-global context queue from concurrent access.
++global spark queue from concurrent access.
+ After acquiring the lock,
+ engines execute a loop.
+ An engine exits the loop only when it finds some work to do or the
+@@ -373,8 +373,8 @@ register and the spark's thread local mutables
+ into the context.
+ If the engine does not find any work,
+ it will wait using a condition variable and the run queue lock.
+-The pthreads wait function is able to unlock the lock and wait on the
+-condition atomically, preventing race conditions.
++The pthread wait function is able to unlock the lock and wait on the
++condition variable atomically, preventing race conditions.
+ The condition variable is used to wake up the engine if either a spark is
+ placed on the global spark queue or a context is placed on the context run
+ queue.
+diff --git a/rts_original_scheduling_performance.tex b/rts_original_scheduling_performance.tex
+index 450bf3d..bcfa6ea 100644
+--- a/rts_original_scheduling_performance.tex
++++ b/rts_original_scheduling_performance.tex
+@@ -30,7 +30,8 @@
+ In Section~\ref{sec:rts_gc} we ran our benchmarks with a recent version of the
+ runtime system.
+ In the rest of this chapter we describe many of the improvements to the
+-runtime system that improved parallel performance.
++runtime system that led to the improved parallel performance reported in
++that section.
+ 
+ \plan{Introduce right recursion.}
+ Figure~\ref{fig:map_right_and_left_recursive} shows two alternative, parallel
+@@ -77,9 +78,10 @@ We use the mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
+ Using this program we can easily observe the
+ speedup due to parallelism in Mercury without the effects of the garbage
+ collector.
+-The loop that iterates over the rows in the image uses right recursion.
+-It is similar to \code{map/3}
+-in Figure~\ref{fig:map_right_recursive}.
++The main loop of the renderer uses right recursion,
++and is similar to \code{map/3}
++(Figure~\ref{fig:map_right_recursive}),
++this is the loop that iterates over the image's rows.
+ The leftmost column shows the maximum number of contexts permitted at
+ any time.
+ This is the limit that was mentioned in the previous section.
+@@ -130,10 +132,9 @@ After executing \code{P/2} the original context will call the
+ \joinandcontinue barrier.
+ It then attempts to execute a spark from its local spark stack,
+ which will fail because the only spark was placed on the global spark queue.
+-The original context will be needed after the other conjunct finishes, 
+-to execute the code after the parallel conjunction.
+-The original context cannot proceed but will be needed later,
+-therefore it is suspended until all the other 599 iterations of the loop
++The original context cannot proceed until after the other context finishes,
++but it will be needed then and must then be kept in memory.
++Therefore It is suspended until all the other 599 iterations of the loop
+ have finished.
+ Meanwhile the spark that was placed on the global run queue is converted
+ into a new context.
+@@ -142,7 +143,7 @@ becomes blocked within the recursive instance of the same parallel
+ conjunction;
+ it must wait for the remaining 598 iterations of the loop.
+ This process continues to repeat itself,
+-allocating more contexts which can consume large amounts of memory.
++allocating more contexts.
+ Each context consumes a significant amount of memory,
+ much more than one stack frame.
+ Therefore
+@@ -264,12 +265,24 @@ Right and Left recursion shown with standard deviation}
+ Table~\ref{tab:2009_left_nolimit} shows benchmark results using left
+ recursion.
+ The table is broken into three sections:
++
++\begin{enumerate}
++
++\item
+ a copy of the right recursion data from Table~\ref{tab:right},
+ which is presented again for comparison;
++
++\item
+ the left recursion data,
+ which we will discuss now;
++
++\item
+ and left recursion data with a modified context limit,
+ which we will discuss in a moment.
++
++\end{enumerate}
++
++\noindent
+ The figures in parenthesis are the standard deviation of the samples.
+ 
+ The left recursive figures are underwhelming;
+@@ -371,7 +384,7 @@ this way.
+ 
+ \plan{Reinforce that these results support the idea that scheduling
+ decisions are made prematurely}
+-Both of the left recursion problems have the same cause:
++Both of the left recursive programs have the same cause:
+ the decision to execute a spark sequentially or in parallel is
+ made too early.
+ This decision is made when the spark is scheduled,
+diff --git a/rts_reorder.tex b/rts_reorder.tex
+index 16f9cd7..ccbcc29 100644
+--- a/rts_reorder.tex
++++ b/rts_reorder.tex
+@@ -59,7 +59,7 @@ Figure~\ref{fig:map_left_recursive} (page~\pageref{fig:map_right_recursive}).
+ \end{algorithm}
+ 
+ \plan{Describe the transformation}
+-We only attempted to reorder completely independent conjunctions.
++We only reorder completely independent conjunctions.
+ It may be possible to find independent sections of dependent conjunctions
+ and reorder them,
+ but we have not needed to.
+@@ -82,10 +82,11 @@ for example a goal cannot be swapped with an impure goal,
+ therefore \trypushconjlater may not always push a goal all the way to the
+ end of the list.
+ 
+-\plan{Discuss reasoning for not showing results}.
++\plan{Discuss reasoning for not showing results.}
+ We have benchmarked and tested this to confirm that independent right recursion
+ now performs the same as independent left recursion.
+-This is because independent right recursion is transformed into independent
++We expected these programs to perform identically
++because independent right recursion is transformed into independent
+ left recursion.
+ 
+ 
+diff --git a/rts_work_stealing.tex b/rts_work_stealing.tex
+index 2c6b9f1..856b106 100644
+--- a/rts_work_stealing.tex
++++ b/rts_work_stealing.tex
+@@ -18,7 +18,7 @@ before it is executed.
+ Work stealing is a popular method for managing parallel work in a shared
+ memory multiprocessor system.
+ % XXX: There may be earlier papers by keller 1984 as cited by halstead.
+-Multilisp \citep{halstead:1985:multilisp} was one of the first systems to
++Multilisp (\citet{halstead:1985:multilisp}) was one of the first systems to
+ use work stealing,
+ which Halstead calls ``an unfair scheduling policy''.
+ The term ``unfair'' is not an expression of the morals of stealing (work),
+@@ -70,7 +70,7 @@ Work stealing's other benefits can be summarised as follows.
+ 
+ \end{itemize}
+ 
+-The initial work stealing implementation was built jointly by
++Mercury's initial work stealing implementation was built jointly by
+ Peter Wang and myself,
+ Wang contributed about 80\% of the work
+ and I contributed the remaining 20\%.
+@@ -349,7 +349,7 @@ The deque provides the following operations.
+     is not a double pointer as one might expect.
+     This implementation detail avoids memory allocation for sparks inside
+     the deque implementation.
+-    A callers of any of these functions temporarily stores the spark on
++    Callers of any of these functions temporarily stores the spark on
+     its program stack.
+ 
+     \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]
+@@ -486,7 +486,7 @@ processors in the order that they appear in the program.
+ % processors in the order that they appear in the program.
+ % This is much stronger than C's \code{volatile} keyword which only controls
+ % how the compiler may order instructions and cache values.
+-\citet{Chase_2005_wsdeque} uses Java's \code{volatile} qualifier in the
++\citet{Chase_2005_wsdeque} use Java's \code{volatile} qualifier in the
+ declaration for the \var{top} and \var{bottom} fields of the deque
+ structure.
+ When adding the deque algorithms to Mercury's runtime system,
+diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
+index b872029..65cb5a5 100644
+--- a/rts_work_stealing2.tex
++++ b/rts_work_stealing2.tex
+@@ -230,7 +230,7 @@ without a context will call \idle to acquire new work.
+ the new version is shown in Algorithm~\ref{alg:idle}.
+ This algorithm uses a structure pointed to by \var{eng\_data} to receive
+ notifications;
+-we will discuss this structure and notifications this later in this section.
++we will discuss this structure and notifications later in this section.
+ For now we will discuss how \idle looks for work in lieu of any notification.
+ 
+ \idle tries to find a runnable context before trying to find a local
+@@ -275,7 +275,7 @@ If it finds a context,
+ it will execute \prepareengineforcontext
+ (Algorithm~\ref{alg:prepare_engine_for_context}),
+ which checks for and unloads the engine's current context,
+-and then loads a new context.
++and then loads the new context.
+ It also clears the context's resume field and returns the field's previous
+ value so that \idle can jump to the resume address.
+ The context's resume field must be cleared here as
+@@ -544,7 +544,7 @@ This is modelled as a state transition of the recipient;
+ such transitions are shown with red and green edges in the graph.
+ Red edges denote transitions from the sleeping state:
+ the sender acquires the \code{MR\_es\_lock} in the
+-\enginesleepsync structure while updating the structures contents and
++\enginesleepsync structure while updating the structure's contents and
+ signalling the sleep semaphore.
+ Green edges denote transitions from other states:
+ the sender uses a compare and swap to write the \code{MR\_BUSY} value to the
+@@ -585,13 +585,13 @@ another engine.
+ 
+     \item[\code{MR\_ACTION\_CONTEXT}:]
+     A context has become runnable and is pointed to by the
+-    \code{MR\_es\_action\_data} field.
++    \esactiondata field.
+     We attach the context to the message so that we do not have to place it
+     in the context run queue and then retrieve it again when we know that
+     this engine is capable of executing the context.
+     However this notification cannot be ignored as that would cause the
+     context to be leaked.
+-    Leaking a context means not dropping or loosing the context;
++    Leaking a context means dropping or losing the context;
+     a context that must be executed may not be leaked as the computation it
+     represents would get lost.
+     Therefore we only ever send \code{MR\_ACTION\_CONTEXT} messages to engines in
+@@ -614,7 +614,7 @@ another engine.
+ 
+     \item[\code{MR\_ACTION\_WORKSTEAL}:]
+     A spark has been placed on the spark deque indicated by the
+-    \code{MR\_es\_action\_data} field.
++    \esactiondata field.
+     This message is used to notify an engine of a new spark that it might be
+     able to steal and execute.
+     Informing the thief which spark deque it should check is an
+@@ -1089,10 +1089,10 @@ However,
+ the smaller number of spark deques make work stealing faster.
+ Overall,
+ the benefit of the new implementation depends on the program being executed.
+-However it is important to remember that fibs is a microbenchmark and does
++However it is important to remember that fibs is a micro-benchmark and does
+ not represent typical programs,
+-especially granularity control as these versions create embarrassing
+-parallelism.
++especially the non-granularity controlled and under-granularity controlled
++versions as they create embarrassing parallelism.
+ 
+ There are some other interesting trends in the results.
+ Most obviously,
+@@ -1104,11 +1104,11 @@ run more slowly than those with coarse granularity.
+ However
+ when we consider the sequential results for varying amounts of granularity,
+ we see some strange results.
+-We should expect to see the overheads of granularity control in these
++We expected to see the overheads of granularity control in these
+ results;
+ the results with large values for \Depth should be slower than the ones with
+ smaller values.
+-We would also expect the results without granularity control to be fastest,
++We also expected the results without granularity control to be the fastest,
+ but not significantly:
+ in practice \fibsgc contributes to a tiny part of the call graphs of tests
+ with a low \Depth value.
+@@ -1117,8 +1117,8 @@ the sequential execution times for fibs with a \Depth of 40
+ are \emph{faster} than those with a \Depth of 10
+ and those without granularity control.
+ We are not sure of the cause,
+-however one hypothesis is that of the two procedures used in the granularity control
+-code,
++however one hypothesis is that of the two procedures used in the granularity
++control code,
+ \fibsseq and \fibsgc,
+ one is faster, namely \fibsgc, due to
+ some strange interaction of the processor's branch predictor and the code's
+@@ -1145,7 +1145,7 @@ the stolen sparks
+ onto its own deque, then it immediately executes the single spark which was
+ not placed on the deque.
+ With each stealing operation,
+-sparks becomes distributed among more of the engines,
++sparks become distributed among more of the engines,
+ which improves the probability that a given victim has work on its own deque.
+ Work stealing will become less frequent as engines try to execute their own
+ sparks before stealing other's,
+
+*** DONE Amdahl's law vs Gustafson-Barsis law      :bibliographic:discussion:
+    CLOSED: [2013-04-14 Sun 16:44]
     Amdahl's law tend to be rather conservative \ have you considered
     using something like Gustafson-Barsis instead?
 
-        [It's pesimistic for a reason - it works]
+        Added a citation and a paragraph about why this is not applicable.
 
-*** CHCK Clarification/Discussion (Page 50)        :clarification:discussion:
+diff --git a/bib.bib b/bib.bib
+index 41b7cff..57dbefc 100644
+--- a/bib.bib
++++ b/bib.bib
+@@ -1835,5 +1835,14 @@ p               Enrico Pontelli},
+   address = {New York, NY, USA},
+ }
+ 
++o
++@article{gustafson:88:reevaluating-amdahl,
+ 
++    author = {John L. Gustafson},
++    title = {Reevaluating Amdahl's Law},
++    journal = {Communications of the ACM},
++    year = {1988},
++    volume = {31},
++    pages = {532--533}
++}
+ 
+diff --git a/rts_gc.tex b/rts_gc.tex
+index a01cdf5..327cd26 100644
+--- a/rts_gc.tex
++++ b/rts_gc.tex
+@@ -65,6 +65,13 @@ As the number of processors increases,
+ the mutator threads spend a larger proportion of their time waiting for
+ collection to complete.
+ 
++A reviewer suggested the use of Gustafson-Barsis' law
++\citep{gustafson:88:reevaluating-amdahl}
++as Amdahl's law is pessimistic.
++However Gustafson-Basis' law assumes that the amount of available data that
++one might want to process is unbounded.
++This rarely true for most applications and so Amdahl's law is more applicable.
++
+ \plan{Discuss predictions regarding parallel marking, locking and thread
+ local heaps.}
+ To reduce this problem,
+
+*** WONT Clarification/Discussion (Page 50)        :clarification:discussion:
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
     bounding/unbounding threads?
 
-*** CHCK Prose on page 56
+    No such reference exists.  There are no "reasons" on this page
+    and "aim 2" is both obvious given the reasoning on p50 and is
+    explained and measured throughout the dissertation.
+
+*** DONE Prose on page 56
+    CLOSED: [2013-04-14 Sun 15:46]
     I found page 56 rather poorly written and hard to follow.
 
-** TODO Chapter 6
+I've made the prose clearer and included some extra clarifications to
+resolve potential ambiguities.
 
+diff --git a/rts_original_scheduling_performance.tex b/rts_original_scheduling_performance.tex
+index 450bf3d..3b87ebd 100644
+--- a/rts_original_scheduling_performance.tex
++++ b/rts_original_scheduling_performance.tex
+@@ -72,42 +72,43 @@ and therefore tend to write right recursive code.
+ 
+ \plan{Show performance figures.}
+ Table~\ref{tab:right} shows average elapsed time in seconds for the
+-mandelbrot\_lowalloc program from 20 test runs.
+-We use the mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
+-Using this program we can easily observe the
+-speedup due to parallelism in Mercury without the effects of the garbage
+-collector.
+-The loop that iterates over the rows in the image uses right recursion.
+-It is similar to \code{map/3}
+-in Figure~\ref{fig:map_right_recursive}.
+-The leftmost column shows the maximum number of contexts permitted at
+-any time.
+-This is the limit that was mentioned in the previous section.
++mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
++We this program because it is easy to observe the speedup due to parallelism
++in Mercury as garbage collection does not affect its performance very much.
++The loop that iterates over the rows in the image uses right recursion;
++it is similar to the loop in Figure~\ref{fig:map_right_recursive}.
++The leftmost column of the table shows the maximum number of contexts
++that may exist at any time.
++This is the limit that was introduced in the previous section.
+ The next two columns give the elapsed execution time for a sequential
+-version of the program;
+-in this version of the program no parallel conjunctions were used.
++version of the program,
++the program compiled without the use of the parallel conjunction operator.
+ These two columns give results without and with thread safety.
+ The following four columns give the elapsed execution times
+ using one to four Mercury engines.
+-The numbers in parentheses are the ratio between the time and the
+-sequential thread safe time.
++Each value in the table is a mean of 20 test runs.
++The numbers in parentheses are the ratio between the mean time and the
++mean sequential thread safe time.
+ 
+ \plan{Observations}
+ In general we achieve more parallelism when we use more contexts,
+-up to a threshold of 601 contexts,
+-as there are 600 rows in the image and a base case each one consumes a
+-context.
++up to a threshold of 601 contexts.
++The threshold is at this point because
++there are 600 rows in the image meaning 600 iterations of the loop plus 1
++for the base case.
++Each iteration may consume a context.
+ This is why the program does not benefit greatly from a high limit such as
+ 1024 or 2048 contexts.
+-This program may use fewer than 600 contexts as any sequentially executed
+-sparks use their parent context.
++When a spark is executed in its parent context
++(two iterations execute sequentially)
++then the program may use fewer than 600 contexts.
+ This is possibly why a limit of 512 contexts also results in a good parallel
+ speedup.
+ When only 256 contexts are used,
+ the four core version achieves a speedup of 1.30,
+ compared to 3.55 for 512 or more contexts.
+-Given that mandelbrot uses independent parallelism there should never be any
+-need to suspend a context.
++Given that mandelbrot uses independent parallelism,
++ideally there should never be any need to suspend a context.
+ Therefore the program should parallelise well enough when restricted to
+ a small number of contexts (four to eight).
+ Too many contexts are needed to execute this program at the level of
+@@ -119,8 +120,10 @@ parallelism.
+ \plan{Describe the context limit problem.}
+ %Right recursion uses a context for each iteration of the loop,
+ %and then suspends that context.
+-To understand this problem we must consider how parallel conjunctions are
++To understand this problem, we must consider how parallel conjunctions are
+ executed (see Section~\ref{sec:backgnd_merpar}).
++We will step through the execution \code{map/3} from
++Figure~\ref{fig:map_right_recursive}.
+ The original context creates a spark for the second and later conjuncts and
+ puts it on the global spark queue.
+ It then executes the first conjunct \code{P/2}.
+
+** TODO Chapter 6
 *** CHCK Please include more figures.                               :diagram:
 
 ** TODO Bibliography

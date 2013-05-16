@@ -59,7 +59,7 @@ Figure~\ref{fig:map_left_recursive} (page~\pageref{fig:map_right_recursive}).
 \end{algorithm}
 
 \plan{Describe the transformation}
-We only attempted to reorder completely independent conjunctions.
+We only reorder completely independent conjunctions.
 It may be possible to find independent sections of dependent conjunctions
 and reorder them,
 but we have not needed to.
@@ -82,10 +82,11 @@ for example a goal cannot be swapped with an impure goal,
 therefore \trypushconjlater may not always push a goal all the way to the
 end of the list.
 
-\plan{Discuss reasoning for not showing results}.
+\plan{Discuss reasoning for not showing results.}
 We have benchmarked and tested this to confirm that independent right recursion
 now performs the same as independent left recursion.
-This is because independent right recursion is transformed into independent
+We expected these programs to perform identically
+because independent right recursion is transformed into independent
 left recursion.
 
 
