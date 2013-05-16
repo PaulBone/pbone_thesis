@@ -144,10 +144,14 @@ since its result may never be needed.
 Restricting parallelism to \ddet and \dccmulti code is not a significant
 limitation;
 since the design of Mercury strongly encourages deterministic code,
-in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
-and most programs spend an even greater fraction of their time in \ddet code.
-\peter{Do we have any statistics regarding what proportion of execution time
-  is spent in det code?  That would be a more relevant statistic.}
+in our experience, about 75 to 85\% of all Mercury procedures are
+\ddet\footnote{This statistic was calculated by counting the different
+determinism declarations in the source code of the Mercury system.},
+and we expect that most programs spend an even greater fraction of their
+time in \ddet code.
+% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
+% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
+% which is the most accuratly we have measured this.
 Existing algorithms for executing nondeterministic code in parallel
 have very significant overheads, generating slowdowns by integer factors.
 Thus we have given priority to parallelising deterministic code,
@@ -250,6 +254,12 @@ consists only of the final conjunct, $G_n$,
 and the context just executes it.
 Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
+The introduction of the barrier at the end of the conjunction can prevent
+the compiler from using tail recursion optimistion.
+This occurs when $G_n$ ended in a recursive call, and the whole conjunction
+was the last conjunction in a procedure's body.
+We discuss this problem in more detail and provide our solution in
+Chapter~\ref{chap:loop_control}.
 Figure~\ref{fig:par_conj} shows an example of the code generated to execute
 a parallel conjunction.
 In this example the first conjunct creates a spark that represents the

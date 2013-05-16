@@ -345,29 +345,108 @@ index b41bbbb..dbade1d 100644
  conjunctions and then \emph{guess} which conjunct produces each variable
  (usually the leftmost one in which the variable appears)
 
-** TODO Chapter 2
+** DONE Chapter 2
+   CLOSED: [2013-05-16 Thu 16:28]
 
-*** TODO Detism stats                                         :clarification:
+*** DONE Detism stats                                         :clarification:
+    CLOSED: [2013-05-16 Thu 12:27]
     Can you provide a source for the various statistics mentioned in page
     25?
 
-*** CHCK TRO and and-parallelism                :clarification:bibliographic:
+diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
+index 21d12ec..b6da6b4 100644
+--- a/backgnd_merpar.tex
++++ b/backgnd_merpar.tex
+@@ -144,10 +144,14 @@ since its result may never be needed.
+ Restricting parallelism to \ddet and \dccmulti code is not a significant
+ limitation;
+ since the design of Mercury strongly encourages deterministic code,
+-in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
+-and most programs spend an even greater fraction of their time in \ddet code.
+-\peter{Do we have any statistics regarding what proportion of execution time
+-  is spent in det code?  That would be a more relevant statistic.}
++in our experience, about 75 to 85\% of all Mercury procedures are
++\ddet\footnote{This statistic was calculated by counting the different
++determinism declarations in the source code of the Mercury system.},
++and we expect that most programs spend an even greater fraction of their
++time in \ddet code.
++% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
++% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
++% which is the most accuratly we have measured this.
+ Existing algorithms for executing nondeterministic code in parallel
+ have very significant overheads, generating slowdowns by integer factors.
+ Thus we have given priority to parallelising deterministic code,
+
+*** DONE TRO and and-parallelism                :clarification:bibliographic:
+    CLOSED: [2013-05-16 Thu 00:00]
     How does the discussion in page 26 relate to some of the tail recursion
     optimizations developed for and=parallelism?
 
-*** TODO Futures                                   :clarification:discussion:
+diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
+index 21d12ec..05a3b03 100644
+--- a/backgnd_merpar.tex
++++ b/backgnd_merpar.tex
+@@ -250,6 +250,12 @@ consists only of the final conjunct, $G_n$,
+ and the context just executes it.
+ Once each conjunct synchronises using {\joinandcontinue},
+ the original context will continue execution after the parallel conjunction.
++The introduction of the barrier at the end of the conjunction can prevent
++the compiler from using tail recursion optimistion.
++This occurs when $G_n$ ended in a recursive call, and the whole conjunction
++was the last conjunction in a procedure's body.
++We discuss this problem in more detail and provide our solution in
++Chapter~\ref{chap:loop_control}.
+ Figure~\ref{fig:par_conj} shows an example of the code generated to execute
+ a parallel conjunction.
+ In this example the first conjunct creates a spark that represents the
+
+*** DONE Futures                                   :clarification:discussion:
+    CLOSED: [2013-05-15 Wed 23:42]
     I might have missed it, but lots of what I see in page 28 resembles the
     behavior of conditional variables in POSIX threads.
 
-*** TODO Evidence                                                :discussion:
+diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
+index a5c14f2..a15a8bc 100644
+--- a/backgnd_deppar.tex
++++ b/backgnd_deppar.tex
+@@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
+ it must be declared as impure so that the compiler will not optimise away calls
+ to it.
+ 
++Some readers have asked if futures are similar to POSIX condition
++variables \citep{butenhof1997:pthreads}.
++While both name their operations \emph{wait} and \emph{signal} they are
++different in two significant ways.
++First,
++futures store a value as well as state,
++POSIX condition variables store only their state.
++Second,
++when a future is signalled, all its consumers are woken,
++whereas only one of a POSIX condition variable's waiters is woken.
++A POSIX condition variable is more similar to a semaphore.
++
+ To minimise waiting,
+ the compiler pushes \signal operations on each future
+ as far to the left into the producer conjunct as possible,
+
+*** DONE Evidence                                                :discussion:
+    CLOSED: [2013-05-15 Wed 18:35]
     I found some considerations in page 30/31 a bit speculative (especially
     the last two paragraphs before 2.4.1); any evidence supporting these
     clairns?  @ particular, evidence related to how unbalanced Computations
     can become due to different inputs.
 
-*** TODO Diagrams                                                   :diagram:
+Reviewer #1 raised this issue and I've provided extra information in
+response to reviewer #1.
+
+*** WONT Diagrams                                                   :diagram:
+
     The discussion in this Chapter could benefit from graphical
     representations of the data structures.
+
+Which discussion? there are several, many of them already include C
+style structure definitions (Sparks, SyncTerms and Futures).  I don't
+think anything more graphical is required.
 
 ** TODO Chapter 3
 
