@@ -122,7 +122,8 @@ could annotate it.
     semantics of the language [e.g., same observable behavior).  Even
     though it is true, it would be a good idea to spell it out.
 
-** TODO Chapter 1
+** DONE Chapter 1
+   CLOSED: [2013-05-16 Thu 20:36]
 
 Chapter 1 is supposed to set the contest for the whole dissertation, and it
 does so in a good way. The chapter could be strengthened a bit by adding
