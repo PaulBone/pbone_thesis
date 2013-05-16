@@ -159,9 +159,34 @@ some citations [especially in the first few pages). Additionally
 
 ** TODO Chapter 2
 
-*** TODO Detism stats                                         :clarification:
+*** DONE Detism stats                                         :clarification:
+    CLOSED: [2013-05-16 Thu 12:27]
     Can you provide a source for the various statistics mentioned in page
     25?
+
+diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
+index 21d12ec..b6da6b4 100644
+--- a/backgnd_merpar.tex
++++ b/backgnd_merpar.tex
+@@ -144,10 +144,14 @@ since its result may never be needed.
+ Restricting parallelism to \ddet and \dccmulti code is not a significant
+ limitation;
+ since the design of Mercury strongly encourages deterministic code,
+-in our experience, about 75 to 85\% of all Mercury procedures are \ddet,
+-and most programs spend an even greater fraction of their time in \ddet code.
+-\peter{Do we have any statistics regarding what proportion of execution time
+-  is spent in det code?  That would be a more relevant statistic.}
++in our experience, about 75 to 85\% of all Mercury procedures are
++\ddet\footnote{This statistic was calculated by counting the different
++determinism declarations in the source code of the Mercury system.},
++and we expect that most programs spend an even greater fraction of their
++time in \ddet code.
++% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
++% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
++% which is the most accuratly we have measured this.
+ Existing algorithms for executing nondeterministic code in parallel
+ have very significant overheads, generating slowdowns by integer factors.
+ Thus we have given priority to parallelising deterministic code,
 
 *** CHCK TRO and and-parallelism                :clarification:bibliographic:
     How does the discussion in page 26 relate to some of the tail recursion
