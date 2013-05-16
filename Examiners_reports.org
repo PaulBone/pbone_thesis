@@ -135,7 +135,34 @@ some citations [especially in the first few pages). Additionally
 *** TODO Pure/impure examples                                 :clarification:
     I would suggest to add examples of Pure and impure languages
 
-*** CHCK Is the example in page 8 correct?
+*** DONE Is the example in page 8 correct?
+    CLOSED: [2013-05-16 Thu 18:36]
+
+The example is correct, the text was not.
+
+diff --git a/literature_review.tex b/literature_review.tex
+index b41bbbb..2c17e59 100644
+--- a/literature_review.tex
++++ b/literature_review.tex
+@@ -557,14 +557,14 @@ The \code{par} and \code{pseq} functions have the types:
+ par :: a -> b -> b
+ pseq :: a -> b -> b
+ \end{verbatim}
+-They both take two arguments and return their first.
++They both take two arguments and return their second.
+ Their declarative semantics are identical;
+ however their \emph{operational} semantics are different.
+ The \code{par} function may spawn off a parallel task that evaluates its
+-second argument to WHNF,
+-and returns its first argument.
+-The \code{pseq} function will evaluate its second argument to WHNF
+-\emph{and then} return its first argument.
++first argument to WHNF,
++and returns its second argument.
++The \code{pseq} function will evaluate its first argument to WHNF
++\emph{and then} return its second argument.
+ We can think of these functions as the \code{const} function
+ with different evaluation strategies.
 
 *** DONE Logic programming scope (non SLD?)                   :clarification:
     CLOSED: [2013-05-16 Thu 18:26]

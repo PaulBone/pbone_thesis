@@ -557,14 +557,14 @@ The \code{par} and \code{pseq} functions have the types:
 par :: a -> b -> b
 pseq :: a -> b -> b
 \end{verbatim}
-They both take two arguments and return their first.
+They both take two arguments and return their second.
 Their declarative semantics are identical;
 however their \emph{operational} semantics are different.
 The \code{par} function may spawn off a parallel task that evaluates its
-second argument to WHNF,
-and returns its first argument.
-The \code{pseq} function will evaluate its second argument to WHNF
-\emph{and then} return its first argument.
+first argument to WHNF,
+and returns its second argument.
+The \code{pseq} function will evaluate its first argument to WHNF
+\emph{and then} return its second argument.
 We can think of these functions as the \code{const} function
 with different evaluation strategies.
 
