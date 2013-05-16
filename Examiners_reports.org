@@ -186,11 +186,50 @@ some citations [especially in the first few pages). Additionally
 *** TODO Proofread                                                  :trivial:
     I found several English errors and typos, please proofread
 
-*** TODO Amdahl's law vs Gustafson-Barsis law      :bibliographic:discussion:
+*** DONE Amdahl's law vs Gustafson-Barsis law      :bibliographic:discussion:
+    CLOSED: [2013-04-14 Sun 16:44]
     Amdahl's law tend to be rather conservative \ have you considered
     using something like Gustafson-Barsis instead?
 
-        [It's pesimistic for a reason - it works]
+        Added a citation and a paragraph about why this is not applicable.
+
+diff --git a/bib.bib b/bib.bib
+index 41b7cff..57dbefc 100644
+--- a/bib.bib
++++ b/bib.bib
+@@ -1835,5 +1835,14 @@ p               Enrico Pontelli},
+   address = {New York, NY, USA},
+ }
+ 
++o
++@article{gustafson:88:reevaluating-amdahl,
+ 
++    author = {John L. Gustafson},
++    title = {Reevaluating Amdahl's Law},
++    journal = {Communications of the ACM},
++    year = {1988},
++    volume = {31},
++    pages = {532--533}
++}
+ 
+diff --git a/rts_gc.tex b/rts_gc.tex
+index a01cdf5..327cd26 100644
+--- a/rts_gc.tex
++++ b/rts_gc.tex
+@@ -65,6 +65,13 @@ As the number of processors increases,
+ the mutator threads spend a larger proportion of their time waiting for
+ collection to complete.
+ 
++A reviewer suggested the use of Gustafson-Barsis' law
++\citep{gustafson:88:reevaluating-amdahl}
++as Amdahl's law is pessimistic.
++However Gustafson-Basis' law assumes that the amount of available data that
++one might want to process is unbounded.
++This rarely true for most applications and so Amdahl's law is more applicable.
++
+ \plan{Discuss predictions regarding parallel marking, locking and thread
+ local heaps.}
+ To reduce this problem,
 
 *** WONT Clarification/Discussion (Page 50)        :clarification:discussion:
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
