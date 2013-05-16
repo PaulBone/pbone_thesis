@@ -100,7 +100,8 @@ could annotate it.
 
 ** TODO p. 12.4.  Typo: “that the each iteration”                   :trivial:
 
-* TODO Examiner 2
+* DONE Examiner 2
+  CLOSED: [2013-05-16 Thu 22:00]
 
 ** DONE General
    CLOSED: [2013-05-16 Thu 21:46]
