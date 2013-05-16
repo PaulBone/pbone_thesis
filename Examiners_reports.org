@@ -196,11 +196,97 @@ some citations [especially in the first few pages). Additionally
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
     bounding/unbounding threads?
 
-*** CHCK Prose on page 56
+*** DONE Prose on page 56
+    CLOSED: [2013-04-14 Sun 15:46]
     I found page 56 rather poorly written and hard to follow.
 
-** TODO Chapter 6
+I've made the prose clearer and included some extra clarifications to
+resolve potential ambiguities.
 
+diff --git a/rts_original_scheduling_performance.tex b/rts_original_scheduling_performance.tex
+index 450bf3d..3b87ebd 100644
+--- a/rts_original_scheduling_performance.tex
++++ b/rts_original_scheduling_performance.tex
+@@ -72,42 +72,43 @@ and therefore tend to write right recursive code.
+ 
+ \plan{Show performance figures.}
+ Table~\ref{tab:right} shows average elapsed time in seconds for the
+-mandelbrot\_lowalloc program from 20 test runs.
+-We use the mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
+-Using this program we can easily observe the
+-speedup due to parallelism in Mercury without the effects of the garbage
+-collector.
+-The loop that iterates over the rows in the image uses right recursion.
+-It is similar to \code{map/3}
+-in Figure~\ref{fig:map_right_recursive}.
+-The leftmost column shows the maximum number of contexts permitted at
+-any time.
+-This is the limit that was mentioned in the previous section.
++mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
++We this program because it is easy to observe the speedup due to parallelism
++in Mercury as garbage collection does not affect its performance very much.
++The loop that iterates over the rows in the image uses right recursion;
++it is similar to the loop in Figure~\ref{fig:map_right_recursive}.
++The leftmost column of the table shows the maximum number of contexts
++that may exist at any time.
++This is the limit that was introduced in the previous section.
+ The next two columns give the elapsed execution time for a sequential
+-version of the program;
+-in this version of the program no parallel conjunctions were used.
++version of the program,
++the program compiled without the use of the parallel conjunction operator.
+ These two columns give results without and with thread safety.
+ The following four columns give the elapsed execution times
+ using one to four Mercury engines.
+-The numbers in parentheses are the ratio between the time and the
+-sequential thread safe time.
++Each value in the table is a mean of 20 test runs.
++The numbers in parentheses are the ratio between the mean time and the
++mean sequential thread safe time.
+ 
+ \plan{Observations}
+ In general we achieve more parallelism when we use more contexts,
+-up to a threshold of 601 contexts,
+-as there are 600 rows in the image and a base case each one consumes a
+-context.
++up to a threshold of 601 contexts.
++The threshold is at this point because
++there are 600 rows in the image meaning 600 iterations of the loop plus 1
++for the base case.
++Each iteration may consume a context.
+ This is why the program does not benefit greatly from a high limit such as
+ 1024 or 2048 contexts.
+-This program may use fewer than 600 contexts as any sequentially executed
+-sparks use their parent context.
++When a spark is executed in its parent context
++(two iterations execute sequentially)
++then the program may use fewer than 600 contexts.
+ This is possibly why a limit of 512 contexts also results in a good parallel
+ speedup.
+ When only 256 contexts are used,
+ the four core version achieves a speedup of 1.30,
+ compared to 3.55 for 512 or more contexts.
+-Given that mandelbrot uses independent parallelism there should never be any
+-need to suspend a context.
++Given that mandelbrot uses independent parallelism,
++ideally there should never be any need to suspend a context.
+ Therefore the program should parallelise well enough when restricted to
+ a small number of contexts (four to eight).
+ Too many contexts are needed to execute this program at the level of
+@@ -119,8 +120,10 @@ parallelism.
+ \plan{Describe the context limit problem.}
+ %Right recursion uses a context for each iteration of the loop,
+ %and then suspends that context.
+-To understand this problem we must consider how parallel conjunctions are
++To understand this problem, we must consider how parallel conjunctions are
+ executed (see Section~\ref{sec:backgnd_merpar}).
++We will step through the execution \code{map/3} from
++Figure~\ref{fig:map_right_recursive}.
+ The original context creates a spark for the second and later conjuncts and
+ puts it on the global spark queue.
+ It then executes the first conjunct \code{P/2}.
+
+** TODO Chapter 6
 *** CHCK Please include more figures.                               :diagram:
 
 ** TODO Bibliography
