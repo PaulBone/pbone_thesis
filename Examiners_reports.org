@@ -203,9 +203,8 @@ some citations [especially in the first few pages). Additionally
 
 *** CHCK Please include more figures.                               :diagram:
 
-** TODO Bibliography
-
-Zoltan said he'd check these.
+** DONE Bibliography
+   CLOSED: [2013-05-16 Thu 21:58]
 
 *** Several errors, please review your entries?
 
