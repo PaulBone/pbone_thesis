@@ -177,9 +177,13 @@ some citations [especially in the first few pages). Additionally
     clairns?  @ particular, evidence related to how unbalanced Computations
     can become due to different inputs.
 
-*** TODO Diagrams                                                   :diagram:
+*** WONT Diagrams                                                   :diagram:
     The discussion in this Chapter could benefit from graphical
     representations of the data structures.
+
+Which discussion? there are several, many of them already include C
+style structure definitions (Sparks, SyncTerms and Futures).  I don't
+think anything more graphical is required.
 
 ** TODO Chapter 3
 
