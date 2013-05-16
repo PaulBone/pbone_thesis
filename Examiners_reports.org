@@ -128,9 +128,36 @@ Chapter 1 is supposed to set the contest for the whole dissertation, and it
 does so in a good way. The chapter could be strengthened a bit by adding
 some citations [especially in the first few pages). Additionally
 
-*** TODO Non-SMP                                              :clarification:
+*** DONE Non-SMP                                              :clarification:
+    CLOSED: [2013-05-16 Thu 20:24]
     Considerations in this chapter ignore the new generations of
     architecturesbased on CUDA Numa (not SMP), etc.
+
+These architectures aren't ignored, they're acknowledged and then we
+say they're out of scope.  We did not specifically mention CUDA or
+other GPGPU architectures so I will acknowledge them:
+
+diff --git a/intro.tex b/intro.tex
+index 3f6ae20..0a9678f 100644
+--- a/intro.tex
++++ b/intro.tex
+@@ -87,8 +87,15 @@ and slower access to the other processors' memories.
+ %The benefit of NUMA is that it is easier to build large NUMA systems than
+ %large SMP systems.
+ %The drawback is that it is harder to program.
+-SMP systems are currently vastly more common, so programmers are usually
+-more interested in programming for them.
++A new type of architecture uses graphics programming units (GPUs) to
++perform general purpose computing,
++they are called GPGPU architectures.
++However they are not as general purpose as their name suggests:
++they work well for large regular data-parallel and compute-intensive
++workloads, but not work well for more general symbolic processing.
++Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
++Also SMP systems are vastly more common than NUMA systems,
++so programmers are usually more interested in programming for them.
+ Therefore, in this dissertation we are only concerned with SMP systems.
+ Our approach will work with NUMA systems, but not optimally. 
 
 *** DONE Pure/impure examples                                 :clarification:
     CLOSED: [2013-05-16 Thu 19:58]
