@@ -874,10 +874,8 @@ However clause bodies can still include tell unifications can may provide a
 variable instantiation that allows some other blocked computation to resume.
 Therefore most unifications still incur these extra costs.
 
-The Data Dependent AND-parallelism system (DDAS)
-of \citet{pontelli:1996:ddas} supports explicit
-dependent AND-parallelism in a non-deterministic language;
-it is based on the work of \citet{gupta:1991:ace}.
+\citet{pontelli:1996:nondet-and-par} describe a system that 
+supports explicit dependent AND-parallelism in a non-deterministic language.
 Analyses determine a conservative set of shared variables in dependent
 conjunctions and then \emph{guess} which conjunct produces each variable
 (usually the leftmost one in which the variable appears)

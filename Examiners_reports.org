@@ -151,11 +151,45 @@ some citations [especially in the first few pages). Additionally
     Try to find something about this in the literature, if I don't
     find anything then no action needs to be taken.
 
-*** CHCK Research inheritance                                 :bibliographic:
+*** DONE Research inheritance                                 :bibliographic:
+    CLOSED: [2013-05-16 Thu 15:44]
     My memory might be wrong.  but the dependent and——p model of
     Pontelli and Gupta does not really build on [45] [they are
     completely independent).  Furthermore, DDAS was the name of the
     system developed by Kish Shen, not by Pontelli Gupta.
+
+The reviewer is correct, I've revised the discussion in question.
+
+diff --git a/bib.bib b/bib.bib
+index 41b7cff..081c61d 100644
+--- a/bib.bib
++++ b/bib.bib
+@@ -918,7 +918,7 @@ Misc{shapiro:flat_concur_prolog,
+ 	address = {Leuven, Belgium}
+ }
+ 
+-@techreport{pontelli:1996:ddas,
++@techreport{pontelli:1996:nondet-and-par,
+ 	author = {Enrico Pontelli and Gopal Gupta},
+     title = {Non-determinate Dependent And-Parallelism Revisited},
+     institution = {Laboratory for Logic, Databases, and Advanced
+diff --git a/literature_review.tex b/literature_review.tex
+index b41bbbb..dbade1d 100644
+--- a/literature_review.tex
++++ b/literature_review.tex
+@@ -874,10 +874,8 @@ However clause bodies can still include tell unifications can may provide a
+ variable instantiation that allows some other blocked computation to resume.
+ Therefore most unifications still incur these extra costs.
+ 
+-The Data Dependent AND-parallelism system (DDAS)
+-of \citet{pontelli:1996:ddas} supports explicit
+-dependent AND-parallelism in a non-deterministic language;
+-it is based on the work of \citet{gupta:1991:ace}.
++\citet{pontelli:1996:nondet-and-par} describe a system that 
++supports explicit dependent AND-parallelism in a non-deterministic language.
+ Analyses determine a conservative set of shared variables in dependent
+ conjunctions and then \emph{guess} which conjunct produces each variable
+ (usually the leftmost one in which the variable appears)
 
 ** TODO Chapter 2
 
