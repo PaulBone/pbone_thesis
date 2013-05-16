@@ -143,13 +143,16 @@ some citations [especially in the first few pages). Additionally
     Logic programming is a much broader term, and the considerations in this
     page do not reach other LP languages [e.g._,ASP-based).
 
-*** CHCK Dependent vs Independent                             :bibliographic:
+*** WONT Dependent vs Independent                             :bibliographic:
     Hermenegildo used to stress that there is really no such thing as
     independent and dependent and-p, they are the same thing just seen at
     different levels of granularity [and I tend to agree with this).
 
     Try to find something about this in the literature, if I don't
     find anything then no action needs to be taken.
+
+    I could not find any specific reference by Hermenegildo about
+    this, and in any cause I strongly disagree.
 
 *** DONE Research inheritance                                 :bibliographic:
     CLOSED: [2013-05-16 Thu 15:44]
