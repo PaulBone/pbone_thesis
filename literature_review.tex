@@ -611,7 +611,9 @@ which threads will perform which computations.
 \subsubsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
-Logic programming languages use selective linear resolution with definite
+Different logic programming languages use different evaluation strategies,
+but we will restrict our attention to those that use
+selective linear resolution with definite
 clauses (SLD resolution) \citep{kowalski_sld}.
 SLD resolution attempts to answer a query by finding a Horn clause whose
 head has the same predicate name as the selected atom in the query,
