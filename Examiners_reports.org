@@ -102,25 +102,78 @@ could annotate it.
 
 * TODO Examiner 2
 
-** TODO General
+** DONE General
+   CLOSED: [2013-05-16 Thu 21:46]
 
-*** TODO Scope outside of Mercury                                :discussion:
+*** DONE Scope outside of Mercury                                :discussion:
+    CLOSED: [2013-05-16 Thu 21:46]
     I would have liked to see some discussion about how all the techniques
     proposed in this dissertation could be applied outside of Mercury
     [e.g., to Prolog? To functional languages?)
 
-*** TODO Benchmark diversity                                     :discussion:
+This was never within our intended scope, each of the other languages
+has limitations that affect the usefulness of automatic
+parallelisation.  Some of these are described in the literature
+review.  For example Prolog does not have any efficient parallel
+implementations and Haskell's lazyness makes it very difficult to
+reason about performance.  Many other languages (including Prolog)
+are not pure (which is required for auto-parallelism) and no other
+language has a profiler as powerful as the Mercury deep profiler.
+
+I've added a small note in the introduction to this affect:
+
+diff --git a/intro.tex b/intro.tex
+index 3f6ae20..01785c5 100644
+--- a/intro.tex
++++ b/intro.tex
+@@ -218,8 +218,14 @@ automatic parallelism.
+ Our work is targeted towards Mercury.
+ We choose to use Mercury because
+ it already supports explicit parallelism of dependent conjunctions,
+-and it provides powerful profiling tools which generate data for our profile
+-feedback analyses.
++and it provides the most powerful profiling tool of any declarative language,
++which generate data for our profile feedback analyses.
++In some ways our work can be used with other programming languages,
++but most other languages have significant barriers.
++In particular automatic parallelism can only work reliably with declaratively
++pure languages,
++and the language should use a strict evaluation strategy to make it easy to
++reason about parallel performance.
+ Mercury's support for parallel execution and the previous
+ auto-parallelisation system \citep{bone:2008:hons} is described in
+ Chapter~\ref{chap:backgnd}.
+
+*** DONE Benchmark diversity                                     :discussion:
+    CLOSED: [2013-05-16 Thu 21:27]
     Many of your considerations on two benchmarks, representing
     rely some fairly regular computations.  How would you consider
     these representatives?  Or, more in general, I would have liked to
     see a much broader pool of diverse benchmarks being used
     throughout the dissertation.
 
-*** TODO Formal semantics                                        :discussion:
+We agree, however we did not have the resources to find and construct
+more benchmarks.  That said, Chapter 3 deals with these 'easy'
+benchmarks deliberately, to ensure that we can handle these
+computations efficiently.  Chapter 4 contains a discussion about
+applying the overlap analysis to the Mercury compiler, and remarks
+that fewer conjunctions are parallelised (a good thing) but that the
+difference is lost in the noise.  Chapter 5 deals with a pathological
+case that can be best shown using the same benchmarks as Chapter 3,
+as these benchmarks exhibit the pathological behaviour without
+creating extra 'noise'.
+
+*** DONE Formal semantics                                        :discussion:
+    CLOSED: [2013-05-16 Thu 20:40]
     There are no formal considerations about the fact that the
     parallel implementations respect the "theoretical" operational
     semantics of the language [e.g., same observable behavior).  Even
     though it is true, it would be a good idea to spell it out.
+
+Each transformation individually respects the program semantics (the
+_declarative_ semantics, if they respected the operational semantics
+then they wouldn't have transformed anything!).  We have already said
+as much as we've presented each transformation.
 
 ** TODO Chapter 1
 
