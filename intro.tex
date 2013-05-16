@@ -87,8 +87,15 @@ and slower access to the other processors' memories.
 %The benefit of NUMA is that it is easier to build large NUMA systems than
 %large SMP systems.
 %The drawback is that it is harder to program.
-SMP systems are currently vastly more common, so programmers are usually
-more interested in programming for them.
+A new type of architecture uses graphics programming units (GPUs) to
+perform general purpose computing,
+they are called GPGPU architectures.
+However they are not as general purpose as their name suggests:
+they work well for large regular data-parallel and compute-intensive
+workloads, but not work well for more general symbolic processing.
+Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
+Also SMP systems are vastly more common than NUMA systems,
+so programmers are usually more interested in programming for them.
 Therefore, in this dissertation we are only concerned with SMP systems.
 Our approach will work with NUMA systems, but not optimally.
 
