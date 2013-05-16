@@ -137,11 +137,30 @@ some citations [especially in the first few pages). Additionally
 
 *** CHCK Is the example in page 8 correct?
 
-*** TODO Logic programming scope (non SLD?)                   :clarification:
+*** DONE Logic programming scope (non SLD?)                   :clarification:
+    CLOSED: [2013-05-16 Thu 18:26]
     Considerations in page 9 talk about “logic programming”. but they are
     really focused on languages derived from Prolog (SLD-based, etc.).
     Logic programming is a much broader term, and the considerations in this
     page do not reach other LP languages [e.g._,ASP-based).
+
+Say explicitly that we restrict our attention to SLD-based languages.
+
+diff --git a/literature_review.tex b/literature_review.tex
+index b41bbbb..6bef1f2 100644
+--- a/literature_review.tex
++++ b/literature_review.tex
+@@ -611,7 +611,9 @@ which threads will perform which computations.
+ \subsubsection{Parallelism in logic languages}
+ \label{sec:intro_par_logic}
+ 
+-Logic programming languages use selective linear resolution with definite
++Different logic programming languages use different evaluation strategies,
++but we will restrict our attention to those that use
++selective linear resolution with definite
+ clauses (SLD resolution) \citep{kowalski_sld}.
+ SLD resolution attempts to answer a query by finding a Horn clause whose
+ head has the same predicate name as the selected atom in the query,
 
 *** WONT Dependent vs Independent                             :bibliographic:
     Hermenegildo used to stress that there is really no such thing as
