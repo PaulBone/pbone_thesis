@@ -1137,8 +1137,14 @@ index 450bf3d..3b87ebd 100644
  puts it on the global spark queue.
  It then executes the first conjunct \code{P/2}.
 
-** TODO Chapter 6
-*** CHCK Please include more figures.                               :diagram:
+** DONE Chapter 6
+   CLOSED: [2013-04-14 Sun 14:42]
+
+*** WONT Please include more figures.                               :diagram:
+    CLOSED: [2013-04-14 Sun 14:42]
+
+No,  Due to bitrot in the upstream ThreadScope project generating
+additional pictures requires extra work.
 
 ** TODO Bibliography
 
