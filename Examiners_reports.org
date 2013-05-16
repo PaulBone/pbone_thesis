@@ -171,13 +171,18 @@ some citations [especially in the first few pages). Additionally
     I might have missed it, but lots of what I see in page 28 resembles the
     behavior of conditional variables in POSIX threads.
 
-*** TODO Evidence                                                :discussion:
+*** DONE Evidence                                                :discussion:
+    CLOSED: [2013-05-15 Wed 18:35]
     I found some considerations in page 30/31 a bit speculative (especially
     the last two paragraphs before 2.4.1); any evidence supporting these
     clairns?  @ particular, evidence related to how unbalanced Computations
     can become due to different inputs.
 
+Reviewer #1 raised this issue and I've provided extra information in
+response to reviewer #1.
+
 *** WONT Diagrams                                                   :diagram:
+
     The discussion in this Chapter could benefit from graphical
     representations of the data structures.
 
