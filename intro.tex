@@ -92,11 +92,20 @@ perform general purpose computing,
 they are called GPGPU architectures.
 However they are not as general purpose as their name suggests:
 they work well for large regular data-parallel and compute-intensive
-workloads, but not work well for more general symbolic processing.
-Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
-Also SMP systems are vastly more common than NUMA systems,
-so programmers are usually more interested in programming for them.
-Therefore, in this dissertation we are only concerned with SMP systems.
+workloads,
+but do not work well for more general symbolic processing.
+GPGPUs give programs access to small amounts of different types of memory
+that must be allocated statically,
+however most symbolic programs rely on dynamic allocation of unpredictable
+amounts of memory.
+Additionally, symbolic programs often include code with many conditional
+branches;
+this type of code does not perform well on GPGPUs.
+GPGPU architectures are not as general purpose as SMP systems and
+SMP systems are vastly more common than NUMA systems.
+Therefore, in this dissertation we are only concerned with SMP systems as
+they are both more general and more common,
+making them more desirable targets for most programmers.
 Our approach will work with NUMA systems, but not optimally.
 
 %\plan{We need parallelism}

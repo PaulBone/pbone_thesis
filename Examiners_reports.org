@@ -198,23 +198,35 @@ diff --git a/intro.tex b/intro.tex
 index 3f6ae20..0a9678f 100644
 --- a/intro.tex
 +++ b/intro.tex
-@@ -87,8 +87,15 @@ and slower access to the other processors' memories.
+@@ -87,9 +87,25 @@ and slower access to the other processors' memories.
  %The benefit of NUMA is that it is easier to build large NUMA systems than
  %large SMP systems.
  %The drawback is that it is harder to program.
 -SMP systems are currently vastly more common, so programmers are usually
 -more interested in programming for them.
+-Therefore, in this dissertation we are only concerned with SMP systems.
 +A new type of architecture uses graphics programming units (GPUs) to
 +perform general purpose computing,
 +they are called GPGPU architectures.
 +However they are not as general purpose as their name suggests:
 +they work well for large regular data-parallel and compute-intensive
-+workloads, but not work well for more general symbolic processing.
-+Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
-+Also SMP systems are vastly more common than NUMA systems,
-+so programmers are usually more interested in programming for them.
- Therefore, in this dissertation we are only concerned with SMP systems.
- Our approach will work with NUMA systems, but not optimally. 
++workloads,
++but do not work well for more general symbolic processing.
++GPGPUs give programs access to small amounts of different types of memory
++that must be allocated statically,
++however most symbolic programs rely on dynamic allocation of unpredictable
++amounts of memory.
++Additionally, symbolic programs often include code with many conditional
++branches;
++this type of code does not perform well on GPGPUs.
++GPGPU architectures are not as general purpose as SMP systems and
++SMP systems are vastly more common than NUMA systems.
++Therefore, in this dissertation we are only concerned with SMP systems as
++they are both more general and more common,
++making them more desirable targets for most programmers.
+ Our approach will work with NUMA systems, but not optimally.
+ 
+ %\plan{We need parallelism}
 
 *** DONE Pure/impure examples                                 :clarification:
     CLOSED: [2013-05-16 Thu 19:58]
@@ -237,12 +249,12 @@ index b41bbbb..4f19f55 100644
      parallelism desirable.
      Thus parallelisation of programs written in impure languages is notoriously
      difficult.
-+    Examples of impure languages are C, Java, Prolog and Lisp,
-+    even though some of these are declarative languages they still allow
-+    side effects, and are therefore impure.
++    Examples of impure languages are C, Java, Prolog and Lisp;
++    even though the last two of these are declarative languages,
++    they still allow side effects, and are therefore impure.
  
  \end{description}
-
+ 
 *** DONE Is the example in page 8 correct?
     CLOSED: [2013-05-16 Thu 18:36]
 
