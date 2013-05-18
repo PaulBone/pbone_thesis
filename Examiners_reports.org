@@ -242,7 +242,7 @@ index 3f6ae20..0a9678f 100644
 +they are called GPGPU architectures.
 +However they are not as general purpose as their name suggests:
 +they work well for large regular data-parallel and compute-intensive
-+workloads, but not work well for more general symbolic processing.
++workloads, but do not work well for more general symbolic processing.
 +Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
 +Also SMP systems are vastly more common than NUMA systems,
 +so programmers are usually more interested in programming for them.
