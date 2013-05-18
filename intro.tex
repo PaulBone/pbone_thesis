@@ -231,8 +231,10 @@ In some ways our work can be used with other programming languages,
 but most other languages have significant barriers.
 In particular automatic parallelism can only work reliably with declaratively
 pure languages,
-and the language should use a strict evaluation strategy to make it easy to
-reason about parallel performance.
+the language should also use a strict evaluation strategy to make it easy to
+reason about parallel performance,
+and in the case of a logic language, a strict and precise mode system is
+required to determine when variables are assigned their values.
 Mercury's support for parallel execution and the previous
 auto-parallelisation system \citep{bone:2008:hons} is described in
 Chapter~\ref{chap:backgnd}.

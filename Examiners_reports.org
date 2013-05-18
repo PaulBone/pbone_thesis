@@ -127,7 +127,7 @@ diff --git a/intro.tex b/intro.tex
 index 3f6ae20..01785c5 100644
 --- a/intro.tex
 +++ b/intro.tex
-@@ -218,8 +218,14 @@ automatic parallelism.
+@@ -218,8 +225,16 @@ automatic parallelism.
  Our work is targeted towards Mercury.
  We choose to use Mercury because
  it already supports explicit parallelism of dependent conjunctions,
@@ -139,8 +139,10 @@ index 3f6ae20..01785c5 100644
 +but most other languages have significant barriers.
 +In particular automatic parallelism can only work reliably with declaratively
 +pure languages,
-+and the language should use a strict evaluation strategy to make it easy to
-+reason about parallel performance.
++the language should also use a strict evaluation strategy to make it easy to
++reason about parallel performance,
++and in the case of a logic language, a strict and precise mode system is
++required to determine when variables are assigned their values.
  Mercury's support for parallel execution and the previous
  auto-parallelisation system \citep{bone:2008:hons} is described in
  Chapter~\ref{chap:backgnd}.
