@@ -134,7 +134,7 @@ index 3f6ae20..01785c5 100644
 -and it provides powerful profiling tools which generate data for our profile
 -feedback analyses.
 +and it provides the most powerful profiling tool of any declarative language,
-+which generate data for our profile feedback analyses.
++which generates data for our profile feedback analyses.
 +In some ways our work can be used with other programming languages,
 +but most other languages have significant barriers.
 +In particular automatic parallelism can only work reliably with declaratively
@@ -163,6 +163,41 @@ difference is lost in the noise.  Chapter 5 deals with a pathological
 case that can be best shown using the same benchmarks as Chapter 3,
 as these benchmarks exhibit the pathological behaviour without
 creating extra 'noise'.
+
+The first paragraph in Chapter 3 made a similar point.  I've extended that
+paragraph to make this point clearer:
+
+diff --git a/rts.tex b/rts.tex
+index b7f5096..5b33986 100644
+--- a/rts.tex
++++ b/rts.tex
+@@ -16,6 +16,14 @@ we did not get the speedups that we expected.
+ Therefore,
+ we chose to address the performance problems
+ before we worked on automatic parallelism.
++Throughout this chapter
++we continue to use these two benchmarks, along with a naive Fibonacci
++program (Page~\pageref{page:fibs}).
++These benchmarks are not diverse and they all create a lot of
++AND-parallelism,
++most of which is independent.
++We use these benchmarks deliberately to test that our runtime system can
++handle large amounts of parallelism efficiently.
+
+ In this chapter we investigate and correct these performance problems.
+ We start with the garbage collector in Section~\ref{sec:rts_gc};
+diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
+index b872029..a120b85 100644
+--- a/rts_work_stealing2.tex
++++ b/rts_work_stealing2.tex
+@@ -982,6 +982,7 @@ rather than contexts, in order to make work stealing simpler
+ \end{center}
+ \end{figure}
+
++\label{page:fibs}
+ To make it easier to see the effects of the new work stealing code,
+ we created a new benchmark named fibs.
+ Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 
 *** DONE Formal semantics                                        :discussion:
     CLOSED: [2013-05-16 Thu 20:40]
@@ -207,7 +242,7 @@ index 3f6ae20..0a9678f 100644
 +they are called GPGPU architectures.
 +However they are not as general purpose as their name suggests:
 +they work well for large regular data-parallel and compute-intensive
-+workloads, but not work well for more general symbolic processing.
++workloads, but do not work well for more general symbolic processing.
 +Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
 +Also SMP systems are vastly more common than NUMA systems,
 +so programmers are usually more interested in programming for them.
@@ -407,16 +442,16 @@ index 21d12ec..05a3b03 100644
     behavior of conditional variables in POSIX threads.
 
 diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
-index a5c14f2..a15a8bc 100644
+index a5c14f2..7ea1217 100644
 --- a/backgnd_deppar.tex
 +++ b/backgnd_deppar.tex
 @@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
  it must be declared as impure so that the compiler will not optimise away calls
  to it.
  
-+Some readers have asked if futures are similar to POSIX condition
-+variables \citep{butenhof1997:pthreads}.
-+While both name their operations \emph{wait} and \emph{signal} they are
++Note that while futures and POSIX condition variables
++\citep{butenhof1997:pthreads}
++both name their operations \emph{wait} and \emph{signal} they are
 +different in two significant ways.
 +First,
 +futures store a value as well as state,
@@ -761,8 +796,8 @@ index 450bf3d..bcfa6ea 100644
 -in Figure~\ref{fig:map_right_recursive}.
 +The main loop of the renderer uses right recursion,
 +and is similar to \code{map/3}
-+(Figure~\ref{fig:map_right_recursive}),
-+this is the loop that iterates over the image's rows.
++(Figure~\ref{fig:map_right_recursive}).
++This is the loop that iterates over the image's rows.
  The leftmost column shows the maximum number of contexts permitted at
  any time.
  This is the limit that was mentioned in the previous section.
@@ -819,7 +854,7 @@ index 450bf3d..bcfa6ea 100644
  \plan{Reinforce that these results support the idea that scheduling
  decisions are made prematurely}
 -Both of the left recursion problems have the same cause:
-+Both of the left recursive programs have the same cause:
++Both of the problems involving left recursion have the same cause:
  the decision to execute a spark sequentially or in parallel is
  made too early.
  This decision is made when the spark is scheduled,
@@ -877,7 +912,7 @@ index 2c6b9f1..856b106 100644
      This implementation detail avoids memory allocation for sparks inside
      the deque implementation.
 -    A callers of any of these functions temporarily stores the spark on
-+    Callers of any of these functions temporarily stores the spark on
++    A caller of any of these functions temporarily stores the spark on
      its program stack.
  
      \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]
@@ -894,12 +929,13 @@ diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
 index b872029..65cb5a5 100644
 --- a/rts_work_stealing2.tex
 +++ b/rts_work_stealing2.tex
-@@ -230,7 +230,7 @@ without a context will call \idle to acquire new work.
+@@ -230,7 +230,8 @@ without a context will call \idle to acquire new work.
  the new version is shown in Algorithm~\ref{alg:idle}.
  This algorithm uses a structure pointed to by \var{eng\_data} to receive
  notifications;
 -we will discuss this structure and notifications this later in this section.
-+we will discuss this structure and notifications later in this section.
++we will discuss this structure and how it is used to send and receive
++notifications later in this section.
  For now we will discuss how \idle looks for work in lieu of any notification.
  
  \idle tries to find a runnable context before trying to find a local
@@ -1028,17 +1064,25 @@ index a01cdf5..327cd26 100644
 @@ -65,6 +65,13 @@ As the number of processors increases,
  the mutator threads spend a larger proportion of their time waiting for
  collection to complete.
- 
-+A reviewer suggested the use of Gustafson-Barsis' law
-+\citep{gustafson:88:reevaluating-amdahl}
-+as Amdahl's law is pessimistic.
-+However Gustafson-Basis' law assumes that the amount of available data that
-+one might want to process is unbounded.
-+This rarely true for most applications and so Amdahl's law is more applicable.
+
++In some constexts 
++Gustafson-Barsis' law
++\citep{gustafson:88:reevaluating-amdahl} might be more approprite than
++Amdahl's law.
++This is true when there is either: always more data that could be processed
++by additional computation resources,
++or when the data can be split into smaller and smaller peices
++without affecting the granuality of parallel tasks.
++These conditions can be true for large numeric computations;
++however they are rarely true for symbolic computations,
++and Mercury is typically used for symbolic computations.
++Therefore we use Amdahl's law as it is more applicable.
 +
  \plan{Discuss predictions regarding parallel marking, locking and thread
  local heaps.}
- To reduce this problem,
+-To reduce this effect,
++To reduce the amount of time that mutator threads have to wait for the
++collector,
 
 *** WONT Clarification/Discussion (Page 50)        :clarification:discussion:
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
@@ -1085,7 +1129,7 @@ index 450bf3d..3b87ebd 100644
  The next two columns give the elapsed execution time for a sequential
 -version of the program;
 -in this version of the program no parallel conjunctions were used.
-+version of the program,
++version of the program, that is,
 +the program compiled without the use of the parallel conjunction operator.
  These two columns give results without and with thread safety.
  The following four columns give the elapsed execution times
@@ -1132,7 +1176,7 @@ index 450bf3d..3b87ebd 100644
 -To understand this problem we must consider how parallel conjunctions are
 +To understand this problem, we must consider how parallel conjunctions are
  executed (see Section~\ref{sec:backgnd_merpar}).
-+We will step through the execution \code{map/3} from
++We will step through the execution of \code{map/3} from
 +Figure~\ref{fig:map_right_recursive}.
  The original context creates a spark for the second and later conjuncts and
  puts it on the global spark queue.

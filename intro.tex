@@ -92,7 +92,7 @@ perform general purpose computing,
 they are called GPGPU architectures.
 However they are not as general purpose as their name suggests:
 they work well for large regular data-parallel and compute-intensive
-workloads, but not work well for more general symbolic processing.
+workloads, but do not work well for more general symbolic processing.
 Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
 Also SMP systems are vastly more common than NUMA systems,
 so programmers are usually more interested in programming for them.
@@ -226,7 +226,7 @@ Our work is targeted towards Mercury.
 We choose to use Mercury because
 it already supports explicit parallelism of dependent conjunctions,
 and it provides the most powerful profiling tool of any declarative language,
-which generate data for our profile feedback analyses.
+which generates data for our profile feedback analyses.
 In some ways our work can be used with other programming languages,
 but most other languages have significant barriers.
 In particular automatic parallelism can only work reliably with declaratively

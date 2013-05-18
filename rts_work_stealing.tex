@@ -349,7 +349,7 @@ The deque provides the following operations.
     is not a double pointer as one might expect.
     This implementation detail avoids memory allocation for sparks inside
     the deque implementation.
-    Callers of any of these functions temporarily stores the spark on
+    A caller of any of these functions temporarily stores the spark on
     its program stack.
 
     \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]

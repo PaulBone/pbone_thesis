@@ -80,13 +80,13 @@ speedup due to parallelism in Mercury without the effects of the garbage
 collector.
 The main loop of the renderer uses right recursion,
 and is similar to \code{map/3}
-(Figure~\ref{fig:map_right_recursive}),
-this is the loop that iterates over the image's rows.
+(Figure~\ref{fig:map_right_recursive}).
+This is the loop that iterates over the image's rows.
 The leftmost column of the table shows the maximum number of contexts
 that may exist at any time.
 This is the limit that was introduced in the previous section.
 The next two columns give the elapsed execution time for a sequential
-version of the program,
+version of the program, that is,
 the program compiled without the use of the parallel conjunction operator.
 These two columns give results without and with thread safety.
 The following four columns give the elapsed execution times
@@ -127,7 +127,7 @@ parallelism.
 %and then suspends that context.
 To understand this problem, we must consider how parallel conjunctions are
 executed (see Section~\ref{sec:backgnd_merpar}).
-We will step through the execution \code{map/3} from
+We will step through the execution of \code{map/3} from
 Figure~\ref{fig:map_right_recursive}.
 The original context creates a spark for the second and later conjuncts and
 puts it on the global spark queue.
@@ -390,7 +390,7 @@ this way.
 
 \plan{Reinforce that these results support the idea that scheduling
 decisions are made prematurely}
-Both of the left recursive programs have the same cause:
+Both of the problems involving left recursion have the same cause:
 the decision to execute a spark sequentially or in parallel is
 made too early.
 This decision is made when the spark is scheduled,

@@ -16,6 +16,14 @@ we did not get the speedups that we expected.
 Therefore,
 we chose to address the performance problems
 before we worked on automatic parallelism.
+Throughout this chapter
+we continue to use these two benchmarks, along with a naive Fibonacci
+program (Page~\pageref{page:fibs}).
+These benchmarks are not diverse and they all create a lot of
+AND-parallelism,
+most of which is independent.
+We use these benchmarks deliberately to test that our runtime system can
+handle large amounts of parallelism efficiently.
 
 In this chapter we investigate and correct these performance problems.
 We start with the garbage collector in Section~\ref{sec:rts_gc};

@@ -66,16 +66,22 @@ As the number of processors increases,
 the mutator threads spend a larger proportion of their time waiting for
 collection to complete.
 
-A reviewer suggested the use of Gustafson-Barsis' law
-\citep{gustafson:88:reevaluating-amdahl}
-as Amdahl's law is pessimistic.
-However Gustafson-Basis' law assumes that the amount of available data that
-one might want to process is unbounded.
-This rarely true for most applications and so Amdahl's law is more applicable.
+Gustafson-Barsis' law
+\citep{gustafson:88:reevaluating-amdahl} is more approprite than
+Amdahl's law when:
+there is always more data that could be processed
+by additional computation resources (such as in scientific computing),
+or when the data can be split into smaller and smaller peices
+without affecting the granuality of parallel tasks.
+These conditions are often true for large numeric computations;
+however they are rarely true for symbolic computations,
+and Mercury is typically used for symbolic computations.
+Therefore we use Amdahl's law as it is more applicable.
 
 \plan{Discuss predictions regarding parallel marking, locking and thread
 local heaps.}
-To reduce this effect,
+To reduce the amount of time that mutator threads have to wait for the
+collector,
 \citet{boehm:1988:gc} included parallel marking support in their collector.
 Ideally this would remove the bottleneck described above.
 However,
