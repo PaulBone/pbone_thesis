@@ -1064,17 +1064,25 @@ index a01cdf5..327cd26 100644
 @@ -65,6 +65,13 @@ As the number of processors increases,
  the mutator threads spend a larger proportion of their time waiting for
  collection to complete.
- 
-+A reviewer suggested the use of Gustafson-Barsis' law
-+\citep{gustafson:88:reevaluating-amdahl}
-+as Amdahl's law is pessimistic.
-+However Gustafson-Basis' law assumes that the amount of available data that
-+one might want to process is unbounded.
-+This rarely true for most applications and so Amdahl's law is more applicable.
+
++In some constexts 
++Gustafson-Barsis' law
++\citep{gustafson:88:reevaluating-amdahl} might be more approprite than
++Amdahl's law.
++This is true when there is either: always more data that could be processed
++by additional computation resources,
++or when the data can be split into smaller and smaller peices
++without affecting the granuality of parallel tasks.
++These conditions can be true for large numeric computations;
++however they are rarely true for symbolic computations,
++and Mercury is typically used for symbolic computations.
++Therefore we use Amdahl's law as it is more applicable.
 +
  \plan{Discuss predictions regarding parallel marking, locking and thread
  local heaps.}
- To reduce this problem,
+-To reduce this effect,
++To reduce the amount of time that mutator threads have to wait for the
++collector,
 
 *** WONT Clarification/Discussion (Page 50)        :clarification:discussion:
     Reason 2 page 50: would it be possible to test this hypothesis?  p)
@@ -1121,7 +1129,7 @@ index 450bf3d..3b87ebd 100644
  The next two columns give the elapsed execution time for a sequential
 -version of the program;
 -in this version of the program no parallel conjunctions were used.
-+version of the program,
++version of the program, that is,
 +the program compiled without the use of the parallel conjunction operator.
  These two columns give results without and with thread safety.
  The following four columns give the elapsed execution times
@@ -1168,7 +1176,7 @@ index 450bf3d..3b87ebd 100644
 -To understand this problem we must consider how parallel conjunctions are
 +To understand this problem, we must consider how parallel conjunctions are
  executed (see Section~\ref{sec:backgnd_merpar}).
-+We will step through the execution \code{map/3} from
++We will step through the execution of \code{map/3} from
 +Figure~\ref{fig:map_right_recursive}.
  The original context creates a spark for the second and later conjuncts and
  puts it on the global spark queue.
