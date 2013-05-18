@@ -145,13 +145,16 @@ Restricting parallelism to \ddet and \dccmulti code is not a significant
 limitation;
 since the design of Mercury strongly encourages deterministic code,
 in our experience, about 75 to 85\% of all Mercury procedures are
-\ddet\footnote{This statistic was calculated by counting the different
-determinism declarations in the source code of the Mercury system.},
-and we expect that most programs spend an even greater fraction of their
-time in \ddet code.
-% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
-% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
-% which is the most accuratly we have measured this.
+\ddet.
+(This statistic was calculated by counting the different
+determinism declarations in the source code of the Mercury system.)
+Furthermore,
+we expect that most programs spend an even greater fraction of their time in
+\ddet code
+(we know from profiling data that the Mercury compiler does).
+% Table~\ref{tab:recursion_types}) shows that at least 95\% of the
+% compiler's time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet
+% code, which is the most accuratly we have measured this.
 Existing algorithms for executing nondeterministic code in parallel
 have very significant overheads, generating slowdowns by integer factors.
 Thus we have given priority to parallelising deterministic code,

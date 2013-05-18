@@ -92,11 +92,20 @@ perform general purpose computing,
 they are called GPGPU architectures.
 However they are not as general purpose as their name suggests:
 they work well for large regular data-parallel and compute-intensive
-workloads, but do not work well for more general symbolic processing.
-Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
-Also SMP systems are vastly more common than NUMA systems,
-so programmers are usually more interested in programming for them.
-Therefore, in this dissertation we are only concerned with SMP systems.
+workloads,
+but do not work well for more general symbolic processing.
+GPGPUs give programs access to small amounts of different types of memory
+that must be allocated statically,
+however most symbolic programs rely on dynamic allocation of unpredictable
+amounts of memory.
+Additionally, symbolic programs often include code with many conditional
+branches;
+this type of code does not perform well on GPGPUs.
+GPGPU architectures are not as general purpose as SMP systems and
+SMP systems are vastly more common than NUMA systems.
+Therefore, in this dissertation we are only concerned with SMP systems as
+they are both more general and more common,
+making them more desirable targets for most programmers.
 Our approach will work with NUMA systems, but not optimally.
 
 %\plan{We need parallelism}
@@ -231,8 +240,10 @@ In some ways our work can be used with other programming languages,
 but most other languages have significant barriers.
 In particular automatic parallelism can only work reliably with declaratively
 pure languages,
-and the language should use a strict evaluation strategy to make it easy to
-reason about parallel performance.
+the language should also use a strict evaluation strategy to make it easy to
+reason about parallel performance,
+and in the case of a logic language, a strict and precise mode system is
+required to determine when variables are assigned their values.
 Mercury's support for parallel execution and the previous
 auto-parallelisation system \citep{bone:2008:hons} is described in
 Chapter~\ref{chap:backgnd}.

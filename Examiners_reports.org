@@ -127,7 +127,7 @@ diff --git a/intro.tex b/intro.tex
 index 3f6ae20..01785c5 100644
 --- a/intro.tex
 +++ b/intro.tex
-@@ -218,8 +218,14 @@ automatic parallelism.
+@@ -218,8 +225,16 @@ automatic parallelism.
  Our work is targeted towards Mercury.
  We choose to use Mercury because
  it already supports explicit parallelism of dependent conjunctions,
@@ -139,8 +139,10 @@ index 3f6ae20..01785c5 100644
 +but most other languages have significant barriers.
 +In particular automatic parallelism can only work reliably with declaratively
 +pure languages,
-+and the language should use a strict evaluation strategy to make it easy to
-+reason about parallel performance.
++the language should also use a strict evaluation strategy to make it easy to
++reason about parallel performance,
++and in the case of a logic language, a strict and precise mode system is
++required to determine when variables are assigned their values.
  Mercury's support for parallel execution and the previous
  auto-parallelisation system \citep{bone:2008:hons} is described in
  Chapter~\ref{chap:backgnd}.
@@ -231,23 +233,35 @@ diff --git a/intro.tex b/intro.tex
 index 3f6ae20..0a9678f 100644
 --- a/intro.tex
 +++ b/intro.tex
-@@ -87,8 +87,15 @@ and slower access to the other processors' memories.
+@@ -87,9 +87,25 @@ and slower access to the other processors' memories.
  %The benefit of NUMA is that it is easier to build large NUMA systems than
  %large SMP systems.
  %The drawback is that it is harder to program.
 -SMP systems are currently vastly more common, so programmers are usually
 -more interested in programming for them.
+-Therefore, in this dissertation we are only concerned with SMP systems.
 +A new type of architecture uses graphics programming units (GPUs) to
 +perform general purpose computing,
 +they are called GPGPU architectures.
 +However they are not as general purpose as their name suggests:
 +they work well for large regular data-parallel and compute-intensive
-+workloads, but do not work well for more general symbolic processing.
-+Neither NUMA or GPGPU architectures are as general purpose as SMP systems.
-+Also SMP systems are vastly more common than NUMA systems,
-+so programmers are usually more interested in programming for them.
- Therefore, in this dissertation we are only concerned with SMP systems.
- Our approach will work with NUMA systems, but not optimally. 
++workloads,
++but do not work well for more general symbolic processing.
++GPGPUs give programs access to small amounts of different types of memory
++that must be allocated statically,
++however most symbolic programs rely on dynamic allocation of unpredictable
++amounts of memory.
++Additionally, symbolic programs often include code with many conditional
++branches;
++this type of code does not perform well on GPGPUs.
++GPGPU architectures are not as general purpose as SMP systems and
++SMP systems are vastly more common than NUMA systems.
++Therefore, in this dissertation we are only concerned with SMP systems as
++they are both more general and more common,
++making them more desirable targets for most programmers.
+ Our approach will work with NUMA systems, but not optimally.
+ 
+ %\plan{We need parallelism}
 
 *** DONE Pure/impure examples                                 :clarification:
     CLOSED: [2013-05-16 Thu 19:58]
@@ -270,12 +284,12 @@ index b41bbbb..4f19f55 100644
      parallelism desirable.
      Thus parallelisation of programs written in impure languages is notoriously
      difficult.
-+    Examples of impure languages are C, Java, Prolog and Lisp,
-+    even though some of these are declarative languages they still allow
-+    side effects, and are therefore impure.
++    Examples of impure languages are C, Java, Prolog and Lisp;
++    even though the last two of these are declarative languages,
++    they still allow side effects, and are therefore impure.
  
  \end{description}
-
+ 
 *** DONE Is the example in page 8 correct?
     CLOSED: [2013-05-16 Thu 18:36]
 
@@ -393,7 +407,7 @@ diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
 index 21d12ec..b6da6b4 100644
 --- a/backgnd_merpar.tex
 +++ b/backgnd_merpar.tex
-@@ -144,10 +144,14 @@ since its result may never be needed.
+@@ -144,10 +144,17 @@ since its result may never be needed.
  Restricting parallelism to \ddet and \dccmulti code is not a significant
  limitation;
  since the design of Mercury strongly encourages deterministic code,
@@ -402,13 +416,16 @@ index 21d12ec..b6da6b4 100644
 -\peter{Do we have any statistics regarding what proportion of execution time
 -  is spent in det code?  That would be a more relevant statistic.}
 +in our experience, about 75 to 85\% of all Mercury procedures are
-+\ddet\footnote{This statistic was calculated by counting the different
-+determinism declarations in the source code of the Mercury system.},
-+and we expect that most programs spend an even greater fraction of their
-+time in \ddet code.
-+% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
-+% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
-+% which is the most accuratly we have measured this.
++\ddet.
++(This statistic was calculated by counting the different
++determinism declarations in the source code of the Mercury system.)
++Furthermore,
++we expect that most programs spend an even greater fraction of their time in
++\ddet code
++(we know from profiling data that the Mercury compiler does).
++% Table~\ref{tab:recursion_types}) shows that at least 95\% of the
++% compiler's time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet
++% code, which is the most accuratly we have measured this.
  Existing algorithms for executing nondeterministic code in parallel
  have very significant overheads, generating slowdowns by integer factors.
  Thus we have given priority to parallelising deterministic code,
@@ -442,19 +459,19 @@ index 21d12ec..05a3b03 100644
     behavior of conditional variables in POSIX threads.
 
 diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
-index a5c14f2..7ea1217 100644
+index a5c14f2..ec1a14d 100644
 --- a/backgnd_deppar.tex
 +++ b/backgnd_deppar.tex
 @@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
  it must be declared as impure so that the compiler will not optimise away calls
  to it.
  
-+Note that while futures and POSIX condition variables
-+\citep{butenhof1997:pthreads}
-+both name their operations \emph{wait} and \emph{signal} they are
-+different in two significant ways.
++Some readers may wonder whether futures are similar to POSIX condition
++variables \citep{butenhof1997:pthreads}.
++While both name their operations \emph{wait} and \emph{signal},
++they are different in two significant ways.
 +First,
-+futures store a value as well as state,
++futures store a value as well as a state,
 +POSIX condition variables store only their state.
 +Second,
 +when a future is signalled, all its consumers are woken,
@@ -700,19 +717,31 @@ index a01cdf5..2ffb2da 100644
      causing a cache miss in P1's cache and invalidating the corresponding cache
      line in P2's cache.
 -    Later, when collection is finished,
-+    Later, when collection is finishes,
++    Later, when collection finishes,
      P2's process resumes execution and incurs a cache miss for the object that
      it had been using.
      % He never states this in either of his parallel GC papers.
-@@ -503,7 +507,7 @@ There are two reasons for this
+@@ -502,15 +513,15 @@ There are two reasons for this
+ \plan{Discuss local heaps for threads, and their reliability problems.}
  We also investigated another area for increased parallel performance.
  Boehm GC maintains thread local free lists that allow memory to be allocated
- without contending for locks on global free lists.
+-without contending for locks on global free lists.
 -When a local free list cannot satisfy a memory request, the global free
-+When local free lists cannot satisfy a memory request, the global free
- lists must be used.
- The local free lists amortise the costs of locking the global free lists.
+-lists must be used.
+-The local free lists amortise the costs of locking the global free lists.
++without contending for locks on the global free list.
++When a thread's local free list cannot satisfy a memory request, the global
++free list must be used.
++The local free lists amortise the costs of locking the global free list.
  We anticipate that increasing the size of the local free lists will cause even
+ less contention for global locks,
+ allowing allocation intensive programs to have better parallel
+ performance.
+-The size of the local free list can be adjusted by increasing the
++The size of the local free lists can be adjusted by increasing the
+ \texttt{HBLKSIZE} tunable.
+ Unfortunately this feature is experimental,
+ and adjusting \texttt{HBLKSIZE} caused our programs to crash.
 diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
 index da8adda..1a8e80d 100644
 --- a/rts_original_scheduling.tex
@@ -810,8 +839,8 @@ index 450bf3d..bcfa6ea 100644
 -The original context cannot proceed but will be needed later,
 -therefore it is suspended until all the other 599 iterations of the loop
 +The original context cannot proceed until after the other context finishes,
-+but it will be needed then and must then be kept in memory.
-+Therefore It is suspended until all the other 599 iterations of the loop
++but it will be needed then and must then be kept in memory until then.
++Therefore it is suspended until all the other 599 iterations of the loop
  have finished.
  Meanwhile the spark that was placed on the global run queue is converted
  into a new context.

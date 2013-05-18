@@ -139,8 +139,8 @@ After executing \code{P/2} the original context will call the
 It then attempts to execute a spark from its local spark stack,
 which will fail because the only spark was placed on the global spark queue.
 The original context cannot proceed until after the other context finishes,
-but it will be needed then and must then be kept in memory.
-Therefore It is suspended until all the other 599 iterations of the loop
+but it will be needed then and must then be kept in memory until then.
+Therefore it is suspended until all the other 599 iterations of the loop
 have finished.
 Meanwhile the spark that was placed on the global run queue is converted
 into a new context.
