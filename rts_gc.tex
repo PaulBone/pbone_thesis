@@ -510,10 +510,18 @@ We anticipate that increasing the size of the local free lists will cause even
 less contention for global locks,
 allowing allocation intensive programs to have better parallel
 performance.
-The size of the local free list can be adjusted by increasing the
-\texttt{HBLKSIZE} tunable.
-Unfortunately this feature is experimental,
-and adjusting \texttt{HBLKSIZE} caused our programs to crash.
+We wanted to investigate if increasing the size of the local free lists could
+improve performance.
+We contacted the Boehm GC team about this and they advised us to experiment
+with the \texttt{HBLKSIZE} tunable.
+They did not say what this tunable controls.
+it is undocumented and the source code is very hard to understand.
+Our impression is that it only indirectly tunes the sizes of the local free
+lists.
+Unfortunately this feature is experimental:
+adjusting \texttt{HBLKSIZE} caused our programs to crash intermittently,
+such that we could not determine for which values (other than the default) 
+the programs would run reliably.
 Therefore we cannot evaluate how \texttt{HBLKSIZE} affects our
 programs.
 Once this feature is no longer experimental,

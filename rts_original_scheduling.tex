@@ -161,6 +161,10 @@ there are three important scenarios:
     any sparks left on the stack by $G_1$ would have been popped off by
     the \joinandcontinue barriers of the conjunctions that spawned off the
     sparks.
+    This invariant requires a \emph{last-in-first-out} storage of sparks,
+    which is why each context uses a stack rather than a queue.
+    In Section~\ref{sec:rts_work_stealing} we explain in more detail
+    \emph{why} a \emph{last-in-first-out} order is important.
 
     The check that the spark's stack pointer is equal to the current
     parent stack pointer\footnote{

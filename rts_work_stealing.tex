@@ -10,7 +10,8 @@ its solution.
 In a work stealing system,
 sparks placed on a context's local spark stack
 are not committed to running in that context;
-they may be executed in a different context if they are stolen.
+they may be executed in a different context if they are stolen
+(we describe below why we use a stack to store sparks).
 This delays the decision of where to execute a spark until the moment
 before it is executed.
 

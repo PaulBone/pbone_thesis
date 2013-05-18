@@ -5,13 +5,31 @@ could annotate it.
 #+TAGS: clarification(c) trivial(t) bibliographic(b) diagram(p) reorder(r)
 #+TAGS: discussion(d)
 
-* TODO Examiner 1
+* DONE Examiner 1
+  CLOSED: [2013-04-14 Sun 14:19]
 
-** TODO p.28 Top.  future.wait/2                              :clarification:
+** DONE p.28 Top.  future.wait/2                              :clarification:
+   CLOSED: [2013-04-14 Sun 14:19]
    When explaining the working of future.wait/2, it would be nice to
    add a line explaining why there is no danger for deadlock.
 
-** TODO p.30-31,  Feedback                                    :clarification:
+diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
+index a5c14f2..81eb62c 100644
+--- a/backgnd_deppar.tex
++++ b/backgnd_deppar.tex
+@@ -95,6 +95,9 @@ acquiring the lock as well as after.
+ If it is \code{MR\_PRODUCED} before the lock is acquired,
+ then \wait can safely retrieve the
+ future's value without using the lock.
++Note also that because Mercury's mode system ensures that variable
++dependencies can never form cycles,
++the compiler's use of futures cannot create a deadlock.
+ 
+ A producer will call \signal to place a value into a future and wake up any
+ suspended contexts.
+
+** DONE p.30-31,  Feedback                                    :clarification:
+   CLOSED: [2013-04-14 Sun 12:40]
     In your argumentation for the feedback-directed approach, you state
     yourself that a program is typically executed multiple times with
     respect to different inputs (p.31). While you use this argument in
@@ -26,35 +44,178 @@ could annotate it.
     appropriate level of objectiveness. See also my remark on the discussion
     w.r.t.  Static analysis (p 92).
 
-** TODO p 34,                                                       :trivial:
+    This issue was discussed but the discussion could have been
+    better.  The change below improves the discussion making our
+    reasoning clearer.
+
+diff --git a/backgnd_autopar.tex b/backgnd_autopar.tex
+index e5e0cb5..be01eae 100644
+--- a/backgnd_autopar.tex
++++ b/backgnd_autopar.tex
+@@ -96,21 +96,30 @@ used with another,
+ then the profile will not necessarily represent the actual use
+ of the program,
+ and that the optimisation may not be as good as it should be.
+-Parallelisation decisions are binary,
++In practice parallelism is used in very few places within a program:
++in the Mercury Compiler itself there are only 34
++(Page~\pageref{page:conjs_in_mcc}) conjuncts in 28,448\footnote{
++    The number of \PS structures in the same profiling data that was used to
++    provide the figures on Page~\pageref{page:conjs_in_mcc}.}
++procedures that may be worth parallelising.
++This means that most differences in performance are not likely to affect the
++very small part of the program where parallelism may be applicable.
++Furthermore,
++as parallelisation decisions are binary,
+ either `do not parallelise' to `parallelise'.
+-Therefore,
+-they will only change as the costs of computations cross some threshold.
+-Unless alternative input data causes a computation's runtime to cross such a
+-threshold,
+-then the parallelisation based on the original input data is 
+-as equally valid as the parallelisation based on the alternative input data.
+-Most variations in input data will not  
+-effect parallelisation enough to cause a significant difference in performance.
+-
+-Even in a case where automatic parallelisation does not produce optimal
+-results,
+-near optimal results are good enough.
+-Automatic parallelisation will always be cheaper than manual
++a numerical difference in performance will not usually alter the binary
++parallelisation decision.
++So in most cases,
++auto-parallelisation based on the original input data is equivalent to
++auto-parallelisation based on slightly different input data.
++
++In cases where different input data causes the program to be parallelised
++differently,
++the result is often going to be near-optimal.
++In these cases the main benefits of automatic parallelisation are
++unaffected,
++which are:
++automatic parallelisation will always be cheaper than manual
+ parallelisation,
+ it requires much less time and does not require a company hire a
+ parallelisation expert.
+diff --git a/overlap.tex b/overlap.tex
+index 3b853ed..a66eb8a 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -3121,6 +3121,7 @@ whose effect is lost in the noise.
+ % However, the raw times showed significant variability,
+ % and this process does not entirely eliminate that variability.
+ 
++\label{page:conjs_in_mcc}
+ To see the difference between naive and overlap,
+ we need to look at larger programs.
+ Our standard large test program is the Mercury compiler, which contains
+
+
+** DONE p 34,                                                       :trivial:
+   CLOSED: [2013-03-31 Sun 18:21]
     imprecise vocabulary.  On the one hand you talk about
     “computations p and C1” but further down the test they have become
     ‘“conjuncts p and q”.
 
-** TODO p.41 Notation                                               :trivial:
-   line G_{kl},\ldots,G_{a}.  This must be G_{k+l}.
+   Fixed by replacing the initial 'computations' with 'conjuncts'
 
-** CHCK p.50. BLKSIZE                                         :clarification:
+** DONE p.41 Notation                                               :trivial:
+   CLOSED: [2013-03-31 Sun 18:49]
+   line G_{k_l},\ldots,G_{a}.  This must be G_{k+l}.
+
+   The examiner is correct. I've fixed this.
+
+** DONE p.50. BLKSIZE                                         :clarification:
+   CLOSED: [2013-04-10 Wed 22:44]
    What is “HLKSlZE”?’ Is it some dark option to be set in the Eoehm
    runtime?  it, it should also be explained.  if care to mention you
 
-** CHCK p.60. Choice of stack                                       :reorder:
+   Maybe the examiner says that if we cannot explain it then we should
+   not mention it.  I've explained that it is inscrutable.
+
+diff --git a/rts_gc.tex b/rts_gc.tex
+index a01cdf5..7306619 100644
+--- a/rts_gc.tex
++++ b/rts_gc.tex
+@@ -510,10 +510,18 @@ We anticipate that increasing the size of the local free lists will cause even
+ less contention for global locks,
+ allowing allocation intensive programs to have better parallel
+ performance.
+-The size of the local free list can be adjusted by increasing the
+-\texttt{HBLKSIZE} tunable.
+-Unfortunately this feature is experimental,
+-and adjusting \texttt{HBLKSIZE} caused our programs to crash.
++We wanted to investigate if increasing the size of the local free lists could
++improve performance.
++We contacted the Boehm GC team about this and they advised us to experiment
++with the \texttt{HBLKSIZE} tunable.
++They did not say what this tunable controls.
++it is undocumented and the source code is very hard to understand.
++Our impression is that it only indirectly tunes the sizes of the local free
++lists.
++Unfortunately this feature is experimental:
++adjusting \texttt{HBLKSIZE} caused our programs to crash intermittently,
++such that we could not determine for which values (other than the default) 
++the programs would run reliably.
+ Therefore we cannot evaluate how \texttt{HBLKSIZE} affects our
+ programs.
+ Once this feature is no longer experimental,
+
+** DONE p.60. Choice of stack                                       :reorder:
+   CLOSED: [2013-04-10 Wed 22:45]
    While l was wondering for several pages Why this structure had to
    be a stack, the second half of the page provides the explanation (to
    deal with nested conjunctions).  It would help the reader if this
    justification was moved to the spot. where the stacks are introduced.
+
+I cannot move this as there is a circular dependency in the
+explanation.  I've provided a forward reference instead.  I've also
+added a forward reference that was missing from an earlier chapter to
+the same explanation.
+
+diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
+index da8adda..30dcc74 100644
+--- a/rts_original_scheduling.tex
++++ b/rts_original_scheduling.tex
+@@ -161,6 +161,10 @@ there are three important scenarios:
+     any sparks left on the stack by $G_1$ would have been popped off by
+     the \joinandcontinue barriers of the conjunctions that spawned off the
+     sparks.
++    This invariant requires a \emph{last-in-first-out} storage of sparks,
++    which is why each context uses a stack rather than a queue.
++    In Section~\ref{sec:rts_work_stealing} we explain in more detail
++    \emph{why} a \emph{last-in-first-out} order is important.
+ 
+     The check that the spark's stack pointer is equal to the current
+     parent stack pointer\footnote{
+diff --git a/rts_work_stealing.tex b/rts_work_stealing.tex
+index 2c6b9f1..ec273c5 100644
+--- a/rts_work_stealing.tex
++++ b/rts_work_stealing.tex
+@@ -10,7 +10,8 @@ its solution.
+ In a work stealing system,
+ sparks placed on a context's local spark stack
+ are not committed to running in that context;
+-they may be executed in a different context if they are stolen.
++they may be executed in a different context if they are stolen
++(we describe below why we use a stack to store sparks).
+ This delays the decision of where to execute a spark until the moment
+ before it is executed.
+ 
 
 ** NOOP p.71. remark
    Just a remark, but algorithm 3.8 is basic and the idea of
     reordering independent conjunctions quite seems not far.  being pushed
     very
 
-
-** TODO p. 78. XXX                                                  :trivial:
+** DONE p. 78. XXX                                                  :trivial:
+   CLOSED: [2013-04-01 Mon 14:12]
    In Figure 3.6, there is an “XXX” remaining.
 
+   Deleted, (the revisit had already been acted upon).
 
-** TODO p.79. Busy transitions                                :clarification:
+** DONE p.79. Busy transitions                                :clarification:
+   CLOSED: [2013-04-10 Wed 21:43]
     Figure 0 = Seems strange to characterize some transitions as
     “busier” because “you think” (p.78) they occur most often.  Is
     this relevant and, if it is, could it be better (experimentally)
@@ -62,7 +223,31 @@ could annotate it.
     one wonder Whether some of the made are based on
     intuitionchoicesyou only.
 
-** TODO p.92. Static analysis                                 :clarification:
+Described our reasoning why these edges are busier:
+
+diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
+index bc4178e..def8dbe 100644
+--- a/rts_work_stealing2.tex
++++ b/rts_work_stealing2.tex
+@@ -530,8 +530,13 @@ blue edge:
+ blue denotes a transition that is done with a compare and swap on the
+ \code{MR\_es\_state} field of the \enginesleepsync structure,
+ whilst other transitions are made with an assignment.
+-The edges drawn with thicker lines are \emph{busier}:
+-these are the transitions that we think occur most often.
++The parallel runtime system is under the most load when there are a large
++number of sparks that represent small computations.
++When this occurs, engines spend most of their execution time in the
++\code{MR\_WORKING}, \code{MR\_LOOKING\_FOR\_WORK} and \code{MR\_STEALING}
++states, or transitioning between them.
++Therefore these transitions are \emph{busier}
++and their edges in the graph are drawn with thicker lines.
+ 
+ \plan{Notification transitions}
+ When an engine creates a spark or makes a context runnable
+
+** DONE p.92. Static analysis                                 :clarification:
+   CLOSED: [2013-04-09 Tue 10:51]
     When (re)introducing the general approach and justifying the
     feedback-approach, the discussion on profiler-feedback versus static
     analysis could be more detailed and more objective.  You put a lot of
@@ -80,25 +265,188 @@ could annotate it.
     input, so both methods have the same requirements.  Each method
     has its own strengths and may complement the other.
 
-** TODO p.93 (end of section 4.2). Terminology                      :trivial:
+diff --git a/overlap.tex b/overlap.tex
+index a66eb8a..50fbd11 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -276,14 +276,19 @@ However, this will not be accurate;
+ static analysis cannot take into account sizes of data terms,
+ or other values that are only available at runtime.
+ It may be possible to provide this data by some other means,
+-such as by requiring the programmer to provide a specification of their
+-program's likely input data.
+-It has been shown that programmers are not good at estimating where their
+-programs' hotspots are,
+-likewise we think that a programmer's estimate of their program's likely
+-input data will also be inaccurate.
+-This conclusion is supported by the obvious reasoning that it is always best
+-to experimentally measure something rather than estimate it is value.
++such as by requiring the programmer to provide a 
++descriptions of the typical shapes and sizes of 
++their program's likely input data.
++Programming folklore says that programmers are not good at estimating where
++their programs' hotspots are.
++Some of the reasons for this will affect a programmer's estimate of their
++program's likely input data, making it inaccurate.
++In fact, misunderstanding a program's typical input is one of the reasons
++why a programmer is likely to mis-estimate the location of the
++program's hotspots.
++Our argument is that an estimate,
++even a confident one, can only be verified by measurement,
++but a measurement never needs estimation to back it up.
+ Therefore,
+ our automatic parallelisation system uses profiler feedback information.
+ This was introduced in Section~\ref{sec:backgnd_autopar},
+
+I've also described this earlier in Chapter 2.
+
+diff --git a/backgnd_autopar.tex b/backgnd_autopar.tex
+index 6cfa3fb..2a3b85f 100644
+--- a/backgnd_autopar.tex
++++ b/backgnd_autopar.tex
+@@ -40,11 +40,16 @@ against another computation.
+ It is important not to create too much parallelism:
+ The hardware is limited in how many parallel tasks it can execute,
+ any more and the overheads of parallel execution will slow the program down.
+-Therefore, it is not just sub-optimal to parallelise the search of the small li
++Therefore, it is not just sub-optimal to parallelise the search of the small
++list,
+ but detrimental.
+-The only way we can know the actual cost of most pieces of code
+-is by understanding their typical inputs,
+-or measuring their runtime cost while operating on typical inputs.
++Using a description of a program's typical inputs one could
++calculate the execution times of the program's procedures.
++However it is more direct, more robust and much easier to simply use a
++profiler to measure the typical execution times of procedures in the program
++while the program is executing with typical inputs,
++especially when we have such a powerful profiler already available
++(Section~\ref{sec:backgnd_deep}).
+ Therefore,
+ profiling data should be used in auto-parallelisation;
+ it allows us to predict runtime costs for computations whose
+
+** DONE p.93 (end of section 4.2). Terminology                      :trivial:
+   CLOSED: [2013-04-01 Mon 14:52]
    Terminology: one often uses “monovariant/polyvariant” to refer to
    the fact that a predicate/procedure is
    analysed/transformed/compiled one versus multiple times with
    respect to a somewhat different content.
 
-** TODO p.106 (bottom of the page):                           :clarification:
+   I've rephrased this paragraph to use these terms (and explain
+   them).
+
+diff --git a/overlap.tex b/overlap.tex
+index 97d03d0..4157fd0 100644
+--- a/overlap.tex
++++ b/overlap.tex
+@@ -383,11 +398,13 @@ A procedure can contain several conjunctions with two or more goals that we
+ consider parallelising,
+ therefore multiple candidate parallelisations may be generated for different
+ conjunctions in a procedure.
+-The same procedure may also appear more than once in the call graph,
+-and therefore multiple parallelisations may be generated for the same
+-conjunctions within the procedure.
+-We discuss how we resolve conflicting recommendations for the same procedure
+-in Section~\ref{sec:overlap_pragmatic}.
++The same procedure may also appear more than once in the call graph.
++Each time it occurs in the call graph its conjunctions may be parallelised
++differently, or not at all,
++therefore it is said to be \emph{polyvariant} (having multiple forms).
++Currently our implementation compiles a single \emph{monovariant} procedure.
++We discuss how the implementation chooses which candidate parallelisations to
++include in Section~\ref{sec:overlap_pragmatic}.
+ 
+ % \section{Traversing the call graph}
+ % \label{sec:overlap_dfs}
+
+
+** DONE p.106 (bottom of the page):                           :clarification:
+   CLOSED: [2013-04-01 Mon 17:59]
    “the recursivecalls cost at its average recursion depth is used by
    the algorithm”.  is this speaking) the best one can get or would it
    be to obtain more precise results (eg.  (theoretically possible by
    performing some finpoint computation on the predicate)?
 
-   This is what we can do without changing the profiler further.  We
-   could change the profiler but we're not convinced that doing so is
-   necessary.
+   The examiner has understood the issue to some degree.  I've
+   emphasised the issue and added discussion about getting more
+   precise results through analysis of recurrence relations.
 
-** TODO p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
+:diff --git a/conc.tex b/conc.tex
+index b9e2ddc..0b49b5b 100644
+--- a/conc.tex
++++ b/conc.tex
+@@ -93,6 +93,7 @@ and to adjust the values that represent the costs of parallel execution
+ overheads in the cost model.
+ 
+ \section{Further work}
++\label{sec:conc_further_work}
+ 
+ Throughout this dissertation we have discussed further work that may apply to
+ each contribution.
+diff --git a/overlap.tex b/overlap.tex
+index a0accd5..756d879 100644
+--- a/overlap.tex
++++ b/overlap.tex
 
-** TODO p. 12.4.  Typo: “that the each iteration”                   :trivial:
+@@ -1713,22 +1730,39 @@ times.
+ In many cases,
+ the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
+ will contain a recursive call.
+-In these cases the recursive call's cost at its average recursion depth is
+-used by the algorithm.
+-This assumes that the recursive call
+-calls the \emph{original, sequential} version of the procedure.
++In these cases,
++the algorithm uses the recursive call's cost at its average recursion depth
++in the sequential execution data gathered by the profiler.
++This is naive because it assumes that the recursive call
++calls the \emph{original, sequential} version of the procedure,
++however the call is recursive and so the parallelised procedure calls itself,
++the \emph{transformed parallel} procedure whose cost at its average recursion
++depth is going to be different from the sequential version's.
+ When the recursive call calls the parallelised version,
+-we can expect a similar saving (absolute time, not ratio)
++%we can expect a similar saving
++there may be a similar saving 
++(absolute time, not ratio)
+ on \emph{every} recursive invocation,
+ provided that there are enough free CPUs.
+ How this affects the expected speedup of the top level call
+ depends on the structure of the recursion.
+-Our current approach handles non-recursive cases correctly,
++
++It should be possible to estimate the parallel execution time of the top level
++call into the recursive procedure,
++including the parallelism created at each level of the recursion,
++provided that
++the recursion pattern is one that is understood by the algorithms in
++Section~\ref{sec:overlap_reccalls}.
++Before we implemented this it was more practical to improve the efficiency of
++recursive code
++(Chapter~\ref{chap:loop_control}).
++We have not yet returned to this problem,
++see Section~\ref{sec:conc_further_work}.
++Nevertheless,
++our current approach handles non-recursive cases correctly,
+ which are the majority (78\%) of all cases;
+ it handles a further 13\% of cases (single recursion) reasonably well
+ (Section~\ref{sec:overlap_reccalls}).
+-We do not currently do any further analysis when parallelising recursive
+-code.
+ Note that even better results for singly recursive procedures can be
+ achieved because of the work in Chapter~\ref{chap:loop_control}.
+ 
+
+** DONE p.120 (bottom of the page). Typo: “perforrned perform”.     :trivial:
+   CLOSED: [2013-04-01 Mon 14:55]
+
+   Fixed (almost) double word.
+
+** DONE p. 12.4.  Typo: “that the each iteration”                   :trivial:
+   CLOSED: [2013-04-01 Mon 14:57]
+
+Removed 'the' from the phrase.
 
 * TODO Examiner 2
 

@@ -275,7 +275,22 @@ analysis.
 However, this will not be accurate;
 static analysis cannot take into account sizes of data terms,
 or other values that are only available at runtime.
-Therefore, we use profiler feedback information in our implementation.
+It may be possible to provide this data by some other means,
+such as by requiring the programmer to provide a 
+descriptions of the typical shapes and sizes of 
+their program's likely input data.
+Programming folklore says that programmers are not good at estimating where
+their programs' hotspots are.
+Some of the reasons for this will affect a programmer's estimate of their
+program's likely input data, making it inaccurate.
+In fact, misunderstanding a program's typical input is one of the reasons
+why a programmer is likely to mis-estimate the location of the
+program's hotspots.
+Our argument is that an estimate,
+even a confident one, can only be verified by measurement,
+but a measurement never needs estimation to back it up.
+Therefore,
+our automatic parallelisation system uses profiler feedback information.
 This was introduced in Section~\ref{sec:backgnd_autopar},
 which also includes a description of Mercury's deep profiler.
 To generate the profiler feedback data,
@@ -383,11 +398,13 @@ A procedure can contain several conjunctions with two or more goals that we
 consider parallelising,
 therefore multiple candidate parallelisations may be generated for different
 conjunctions in a procedure.
-The same procedure may also appear more than once in the call graph,
-and therefore multiple parallelisations may be generated for the same
-conjunctions within the procedure.
-We discuss how we resolve conflicting recommendations for the same procedure
-in Section~\ref{sec:overlap_pragmatic}.
+The same procedure may also appear more than once in the call graph.
+Each time it occurs in the call graph its conjunctions may be parallelised
+differently, or not at all,
+therefore it is said to be \emph{polyvariant} (having multiple forms).
+Currently our implementation compiles a single \emph{monovariant} procedure.
+We discuss how the implementation chooses which candidate parallelisations to
+include in Section~\ref{sec:overlap_pragmatic}.
 
 % \section{Traversing the call graph}
 % \label{sec:overlap_dfs}
@@ -1713,22 +1730,39 @@ times.
 In many cases,
 the conjunction given to Algorithm~\ref{alg:dep_par_conj_overlap_middle}
 will contain a recursive call.
-In these cases the recursive call's cost at its average recursion depth is
-used by the algorithm.
-This assumes that the recursive call
-calls the \emph{original, sequential} version of the procedure.
+In these cases,
+the algorithm uses the recursive call's cost at its average recursion depth
+in the sequential execution data gathered by the profiler.
+This is naive because it assumes that the recursive call
+calls the \emph{original, sequential} version of the procedure,
+however the call is recursive and so the parallelised procedure calls itself,
+the \emph{transformed parallel} procedure whose cost at its average recursion
+depth is going to be different from the sequential version's.
 When the recursive call calls the parallelised version,
-we can expect a similar saving (absolute time, not ratio)
+%we can expect a similar saving
+there may be a similar saving 
+(absolute time, not ratio)
 on \emph{every} recursive invocation,
 provided that there are enough free CPUs.
 How this affects the expected speedup of the top level call
 depends on the structure of the recursion.
-Our current approach handles non-recursive cases correctly,
+
+It should be possible to estimate the parallel execution time of the top level
+call into the recursive procedure,
+including the parallelism created at each level of the recursion,
+provided that
+the recursion pattern is one that is understood by the algorithms in
+Section~\ref{sec:overlap_reccalls}.
+Before we implemented this it was more practical to improve the efficiency of
+recursive code
+(Chapter~\ref{chap:loop_control}).
+We have not yet returned to this problem,
+see Section~\ref{sec:conc_further_work}.
+Nevertheless,
+our current approach handles non-recursive cases correctly,
 which are the majority (78\%) of all cases;
 it handles a further 13\% of cases (single recursion) reasonably well
 (Section~\ref{sec:overlap_reccalls}).
-We do not currently do any further analysis when parallelising recursive
-code.
 Note that even better results for singly recursive procedures can be
 achieved because of the work in Chapter~\ref{chap:loop_control}.
 
@@ -3092,6 +3126,7 @@ whose effect is lost in the noise.
 % However, the raw times showed significant variability,
 % and this process does not entirely eliminate that variability.
 
+\label{page:conjs_in_mcc}
 To see the difference between naive and overlap,
 we need to look at larger programs.
 Our standard large test program is the Mercury compiler, which contains
@@ -3228,7 +3263,7 @@ our prior work (\citet{bone:2008:hons}
     to the degree of Bachelor of Computer Science Honours at The University of
     Melbourne.}).
 Compared with the work in this chapter,
-our earlier work performed perform a much simpler analysis of the
+our earlier work performed a much simpler analysis of the
 parallelism available in dependent parallel conjunctions.
 It could handle only conjunctions with two conjuncts and a single shared
 variable.
