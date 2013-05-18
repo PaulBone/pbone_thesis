@@ -7,15 +7,23 @@
 Early in the project
 we tested two manually parallelised programs:
 a raytracer and a mandelbrot image generator.
-Both of them have a single significant loop
+Both programs have a single significant loop
 whose iterations are independent of one another.
-We expect that automatic parallelisation would parallelise this loop
-as it is the best place to introduce parallelism.
-When we parallelised this loop manually we did
+We expect that a good automatic parallelisation system will parallelise this
+loop as it is the best place to introduce parallelism.
+When we parallelised this loop manually,
 we did not get the speedups that we expected.
 Therefore,
 we chose to address the performance problems
 before we worked on automatic parallelism.
+Throughout this chapter
+we continue to use these two benchmarks, along with a naive Fibonacci
+program (Page~\pageref{page:fibs}).
+These benchmarks are not diverse and they all create a lot of
+AND-parallelism,
+most of which is independent.
+We use these benchmarks deliberately to test that our runtime system can
+handle large amounts of parallelism efficiently.
 
 In this chapter we investigate and correct these performance problems.
 We start with the garbage collector in Section~\ref{sec:rts_gc};
@@ -30,10 +38,12 @@ spark scheduling.
 We address one of these problems by introducing work stealing in
 Section~\ref{sec:rts_work_stealing}.
 Then in Section~\ref{sec:rts_reorder} we reorder conjuncts in independent
-parallel conjunctions to work around the other spark scheduling problem.
-Finally, in Section~\ref{sec:rts_work_stealing2} we make further improvements to
-work stealing and change how idle engines look for work, sleep and are
-woken up.
+parallel conjunctions to work around the second spark scheduling problem.
+Finally, in Section~\ref{sec:rts_work_stealing2} we make further
+improvements to
+work stealing and change the data structures and algorithms used to manage
+idle engines,
+including how idle engines look for work, sleep and are woken up.
 
 \input{rts_gc}
 \input{rts_original_scheduling}

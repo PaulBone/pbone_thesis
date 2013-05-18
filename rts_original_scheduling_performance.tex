@@ -30,7 +30,8 @@
 In Section~\ref{sec:rts_gc} we ran our benchmarks with a recent version of the
 runtime system.
 In the rest of this chapter we describe many of the improvements to the
-runtime system that improved parallel performance.
+runtime system that led to the improved parallel performance reported in
+that section.
 
 \plan{Introduce right recursion.}
 Figure~\ref{fig:map_right_and_left_recursive} shows two alternative, parallel
@@ -73,41 +74,46 @@ and therefore tend to write right recursive code.
 \plan{Show performance figures.}
 Table~\ref{tab:right} shows average elapsed time in seconds for the
 mandelbrot\_lowalloc program from 20 test runs.
-We use the mandelbrot\_lowalloc program from Section~\ref{sec:rts_gc}.
+We described this program above in Section~\ref{sec:rts_gc}.
 Using this program we can easily observe the
 speedup due to parallelism in Mercury without the effects of the garbage
 collector.
-The loop that iterates over the rows in the image uses right recursion.
-It is similar to \code{map/3}
-in Figure~\ref{fig:map_right_recursive}.
-The leftmost column shows the maximum number of contexts permitted at
-any time.
-This is the limit that was mentioned in the previous section.
+The main loop of the renderer uses right recursion,
+and is similar to \code{map/3}
+(Figure~\ref{fig:map_right_recursive}).
+This is the loop that iterates over the image's rows.
+The leftmost column of the table shows the maximum number of contexts
+that may exist at any time.
+This is the limit that was introduced in the previous section.
 The next two columns give the elapsed execution time for a sequential
-version of the program;
-in this version of the program no parallel conjunctions were used.
+version of the program, that is,
+the program compiled without the use of the parallel conjunction operator.
 These two columns give results without and with thread safety.
 The following four columns give the elapsed execution times
 using one to four Mercury engines.
-The numbers in parentheses are the ratio between the time and the
-sequential thread safe time.
+Each value in the table is a mean of 20 test runs.
+The numbers in parentheses are the ratio between the mean time and the
+mean sequential thread safe time.
 
 \plan{Observations}
 In general we achieve more parallelism when we use more contexts,
-up to a threshold of 601 contexts,
-as there are 600 rows in the image and a base case each one consumes a
-context.
+up to a threshold of 601 contexts.
+The threshold is at this point because
+there are 600 rows in the image meaning 600 iterations of the loop plus 1
+for the base case.
+Each iteration may consume a context.
 This is why the program does not benefit greatly from a high limit such as
 1024 or 2048 contexts.
-This program may use fewer than 600 contexts as any sequentially executed
-sparks use their parent context.
+When a spark is executed in its parent context
+(two iterations execute sequentially)
+then the program may use fewer than 600 contexts.
 This is possibly why a limit of 512 contexts also results in a good parallel
 speedup.
 When only 256 contexts are used,
 the four core version achieves a speedup of 1.30,
 compared to 3.55 for 512 or more contexts.
-Given that mandelbrot uses independent parallelism there should never be any
-need to suspend a context.
+Given that mandelbrot uses independent parallelism,
+ideally there should never be any need to suspend a context.
 Therefore the program should parallelise well enough when restricted to
 a small number of contexts (four to eight).
 Too many contexts are needed to execute this program at the level of
@@ -119,8 +125,10 @@ parallelism.
 \plan{Describe the context limit problem.}
 %Right recursion uses a context for each iteration of the loop,
 %and then suspends that context.
-To understand this problem we must consider how parallel conjunctions are
+To understand this problem, we must consider how parallel conjunctions are
 executed (see Section~\ref{sec:backgnd_merpar}).
+We will step through the execution of \code{map/3} from
+Figure~\ref{fig:map_right_recursive}.
 The original context creates a spark for the second and later conjuncts and
 puts it on the global spark queue.
 It then executes the first conjunct \code{P/2}.
@@ -130,10 +138,9 @@ After executing \code{P/2} the original context will call the
 \joinandcontinue barrier.
 It then attempts to execute a spark from its local spark stack,
 which will fail because the only spark was placed on the global spark queue.
-The original context will be needed after the other conjunct finishes, 
-to execute the code after the parallel conjunction.
-The original context cannot proceed but will be needed later,
-therefore it is suspended until all the other 599 iterations of the loop
+The original context cannot proceed until after the other context finishes,
+but it will be needed then and must then be kept in memory until then.
+Therefore it is suspended until all the other 599 iterations of the loop
 have finished.
 Meanwhile the spark that was placed on the global run queue is converted
 into a new context.
@@ -142,7 +149,7 @@ becomes blocked within the recursive instance of the same parallel
 conjunction;
 it must wait for the remaining 598 iterations of the loop.
 This process continues to repeat itself,
-allocating more contexts which can consume large amounts of memory.
+allocating more contexts.
 Each context consumes a significant amount of memory,
 much more than one stack frame.
 Therefore
@@ -264,12 +271,24 @@ Right and Left recursion shown with standard deviation}
 Table~\ref{tab:2009_left_nolimit} shows benchmark results using left
 recursion.
 The table is broken into three sections:
+
+\begin{enumerate}
+
+\item
 a copy of the right recursion data from Table~\ref{tab:right},
 which is presented again for comparison;
+
+\item
 the left recursion data,
 which we will discuss now;
+
+\item
 and left recursion data with a modified context limit,
 which we will discuss in a moment.
+
+\end{enumerate}
+
+\noindent
 The figures in parenthesis are the standard deviation of the samples.
 
 The left recursive figures are underwhelming;
@@ -371,7 +390,7 @@ this way.
 
 \plan{Reinforce that these results support the idea that scheduling
 decisions are made prematurely}
-Both of the left recursion problems have the same cause:
+Both of the problems involving left recursion have the same cause:
 the decision to execute a spark sequentially or in parallel is
 made too early.
 This decision is made when the spark is scheduled,

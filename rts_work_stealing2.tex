@@ -230,7 +230,8 @@ without a context will call \idle to acquire new work.
 the new version is shown in Algorithm~\ref{alg:idle}.
 This algorithm uses a structure pointed to by \var{eng\_data} to receive
 notifications;
-we will discuss this structure and notifications this later in this section.
+we will discuss this structure and how it is used to send and receive
+notifications later in this section.
 For now we will discuss how \idle looks for work in lieu of any notification.
 
 \idle tries to find a runnable context before trying to find a local
@@ -275,7 +276,7 @@ If it finds a context,
 it will execute \prepareengineforcontext
 (Algorithm~\ref{alg:prepare_engine_for_context}),
 which checks for and unloads the engine's current context,
-and then loads a new context.
+and then loads the new context.
 It also clears the context's resume field and returns the field's previous
 value so that \idle can jump to the resume address.
 The context's resume field must be cleared here as
@@ -548,7 +549,7 @@ This is modelled as a state transition of the recipient;
 such transitions are shown with red and green edges in the graph.
 Red edges denote transitions from the sleeping state:
 the sender acquires the \code{MR\_es\_lock} in the
-\enginesleepsync structure while updating the structures contents and
+\enginesleepsync structure while updating the structure's contents and
 signalling the sleep semaphore.
 Green edges denote transitions from other states:
 the sender uses a compare and swap to write the \code{MR\_BUSY} value to the
@@ -589,13 +590,13 @@ another engine.
 
     \item[\code{MR\_ACTION\_CONTEXT}:]
     A context has become runnable and is pointed to by the
-    \code{MR\_es\_action\_data} field.
+    \esactiondata field.
     We attach the context to the message so that we do not have to place it
     in the context run queue and then retrieve it again when we know that
     this engine is capable of executing the context.
     However this notification cannot be ignored as that would cause the
     context to be leaked.
-    Leaking a context means not dropping or loosing the context;
+    Leaking a context means dropping or losing the context;
     a context that must be executed may not be leaked as the computation it
     represents would get lost.
     Therefore we only ever send \code{MR\_ACTION\_CONTEXT} messages to engines in
@@ -618,7 +619,7 @@ another engine.
 
     \item[\code{MR\_ACTION\_WORKSTEAL}:]
     A spark has been placed on the spark deque indicated by the
-    \code{MR\_es\_action\_data} field.
+    \esactiondata field.
     This message is used to notify an engine of a new spark that it might be
     able to steal and execute.
     Informing the thief which spark deque it should check is an
@@ -986,6 +987,7 @@ rather than contexts, in order to make work stealing simpler.
 \end{center}
 \end{figure}
 
+\label{page:fibs}
 To make it easier to see the effects of the new work stealing code,
 we created a new benchmark named fibs.
 Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
@@ -1093,10 +1095,10 @@ However,
 the smaller number of spark deques make work stealing faster.
 Overall,
 the benefit of the new implementation depends on the program being executed.
-However it is important to remember that fibs is a microbenchmark and does
+However it is important to remember that fibs is a micro-benchmark and does
 not represent typical programs,
-especially granularity control as these versions create embarrassing
-parallelism.
+especially the non-granularity controlled and under-granularity controlled
+versions as they create embarrassing parallelism.
 
 There are some other interesting trends in the results.
 Most obviously,
@@ -1108,11 +1110,11 @@ run more slowly than those with coarse granularity.
 However
 when we consider the sequential results for varying amounts of granularity,
 we see some strange results.
-We should expect to see the overheads of granularity control in these
+We expected to see the overheads of granularity control in these
 results;
 the results with large values for \Depth should be slower than the ones with
 smaller values.
-We would also expect the results without granularity control to be fastest,
+We also expected the results without granularity control to be the fastest,
 but not significantly:
 in practice \fibsgc contributes to a tiny part of the call graphs of tests
 with a low \Depth value.
@@ -1121,8 +1123,8 @@ the sequential execution times for fibs with a \Depth of 40
 are \emph{faster} than those with a \Depth of 10
 and those without granularity control.
 We are not sure of the cause,
-however one hypothesis is that of the two procedures used in the granularity control
-code,
+however one hypothesis is that of the two procedures used in the granularity
+control code,
 \fibsseq and \fibsgc,
 one is faster, namely \fibsgc, due to
 some strange interaction of the processor's branch predictor and the code's
@@ -1149,7 +1151,7 @@ the stolen sparks
 onto its own deque, then it immediately executes the single spark which was
 not placed on the deque.
 With each stealing operation,
-sparks becomes distributed among more of the engines,
+sparks become distributed among more of the engines,
 which improves the probability that a given victim has work on its own deque.
 Work stealing will become less frequent as engines try to execute their own
 sparks before stealing other's,

@@ -36,6 +36,8 @@ We group languages into the following two classifications.
     but we will restrict our attention to the specific benefit
     that this makes it easy for both compilers and programmers to understand
     if it is safe to parallelise any particular computation.
+    Examples of pure declarative languages are Mercury, Haskell and
+    Clean.
 
     \item[Impure] programming languages are those that allow side effects.
     This includes imperative and impure declarative languages.
@@ -45,6 +47,9 @@ We group languages into the following two classifications.
     parallelism desirable.
     Thus parallelisation of programs written in impure languages is notoriously
     difficult.
+    Examples of impure languages are C, Java, Prolog and Lisp;
+    even though the last two of these are declarative languages,
+    they still allow side effects, and are therefore impure.
 
 \end{description}
 
@@ -557,14 +562,14 @@ The \code{par} and \code{pseq} functions have the types:
 par :: a -> b -> b
 pseq :: a -> b -> b
 \end{verbatim}
-They both take two arguments and return their first.
+They both take two arguments and return their second.
 Their declarative semantics are identical;
 however their \emph{operational} semantics are different.
 The \code{par} function may spawn off a parallel task that evaluates its
-second argument to WHNF,
-and returns its first argument.
-The \code{pseq} function will evaluate its second argument to WHNF
-\emph{and then} return its first argument.
+first argument to WHNF,
+and returns its second argument.
+The \code{pseq} function will evaluate its first argument to WHNF
+\emph{and then} return its second argument.
 We can think of these functions as the \code{const} function
 with different evaluation strategies.
 
@@ -611,7 +616,9 @@ which threads will perform which computations.
 \subsubsection{Parallelism in logic languages}
 \label{sec:intro_par_logic}
 
-Logic programming languages use selective linear resolution with definite
+Different logic programming languages use different evaluation strategies,
+but we will restrict our attention to those that use
+selective linear resolution with definite
 clauses (SLD resolution) \citep{kowalski_sld}.
 SLD resolution attempts to answer a query by finding a Horn clause whose
 head has the same predicate name as the selected atom in the query,
@@ -874,10 +881,8 @@ However clause bodies can still include tell unifications can may provide a
 variable instantiation that allows some other blocked computation to resume.
 Therefore most unifications still incur these extra costs.
 
-The Data Dependent AND-parallelism system (DDAS)
-of \citet{pontelli:1996:ddas} supports explicit
-dependent AND-parallelism in a non-deterministic language;
-it is based on the work of \citet{gupta:1991:ace}.
+\citet{pontelli:1996:nondet-and-par} describe a system that 
+supports explicit dependent AND-parallelism in a non-deterministic language.
 Analyses determine a conservative set of shared variables in dependent
 conjunctions and then \emph{guess} which conjunct produces each variable
 (usually the leftmost one in which the variable appears)
