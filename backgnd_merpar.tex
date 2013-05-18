@@ -258,7 +258,7 @@ and the context just executes it.
 Once each conjunct synchronises using {\joinandcontinue},
 the original context will continue execution after the parallel conjunction.
 The introduction of the barrier at the end of the conjunction can prevent
-the compiler from using tail recursion optimistion.
+the compiler from using tail recursion optimisation.
 This occurs when $G_n$ ended in a recursive call, and the whole conjunction
 was the last conjunction in a procedure's body.
 We discuss this problem in more detail and provide our solution in

@@ -173,7 +173,7 @@ V_10 = V_9 + V_7,       V_11 = V_1 * A,         X   = V_10 / V_11
 As shown here,
 constants such as integers must be introduced as unifications between a
 variable and a function symbol representing the constant.
-Goals flatterned in this way are said to be in
+Goals flattened in this way are said to be in
 \emph{super homogeneous form}.
 
 Mercury has a type system inspired by the type system of Hope~\citep{hope}
@@ -284,7 +284,8 @@ which we call a \emph{procedure}.
 In fact, the compiler handles individual procedures as separate entities
 after mode checking.
 Mode correct conjunctions,
-and other conjoined goals such as the cond and then parts of an if-then-else,
+and other conjoined goals such as the condition and then parts of an
+if-then-else,
 must produce values for variables before consuming them.
 This means that
 variables passed as input arguments must be ground before and after the
@@ -331,8 +332,8 @@ The mode system enforces three invariants:
   but also the condition and then-part of an if-then-else,
   each variable that is consumed by any of the goals
   is produced by exactly one earlier goal.
-  The else part of an if-then-else is not conjoined with the cond part
-  so this invariant does not apply to the cond and else parts.
+  The else part of an if-then-else is not conjoined with the condition part
+  so this invariant does not apply to the condition and else parts.
 
   \item[Branched goal invariant:]
   In disjunctions, switches or if-then-elses,
