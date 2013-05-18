@@ -442,16 +442,16 @@ index 21d12ec..05a3b03 100644
     behavior of conditional variables in POSIX threads.
 
 diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
-index a5c14f2..a15a8bc 100644
+index a5c14f2..7ea1217 100644
 --- a/backgnd_deppar.tex
 +++ b/backgnd_deppar.tex
 @@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
  it must be declared as impure so that the compiler will not optimise away calls
  to it.
  
-+Some readers have asked if futures are similar to POSIX condition
-+variables \citep{butenhof1997:pthreads}.
-+While both name their operations \emph{wait} and \emph{signal} they are
++Note that while futures and POSIX condition variables
++\citep{butenhof1997:pthreads}
++both name their operations \emph{wait} and \emph{signal} they are
 +different in two significant ways.
 +First,
 +futures store a value as well as state,
