@@ -134,7 +134,7 @@ index 3f6ae20..01785c5 100644
 -and it provides powerful profiling tools which generate data for our profile
 -feedback analyses.
 +and it provides the most powerful profiling tool of any declarative language,
-+which generate data for our profile feedback analyses.
++which generates data for our profile feedback analyses.
 +In some ways our work can be used with other programming languages,
 +but most other languages have significant barriers.
 +In particular automatic parallelism can only work reliably with declaratively
@@ -163,6 +163,41 @@ difference is lost in the noise.  Chapter 5 deals with a pathological
 case that can be best shown using the same benchmarks as Chapter 3,
 as these benchmarks exhibit the pathological behaviour without
 creating extra 'noise'.
+
+The first paragraph in Chapter 3 made a similar point.  I've extended that
+paragraph to make this point clearer:
+
+diff --git a/rts.tex b/rts.tex
+index b7f5096..5b33986 100644
+--- a/rts.tex
++++ b/rts.tex
+@@ -16,6 +16,14 @@ we did not get the speedups that we expected.
+ Therefore,
+ we chose to address the performance problems
+ before we worked on automatic parallelism.
++Throughout this chapter
++we continue to use these two benchmarks, along with a naive Fibonacci
++program (Page~\pageref{page:fibs}).
++These benchmarks are not diverse and they all create a lot of
++AND-parallelism,
++most of which is independent.
++We use these benchmarks deliberately to test that our runtime system can
++handle large amounts of parallelism efficiently.
+
+ In this chapter we investigate and correct these performance problems.
+ We start with the garbage collector in Section~\ref{sec:rts_gc};
+diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
+index b872029..a120b85 100644
+--- a/rts_work_stealing2.tex
++++ b/rts_work_stealing2.tex
+@@ -982,6 +982,7 @@ rather than contexts, in order to make work stealing simpler
+ \end{center}
+ \end{figure}
+
++\label{page:fibs}
+ To make it easier to see the effects of the new work stealing code,
+ we created a new benchmark named fibs.
+ Fibs calculates the value of the 43\textsuperscript{rd} Fibonacci number
 
 *** DONE Formal semantics                                        :discussion:
     CLOSED: [2013-05-16 Thu 20:40]
