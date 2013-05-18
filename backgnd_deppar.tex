@@ -95,6 +95,9 @@ acquiring the lock as well as after.
 If it is \code{MR\_PRODUCED} before the lock is acquired,
 then \wait can safely retrieve the
 future's value without using the lock.
+Note also that because Mercury's mode system ensures that variable
+dependencies can never form cycles,
+the compiler's use of futures cannot create a deadlock.
 
 A producer will call \signal to place a value into a future and wake up any
 suspended contexts.
@@ -108,6 +111,18 @@ After releasing the lock, \signal will schedule the suspended contexts.
 Because \signal has no outputs and is deterministic,
 it must be declared as impure so that the compiler will not optimise away calls
 to it.
+
+Some readers may wonder whether futures are similar to POSIX condition
+variables \citep{butenhof1997:pthreads}.
+While both name their operations \emph{wait} and \emph{signal},
+they are different in two significant ways.
+First,
+futures store a value as well as a state,
+POSIX condition variables store only their state.
+Second,
+when a future is signalled, all its consumers are woken,
+whereas only one of a POSIX condition variable's waiters is woken.
+A POSIX condition variable is more similar to a semaphore.
 
 To minimise waiting,
 the compiler pushes \signal operations on each future
