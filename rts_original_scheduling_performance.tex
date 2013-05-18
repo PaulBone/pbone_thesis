@@ -80,8 +80,8 @@ speedup due to parallelism in Mercury without the effects of the garbage
 collector.
 The main loop of the renderer uses right recursion,
 and is similar to \code{map/3}
-(Figure~\ref{fig:map_right_recursive}),
-this is the loop that iterates over the image's rows.
+(Figure~\ref{fig:map_right_recursive}).
+This is the loop that iterates over the image's rows.
 The leftmost column of the table shows the maximum number of contexts
 that may exist at any time.
 This is the limit that was introduced in the previous section.
@@ -390,7 +390,7 @@ this way.
 
 \plan{Reinforce that these results support the idea that scheduling
 decisions are made prematurely}
-Both of the left recursive programs have the same cause:
+Both of the problems involving left recursion have the same cause:
 the decision to execute a spark sequentially or in parallel is
 made too early.
 This decision is made when the spark is scheduled,

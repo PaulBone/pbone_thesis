@@ -230,7 +230,8 @@ without a context will call \idle to acquire new work.
 the new version is shown in Algorithm~\ref{alg:idle}.
 This algorithm uses a structure pointed to by \var{eng\_data} to receive
 notifications;
-we will discuss this structure and notifications later in this section.
+we will discuss this structure and how it is used to send and receive
+notifications later in this section.
 For now we will discuss how \idle looks for work in lieu of any notification.
 
 \idle tries to find a runnable context before trying to find a local

@@ -796,8 +796,8 @@ index 450bf3d..bcfa6ea 100644
 -in Figure~\ref{fig:map_right_recursive}.
 +The main loop of the renderer uses right recursion,
 +and is similar to \code{map/3}
-+(Figure~\ref{fig:map_right_recursive}),
-+this is the loop that iterates over the image's rows.
++(Figure~\ref{fig:map_right_recursive}).
++This is the loop that iterates over the image's rows.
  The leftmost column shows the maximum number of contexts permitted at
  any time.
  This is the limit that was mentioned in the previous section.
@@ -854,7 +854,7 @@ index 450bf3d..bcfa6ea 100644
  \plan{Reinforce that these results support the idea that scheduling
  decisions are made prematurely}
 -Both of the left recursion problems have the same cause:
-+Both of the left recursive programs have the same cause:
++Both of the problems involving left recursion have the same cause:
  the decision to execute a spark sequentially or in parallel is
  made too early.
  This decision is made when the spark is scheduled,
@@ -912,7 +912,7 @@ index 2c6b9f1..856b106 100644
      This implementation detail avoids memory allocation for sparks inside
      the deque implementation.
 -    A callers of any of these functions temporarily stores the spark on
-+    Callers of any of these functions temporarily stores the spark on
++    A caller of any of these functions temporarily stores the spark on
      its program stack.
  
      \item[\code{MR\_ws\_result MR\_steal\_spark(deque *d, spark *s)}]
@@ -929,12 +929,13 @@ diff --git a/rts_work_stealing2.tex b/rts_work_stealing2.tex
 index b872029..65cb5a5 100644
 --- a/rts_work_stealing2.tex
 +++ b/rts_work_stealing2.tex
-@@ -230,7 +230,7 @@ without a context will call \idle to acquire new work.
+@@ -230,7 +230,8 @@ without a context will call \idle to acquire new work.
  the new version is shown in Algorithm~\ref{alg:idle}.
  This algorithm uses a structure pointed to by \var{eng\_data} to receive
  notifications;
 -we will discuss this structure and notifications this later in this section.
-+we will discuss this structure and notifications later in this section.
++we will discuss this structure and how it is used to send and receive
++notifications later in this section.
  For now we will discuss how \idle looks for work in lieu of any notification.
  
  \idle tries to find a runnable context before trying to find a local
