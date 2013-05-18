@@ -523,7 +523,7 @@ without contending for locks on the global free list.
 When a thread's local free list cannot satisfy a memory request, the global
 free list must be used.
 The local free lists amortise the costs of locking the global free list.
-We anticipate that increasing the size of the local free lists will cause even
+We anticipate that increasing the size of local free lists will cause even
 less contention for global locks,
 allowing allocation intensive programs to have better parallel
 performance.
