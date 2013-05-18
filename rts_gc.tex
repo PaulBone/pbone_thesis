@@ -501,7 +501,7 @@ There are two reasons for this
     (P2) objects,
     causing a cache miss in P1's cache and invalidating the corresponding cache
     line in P2's cache.
-    Later, when collection is finishes,
+    Later, when collection finishes,
     P2's process resumes execution and incurs a cache miss for the object that
     it had been using.
     % He never states this in either of his parallel GC papers.
@@ -513,15 +513,15 @@ There are two reasons for this
 \plan{Discuss local heaps for threads, and their reliability problems.}
 We also investigated another area for increased parallel performance.
 Boehm GC maintains thread local free lists that allow memory to be allocated
-without contending for locks on global free lists.
-When local free lists cannot satisfy a memory request, the global free
-lists must be used.
-The local free lists amortise the costs of locking the global free lists.
+without contending for locks on the global free list.
+When a thread's local free list cannot satisfy a memory request, the global
+free list must be used.
+The local free lists amortise the costs of locking the global free list.
 We anticipate that increasing the size of the local free lists will cause even
 less contention for global locks,
 allowing allocation intensive programs to have better parallel
 performance.
-The size of the local free list can be adjusted by increasing the
+The size of the local free lists can be adjusted by increasing the
 \texttt{HBLKSIZE} tunable.
 Unfortunately this feature is experimental,
 and adjusting \texttt{HBLKSIZE} caused our programs to crash.

@@ -109,12 +109,12 @@ Because \signal has no outputs and is deterministic,
 it must be declared as impure so that the compiler will not optimise away calls
 to it.
 
-Some readers have asked if futures are similar to POSIX condition
+Some readers may wonder whether futures are similar to POSIX condition
 variables \citep{butenhof1997:pthreads}.
-While both name their operations \emph{wait} and \emph{signal} they are
-different in two significant ways.
+While both name their operations \emph{wait} and \emph{signal},
+they are different in two significant ways.
 First,
-futures store a value as well as state,
+futures store a value as well as a state,
 POSIX condition variables store only their state.
 Second,
 when a future is signalled, all its consumers are woken,

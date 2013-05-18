@@ -372,7 +372,7 @@ diff --git a/backgnd_merpar.tex b/backgnd_merpar.tex
 index 21d12ec..b6da6b4 100644
 --- a/backgnd_merpar.tex
 +++ b/backgnd_merpar.tex
-@@ -144,10 +144,14 @@ since its result may never be needed.
+@@ -144,10 +144,17 @@ since its result may never be needed.
  Restricting parallelism to \ddet and \dccmulti code is not a significant
  limitation;
  since the design of Mercury strongly encourages deterministic code,
@@ -381,13 +381,16 @@ index 21d12ec..b6da6b4 100644
 -\peter{Do we have any statistics regarding what proportion of execution time
 -  is spent in det code?  That would be a more relevant statistic.}
 +in our experience, about 75 to 85\% of all Mercury procedures are
-+\ddet\footnote{This statistic was calculated by counting the different
-+determinism declarations in the source code of the Mercury system.},
-+and we expect that most programs spend an even greater fraction of their
-+time in \ddet code.
-+% Table~\ref{tab:recursion_types} shows that at least 95\% of the compiler's
-+% time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet code,
-+% which is the most accuratly we have measured this.
++\ddet.
++(This statistic was calculated by counting the different
++determinism declarations in the source code of the Mercury system.)
++Furthermore,
++we expect that most programs spend an even greater fraction of their time in
++\ddet code
++(we know from profiling data that the Mercury compiler does).
++% Table~\ref{tab:recursion_types}) shows that at least 95\% of the
++% compiler's time is spent in \ddet, \dccmulti, \dsemidet or \dccnondet
++% code, which is the most accuratly we have measured this.
  Existing algorithms for executing nondeterministic code in parallel
  have very significant overheads, generating slowdowns by integer factors.
  Thus we have given priority to parallelising deterministic code,
@@ -421,19 +424,19 @@ index 21d12ec..05a3b03 100644
     behavior of conditional variables in POSIX threads.
 
 diff --git a/backgnd_deppar.tex b/backgnd_deppar.tex
-index a5c14f2..a15a8bc 100644
+index a5c14f2..ec1a14d 100644
 --- a/backgnd_deppar.tex
 +++ b/backgnd_deppar.tex
 @@ -109,6 +109,18 @@ Because \signal has no outputs and is deterministic,
  it must be declared as impure so that the compiler will not optimise away calls
  to it.
  
-+Some readers have asked if futures are similar to POSIX condition
++Some readers may wonder whether futures are similar to POSIX condition
 +variables \citep{butenhof1997:pthreads}.
-+While both name their operations \emph{wait} and \emph{signal} they are
-+different in two significant ways.
++While both name their operations \emph{wait} and \emph{signal},
++they are different in two significant ways.
 +First,
-+futures store a value as well as state,
++futures store a value as well as a state,
 +POSIX condition variables store only their state.
 +Second,
 +when a future is signalled, all its consumers are woken,
@@ -679,19 +682,31 @@ index a01cdf5..2ffb2da 100644
      causing a cache miss in P1's cache and invalidating the corresponding cache
      line in P2's cache.
 -    Later, when collection is finished,
-+    Later, when collection is finishes,
++    Later, when collection finishes,
      P2's process resumes execution and incurs a cache miss for the object that
      it had been using.
      % He never states this in either of his parallel GC papers.
-@@ -503,7 +507,7 @@ There are two reasons for this
+@@ -502,15 +513,15 @@ There are two reasons for this
+ \plan{Discuss local heaps for threads, and their reliability problems.}
  We also investigated another area for increased parallel performance.
  Boehm GC maintains thread local free lists that allow memory to be allocated
- without contending for locks on global free lists.
+-without contending for locks on global free lists.
 -When a local free list cannot satisfy a memory request, the global free
-+When local free lists cannot satisfy a memory request, the global free
- lists must be used.
- The local free lists amortise the costs of locking the global free lists.
+-lists must be used.
+-The local free lists amortise the costs of locking the global free lists.
++without contending for locks on the global free list.
++When a thread's local free list cannot satisfy a memory request, the global
++free list must be used.
++The local free lists amortise the costs of locking the global free list.
  We anticipate that increasing the size of the local free lists will cause even
+ less contention for global locks,
+ allowing allocation intensive programs to have better parallel
+ performance.
+-The size of the local free list can be adjusted by increasing the
++The size of the local free lists can be adjusted by increasing the
+ \texttt{HBLKSIZE} tunable.
+ Unfortunately this feature is experimental,
+ and adjusting \texttt{HBLKSIZE} caused our programs to crash.
 diff --git a/rts_original_scheduling.tex b/rts_original_scheduling.tex
 index da8adda..1a8e80d 100644
 --- a/rts_original_scheduling.tex
@@ -789,8 +804,8 @@ index 450bf3d..bcfa6ea 100644
 -The original context cannot proceed but will be needed later,
 -therefore it is suspended until all the other 599 iterations of the loop
 +The original context cannot proceed until after the other context finishes,
-+but it will be needed then and must then be kept in memory.
-+Therefore It is suspended until all the other 599 iterations of the loop
++but it will be needed then and must then be kept in memory until then.
++Therefore it is suspended until all the other 599 iterations of the loop
  have finished.
  Meanwhile the spark that was placed on the global run queue is converted
  into a new context.
