@@ -605,9 +605,9 @@ it will go to sleep after posing the \event{ENGINE\_WILL\_SLEEP} event.
 
 This design uses two events to record
 the successful search for work in a queue:
-\event{TRY\_GET\_RUNNABLE\_CONTEXT} and \event{START\_THREAD},
-\event{TRY\_GET\_LOCAL\_SPARK} and \event{RUN\_SPARK},
-or \event{TRY\_STEAL\_SPARK} and \event{STEAL\_SPARK}.
+\event{TRY\_\-GET\_\-RUNN\-ABLE\_\-CON\-TEXT} and \event{START\_\-THREAD},
+\event{TRY\_\-GET\_\-LOCAL\_\-SPARK} and \event{RUN\_\-SPARK},
+or \event{TRY\_\-STEAL\_\-SPARK} and \event{STEAL\_\-SPARK}.
 This may seem wasteful compared to using one event,
 but this design enables us to measure several interesting things:
 
@@ -1453,8 +1453,8 @@ the value of the \metric{Nanosecs per call} metric.
 We plan to modify the \tscope GUI so that
 if the user hovers the pointer over the representation
 of an event connected with a parallel conjunction as a whole
-(such as a \event{START\_PAR\_CONJUNCTION} or
-\event{END\_PAR\_CONJUNCTION} event),
+(such as a \event{START\_\-PAR\_\-CON\-JUNC\-TION} or
+\event{END\_\-PAR\_\-CON\-JUNC\-TION} event),
 they get a menu allowing them to select
 one of the conjunction-specific metrics listed above.
 The system should then compute and print the selected metric.

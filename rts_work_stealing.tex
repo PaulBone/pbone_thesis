@@ -529,37 +529,37 @@ model and the new C++0x\footnote{C++0x is also known as C++11} memory model.
 \paul{XXX: Place these environments once we know what pagination will be
 used}
 \begin{verbatim}
- 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
- 2      MR_bool     finished, got_spark;
- 3      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
- 4      MR_Context  *orig_context = st->MR_st_orig_context;
- 5      MR_Spark    spark;
+ 1 void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
+ 2    MR_bool     finished, got_spark;
+ 3    MR_Context  *current_context = MR_ENGINE(MR_eng_current_context); 
+ 4    MR_Context  *orig_context = st->MR_st_orig_context;
+ 5    MR_Spark    spark;
  6
- 7      finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
- 8      if (finished) {
- 9          if (orig_context == current_context) {
-10              MR_GOTO(cont_label)
-11          } else {
-12              while (orig_context->MR_ctxt_resume != cont_label) {
-13                  CPU_spin_loop_hint();
-14              }
-15              MR_schedule_context(orig_context);
-16              MR_GOTO{MR_idle};
-17          }
-18      } else {
-19          got_spark = MR_pop_spark(current_context->MR_ctxt_spark_deque, &spark);
-20          if (got_spark) {
-21              MR_GOTO(spark.MR_spark_code);
-22          } else {
-23              if (orig_context == current_context) {
-24                   MR_save_context(current_context);
-25                   current_context->MR_ctxt_resume = cont_label;
-26                   MR_ENGINE(MR_eng_current_context) = NULL;
-27              }
-28              MR_GOTO(MR_idle);
-29          }
-30      }
-31  }    
+ 7    finished = MR_atomic_dec_and_is_zero(&(st->MR_st_num_outstanding));
+ 8    if (finished) {
+ 9       if (orig_context == current_context) {
+10          MR_GOTO(cont_label)
+11       } else {
+12          while (orig_context->MR_ctxt_resume != cont_label) {
+13             CPU_spin_loop_hint();
+14          }
+15          MR_schedule_context(orig_context);
+16          MR_GOTO{MR_idle};
+17       }
+18    } else {
+19       got_spark = MR_pop_spark(current_context->MR_ctxt_spark_deque, &spark);
+20       if (got_spark) {
+21          MR_GOTO(spark.MR_spark_code);
+22       } else {
+23          if (orig_context == current_context) {
+24             MR_save_context(current_context);
+25             current_context->MR_ctxt_resume = cont_label;
+26             MR_ENGINE(MR_eng_current_context) = NULL;
+27          }
+28          MR_GOTO(MR_idle);
+29       }
+30    }
+31 }    
 \end{verbatim}
 \caption{\joinandcontinue --- initial work stealing version}
 \label{alg:join_and_continue_ws1}
