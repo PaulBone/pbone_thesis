@@ -500,20 +500,39 @@ These conditions guarantee that at each point in the execution
 there is exactly one current state of the world.
 
 % Float this so that it does not straddle a page boundary
+% XXX: Subfigure.
 \begin{figure}
-\begin{verbatim}
-:- pred main(io::di, io::uo) is det.
-
-main(S0, S) :-
-    io.write_string("Hello ", S0, S1),
-    io.write_string("world\n", S1, S).
-\end{verbatim}
+\begin{center}
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[Normal notation]{%
+\label{fig:hello_normal}
+\begin{tabular}{l}
+\code{:- pred main(io::di, io::uo) is det.} \\
+\\
+\code{main(S0, S) :-} \\
+\code{~~~~io.write\_string("Hello ", S0, S1),} \\
+\code{~~~~io.write\_string("world{\textbackslash}n", S1, S).}
+\end{tabular}}
+\end{minipage}
+%
+\begin{minipage}[b]{0.49\textwidth}
+\subfigure[State variable notation]{%
+\label{fig:hello_sv}
+\begin{tabular}{l}
+\code{:- pred main(io::di, io::uo) is det.} \\
+\\
+\code{main(!IO) :-} \\
+\code{~~~~io.write\_string("Hello ", !IO),} \\
+\code{~~~~io.write\_string("world{\textbackslash}n", !IO).}
+\end{tabular}}
+\end{minipage}
+\end{center}
 \caption{Hello world and I/O example}
 \label{fig:hello}
 \end{figure}
 
 As an example, a version of ``Hello world'' is shown in
-Figure~\ref{fig:hello}.
+Figure~\ref{fig:hello_normal}.
 \code{S0} is the initial state of the world,
 \code{S1} is the state of the world after printing ``\code{Hello }'',
 and \code{S} is the state of the world
@@ -536,18 +555,8 @@ but this sugar does not affect
 the compiler's internal representation of the program.
 This syntactic sugar is shown below, along with the convention of naming
 the I/O state \code{!IO}.
-The compiler will transform the example below into the example in
-Figure~\ref{fig:hello}.
-
-\begin{verbatim}
-:- pred main(io::di, io::uo) is det.
-
-main(!IO) :-
-    io.write_string("Hello ", !IO),
-    io.write_string("world\n", !IO).
-\end{verbatim}
-
-\noindent
+The compiler will transform the example in Figure~\ref{fig:hello_sv} into the
+example in Figure~\ref{fig:hello_normal}.
 Any term beginning with a bang (\code{!})
 will be expanded into a pair of automatically named
 variables.
@@ -555,6 +564,7 @@ The variable names created sequence conjunctions from left to right in
 conjunctions when used with pairs of \code{di/uo} or \code{in/out}
 modes.
 %\peter{End of stuff I think you should leave out.}
+
 
 \label{page:purity}
 Mercury divides goals into three purity categories:
