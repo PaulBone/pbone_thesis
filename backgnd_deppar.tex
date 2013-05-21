@@ -24,28 +24,6 @@ map_foldl(M, F, L, Acc0, Acc) :-
 %\vspace{-1\baselineskip}
 \end{figure}
 
-\begin{figure}
-\begin{verbatim}
-enum MR_produced {
-    MR_NOT_YET_PRODUCED, 
-    MR_PRODUCED
-};
-
-struct MR_Future {
-    /* lock preventing concurrent accesses */
-    MercuryLock             MR_fut_lock;
-    /* whether this future has been signalled yet */
-    enum MR_produced        MR_fut_produced;
-
-    /* linked list of all the contexts blocked on this future */
-    MR_Context              *MR_fut_suspended;
-    MR_Word                 MR_fut_value;
-};
-\end{verbatim}
-\caption{Future data structure}
-\label{fig:future}
-\end{figure}
-
 Mercury's mode system allows a conjunct in a sequential conjunction to consume
 variables that are produced by conjuncts to its left, but not to its right.
 However,
@@ -70,6 +48,28 @@ shared variables can be identified at compile time.
 The compiler replaces each shared variable with a \emph{future}
 \citep{halstead:1984:multilisp},
 which is used to safely communicate the variable's value among conjuncts.
+
+\begin{figure}
+\begin{verbatim}
+enum MR_produced {
+    MR_NOT_YET_PRODUCED, 
+    MR_PRODUCED
+};
+
+struct MR_Future {
+    /* lock preventing concurrent accesses */
+    MercuryLock             MR_fut_lock;
+    /* whether this future has been signalled yet */
+    enum MR_produced        MR_fut_produced;
+
+    /* linked list of all the contexts blocked on this future */
+    MR_Context              *MR_fut_suspended;
+    MR_Word                 MR_fut_value;
+};
+\end{verbatim}
+\caption{Future data structure}
+\label{fig:future}
+\end{figure}
 
 Figure~\ref{fig:future} shows the future data structure,
 which contains room for the value of the variable,

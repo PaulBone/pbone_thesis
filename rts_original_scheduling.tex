@@ -70,57 +70,6 @@ last-in-first-out manner.
 \label{fig:par_conj_impl_only}
 \end{figure}
 
-\begin{algorithm}[tbp]
-\begin{verbatim}
- 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
- 2      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
- 3
- 4      MR_acquire_lock(&MR_SyncTermLock);
- 5      st->MR_st_num_outstanding--;
- 5      if (st->MR_st_num_outstanding == 0) {
- 6          if (st->MR_st_orig_context == current_context) {
- 7              MR_release_lock(&MR_SyncTermLock);
- 9              MR_GOTO(cont_label);
-10          } else {
-11              st->MR_st_orig_context->MR_ctxt_resume_label = cont_label;
-12              MR_schedule(st->MR_st_orig_context);
-13              MR_release_lock(&MR_SyncTermLock);
-14              MR_GOTO(MR_idle);
-15          }
-16      } else {
-17          MR_Spark    spark;
-18          MR_bool     popped;
-19
-20          popped = MR_pop_spark(current_context->MR_ctxt_spark_stack, &spark);
-21          if (popped && (spark.MR_spark_parent_sp == MR_parent_sp)) {
-22              /*
-23              ** The spark at the top of the stack is part of the same
-24              ** parallel conjunction, we can exuecute it immediately.
-25              */
-26              MR_release_lock(&MR_SyncTermLock);
-27              MR_GOTO(spark.MR_spark_code);
-28          } else {
-29              if (popped) {
-30                  /*
-31                  ** The spark is part of a different parallel conjunction,
-32                  ** put it back.
-33                  */
-34                  MR_push_spark(current_context->MR_ctxt_spark_stack, &spark);
-35              }
-36              if (st->MR_st_orig_context == current_context) {
-37                  MR_save_context(current_context)
-38                  MR_ENGINE(MR_eng_current_context) = NULL;
-39              }
-40              MR_release_lock(&MR_SyncTermLock);
-41              MR_GOTO(MR_idle);
-42          }
-43      }
-44  }
-\end{verbatim}
-\caption{\joinandcontinue --- original version}
-\label{alg:join_and_continue_peterw}
-\end{algorithm}
-
 \plan{barrier code, this is used to explain the right recursion problem.}
 In Section~\ref{sec:backgnd_merpar} we described how parallel
 conjunctions are compiled
@@ -186,6 +135,57 @@ there are three important scenarios:
     This causes $C_{Orig}$ to jump to the continuation label,
     line 9 in the example,
     completing the execution of the parallel conjunction.
+
+\begin{algorithm}[tbp]
+\begin{verbatim}
+ 1  void MR_join_and_continue(MR_SyncTerm *st, MR_Code *cont_label) {
+ 2      MR_Context  *current_context = MR_ENGINE(MR_eng_current_context);
+ 3
+ 4      MR_acquire_lock(&MR_SyncTermLock);
+ 5      st->MR_st_num_outstanding--;
+ 5      if (st->MR_st_num_outstanding == 0) {
+ 6          if (st->MR_st_orig_context == current_context) {
+ 7              MR_release_lock(&MR_SyncTermLock);
+ 9              MR_GOTO(cont_label);
+10          } else {
+11              st->MR_st_orig_context->MR_ctxt_resume_label = cont_label;
+12              MR_schedule(st->MR_st_orig_context);
+13              MR_release_lock(&MR_SyncTermLock);
+14              MR_GOTO(MR_idle);
+15          }
+16      } else {
+17          MR_Spark    spark;
+18          MR_bool     popped;
+19
+20          popped = MR_pop_spark(current_context->MR_ctxt_spark_stack, &spark);
+21          if (popped && (spark.MR_spark_parent_sp == MR_parent_sp)) {
+22              /*
+23              ** The spark at the top of the stack is part of the same
+24              ** parallel conjunction, we can exuecute it immediately.
+25              */
+26              MR_release_lock(&MR_SyncTermLock);
+27              MR_GOTO(spark.MR_spark_code);
+28          } else {
+29              if (popped) {
+30                  /*
+31                  ** The spark is part of a different parallel conjunction,
+32                  ** put it back.
+33                  */
+34                  MR_push_spark(current_context->MR_ctxt_spark_stack, &spark);
+35              }
+36              if (st->MR_st_orig_context == current_context) {
+37                  MR_save_context(current_context)
+38                  MR_ENGINE(MR_eng_current_context) = NULL;
+39              }
+40              MR_release_lock(&MR_SyncTermLock);
+41              MR_GOTO(MR_idle);
+42          }
+43      }
+44  }
+\end{verbatim}
+\caption{\joinandcontinue --- original version}
+\label{alg:join_and_continue_peterw}
+\end{algorithm}
 
     \item[Scenario two:]~
 
