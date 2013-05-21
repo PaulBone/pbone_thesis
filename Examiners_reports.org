@@ -596,7 +596,7 @@ index 3f6ae20..0a9678f 100644
 +workloads,
 +but do not work well for more general symbolic processing.
 +GPGPUs give programs access to small amounts of different types of memory
-+that must be allocated statically,
++of fixed sizes,
 +however most symbolic programs rely on dynamic allocation of unpredictable
 +amounts of memory.
 +Additionally, symbolic programs often include code with many conditional
@@ -1446,7 +1446,7 @@ index a01cdf5..327cd26 100644
 +Gustafson-Barsis' law
 +\citep{gustafson:88:reevaluating-amdahl} might be more approprite than
 +Amdahl's law.
-+This is true when there is either: always more data that could be processed
++This is true when there is either: always more data than could be processed
 +by additional computation resources,
 +or when the data can be split into smaller and smaller peices
 +without affecting the granuality of parallel tasks.
